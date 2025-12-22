@@ -126,7 +126,7 @@ export default function Stocks() {
             <Button
               variant="outline"
               onClick={() => setShowSupplierForm(true)}
-              className="border-slate-600"
+              className="border-slate-600 text-slate-200"
             >
               <Truck className="w-4 h-4 mr-2" />
               Fournisseur

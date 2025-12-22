@@ -279,7 +279,7 @@ function ShiftFormModal({ employee, date, shift, onClose, onSave, onDelete }) {
               </Button>
             )}
             <div className="flex gap-3 ml-auto">
-              <Button type="button" variant="outline" onClick={onClose} className="border-slate-600">
+              <Button type="button" variant="outline" onClick={onClose} className="border-slate-600 text-slate-200">
                 Annuler
               </Button>
               <Button type="submit" className="bg-orange-600 hover:bg-orange-700">

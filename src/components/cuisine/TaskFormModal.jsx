@@ -390,7 +390,7 @@ export default function TaskFormModal({ open, onClose, task, categories }) {
           </Tabs>
 
           <div className="flex justify-end gap-3 pt-4 border-t border-slate-700">
-            <Button type="button" variant="outline" onClick={onClose} className="border-slate-600">
+            <Button type="button" variant="outline" onClick={onClose} className="border-slate-600 text-slate-200">
               Annuler
             </Button>
             <Button 

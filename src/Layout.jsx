@@ -38,7 +38,7 @@ export default function Layout({ children, currentPageName }) {
       to={createPageUrl(to)}
       onClick={() => setSidebarOpen(false)}
       className={cn(
-        "flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200",
+        "flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 text-slate-200",
         "hover:bg-slate-700/50 active:scale-95",
         active && "bg-orange-600/20 text-orange-400 border border-orange-600/30"
       )}

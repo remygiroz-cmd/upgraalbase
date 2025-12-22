@@ -66,7 +66,7 @@ export default function MiseEnPlace() {
             <Button
               variant="outline"
               onClick={() => setShowCategoryManager(true)}
-              className="border-slate-600 hover:bg-slate-700"
+              className="border-slate-600 hover:bg-slate-700 text-slate-200"
             >
               Catégories
             </Button>

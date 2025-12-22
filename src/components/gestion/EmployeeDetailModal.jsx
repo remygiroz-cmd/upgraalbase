@@ -149,12 +149,12 @@ export default function EmployeeDetailModal({ employee, onClose, onEdit }) {
           <Button
             onClick={onEdit}
             variant="outline"
-            className="border-slate-600"
+            className="border-slate-600 text-slate-200"
           >
             <Pencil className="w-4 h-4 mr-2" />
             Modifier
           </Button>
-          <Button onClick={onClose} className="bg-slate-600 hover:bg-slate-500">
+          <Button onClick={onClose} className="bg-slate-600 hover:bg-slate-500 text-slate-100">
             Fermer
           </Button>
         </div>

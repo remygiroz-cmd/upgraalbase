@@ -118,7 +118,7 @@ export default function Historique() {
           <Button
             variant="outline"
             onClick={handleExport}
-            className="border-slate-600"
+            className="border-slate-600 text-slate-200"
           >
             <Download className="w-4 h-4 mr-2" />
             Export CSV
@@ -294,7 +294,7 @@ function DayDetailModal({ date, dailyTasks, tasks, messages, onClose }) {
         </div>
 
         <div className="flex justify-end pt-4 border-t border-slate-700">
-          <Button onClick={onClose} className="bg-slate-600 hover:bg-slate-500">
+          <Button onClick={onClose} className="bg-slate-600 hover:bg-slate-500 text-slate-100">
             Fermer
           </Button>
         </div>

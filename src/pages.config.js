@@ -1,25 +1,25 @@
+import Equipe from './pages/Equipe';
+import Historique from './pages/Historique';
 import Home from './pages/Home';
 import MiseEnPlace from './pages/MiseEnPlace';
-import TravailDuJour from './pages/TravailDuJour';
-import Temperatures from './pages/Temperatures';
-import Recettes from './pages/Recettes';
-import Historique from './pages/Historique';
-import Equipe from './pages/Equipe';
 import Pertes from './pages/Pertes';
+import Recettes from './pages/Recettes';
 import Stocks from './pages/Stocks';
+import Temperatures from './pages/Temperatures';
+import TravailDuJour from './pages/TravailDuJour';
 import __Layout from './Layout.jsx';
 
 
 export const PAGES = {
+    "Equipe": Equipe,
+    "Historique": Historique,
     "Home": Home,
     "MiseEnPlace": MiseEnPlace,
-    "TravailDuJour": TravailDuJour,
-    "Temperatures": Temperatures,
-    "Recettes": Recettes,
-    "Historique": Historique,
-    "Equipe": Equipe,
     "Pertes": Pertes,
+    "Recettes": Recettes,
     "Stocks": Stocks,
+    "Temperatures": Temperatures,
+    "TravailDuJour": TravailDuJour,
 }
 
 export const pagesConfig = {
