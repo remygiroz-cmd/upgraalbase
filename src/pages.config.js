@@ -3,6 +3,8 @@ import MiseEnPlace from './pages/MiseEnPlace';
 import TravailDuJour from './pages/TravailDuJour';
 import Temperatures from './pages/Temperatures';
 import Recettes from './pages/Recettes';
+import Historique from './pages/Historique';
+import Equipe from './pages/Equipe';
 import __Layout from './Layout.jsx';
 
 
@@ -12,6 +14,8 @@ export const PAGES = {
     "TravailDuJour": TravailDuJour,
     "Temperatures": Temperatures,
     "Recettes": Recettes,
+    "Historique": Historique,
+    "Equipe": Equipe,
 }
 
 export const pagesConfig = {
