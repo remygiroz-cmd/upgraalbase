@@ -17,7 +17,7 @@ export default function RecipeDetailModal({ recipe, onClose, onEdit, onValidate 
           <div className="flex items-start justify-between">
             <DialogTitle className="flex-1">{recipe.name}</DialogTitle>
             {recipe.is_validated && (
-              <Badge className="bg-emerald-600/20 text-emerald-400 border-emerald-600/30 ml-2">
+              <Badge className="bg-orange-600/20 text-orange-400 border-orange-600/30 ml-2">
                 <CheckCircle2 className="w-3 h-3 mr-1" />
                 Validé
               </Badge>
@@ -51,7 +51,7 @@ export default function RecipeDetailModal({ recipe, onClose, onEdit, onValidate 
             )}
             {recipe.validated_at && (
               <div className="flex items-center gap-2">
-                <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+                <CheckCircle2 className="w-4 h-4 text-orange-400" />
                 <span>
                   Validé le {format(new Date(recipe.validated_at), "d MMMM yyyy", { locale: fr })}
                 </span>
@@ -92,7 +92,7 @@ export default function RecipeDetailModal({ recipe, onClose, onEdit, onValidate 
               <Button
                 onClick={onValidate}
                 variant="outline"
-                className="border-emerald-600 text-emerald-400 hover:bg-emerald-600/20"
+                className="border-orange-600 text-orange-400 hover:bg-orange-600/20"
               >
                 <CheckCircle2 className="w-4 h-4 mr-2" />
                 Valider la recette

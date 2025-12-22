@@ -173,7 +173,7 @@ export default function Historique() {
                   <div className="flex items-center gap-4">
                     <div className={cn(
                       "text-2xl font-bold",
-                      stats.percentage >= 80 ? "text-emerald-400" :
+                      stats.percentage >= 80 ? "text-orange-400" :
                       stats.percentage >= 50 ? "text-amber-400" : "text-red-400"
                     )}>
                       {stats.percentage}%
@@ -187,7 +187,7 @@ export default function Historique() {
                   <div
                     className={cn(
                       "h-full transition-all",
-                      stats.percentage >= 80 ? "bg-emerald-500" :
+                      stats.percentage >= 80 ? "bg-orange-500" :
                       stats.percentage >= 50 ? "bg-amber-500" : "bg-red-500"
                     )}
                     style={{ width: `${stats.percentage}%` }}
@@ -256,14 +256,14 @@ function DayDetailModal({ date, dailyTasks, tasks, messages, onClose }) {
                     className={cn(
                       "p-3 rounded-lg border",
                       dt.is_completed
-                        ? "bg-emerald-900/10 border-emerald-600/20"
+                        ? "bg-orange-900/10 border-orange-600/20"
                         : "bg-slate-700/30 border-slate-600/30"
                     )}
                   >
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3">
                         {dt.is_completed && (
-                          <CheckCircle2 className="w-5 h-5 text-emerald-500 flex-shrink-0" />
+                          <CheckCircle2 className="w-5 h-5 text-orange-400 flex-shrink-0" />
                         )}
                         <div>
                           <p className={cn(

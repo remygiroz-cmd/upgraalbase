@@ -176,7 +176,7 @@ export default function Temperatures() {
           action={
             <Button
               onClick={() => setShowEquipmentModal(true)}
-              className="bg-emerald-600 hover:bg-emerald-700"
+              className="bg-orange-600 hover:bg-orange-700"
             >
               <Plus className="w-4 h-4 mr-2" />
               Ajouter un équipement
@@ -239,7 +239,7 @@ function TemperatureCard({ equipment, temperature, onSave, isSaving }) {
       "p-4 rounded-2xl border transition-all",
       hasValue
         ? isCompliant
-          ? "bg-emerald-900/20 border-emerald-600/30"
+          ? "bg-orange-900/20 border-orange-600/30"
           : "bg-red-900/20 border-red-600/30"
         : "bg-slate-800/50 border-slate-700/50"
     )}>
@@ -261,9 +261,9 @@ function TemperatureCard({ equipment, temperature, onSave, isSaving }) {
         
         {hasValue && (
           isCompliant ? (
-            <CheckCircle2 className="w-6 h-6 text-emerald-500" />
+            <CheckCircle2 className="w-6 h-6 text-orange-400" />
           ) : (
-            <AlertTriangle className="w-6 h-6 text-red-500" />
+            <AlertTriangle className="w-6 h-6 text-red-400" />
           )
         )}
       </div>
@@ -303,7 +303,7 @@ function TemperatureCard({ equipment, temperature, onSave, isSaving }) {
           "w-full min-h-[44px]",
           hasValue
             ? "bg-slate-600 hover:bg-slate-500"
-            : "bg-emerald-600 hover:bg-emerald-700"
+            : "bg-orange-600 hover:bg-orange-700"
         )}
       >
         {hasValue ? 'Mettre à jour' : 'Enregistrer'}
@@ -427,7 +427,7 @@ function EquipmentModal({ open, onClose, equipment, onSave, isSaving }) {
             <Button type="button" variant="outline" onClick={onClose} className="border-slate-600">
               Annuler
             </Button>
-            <Button type="submit" disabled={isSaving} className="bg-emerald-600 hover:bg-emerald-700">
+            <Button type="submit" disabled={isSaving} className="bg-orange-600 hover:bg-orange-700">
               {equipment ? 'Mettre à jour' : 'Créer'}
             </Button>
           </div>

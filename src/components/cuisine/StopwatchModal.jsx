@@ -85,7 +85,7 @@ export default function StopwatchModal({ task, onClose }) {
           <div className="text-center mb-8">
             <div className={cn(
               "text-6xl font-mono font-bold transition-colors",
-              isOverTime ? "text-red-500" : "text-white"
+              isOverTime ? "text-red-400" : "text-slate-100"
             )}>
               {display}
               <span className="text-2xl text-slate-500">.{centiseconds}</span>
@@ -105,7 +105,7 @@ export default function StopwatchModal({ task, onClose }) {
                 <div
                   className={cn(
                     "h-full transition-all duration-100",
-                    isOverTime ? "bg-red-500" : "bg-emerald-500"
+                    isOverTime ? "bg-red-500" : "bg-orange-500"
                   )}
                   style={{ width: `${progress}%` }}
                 />
@@ -131,7 +131,7 @@ export default function StopwatchModal({ task, onClose }) {
                 "w-20 h-20 rounded-full",
                 isRunning
                   ? "bg-amber-600 hover:bg-amber-700"
-                  : "bg-emerald-600 hover:bg-emerald-700"
+                  : "bg-orange-600 hover:bg-orange-700"
               )}
             >
               {isRunning ? (
@@ -146,7 +146,7 @@ export default function StopwatchModal({ task, onClose }) {
               variant="outline"
               onClick={handleValidate}
               disabled={time === 0 || updateMutation.isPending}
-              className="w-14 h-14 rounded-full border-emerald-600 text-emerald-400 hover:bg-emerald-600/20"
+              className="w-14 h-14 rounded-full border-orange-600 text-orange-400 hover:bg-orange-600/20"
             >
               <Check className="w-5 h-5" />
             </Button>

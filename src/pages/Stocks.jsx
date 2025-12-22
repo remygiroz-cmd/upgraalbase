@@ -133,7 +133,7 @@ export default function Stocks() {
             </Button>
             <Button
               onClick={() => setShowProductForm(true)}
-              className="bg-emerald-600 hover:bg-emerald-700"
+              className="bg-orange-600 hover:bg-orange-700"
             >
               <Plus className="w-4 h-4 mr-2" />
               Produit
@@ -179,7 +179,7 @@ export default function Stocks() {
               action={
                 <Button
                   onClick={() => setShowProductForm(true)}
-                  className="bg-emerald-600 hover:bg-emerald-700"
+                  className="bg-orange-600 hover:bg-orange-700"
                 >
                   <Plus className="w-4 h-4 mr-2" />
                   Ajouter un produit
@@ -262,7 +262,7 @@ export default function Stocks() {
                   <Truck className="w-5 h-5 text-indigo-400" />
                   <h3 className="font-medium">{supplier.name}</h3>
                 </div>
-                <p className="text-sm text-emerald-400">
+                <p className="text-sm text-orange-400">
                   Générer bon de commande →
                 </p>
               </button>
@@ -288,7 +288,7 @@ export default function Stocks() {
                     </div>
                     <Badge className={cn(
                       order.status === 'sent' && "bg-amber-600/20 text-amber-400",
-                      order.status === 'received' && "bg-emerald-600/20 text-emerald-400",
+                      order.status === 'received' && "bg-orange-600/20 text-orange-400",
                       order.status === 'draft' && "bg-slate-600/20 text-slate-400"
                     )}>
                       {order.status === 'sent' ? 'Envoyé' : 
@@ -315,7 +315,7 @@ export default function Stocks() {
               action={
                 <Button
                   onClick={() => setShowSupplierForm(true)}
-                  className="bg-emerald-600 hover:bg-emerald-700"
+                  className="bg-orange-600 hover:bg-orange-700"
                 >
                   <Plus className="w-4 h-4 mr-2" />
                   Ajouter un fournisseur
@@ -528,7 +528,7 @@ function ProductFormModal({ open, onClose, product, suppliers, onSave, isSaving 
             <Button type="button" variant="outline" onClick={onClose} className="border-slate-600">
               Annuler
             </Button>
-            <Button type="submit" disabled={isSaving} className="bg-emerald-600 hover:bg-emerald-700">
+            <Button type="submit" disabled={isSaving} className="bg-orange-600 hover:bg-orange-700">
               {product ? 'Modifier' : 'Créer'}
             </Button>
           </div>
@@ -607,7 +607,7 @@ function SupplierFormModal({ open, onClose, onSave, isSaving }) {
             <Button type="button" variant="outline" onClick={onClose} className="border-slate-600">
               Annuler
             </Button>
-            <Button type="submit" disabled={isSaving} className="bg-emerald-600 hover:bg-emerald-700">
+            <Button type="submit" disabled={isSaving} className="bg-orange-600 hover:bg-orange-700">
               Créer
             </Button>
           </div>
@@ -688,7 +688,7 @@ function OrderModal({ supplier, products, onClose }) {
           <Button 
             onClick={handleSave}
             disabled={createOrderMutation.isPending || orderItems.filter(i => i.quantity > 0).length === 0}
-            className="bg-emerald-600 hover:bg-emerald-700"
+            className="bg-orange-600 hover:bg-orange-700"
           >
             Enregistrer
           </Button>

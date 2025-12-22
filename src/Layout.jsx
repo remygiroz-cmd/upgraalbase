@@ -40,7 +40,7 @@ export default function Layout({ children, currentPageName }) {
       className={cn(
         "flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200",
         "hover:bg-slate-700/50 active:scale-95",
-        active && "bg-emerald-600/20 text-emerald-400 border border-emerald-600/30"
+        active && "bg-orange-600/20 text-orange-400 border border-orange-600/30"
       )}
     >
       <Icon className="w-5 h-5" />
@@ -52,7 +52,7 @@ export default function Layout({ children, currentPageName }) {
     <div className="min-h-screen bg-slate-900 text-slate-100">
       <style>{`
         :root {
-          --success: #10b981;
+          --success: #f97316;
           --warning: #f59e0b;
           --cold: #6366f1;
           --danger: #ef4444;
@@ -108,7 +108,7 @@ export default function Layout({ children, currentPageName }) {
           {/* Logo */}
           <div className="flex items-center justify-between p-5 border-b border-slate-700">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-700 flex items-center justify-center">
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-orange-500 to-orange-700 flex items-center justify-center">
                 <ChefHat className="w-6 h-6 text-white" />
               </div>
               <div>

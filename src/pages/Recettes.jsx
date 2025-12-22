@@ -83,7 +83,7 @@ export default function Recettes() {
         actions={
           <Button
             onClick={() => setShowFormModal(true)}
-            className="bg-emerald-600 hover:bg-emerald-700"
+            className="bg-orange-600 hover:bg-orange-700"
           >
             <Plus className="w-4 h-4 mr-2" />
             Nouvelle recette
@@ -128,7 +128,7 @@ export default function Recettes() {
             !searchQuery && (
               <Button
                 onClick={() => setShowFormModal(true)}
-                className="bg-emerald-600 hover:bg-emerald-700"
+                className="bg-orange-600 hover:bg-orange-700"
               >
                 <Plus className="w-4 h-4 mr-2" />
                 Créer une recette
@@ -172,7 +172,7 @@ export default function Recettes() {
                   <div className="flex items-start justify-between gap-2">
                     <h3 className="font-medium line-clamp-2">{recipe.name}</h3>
                     {recipe.is_validated && (
-                      <Badge className="bg-emerald-600/20 text-emerald-400 border-emerald-600/30 flex-shrink-0">
+                      <Badge className="bg-orange-600/20 text-orange-400 border-orange-600/30 flex-shrink-0">
                         <CheckCircle2 className="w-3 h-3 mr-1" />
                         Validé
                       </Badge>

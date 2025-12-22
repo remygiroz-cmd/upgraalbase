@@ -194,7 +194,7 @@ export default function Pertes() {
                 action={
                   <Button
                     onClick={() => setShowProductForm(true)}
-                    className="bg-emerald-600 hover:bg-emerald-700"
+                    className="bg-orange-600 hover:bg-orange-700"
                   >
                     <Plus className="w-4 h-4 mr-2" />
                     Ajouter un produit
@@ -217,7 +217,7 @@ export default function Pertes() {
                   >
                     <p className="font-medium text-sm line-clamp-2">{product.name}</p>
                     {product.unit_price > 0 && (
-                      <p className="text-xs text-emerald-400 mt-1">
+                      <p className="text-xs text-orange-400 mt-1">
                         {product.unit_price.toFixed(2)} € / {product.unit}
                       </p>
                     )}
@@ -434,7 +434,7 @@ function ProductFormModal({ open, onClose, onSave, isSaving }) {
             <Button type="button" variant="outline" onClick={onClose} className="border-slate-600">
               Annuler
             </Button>
-            <Button type="submit" disabled={isSaving} className="bg-emerald-600 hover:bg-emerald-700">
+            <Button type="submit" disabled={isSaving} className="bg-orange-600 hover:bg-orange-700">
               Créer
             </Button>
           </div>

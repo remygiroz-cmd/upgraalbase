@@ -59,7 +59,7 @@ export default function Home() {
         animate={{ opacity: 1, y: 0 }}
         className="text-center mb-12"
       >
-        <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-gradient-to-br from-emerald-500 to-emerald-700 mb-6 shadow-lg shadow-emerald-500/20">
+        <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-gradient-to-br from-orange-500 to-orange-700 mb-6 shadow-lg shadow-orange-500/20">
           <ChefHat className="w-10 h-10 text-white" />
         </div>
         <h1 className="text-4xl font-bold mb-3">UpGraal</h1>

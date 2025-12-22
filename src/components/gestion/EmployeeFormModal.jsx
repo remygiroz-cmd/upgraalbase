@@ -468,7 +468,7 @@ export default function EmployeeFormModal({ open, onClose, employee }) {
             </Button>
             <Button 
               type="submit" 
-              className="bg-emerald-600 hover:bg-emerald-700"
+              className="bg-orange-600 hover:bg-orange-700"
               disabled={saveMutation.isPending}
             >
               {saveMutation.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}

@@ -213,8 +213,8 @@ export default function TravailDuJour() {
       <div className="mb-6 p-4 bg-slate-800/50 rounded-2xl border border-slate-700/50">
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-4">
-            <span className="text-2xl font-bold text-emerald-400">{completedCount}/{totalCount}</span>
-            <span className="text-slate-400">tâches complétées</span>
+            <span className="text-2xl font-bold text-orange-400">{completedCount}/{totalCount}</span>
+            <span className="text-slate-300">tâches complétées</span>
           </div>
           <div className="flex items-center gap-2 text-slate-400">
             <Clock className="w-4 h-4" />
@@ -332,7 +332,7 @@ function DailyTaskCard({ dailyTask, task, onComplete, onAdjustStock }) {
       className={cn(
         "p-4 rounded-2xl border transition-all",
         dailyTask.is_completed
-          ? "bg-emerald-900/20 border-emerald-600/30"
+          ? "bg-orange-900/20 border-orange-600/30"
           : "bg-slate-800/50 border-slate-700/50"
       )}
     >
@@ -381,11 +381,11 @@ function DailyTaskCard({ dailyTask, task, onComplete, onAdjustStock }) {
       {/* Completed by */}
       {dailyTask.is_completed && dailyTask.completed_by_name && (
         <div className="mt-3 pt-3 border-t border-slate-700/50 flex items-center gap-2">
-          <div className="w-6 h-6 rounded-full bg-emerald-600 flex items-center justify-center text-xs font-medium">
+          <div className="w-6 h-6 rounded-full bg-orange-600 flex items-center justify-center text-xs font-medium text-white">
             {dailyTask.completed_by_name.charAt(0).toUpperCase()}
           </div>
-          <span className="text-sm text-slate-400">{dailyTask.completed_by_name}</span>
-          <Check className="w-4 h-4 text-emerald-500 ml-auto" />
+          <span className="text-sm text-slate-300">{dailyTask.completed_by_name}</span>
+          <Check className="w-4 h-4 text-orange-400 ml-auto" />
         </div>
       )}
 
@@ -416,7 +416,7 @@ function DailyTaskCard({ dailyTask, task, onComplete, onAdjustStock }) {
           
           <Button
             onClick={onComplete}
-            className="bg-emerald-600 hover:bg-emerald-700 min-h-[44px]"
+            className="bg-orange-600 hover:bg-orange-700 min-h-[44px]"
           >
             <Check className="w-4 h-4 mr-2" />
             Terminé

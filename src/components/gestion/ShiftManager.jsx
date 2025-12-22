@@ -15,7 +15,7 @@ const DAYS = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'];
 
 const STATUS_COLORS = {
   planned: 'bg-slate-600',
-  confirmed: 'bg-emerald-600',
+  confirmed: 'bg-orange-600',
   absent: 'bg-red-600',
   leave: 'bg-amber-600'
 };
@@ -282,7 +282,7 @@ function ShiftFormModal({ employee, date, shift, onClose, onSave, onDelete }) {
               <Button type="button" variant="outline" onClick={onClose} className="border-slate-600">
                 Annuler
               </Button>
-              <Button type="submit" className="bg-emerald-600 hover:bg-emerald-700">
+              <Button type="submit" className="bg-orange-600 hover:bg-orange-700">
                 {shift ? 'Modifier' : 'Créer'}
               </Button>
             </div>

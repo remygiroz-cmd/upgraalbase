@@ -72,7 +72,7 @@ export default function MiseEnPlace() {
             </Button>
             <Button
               onClick={() => setShowTaskModal(true)}
-              className="bg-emerald-600 hover:bg-emerald-700"
+              className="bg-orange-600 hover:bg-orange-700"
             >
               <Plus className="w-4 h-4 mr-2" />
               Nouvelle tâche
@@ -89,7 +89,7 @@ export default function MiseEnPlace() {
           action={
             <Button
               onClick={() => setShowCategoryManager(true)}
-              className="bg-emerald-600 hover:bg-emerald-700"
+              className="bg-orange-600 hover:bg-orange-700"
             >
               Créer une catégorie
             </Button>
@@ -254,7 +254,7 @@ function TaskCard({ task, onEdit, onDelete, onStartStopwatch }) {
         <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
           <button
             onClick={onStartStopwatch}
-            className="p-2 rounded-lg hover:bg-emerald-600/20 text-slate-400 hover:text-emerald-400 transition-colors"
+            className="p-2 rounded-lg hover:bg-orange-600/20 text-slate-300 hover:text-orange-400 transition-colors"
             title="Chronométrer"
           >
             <Play className="w-4 h-4" />

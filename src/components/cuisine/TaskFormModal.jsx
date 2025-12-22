@@ -261,7 +261,7 @@ export default function TaskFormModal({ open, onClose, task, categories }) {
                     className={cn(
                       "p-4 rounded-xl border-2 text-left transition-all",
                       form.tracking_mode === 'binary'
-                        ? "border-emerald-500 bg-emerald-500/10"
+                        ? "border-orange-500 bg-orange-500/10"
                         : "border-slate-600 hover:border-slate-500"
                     )}
                   >
@@ -395,7 +395,7 @@ export default function TaskFormModal({ open, onClose, task, categories }) {
             </Button>
             <Button 
               type="submit" 
-              className="bg-emerald-600 hover:bg-emerald-700"
+              className="bg-orange-600 hover:bg-orange-700"
               disabled={saveMutation.isPending}
             >
               {saveMutation.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}

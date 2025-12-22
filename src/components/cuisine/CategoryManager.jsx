@@ -7,8 +7,8 @@ import { Plus, Trash2, GripVertical } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const COLORS = [
-  '#10b981', '#f59e0b', '#6366f1', '#ef4444', '#8b5cf6',
-  '#06b6d4', '#ec4899', '#84cc16', '#f97316', '#14b8a6'
+  '#f97316', '#f59e0b', '#6366f1', '#ef4444', '#8b5cf6',
+  '#06b6d4', '#ec4899', '#84cc16', '#fb923c', '#14b8a6'
 ];
 
 export default function CategoryManager({ onClose }) {
@@ -87,7 +87,7 @@ export default function CategoryManager({ onClose }) {
           <Button
             onClick={handleCreate}
             disabled={!newName.trim() || createMutation.isPending}
-            className="bg-emerald-600 hover:bg-emerald-700"
+            className="bg-orange-600 hover:bg-orange-700"
           >
             <Plus className="w-4 h-4" />
           </Button>

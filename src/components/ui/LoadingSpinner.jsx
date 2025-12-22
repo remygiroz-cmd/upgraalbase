@@ -11,7 +11,7 @@ export default function LoadingSpinner({ className, size = "default" }) {
 
   return (
     <div className={cn("flex items-center justify-center py-12", className)}>
-      <Loader2 className={cn("animate-spin text-emerald-500", sizeClasses[size])} />
+      <Loader2 className={cn("animate-spin text-orange-500", sizeClasses[size])} />
     </div>
   );
 }
