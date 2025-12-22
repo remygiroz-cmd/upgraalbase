@@ -195,7 +195,7 @@ export default function RecipeFormModal({ open, onClose, recipe, currentSection 
                   variant="outline"
                   onClick={handleGenerateImage}
                   disabled={generating || !form.name}
-                  className="border-slate-600"
+                  className="border-slate-600 text-slate-900 hover:text-slate-100 hover:bg-slate-700"
                 >
                   {generating ? (
                     <Loader2 className="w-4 h-4 mr-2 animate-spin" />
@@ -298,7 +298,7 @@ export default function RecipeFormModal({ open, onClose, recipe, currentSection 
 
           {/* Actions */}
           <div className="flex justify-end gap-3 pt-4 border-t border-slate-700">
-            <Button type="button" variant="outline" onClick={onClose} className="border-slate-600 text-slate-200">
+            <Button type="button" variant="outline" onClick={onClose} className="border-slate-600 text-slate-900 hover:text-slate-100 hover:bg-slate-700">
               Annuler
             </Button>
             <Button 

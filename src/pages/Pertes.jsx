@@ -142,7 +142,7 @@ export default function Pertes() {
             <Button
               variant="outline"
               onClick={() => setShowProductForm(true)}
-              className="border-slate-600 text-slate-200"
+              className="border-slate-600 text-slate-900 hover:text-slate-100 hover:bg-slate-700"
             >
               <Plus className="w-4 h-4 mr-2" />
               Produit
@@ -150,7 +150,7 @@ export default function Pertes() {
             <Button
               variant="outline"
               onClick={handleExport}
-              className="border-slate-600 text-slate-200"
+              className="border-slate-600 text-slate-900 hover:text-slate-100 hover:bg-slate-700"
             >
               <Download className="w-4 h-4 mr-2" />
               Export
@@ -293,7 +293,7 @@ export default function Pertes() {
                     <Button
                       variant="outline"
                       onClick={() => setCart([])}
-                      className="border-slate-600 text-slate-200"
+                      className="border-slate-600 text-slate-900 hover:text-slate-100 hover:bg-slate-700"
                     >
                       <Trash2 className="w-4 h-4" />
                     </Button>
@@ -431,7 +431,7 @@ function ProductFormModal({ open, onClose, onSave, isSaving }) {
           </div>
 
           <div className="flex justify-end gap-3 pt-4">
-            <Button type="button" variant="outline" onClick={onClose} className="border-slate-600 text-slate-200">
+            <Button type="button" variant="outline" onClick={onClose} className="border-slate-600 text-slate-900 hover:text-slate-100 hover:bg-slate-700">
               Annuler
             </Button>
             <Button type="submit" disabled={isSaving} className="bg-orange-600 hover:bg-orange-700">

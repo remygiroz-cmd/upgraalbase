@@ -126,7 +126,7 @@ export default function Stocks() {
             <Button
               variant="outline"
               onClick={() => setShowSupplierForm(true)}
-              className="border-slate-600 text-slate-200"
+              className="border-slate-600 text-slate-900 hover:text-slate-100 hover:bg-slate-700"
             >
               <Truck className="w-4 h-4 mr-2" />
               Fournisseur
@@ -525,7 +525,7 @@ function ProductFormModal({ open, onClose, product, suppliers, onSave, isSaving 
           </div>
 
           <div className="flex justify-end gap-3 pt-4">
-            <Button type="button" variant="outline" onClick={onClose} className="border-slate-600 text-slate-200">
+            <Button type="button" variant="outline" onClick={onClose} className="border-slate-600 text-slate-900 hover:text-slate-100 hover:bg-slate-700">
               Annuler
             </Button>
             <Button type="submit" disabled={isSaving} className="bg-orange-600 hover:bg-orange-700">
@@ -604,7 +604,7 @@ function SupplierFormModal({ open, onClose, onSave, isSaving }) {
           </div>
 
           <div className="flex justify-end gap-3 pt-4">
-            <Button type="button" variant="outline" onClick={onClose} className="border-slate-600 text-slate-200">
+            <Button type="button" variant="outline" onClick={onClose} className="border-slate-600 text-slate-900 hover:text-slate-100 hover:bg-slate-700">
               Annuler
             </Button>
             <Button type="submit" disabled={isSaving} className="bg-orange-600 hover:bg-orange-700">
@@ -682,7 +682,7 @@ function OrderModal({ supplier, products, onClose }) {
         </div>
 
         <div className="flex justify-end gap-3 pt-4">
-          <Button variant="outline" onClick={onClose} className="border-slate-600 text-slate-200">
+          <Button variant="outline" onClick={onClose} className="border-slate-600 text-slate-900 hover:text-slate-100 hover:bg-slate-700">
             Annuler
           </Button>
           <Button 

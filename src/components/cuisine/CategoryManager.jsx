@@ -109,7 +109,7 @@ export default function CategoryManager({ onClose }) {
       </div>
 
       <div className="flex justify-end pt-2">
-        <Button variant="outline" onClick={onClose} className="border-slate-600 text-slate-200">
+        <Button variant="outline" onClick={onClose} className="border-slate-600 text-slate-900 hover:text-slate-100 hover:bg-slate-700">
           Fermer
         </Button>
       </div>

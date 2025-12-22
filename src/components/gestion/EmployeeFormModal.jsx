@@ -186,7 +186,7 @@ export default function EmployeeFormModal({ open, onClose, employee }) {
                   <Button
                     type="button"
                     variant="outline"
-                    className="border-slate-600 pointer-events-none"
+                    className="border-slate-600 text-slate-900 hover:text-slate-100 hover:bg-slate-700 pointer-events-none"
                     disabled={uploading}
                   >
                     {uploading ? (
@@ -463,7 +463,7 @@ export default function EmployeeFormModal({ open, onClose, employee }) {
           </Tabs>
 
           <div className="flex justify-end gap-3 pt-4 border-t border-slate-700">
-            <Button type="button" variant="outline" onClick={onClose} className="border-slate-600">
+            <Button type="button" variant="outline" onClick={onClose} className="border-slate-600 text-slate-900 hover:text-slate-100 hover:bg-slate-700">
               Annuler
             </Button>
             <Button 

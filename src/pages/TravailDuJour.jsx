@@ -185,7 +185,7 @@ export default function TravailDuJour() {
           <Button
             onClick={() => setShowChefMessage(true)}
             variant="outline"
-            className="border-slate-600 text-slate-200"
+            className="border-slate-600 text-slate-900 hover:text-slate-100 hover:bg-slate-700"
           >
             <MessageSquare className="w-4 h-4 mr-2" />
             Post-it
@@ -293,7 +293,7 @@ export default function TravailDuJour() {
             className="bg-slate-700 border-slate-600 min-h-[100px]"
           />
           <div className="flex justify-end gap-3">
-            <Button variant="outline" onClick={() => setShowChefMessage(false)} className="border-slate-600 text-slate-200">
+            <Button variant="outline" onClick={() => setShowChefMessage(false)} className="border-slate-600 text-slate-900 hover:text-slate-100 hover:bg-slate-700">
               Annuler
             </Button>
             <Button 

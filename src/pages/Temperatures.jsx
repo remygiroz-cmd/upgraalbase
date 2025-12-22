@@ -123,7 +123,7 @@ export default function Temperatures() {
             <Button
               variant="outline"
               onClick={() => setShowEquipmentModal(true)}
-              className="border-slate-600 text-slate-200"
+              className="border-slate-600 text-slate-900 hover:text-slate-100 hover:bg-slate-700"
             >
               <Settings className="w-4 h-4 mr-2" />
               Équipements
@@ -131,7 +131,7 @@ export default function Temperatures() {
             <Button
               variant="outline"
               onClick={handleExportCSV}
-              className="border-slate-600 text-slate-200"
+              className="border-slate-600 text-slate-900 hover:text-slate-100 hover:bg-slate-700"
             >
               <Download className="w-4 h-4 mr-2" />
               Export CSV
@@ -148,7 +148,7 @@ export default function Temperatures() {
           className={cn(
             session === 'morning'
               ? "bg-amber-600 hover:bg-amber-700"
-              : "border-slate-600"
+              : "border-slate-600 text-slate-900 hover:text-slate-100 hover:bg-slate-700"
           )}
         >
           <Sun className="w-4 h-4 mr-2" />
@@ -160,7 +160,7 @@ export default function Temperatures() {
           className={cn(
             session === 'evening'
               ? "bg-indigo-600 hover:bg-indigo-700"
-              : "border-slate-600"
+              : "border-slate-600 text-slate-900 hover:text-slate-100 hover:bg-slate-700"
           )}
         >
           <Moon className="w-4 h-4 mr-2" />
@@ -424,7 +424,7 @@ function EquipmentModal({ open, onClose, equipment, onSave, isSaving }) {
           </div>
 
           <div className="flex justify-end gap-3 pt-4">
-            <Button type="button" variant="outline" onClick={onClose} className="border-slate-600 text-slate-200">
+            <Button type="button" variant="outline" onClick={onClose} className="border-slate-600 text-slate-900 hover:text-slate-100 hover:bg-slate-700">
               Annuler
             </Button>
             <Button type="submit" disabled={isSaving} className="bg-orange-600 hover:bg-orange-700">

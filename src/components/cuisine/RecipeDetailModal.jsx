@@ -92,7 +92,7 @@ export default function RecipeDetailModal({ recipe, onClose, onEdit, onValidate 
               <Button
                 onClick={onValidate}
                 variant="outline"
-                className="border-orange-600 text-orange-400 hover:bg-orange-600/20"
+                className="border-orange-600 bg-orange-600/10 text-orange-500 hover:bg-orange-600/30 hover:text-orange-400"
               >
                 <CheckCircle2 className="w-4 h-4 mr-2" />
                 Valider la recette

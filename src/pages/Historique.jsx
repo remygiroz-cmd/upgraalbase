@@ -118,7 +118,7 @@ export default function Historique() {
           <Button
             variant="outline"
             onClick={handleExport}
-            className="border-slate-600 text-slate-200"
+            className="border-slate-600 text-slate-900 hover:text-slate-100 hover:bg-slate-700"
           >
             <Download className="w-4 h-4 mr-2" />
             Export CSV
