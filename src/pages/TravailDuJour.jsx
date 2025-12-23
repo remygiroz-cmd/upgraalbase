@@ -72,19 +72,22 @@ export default function TravailDuJour() {
     // Check if all tasks are completed
     const allCompleted = updatedTasks.every(t => t.is_completed);
 
-    // Always update tasks first
-    await base44.entities.WorkSession.update(activeSession.id, { tasks: updatedTasks });
-
     if (allCompleted) {
-      // Then complete the session
+      // Update tasks and complete session in one call
       await base44.entities.WorkSession.update(activeSession.id, {
+        tasks: updatedTasks,
         status: 'completed',
         completed_at: new Date().toISOString()
       });
+    } else {
+      // Just update tasks
+      await base44.entities.WorkSession.update(activeSession.id, { 
+        tasks: updatedTasks 
+      });
     }
 
-    // Refresh data
-    queryClient.invalidateQueries({ queryKey: ['workSessions'] });
+    // Force refresh
+    await queryClient.invalidateQueries({ queryKey: ['workSessions'] });
   };
 
   const handleRemoveTask = (taskIndex) => {
