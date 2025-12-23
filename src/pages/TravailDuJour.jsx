@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { ChefHat, Check, CheckCircle2, X, Clock, RotateCcw } from 'lucide-react';
@@ -95,6 +95,18 @@ export default function TravailDuJour() {
       data: { tasks: updatedTasks }
     });
   };
+
+  // Auto-complete session when all tasks are done
+  useEffect(() => {
+    if (!activeSession || activeSession.status === 'completed') return;
+    
+    const allTasksCompleted = activeSession.tasks?.length > 0 && 
+      activeSession.tasks.every(task => task.is_completed);
+    
+    if (allTasksCompleted) {
+      completeSessionMutation.mutate({ id: activeSession.id });
+    }
+  }, [activeSession?.tasks]);
 
   const handleRemoveTask = (taskIndex) => {
     if (!activeSession) return;
