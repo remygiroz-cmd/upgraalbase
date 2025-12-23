@@ -228,6 +228,18 @@ export default function RecipeFormModal({ open, onClose, recipe, currentSection 
                   className="hidden"
                 />
               </div>
+
+              <div>
+                <Label htmlFor="image-url" className="text-xs text-slate-400">Ou coller une URL d'image</Label>
+                <Input
+                  id="image-url"
+                  type="url"
+                  value={form.image_url}
+                  onChange={(e) => setForm(prev => ({ ...prev, image_url: e.target.value }))}
+                  placeholder="https://..."
+                  className="bg-slate-700 border-slate-600 mt-1 text-sm"
+                />
+              </div>
             </div>
           </div>
 
