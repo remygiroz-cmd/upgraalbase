@@ -12,6 +12,7 @@ import TaskFormModal from '@/components/cuisine/TaskFormModal';
 import CategoryManager from '@/components/cuisine/CategoryManager';
 import StopwatchModal from '@/components/cuisine/StopwatchModal';
 import ConfirmDialog from '@/components/ui/ConfirmDialog';
+import AdHocTaskModal from '@/components/cuisine/AdHocTaskModal';
 import { motion, AnimatePresence } from 'framer-motion';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import { cn } from '@/lib/utils';
@@ -26,6 +27,8 @@ export default function MiseEnPlace() {
   const [selectedTasks, setSelectedTasks] = useState(new Set());
   const [stockInputs, setStockInputs] = useState({});
   const [confirmDialog, setConfirmDialog] = useState({ open: false, title: '', description: '', onConfirm: null });
+  const [showAdHocModal, setShowAdHocModal] = useState(false);
+  const [adHocTasks, setAdHocTasks] = useState([]);
   const today = format(new Date(), 'yyyy-MM-dd');
   const dayOfWeek = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'][new Date().getDay()];
 
@@ -296,17 +299,29 @@ export default function MiseEnPlace() {
       return baseTask;
     });
 
+    // Add ad-hoc tasks
+    const adHocTasksArray = adHocTasks.map(adHoc => ({
+      task_id: null,
+      task_name: adHoc.name,
+      category_id: null,
+      category_name: null,
+      is_completed: false,
+      added_at: new Date().toISOString(),
+      ad_hoc_comment: adHoc.comment
+    }));
+
     createSessionMutation.mutate({
       date: today,
       status: 'active',
-      tasks: selectedTasksArray,
+      tasks: [...selectedTasksArray, ...adHocTasksArray],
       started_by: currentUser?.email,
       started_by_name: currentUser?.full_name || currentUser?.email,
       started_at: new Date().toISOString()
     });
     
-    // Reset stock inputs
+    // Reset
     setStockInputs({});
+    setAdHocTasks([]);
   };
 
   const handleAddToSession = async () => {
@@ -370,15 +385,27 @@ export default function MiseEnPlace() {
       return baseTask;
     });
 
-    const updatedTasks = [...(activeSession.tasks || []), ...selectedTasksArray];
+    // Add ad-hoc tasks
+    const adHocTasksArray = adHocTasks.map(adHoc => ({
+      task_id: null,
+      task_name: adHoc.name,
+      category_id: null,
+      category_name: null,
+      is_completed: false,
+      added_at: new Date().toISOString(),
+      ad_hoc_comment: adHoc.comment
+    }));
+
+    const updatedTasks = [...(activeSession.tasks || []), ...selectedTasksArray, ...adHocTasksArray];
     
     updateSessionMutation.mutate({
       id: activeSession.id,
       data: { tasks: updatedTasks }
     });
     
-    // Reset stock inputs
+    // Reset
     setStockInputs({});
+    setAdHocTasks([]);
   };
 
   if (loadingCategories || loadingTasks) {
@@ -413,7 +440,7 @@ export default function MiseEnPlace() {
 
       {/* Selection Actions */}
       <AnimatePresence>
-        {selectedTasks.size > 0 && (
+        {(selectedTasks.size > 0 || adHocTasks.length > 0) && (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -423,16 +450,35 @@ export default function MiseEnPlace() {
             <div className="max-w-7xl mx-auto pointer-events-auto">
               <div className="bg-orange-600/95 backdrop-blur-lg border-t-2 lg:border-2 border-orange-500/50 lg:rounded-2xl shadow-2xl p-3 lg:p-4">
                 <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-                  <span className="font-semibold text-white text-sm lg:text-base">
-                    {selectedTasks.size} tâche{selectedTasks.size > 1 ? 's' : ''} sélectionnée{selectedTasks.size > 1 ? 's' : ''}
-                  </span>
+                  <div className="flex flex-col gap-1">
+                    <span className="font-semibold text-white text-sm lg:text-base">
+                      {selectedTasks.size + adHocTasks.length} tâche{(selectedTasks.size + adHocTasks.length) > 1 ? 's' : ''} sélectionnée{(selectedTasks.size + adHocTasks.length) > 1 ? 's' : ''}
+                    </span>
+                    {adHocTasks.length > 0 && (
+                      <span className="text-xs text-orange-200">
+                        dont {adHocTasks.length} ponctuelle{adHocTasks.length > 1 ? 's' : ''}
+                      </span>
+                    )}
+                  </div>
                   <div className="flex gap-2 w-full sm:w-auto">
                     <Button
                       variant="outline"
-                      onClick={() => setSelectedTasks(new Set())}
+                      onClick={() => {
+                        setSelectedTasks(new Set());
+                        setAdHocTasks([]);
+                      }}
                       className="flex-1 sm:flex-none border-white/30 bg-white/10 text-white hover:bg-white/20 hover:border-white/50 text-sm"
                     >
                       Annuler
+                    </Button>
+                    <Button
+                      variant="outline"
+                      onClick={() => setShowAdHocModal(true)}
+                      className="flex-1 sm:flex-none border-white/30 bg-white/10 text-white hover:bg-white/20 hover:border-white/50 text-sm"
+                    >
+                      <Plus className="w-4 h-4 mr-1 lg:mr-2" />
+                      <span className="hidden sm:inline">Tâche ponctuelle</span>
+                      <span className="sm:hidden">Ponctuelle</span>
                     </Button>
                     {hasActiveSession ? (
                       <Button
@@ -569,6 +615,13 @@ export default function MiseEnPlace() {
           onClose={() => setStopwatchTask(null)}
         />
       )}
+
+      {/* Ad Hoc Task Modal */}
+      <AdHocTaskModal
+        open={showAdHocModal}
+        onClose={() => setShowAdHocModal(false)}
+        onAdd={(task) => setAdHocTasks(prev => [...prev, task])}
+      />
 
       {/* Confirm Dialog */}
       <ConfirmDialog

@@ -306,6 +306,7 @@ export default function TravailDuJour() {
 function WorkTaskCard({ task, onComplete, onRemove, allTasks }) {
   const taskDetails = allTasks.find(t => t.id === task.task_id);
   const hasQuantity = task.quantity_to_produce !== undefined && task.quantity_to_produce > 0;
+  const isAdHoc = !task.task_id;
   
   return (
     <motion.div
@@ -329,12 +330,23 @@ function WorkTaskCard({ task, onComplete, onRemove, allTasks }) {
             )}>
               {task.task_name}
             </h4>
+            {isAdHoc && (
+              <span className="px-2 py-1 rounded-lg bg-purple-600/20 text-purple-400 text-xs font-medium">
+                Ponctuelle
+              </span>
+            )}
             {hasQuantity && (
               <span className="px-2 py-1 rounded-lg bg-indigo-600/20 text-indigo-400 text-xs font-medium">
                 À faire : {task.quantity_to_produce} {taskDetails?.unit || 'unités'}
               </span>
             )}
           </div>
+          
+          {task.ad_hoc_comment && (
+            <p className="text-sm text-slate-400 mt-2 italic">
+              {task.ad_hoc_comment}
+            </p>
+          )}
           
           {task.is_completed && task.completed_by_name && (
             <div className="mt-2 flex items-center gap-2">
