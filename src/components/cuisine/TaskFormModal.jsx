@@ -135,7 +135,7 @@ export default function TaskFormModal({ open, onClose, task, categories }) {
     setGenerating(true);
     try {
       const result = await base44.integrations.Core.GenerateImage({
-        prompt: `Professional food preparation illustration of "${form.name}", clean minimal style, kitchen mise en place, white background, high quality`
+        prompt: `Professional high-quality photograph of "${form.name}" in a professional kitchen, realistic food photography, commercial kitchen setting, professional lighting, sharp focus, clean white background or minimal kitchen background, photorealistic, 8k quality`
       });
       if (result?.url) {
         setForm(prev => ({ ...prev, image_url: result.url }));
