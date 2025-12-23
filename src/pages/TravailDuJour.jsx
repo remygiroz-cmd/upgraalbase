@@ -332,6 +332,11 @@ function WorkTaskCard({ task, onComplete, onRemove, allTasksEntities }) {
   const [manualQuantity, setManualQuantity] = useState(task.completed_quantity || 0);
   const [showQuantityInput, setShowQuantityInput] = useState(false);
   
+  // Sync manualQuantity with task.completed_quantity when it changes
+  React.useEffect(() => {
+    setManualQuantity(task.completed_quantity || 0);
+  }, [task.completed_quantity]);
+  
   const completedQuantity = task.completed_quantity || 0;
   const totalQuantity = task.quantity_to_produce || 1;
   const remainingQuantity = Math.max(0, totalQuantity - completedQuantity);
