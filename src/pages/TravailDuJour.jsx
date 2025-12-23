@@ -358,77 +358,93 @@ function WorkTaskCard({ task, onComplete, onRemove, allTasks, taskEntities, dayO
           : "bg-slate-700/50 border-slate-600/50"
       )}
     >
-      <div className="flex flex-col gap-3">
-        <div className="flex-1">
-          <div className="flex items-start gap-2 flex-wrap mb-2">
-            <h4 className={cn(
-              "font-medium text-base flex-shrink-0",
-              task.is_completed && "line-through text-slate-500"
-            )}>
-              {task.task_name}
-            </h4>
-            {isAdHoc && (
-              <span className="px-2 py-1 rounded-lg bg-purple-600/20 text-purple-400 text-xs font-medium whitespace-nowrap">
-                Ponctuelle
-              </span>
-            )}
+      <div className="flex gap-3">
+        {/* Task Image */}
+        {taskDetails?.image_url && (
+          <div className="flex-shrink-0">
+            <img 
+              src={taskDetails.image_url} 
+              alt={task.task_name}
+              className={cn(
+                "w-20 h-20 sm:w-24 sm:h-24 rounded-lg object-cover border-2",
+                task.is_completed ? "border-orange-600/30 opacity-60" : "border-slate-600"
+              )}
+            />
           </div>
-          
-          <div className="flex flex-wrap gap-2">
-            {hasQuantity && (
-              <span className="px-2 py-1 rounded-lg bg-indigo-600/20 text-indigo-400 text-xs font-medium">
-                À faire : {task.quantity_to_produce} {taskDetails?.unit || 'unités'}
-              </span>
-            )}
-            {binaryMultiplier && binaryMultiplier > 0 && (
-              <span className="px-2 py-1 rounded-lg bg-amber-600/20 text-amber-400 text-xs font-medium">
-                Quantité : {binaryMultiplier}
-              </span>
-            )}
-          </div>
-          
-          {task.ad_hoc_comment && (
-            <p className="text-sm text-slate-400 mt-2 italic">
-              {task.ad_hoc_comment}
-            </p>
-          )}
-          
-          {task.is_completed && task.completed_by_name && (
-            <div className="mt-2 flex items-center gap-2">
-              <div className="w-6 h-6 rounded-full bg-orange-600 flex items-center justify-center text-xs font-medium text-white">
-                {task.completed_by_name.charAt(0).toUpperCase()}
-              </div>
-              <span className="text-sm text-slate-400">{task.completed_by_name}</span>
-              <span className="text-xs text-slate-500">
-                {format(new Date(task.completed_at), 'HH:mm')}
-              </span>
-            </div>
-          )}
-        </div>
+        )}
 
-        <div className="flex items-center gap-2 justify-end">
-          {!task.is_completed && (
-            <>
-              <Button
-                size="sm"
-                variant="ghost"
-                onClick={onRemove}
-                className="text-slate-400 hover:text-red-400 hover:bg-red-600/20 min-h-[44px] px-3"
-              >
-                <X className="w-4 h-4" />
-              </Button>
-              <Button
-                onClick={onComplete}
-                className="bg-orange-600 hover:bg-orange-700 min-h-[44px] flex-1 sm:flex-none"
-              >
-                <Check className="w-4 h-4 mr-2" />
-                Terminé
-              </Button>
-            </>
-          )}
-          {task.is_completed && (
-            <Check className="w-6 h-6 text-orange-400" />
-          )}
+        <div className="flex-1 flex flex-col gap-3">
+          <div className="flex-1">
+            <div className="flex items-start gap-2 flex-wrap mb-2">
+              <h4 className={cn(
+                "font-medium text-base flex-shrink-0",
+                task.is_completed && "line-through text-slate-500"
+              )}>
+                {task.task_name}
+              </h4>
+              {isAdHoc && (
+                <span className="px-2 py-1 rounded-lg bg-purple-600/20 text-purple-400 text-xs font-medium whitespace-nowrap">
+                  Ponctuelle
+                </span>
+              )}
+            </div>
+            
+            <div className="flex flex-wrap gap-2">
+              {hasQuantity && (
+                <span className="px-2 py-1 rounded-lg bg-indigo-600/20 text-indigo-400 text-xs font-medium">
+                  À faire : {task.quantity_to_produce} {taskDetails?.unit || 'unités'}
+                </span>
+              )}
+              {binaryMultiplier && binaryMultiplier > 0 && (
+                <span className="px-2 py-1 rounded-lg bg-amber-600/20 text-amber-400 text-xs font-medium">
+                  Quantité : {binaryMultiplier}
+                </span>
+              )}
+            </div>
+            
+            {task.ad_hoc_comment && (
+              <p className="text-sm text-slate-400 mt-2 italic">
+                {task.ad_hoc_comment}
+              </p>
+            )}
+            
+            {task.is_completed && task.completed_by_name && (
+              <div className="mt-2 flex items-center gap-2">
+                <div className="w-6 h-6 rounded-full bg-orange-600 flex items-center justify-center text-xs font-medium text-white">
+                  {task.completed_by_name.charAt(0).toUpperCase()}
+                </div>
+                <span className="text-sm text-slate-400">{task.completed_by_name}</span>
+                <span className="text-xs text-slate-500">
+                  {format(new Date(task.completed_at), 'HH:mm')}
+                </span>
+              </div>
+            )}
+          </div>
+
+          <div className="flex items-center gap-2 justify-end">
+            {!task.is_completed && (
+              <>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={onRemove}
+                  className="text-slate-400 hover:text-red-400 hover:bg-red-600/20 min-h-[44px] px-3"
+                >
+                  <X className="w-4 h-4" />
+                </Button>
+                <Button
+                  onClick={onComplete}
+                  className="bg-orange-600 hover:bg-orange-700 min-h-[44px] flex-1 sm:flex-none"
+                >
+                  <Check className="w-4 h-4 mr-2" />
+                  Terminé
+                </Button>
+              </>
+            )}
+            {task.is_completed && (
+              <Check className="w-6 h-6 text-orange-400" />
+            )}
+          </div>
         </div>
       </div>
     </motion.div>
