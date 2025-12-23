@@ -63,10 +63,18 @@ export default function TravailDuJour() {
       completed_at: new Date().toISOString()
     };
 
-    updateSessionMutation.mutate({
-      id: activeSession.id,
-      data: { tasks: updatedTasks }
-    });
+    // Check if all tasks are completed
+    const allCompleted = updatedTasks.every(t => t.is_completed);
+
+    if (allCompleted) {
+      // Auto-complete the session
+      completeSessionMutation.mutate({ id: activeSession.id });
+    } else {
+      updateSessionMutation.mutate({
+        id: activeSession.id,
+        data: { tasks: updatedTasks }
+      });
+    }
   };
 
   const handleRemoveTask = (taskIndex) => {
@@ -119,10 +127,38 @@ export default function TravailDuJour() {
     tasksByCategory[catId].push({ ...task, originalIndex: index });
   });
 
-  // Calculate progress
+  const { data: tasks = [] } = useQuery({
+    queryKey: ['tasks'],
+    queryFn: () => base44.entities.Task.list()
+  });
+
+  // Calculate progress and time
   const completedCount = activeSession.tasks?.filter(t => t.is_completed).length || 0;
   const totalCount = activeSession.tasks?.length || 0;
   const progressPercent = totalCount > 0 ? (completedCount / totalCount) * 100 : 0;
+
+  // Calculate total and remaining time
+  const totalTimeSeconds = activeSession.tasks?.reduce((acc, sessionTask) => {
+    const task = tasks.find(t => t.id === sessionTask.task_id);
+    if (!task) return acc;
+    const taskTime = (task.duration_minutes || 0) * 60 + (task.duration_seconds || 0);
+    return acc + taskTime;
+  }, 0) || 0;
+
+  const remainingTimeSeconds = activeSession.tasks?.reduce((acc, sessionTask) => {
+    if (sessionTask.is_completed) return acc;
+    const task = tasks.find(t => t.id === sessionTask.task_id);
+    if (!task) return acc;
+    const taskTime = (task.duration_minutes || 0) * 60 + (task.duration_seconds || 0);
+    return acc + taskTime;
+  }, 0) || 0;
+
+  const formatTime = (seconds) => {
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    if (hours > 0) return `${hours}h ${minutes}min`;
+    return `${minutes}min`;
+  };
 
   return (
     <div>
@@ -147,6 +183,10 @@ export default function TravailDuJour() {
           <div className="flex items-center gap-4">
             <span className="text-2xl font-bold text-orange-400">{completedCount}/{totalCount}</span>
             <span className="text-slate-300">tâches complétées</span>
+          </div>
+          <div className="text-right">
+            <div className="text-sm text-slate-400">Temps total : {formatTime(totalTimeSeconds)}</div>
+            <div className="text-lg font-semibold text-orange-400">Restant : {formatTime(remainingTimeSeconds)}</div>
           </div>
         </div>
         <Progress value={progressPercent} className="h-3 bg-slate-700" />
