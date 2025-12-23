@@ -108,16 +108,19 @@ export default function Recettes() {
       {/* Tabs */}
       <Tabs value={activeSection} onValueChange={setActiveSection} className="mb-6">
         <TabsList className="bg-slate-800 p-1">
-          {SECTIONS.map((section) =>
-          <TabsTrigger
-            key={section.value}
-            value={section.value} className="text-slate-200 px-3 py-1 text-sm font-medium rounded-md inline-flex items-center justify-center whitespace-nowrap ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:text-foreground data-[state=active]:shadow data-[state=active]:bg-slate-700">
-
-
-              <section.icon className="w-4 h-4 mr-2" />
-              {section.label}
-            </TabsTrigger>
-          )}
+          {SECTIONS.map((section) => {
+            const Icon = section.icon;
+            return (
+              <TabsTrigger
+                key={section.value}
+                value={section.value}
+                className="text-slate-200 px-3 py-1 text-sm font-medium rounded-md inline-flex items-center justify-center whitespace-nowrap ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:text-foreground data-[state=active]:shadow data-[state=active]:bg-slate-700"
+              >
+                <Icon className="w-4 h-4 mr-2" />
+                {section.label}
+              </TabsTrigger>
+            );
+          })}
         </TabsList>
       </Tabs>
 
