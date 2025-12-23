@@ -106,20 +106,25 @@ export default function Recettes() {
 
 
       {/* Tabs */}
-      <Tabs value={activeSection} onValueChange={setActiveSection} className="mb-6">
-        <TabsList className="bg-slate-50 text-muted-foreground p-1 rounded-lg inline-flex h-9 items-center justify-center">
-          {SECTIONS.map((section) =>
-          <TabsTrigger
-            key={section.value}
-            value={section.value} className="bg-slate-600 text-slate-200 px-3 py-1 text-sm font-medium rounded-md inline-flex items-center justify-center whitespace-nowrap ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:text-foreground data-[state=active]:shadow data-[state=active]:bg-slate-700">
-
-
-              <section.icon className="bg-slate-50 mr-2 lucide lucide-file-text w-4 h-4" />
+      <div className="flex gap-2 mb-6">
+        {SECTIONS.map((section) => {
+          const Icon = section.icon;
+          return (
+            <Button
+              key={section.value}
+              variant="outline"
+              onClick={() => setActiveSection(section.value)}
+              className={cn(
+                "border-slate-600 text-slate-900 hover:text-slate-100 hover:bg-slate-700",
+                activeSection === section.value && "bg-slate-700 text-slate-100"
+              )}
+            >
+              <Icon className="w-4 h-4 mr-2" />
               {section.label}
-            </TabsTrigger>
-          )}
-        </TabsList>
-      </Tabs>
+            </Button>
+          );
+        })}
+      </div>
 
       {/* Search */}
       <div className="relative mb-6">
