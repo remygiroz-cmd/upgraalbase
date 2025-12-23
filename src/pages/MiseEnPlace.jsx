@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
-import { ClipboardList, Plus, GripVertical, Clock, Hash, ToggleLeft, Pencil, Trash2, Play, Archive, ArchiveRestore } from 'lucide-react';
+import { ClipboardList, Plus, GripVertical, Clock, Hash, ToggleLeft, Pencil, Trash2, Play } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
@@ -26,27 +26,18 @@ export default function MiseEnPlace() {
   const [selectedTasks, setSelectedTasks] = useState(new Set());
   const [stockInputs, setStockInputs] = useState({});
   const [confirmDialog, setConfirmDialog] = useState({ open: false, title: '', description: '', onConfirm: null });
-  const [showArchived, setShowArchived] = useState(false);
   const today = format(new Date(), 'yyyy-MM-dd');
   const dayOfWeek = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'][new Date().getDay()];
 
-  const { data: allCategories = [], isLoading: loadingCategories } = useQuery({
+  const { data: categories = [], isLoading: loadingCategories } = useQuery({
     queryKey: ['categories'],
     queryFn: () => base44.entities.Category.list('order')
   });
 
-  const { data: allTasks = [], isLoading: loadingTasks } = useQuery({
+  const { data: tasks = [], isLoading: loadingTasks } = useQuery({
     queryKey: ['tasks'],
     queryFn: () => base44.entities.Task.list('order')
   });
-
-  const categories = showArchived 
-    ? allCategories 
-    : allCategories.filter(c => c.is_active !== false);
-
-  const tasks = showArchived 
-    ? allTasks 
-    : allTasks.filter(t => t.is_active !== false);
 
   const deleteTaskMutation = useMutation({
     mutationFn: (id) => base44.entities.Task.delete(id),
@@ -66,16 +57,6 @@ export default function MiseEnPlace() {
   const updateTaskMutation = useMutation({
     mutationFn: ({ id, data }) => base44.entities.Task.update(id, data),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['tasks'] })
-  });
-
-  const archiveTaskMutation = useMutation({
-    mutationFn: ({ id, archived }) => base44.entities.Task.update(id, { is_active: !archived }),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['tasks'] })
-  });
-
-  const archiveCategoryMutation = useMutation({
-    mutationFn: ({ id, archived }) => base44.entities.Category.update(id, { is_active: !archived }),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['categories'] })
   });
 
   const handleDragEnd = async (result) => {
@@ -414,17 +395,6 @@ export default function MiseEnPlace() {
           <>
             <Button
               variant="outline"
-              onClick={() => setShowArchived(!showArchived)}
-              className={cn(
-                "border-slate-600 hover:bg-slate-700 text-slate-900 hover:text-slate-100",
-                showArchived && "bg-slate-700 text-orange-400"
-              )}
-            >
-              <Archive className="w-4 h-4 mr-2" />
-              {showArchived ? 'Masquer archivés' : 'Voir archivés'}
-            </Button>
-            <Button
-              variant="outline"
               onClick={() => setShowCategoryManager(true)}
               className="border-slate-600 hover:bg-slate-700 text-slate-900 hover:text-slate-100"
             >
@@ -525,7 +495,6 @@ export default function MiseEnPlace() {
                     tasks={uncategorizedTasks}
                     onEditTask={handleEditTask}
                     onDeleteTask={(id) => deleteTaskMutation.mutate(id)}
-                    onArchiveTask={(id, archived) => archiveTaskMutation.mutate({ id, archived })}
                     onStartStopwatch={setStopwatchTask}
                     isDraggable={false}
                     selectedTasks={selectedTasks}
@@ -555,7 +524,6 @@ export default function MiseEnPlace() {
                           category={category}
                           onEditCategory={(cat) => updateCategoryMutation.mutate(cat)}
                           onDeleteCategory={(id) => deleteCategoryMutation.mutate(id)}
-                          onArchiveCategory={(id, archived) => archiveCategoryMutation.mutate({ id, archived })}
                           dragHandleProps={provided.dragHandleProps}
                           isDragging={snapshot.isDragging}
                           isDraggable={true}
@@ -564,7 +532,6 @@ export default function MiseEnPlace() {
                           stockInputs={stockInputs}
                           onStockInput={handleStockInput}
                           dayOfWeek={dayOfWeek}
-                          isArchived={category.is_active === false}
                         />
                       </div>
                     )}
@@ -616,7 +583,7 @@ export default function MiseEnPlace() {
   );
 }
 
-function CategoryColumn({ categoryId, title, color, tasks, onEditTask, onDeleteTask, onArchiveTask, onStartStopwatch, category, onEditCategory, onDeleteCategory, onArchiveCategory, dragHandleProps, isDragging, isDraggable, selectedTasks, onToggleSelection, stockInputs, onStockInput, dayOfWeek, isArchived }) {
+function CategoryColumn({ categoryId, title, color, tasks, onEditTask, onDeleteTask, onStartStopwatch, category, onEditCategory, onDeleteCategory, dragHandleProps, isDragging, isDraggable, selectedTasks, onToggleSelection, stockInputs, onStockInput, dayOfWeek }) {
   const [isEditing, setIsEditing] = useState(false);
   const [editName, setEditName] = useState(title);
   const [confirmDeleteCategory, setConfirmDeleteCategory] = useState(false);
@@ -684,13 +651,6 @@ function CategoryColumn({ categoryId, title, color, tasks, onEditTask, onDeleteT
               <Pencil className="w-4 h-4" />
             </button>
             <button
-              onClick={() => onArchiveCategory?.(category.id, isArchived)}
-              className="p-2 rounded-lg hover:bg-amber-600/20 text-slate-400 hover:text-amber-400 transition-colors"
-              title={isArchived ? "Restaurer" : "Archiver"}
-            >
-              {isArchived ? <ArchiveRestore className="w-4 h-4" /> : <Archive className="w-4 h-4" />}
-            </button>
-            <button
               onClick={handleDelete}
               className="p-2 rounded-lg hover:bg-red-600/20 text-slate-400 hover:text-red-400 transition-colors"
               title="Supprimer"
@@ -722,7 +682,6 @@ function CategoryColumn({ categoryId, title, color, tasks, onEditTask, onDeleteT
                       task={task}
                       onEdit={() => onEditTask(task)}
                       onDelete={() => onDeleteTask(task.id)}
-                      onArchive={() => onArchiveTask?.(task.id, task.is_active === false)}
                       onStartStopwatch={() => onStartStopwatch(task)}
                       isSelected={selectedTasks?.has(task.id)}
                       onToggleSelection={() => onToggleSelection?.(task.id)}
@@ -731,7 +690,6 @@ function CategoryColumn({ categoryId, title, color, tasks, onEditTask, onDeleteT
                       stockValue={stockInputs?.[task.id]}
                       onStockChange={(value) => onStockInput?.(task.id, value)}
                       dayOfWeek={dayOfWeek}
-                      isArchived={task.is_active === false}
                     />
                   </div>
                 )}
@@ -761,7 +719,7 @@ function CategoryColumn({ categoryId, title, color, tasks, onEditTask, onDeleteT
   );
 }
 
-function TaskCard({ task, onEdit, onDelete, onArchive, onStartStopwatch, isSelected, onToggleSelection, dragHandleProps, isDragging, stockValue, onStockChange, dayOfWeek, isArchived }) {
+function TaskCard({ task, onEdit, onDelete, onStartStopwatch, isSelected, onToggleSelection, dragHandleProps, isDragging, stockValue, onStockChange, dayOfWeek }) {
   const formatDuration = () => {
     const mins = task.duration_minutes || 0;
     const secs = task.duration_seconds || 0;
@@ -882,16 +840,6 @@ function TaskCard({ task, onEdit, onDelete, onArchive, onStartStopwatch, isSelec
             title="Modifier"
           >
             <Pencil className="w-4 h-4" />
-          </button>
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onArchive?.();
-            }}
-            className="p-2 rounded-lg hover:bg-amber-600/20 text-slate-400 hover:text-amber-400 transition-colors"
-            title={isArchived ? "Restaurer" : "Archiver"}
-          >
-            {isArchived ? <ArchiveRestore className="w-4 h-4" /> : <Archive className="w-4 h-4" />}
           </button>
           <button
             onClick={(e) => {
