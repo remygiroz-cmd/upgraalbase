@@ -44,6 +44,7 @@ export default function TaskFormModal({ open, onClose, task, categories }) {
     duration_seconds: 0,
     tracking_mode: 'binary',
     unit: '',
+    requires_stock_check: false,
     weekly_targets: {
       monday: 0,
       tuesday: 0,
@@ -68,6 +69,7 @@ export default function TaskFormModal({ open, onClose, task, categories }) {
         duration_seconds: task.duration_seconds || 0,
         tracking_mode: task.tracking_mode || 'binary',
         unit: task.unit || '',
+        requires_stock_check: task.requires_stock_check || false,
         weekly_targets: task.weekly_targets || {
           monday: 0, tuesday: 0, wednesday: 0, thursday: 0,
           friday: 0, saturday: 0, sunday: 0
@@ -85,6 +87,7 @@ export default function TaskFormModal({ open, onClose, task, categories }) {
         duration_seconds: 0,
         tracking_mode: 'binary',
         unit: '',
+        requires_stock_check: false,
         weekly_targets: {
           monday: 0, tuesday: 0, wednesday: 0, thursday: 0,
           friday: 0, saturday: 0, sunday: 0
@@ -285,16 +288,34 @@ export default function TaskFormModal({ open, onClose, task, categories }) {
               </div>
 
               {form.tracking_mode === 'quantity' && (
-                <div>
-                  <Label htmlFor="unit">Unité de mesure</Label>
-                  <Input
-                    id="unit"
-                    value={form.unit}
-                    onChange={(e) => setForm(prev => ({ ...prev, unit: e.target.value }))}
-                    placeholder="Ex: portions, kg, litres..."
-                    className="bg-slate-700 border-slate-600 mt-1"
-                  />
-                </div>
+                <>
+                  <div>
+                    <Label htmlFor="unit">Unité de mesure</Label>
+                    <Input
+                      id="unit"
+                      value={form.unit}
+                      onChange={(e) => setForm(prev => ({ ...prev, unit: e.target.value }))}
+                      placeholder="Ex: portions, kg, litres..."
+                      className="bg-slate-700 border-slate-600 mt-1"
+                    />
+                  </div>
+                  
+                  <div className="flex items-center gap-3 p-4 bg-slate-700/50 rounded-xl">
+                    <input
+                      type="checkbox"
+                      id="requires_stock_check"
+                      checked={form.requires_stock_check}
+                      onChange={(e) => setForm(prev => ({ ...prev, requires_stock_check: e.target.checked }))}
+                      className="w-4 h-4 rounded border-slate-600 bg-slate-700 text-orange-600 focus:ring-orange-500"
+                    />
+                    <Label htmlFor="requires_stock_check" className="cursor-pointer flex-1">
+                      Vérifier le stock restant avant ajout
+                      <p className="text-xs text-slate-400 font-normal mt-1">
+                        Cette tâche sera automatiquement cochée avec calcul de la quantité à produire
+                      </p>
+                    </Label>
+                  </div>
+                </>
               )}
 
               <div>
