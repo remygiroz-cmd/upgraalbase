@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
-import { Thermometer, Plus, Settings, Download, AlertTriangle, CheckCircle2, Sun, Moon } from 'lucide-react';
+import { Thermometer, Plus, Settings, Download, AlertTriangle, CheckCircle2, Sun, Moon, Save, History } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -24,6 +24,7 @@ export default function Temperatures() {
   const [session, setSession] = useState(autoSession);
   const [showEquipmentModal, setShowEquipmentModal] = useState(false);
   const [editingEquipment, setEditingEquipment] = useState(null);
+  const [showHistoryModal, setShowHistoryModal] = useState(false);
 
   const { data: equipment = [], isLoading: loadingEquipment } = useQuery({
     queryKey: ['equipment'],
@@ -81,6 +82,35 @@ export default function Temperatures() {
     }
   });
 
+  const saveSnapshotMutation = useMutation({
+    mutationFn: async () => {
+      const snapshot = equipment.map(eq => {
+        const temp = temperatures.find(t => t.equipment_id === eq.id);
+        return {
+          equipment_id: eq.id,
+          equipment_name: eq.name,
+          equipment_type: eq.type,
+          temperature: temp?.temperature,
+          target_min: eq.target_min,
+          target_max: eq.target_max,
+          is_compliant: temp?.is_compliant
+        };
+      });
+
+      return base44.entities.TemperatureSnapshot.create({
+        date: today,
+        session,
+        snapshot,
+        recorded_by: currentUser?.email,
+        recorded_by_name: currentUser?.full_name || currentUser?.email,
+        recorded_at: new Date().toISOString()
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['temperatureSnapshots'] });
+    }
+  });
+
   const handleExportCSV = () => {
     const rows = [['Équipement', 'Type', 'Température', 'Min', 'Max', 'Conforme', 'Signé par', 'Date/Heure']];
     
@@ -122,6 +152,14 @@ export default function Temperatures() {
           <>
             <Button
               variant="outline"
+              onClick={() => setShowHistoryModal(true)}
+              className="border-slate-600 text-slate-900 hover:text-slate-100 hover:bg-slate-700"
+            >
+              <History className="w-4 h-4 mr-2" />
+              Historique
+            </Button>
+            <Button
+              variant="outline"
               onClick={() => setShowEquipmentModal(true)}
               className="border-slate-600 text-slate-900 hover:text-slate-100 hover:bg-slate-700"
             >
@@ -135,6 +173,14 @@ export default function Temperatures() {
             >
               <Download className="w-4 h-4 mr-2" />
               Export CSV
+            </Button>
+            <Button
+              onClick={() => saveSnapshotMutation.mutate()}
+              disabled={saveSnapshotMutation.isPending || temperatures.length === 0}
+              className="bg-orange-600 hover:bg-orange-700"
+            >
+              <Save className="w-4 h-4 mr-2" />
+              Enregistrer températures
             </Button>
           </>
         }
@@ -207,6 +253,12 @@ export default function Temperatures() {
         equipment={editingEquipment}
         onSave={(data) => saveEquipmentMutation.mutate(data)}
         isSaving={saveEquipmentMutation.isPending}
+      />
+
+      {/* History Modal */}
+      <HistoryModal
+        open={showHistoryModal}
+        onClose={() => setShowHistoryModal(false)}
       />
     </div>
   );
@@ -432,6 +484,113 @@ function EquipmentModal({ open, onClose, equipment, onSave, isSaving }) {
             </Button>
           </div>
         </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function HistoryModal({ open, onClose }) {
+  const { data: snapshots = [], isLoading } = useQuery({
+    queryKey: ['temperatureSnapshots'],
+    queryFn: () => base44.entities.TemperatureSnapshot.list('-recorded_at'),
+    enabled: open
+  });
+
+  return (
+    <Dialog open={open} onOpenChange={onClose}>
+      <DialogContent className="bg-slate-800 border-slate-700 max-w-4xl max-h-[80vh] overflow-hidden flex flex-col">
+        <DialogHeader>
+          <DialogTitle>Historique des températures HACCP</DialogTitle>
+        </DialogHeader>
+
+        {isLoading ? (
+          <LoadingSpinner />
+        ) : snapshots.length === 0 ? (
+          <EmptyState
+            icon={History}
+            title="Aucun historique"
+            description="Les enregistrements apparaîtront ici après avoir cliqué sur 'Enregistrer températures'"
+          />
+        ) : (
+          <div className="space-y-4 overflow-y-auto pr-2">
+            {snapshots.map((snapshot) => (
+              <div key={snapshot.id} className="bg-slate-900 rounded-xl p-4 border border-slate-700">
+                <div className="flex items-center justify-between mb-3">
+                  <div>
+                    <h4 className="font-semibold text-white">
+                      {format(new Date(snapshot.date), "EEEE d MMMM yyyy", { locale: fr })}
+                      <Badge variant="outline" className="ml-2 text-xs">
+                        {snapshot.session === 'morning' ? (
+                          <>
+                            <Sun className="w-3 h-3 mr-1" />
+                            Matin
+                          </>
+                        ) : (
+                          <>
+                            <Moon className="w-3 h-3 mr-1" />
+                            Soir
+                          </>
+                        )}
+                      </Badge>
+                    </h4>
+                    <p className="text-xs text-slate-400 mt-1">
+                      Par {snapshot.recorded_by_name} • {format(new Date(snapshot.recorded_at), "dd/MM/yyyy à HH:mm")}
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-sm text-slate-300">
+                      {snapshot.snapshot.filter(s => s.is_compliant).length}/{snapshot.snapshot.length}
+                    </p>
+                    <p className="text-xs text-slate-400">conformes</p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+                  {snapshot.snapshot.map((item, idx) => (
+                    <div
+                      key={idx}
+                      className={cn(
+                        "p-3 rounded-lg border",
+                        item.temperature !== undefined && item.temperature !== null
+                          ? item.is_compliant
+                            ? "bg-green-950/30 border-green-800/50"
+                            : "bg-red-950/30 border-red-800/50"
+                          : "bg-slate-800 border-slate-700"
+                      )}
+                    >
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium text-white text-sm truncate">{item.equipment_name}</p>
+                          <p className="text-xs text-slate-400">
+                            Cible: {item.target_min}°C à {item.target_max}°C
+                          </p>
+                        </div>
+                        {item.temperature !== undefined && item.temperature !== null ? (
+                          item.is_compliant ? (
+                            <CheckCircle2 className="w-4 h-4 text-green-400 flex-shrink-0 ml-2" />
+                          ) : (
+                            <AlertTriangle className="w-4 h-4 text-red-400 flex-shrink-0 ml-2" />
+                          )
+                        ) : null}
+                      </div>
+                      <p className="text-xl font-bold text-white mt-2">
+                        {item.temperature !== undefined && item.temperature !== null
+                          ? `${item.temperature}°C`
+                          : 'Non relevé'}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        <div className="flex justify-end pt-4 border-t border-slate-700 mt-4">
+          <Button variant="outline" onClick={onClose} className="border-slate-600 text-slate-900 hover:text-slate-100 hover:bg-slate-700">
+            Fermer
+          </Button>
+        </div>
       </DialogContent>
     </Dialog>
   );
