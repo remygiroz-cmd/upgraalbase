@@ -22,7 +22,13 @@ export default function Layout({ children, currentPageName }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [theme, setTheme] = useState(() => {
     const saved = localStorage.getItem('upgraal-theme');
-    return saved || 'dark';
+    if (saved) return saved;
+    
+    // Respect system preference if no saved preference
+    if (window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches) {
+      return 'light';
+    }
+    return 'dark';
   });
 
   useEffect(() => {
@@ -69,36 +75,7 @@ export default function Layout({ children, currentPageName }) {
   );
 
   return (
-    <div className={cn(
-      "min-h-screen transition-colors duration-200",
-      "bg-slate-900 text-slate-100",
-      "light-mode:bg-slate-50 light-mode:text-slate-900"
-    )}>
-      <style>{`
-        :root {
-          --success: #f97316;
-          --warning: #f59e0b;
-          --cold: #6366f1;
-          --danger: #ef4444;
-        }
-        * {
-          -webkit-tap-highlight-color: transparent;
-        }
-        ::-webkit-scrollbar {
-          width: 6px;
-          height: 6px;
-        }
-        ::-webkit-scrollbar-track {
-          background: transparent;
-        }
-        ::-webkit-scrollbar-thumb {
-          background: #475569;
-          border-radius: 3px;
-        }
-        .light-mode ::-webkit-scrollbar-thumb {
-          background: #cbd5e1;
-        }
-      `}</style>
+    <div className="min-h-screen">
 
       {/* Mobile Header */}
       <header className={cn(
