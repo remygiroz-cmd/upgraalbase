@@ -147,6 +147,9 @@ export default function TravailDuJour() {
     tasksByCategory[catId].push({ ...task, originalIndex: index });
   });
 
+  // Pass the global tasks array to components
+  const globalTasks = tasks;
+
   // Calculate progress with partial completion
   const calculateProgress = () => {
     if (!activeSession.tasks?.length) return { completed: 0, total: 0, percent: 0 };
@@ -288,7 +291,7 @@ export default function TravailDuJour() {
                       task={task}
                       onComplete={(qty) => handleCompleteTask(task.originalIndex, qty)}
                       onRemove={() => handleRemoveTask(task.originalIndex)}
-                      allTasks={tasks}
+                      allTasksEntities={globalTasks}
                     />
                   ))}
                 </AnimatePresence>
@@ -323,14 +326,15 @@ export default function TravailDuJour() {
   );
 }
 
-function WorkTaskCard({ task, onComplete, onRemove, allTasks }) {
-  const taskDetails = allTasks.find(t => t.id === task.task_id);
+function WorkTaskCard({ task, onComplete, onRemove, allTasksEntities }) {
+  const taskDetails = allTasksEntities.find(t => t.id === task.task_id);
   const hasQuantity = task.quantity_to_produce !== undefined && task.quantity_to_produce > 0;
   const [manualQuantity, setManualQuantity] = useState(task.completed_quantity || 0);
   const [showQuantityInput, setShowQuantityInput] = useState(false);
   
   const completedQuantity = task.completed_quantity || 0;
   const totalQuantity = task.quantity_to_produce || 1;
+  const remainingQuantity = Math.max(0, totalQuantity - completedQuantity);
   const isPartiallyComplete = completedQuantity > 0 && completedQuantity < totalQuantity;
   
   const handleCompleteWithQuantity = () => {
@@ -375,7 +379,12 @@ function WorkTaskCard({ task, onComplete, onRemove, allTasks }) {
                   ? "bg-indigo-600/20 text-indigo-400"
                   : "bg-slate-600/20 text-slate-400"
               )}>
-                {completedQuantity > 0 ? `${completedQuantity}/` : ''}{totalQuantity} {taskDetails?.unit || 'unités'}
+                {task.is_completed 
+                  ? `${totalQuantity} ${taskDetails?.unit || 'unités'} ✓`
+                  : isPartiallyComplete
+                  ? `Restant : ${remainingQuantity} ${taskDetails?.unit || 'unités'} (${completedQuantity}/${totalQuantity})`
+                  : `À faire : ${totalQuantity} ${taskDetails?.unit || 'unités'}`
+                }
               </span>
             )}
           </div>
