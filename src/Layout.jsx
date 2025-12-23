@@ -68,22 +68,22 @@ export default function Layout({ children, currentPageName }) {
   // Theme configurations
   const themes = {
     'professional-light': {
-      bg: 'bg-gray-50',
+      bg: 'bg-white',
       text: 'text-gray-900',
-      sidebar: 'bg-white border-r border-gray-200',
-      sidebarText: 'text-gray-700',
-      header: 'bg-white/95 border-gray-200',
-      card: 'bg-white border-gray-200',
-      cardHover: 'hover:border-gray-300',
-      navHover: 'hover:bg-gray-100',
-      navActive: 'bg-blue-50 text-blue-700 border-l-4 border-blue-600',
+      sidebar: 'bg-white border-r border-gray-300',
+      sidebarText: 'text-gray-900',
+      header: 'bg-white border-gray-300',
+      card: 'bg-white border-gray-300',
+      cardHover: 'hover:border-gray-400',
+      navHover: 'hover:bg-blue-50',
+      navActive: 'bg-blue-100 text-blue-900 border-l-4 border-blue-600',
       button: 'bg-blue-600 hover:bg-blue-700',
       buttonText: 'text-white',
       accent: '#2563eb',
-      input: 'bg-white border-gray-300',
-      scrollbar: '#d1d5db',
-      shadow: 'shadow-sm',
-      sectionTitle: 'text-gray-500'
+      input: 'bg-gray-50 border-gray-300',
+      scrollbar: '#9ca3af',
+      shadow: 'shadow-md',
+      sectionTitle: 'text-gray-600'
     },
     'dark-premium': {
       bg: 'bg-slate-950',
