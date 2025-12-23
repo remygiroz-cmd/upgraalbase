@@ -585,7 +585,7 @@ function TaskCard({ task, onEdit, onDelete, onStartStopwatch, isSelected, onTogg
         )}
         
         <div className="flex-1 min-w-0">
-          <h4 className="font-medium truncate">{task.name}</h4>
+          <h4 className="font-medium break-words">{task.name}</h4>
           <div className="flex items-center gap-3 mt-1 text-xs text-slate-400">
             {formatDuration() && (
               <span className="flex items-center gap-1">
