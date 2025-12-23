@@ -28,20 +28,20 @@
     --danger: 239 68 68;
   }
 
-  .light-mode {
-    /* Mode clair */
-    --bg-primary: 248 250 252; /* slate-50 */
-    --bg-secondary: 255 255 255; /* white */
-    --bg-tertiary: 241 245 249; /* slate-100 */
-    --bg-card: 255 255 255; /* white */
-    --bg-hover: 241 245 249; /* slate-100 */
+  html.light-mode {
+    /* Mode clair - Design propre et lisible */
+    --bg-primary: 249 250 251; /* #F9FAFB - gris très clair */
+    --bg-secondary: 255 255 255; /* white - sidebar */
+    --bg-tertiary: 243 244 246; /* #F3F4F6 - éléments tertiaires */
+    --bg-card: 255 255 255; /* white - cartes */
+    --bg-hover: 243 244 246; /* #F3F4F6 - hover clair */
     
-    --text-primary: 15 23 42; /* slate-900 */
-    --text-secondary: 71 85 105; /* slate-600 */
-    --text-tertiary: 100 116 139; /* slate-500 */
+    --text-primary: 17 24 39; /* #111827 - texte principal très sombre */
+    --text-secondary: 75 85 99; /* #4B5563 - texte secondaire lisible */
+    --text-tertiary: 107 114 128; /* #6B7280 - texte tertiaire */
     
-    --border-primary: 226 232 240; /* slate-200 */
-    --border-secondary: 203 213 225; /* slate-300 */
+    --border-primary: 229 231 235; /* #E5E7EB - bordure légère */
+    --border-secondary: 209 213 219; /* #D1D5DB - bordure secondaire */
     
     --orange-primary: 249 115 22; /* orange-600 */
     --orange-hover: 234 88 12; /* orange-700 */
@@ -70,6 +70,15 @@
   }
 
   body {
-    @apply bg-[rgb(var(--bg-primary))] text-[rgb(var(--text-primary))];
+    @apply bg-[rgb(var(--bg-primary))] text-[rgb(var(--text-primary))] transition-colors duration-200;
+  }
+
+  /* Ombres douces pour le light mode */
+  html.light-mode .shadow-sm {
+    box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  }
+
+  html.light-mode [class*="shadow-"] {
+    box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
   }
 }

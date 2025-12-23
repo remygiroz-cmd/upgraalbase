@@ -32,12 +32,19 @@ export default function Layout({ children, currentPageName }) {
   });
 
   useEffect(() => {
+    // Apply theme immediately on mount to prevent flash
+    const applyTheme = () => {
+      if (theme === 'light') {
+        document.documentElement.classList.add('light-mode');
+        document.body.classList.add('light-mode');
+      } else {
+        document.documentElement.classList.remove('light-mode');
+        document.body.classList.remove('light-mode');
+      }
+    };
+    
+    applyTheme();
     localStorage.setItem('upgraal-theme', theme);
-    if (theme === 'light') {
-      document.documentElement.classList.add('light-mode');
-    } else {
-      document.documentElement.classList.remove('light-mode');
-    }
   }, [theme]);
 
   const toggleTheme = () => {
