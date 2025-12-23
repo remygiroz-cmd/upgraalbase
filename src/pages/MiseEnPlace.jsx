@@ -310,6 +310,25 @@ export default function MiseEnPlace() {
   const handleAddToSession = async () => {
     if (!activeSession) return;
     
+    // Check for duplicate tasks
+    const existingTaskIds = new Set(activeSession.tasks?.map(t => t.task_id) || []);
+    const duplicateTasks = Array.from(selectedTasks).filter(taskId => existingTaskIds.has(taskId));
+    
+    if (duplicateTasks.length > 0) {
+      const duplicateNames = duplicateTasks
+        .map(taskId => tasks.find(t => t.id === taskId)?.name)
+        .filter(Boolean)
+        .join(', ');
+      
+      const confirmMessage = duplicateTasks.length === 1
+        ? `La tâche "${duplicateNames}" est déjà présente dans la liste. Voulez-vous l'ajouter de nouveau ?`
+        : `Les tâches suivantes sont déjà présentes dans la liste : ${duplicateNames}. Voulez-vous les ajouter de nouveau ?`;
+      
+      if (!window.confirm(confirmMessage)) {
+        return;
+      }
+    }
+    
     const selectedTasksArray = Array.from(selectedTasks).map(taskId => {
       const task = tasks.find(t => t.id === taskId);
       const category = categories.find(c => c.id === task?.category_id);
