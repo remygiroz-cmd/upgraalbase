@@ -73,13 +73,17 @@ export default function TravailDuJour() {
       ? completedQuantity 
       : (task.quantity_to_produce || 1);
     
+    const isFullyCompleted = finalQuantity >= (task.quantity_to_produce || 1);
+    
     updatedTasks[taskIndex] = {
       ...updatedTasks[taskIndex],
       completed_quantity: finalQuantity,
-      is_completed: finalQuantity >= (task.quantity_to_produce || 1),
-      completed_by: currentUser?.email,
-      completed_by_name: currentUser?.full_name || currentUser?.email,
-      completed_at: new Date().toISOString()
+      is_completed: isFullyCompleted,
+      ...(isFullyCompleted && {
+        completed_by: currentUser?.email,
+        completed_by_name: currentUser?.full_name || currentUser?.email,
+        completed_at: new Date().toISOString()
+      })
     };
 
     updateSessionMutation.mutate({
