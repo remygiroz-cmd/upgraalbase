@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
-import { ClipboardList, Plus, GripVertical, Clock, Hash, ToggleLeft, Pencil, Trash2, Play } from 'lucide-react';
+import { ClipboardList, Plus, GripVertical, Clock, Hash, ToggleLeft, Pencil, Trash2, Play, Archive, RotateCcw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import PageHeader from '@/components/ui/PageHeader';
 import EmptyState from '@/components/ui/EmptyState';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
@@ -26,21 +27,33 @@ export default function MiseEnPlace() {
   const [selectedTasks, setSelectedTasks] = useState(new Set());
   const [stockInputs, setStockInputs] = useState({});
   const [confirmDialog, setConfirmDialog] = useState({ open: false, title: '', description: '', onConfirm: null });
+  const [currentTab, setCurrentTab] = useState('active');
   const today = format(new Date(), 'yyyy-MM-dd');
   const dayOfWeek = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'][new Date().getDay()];
 
-  const { data: categories = [], isLoading: loadingCategories } = useQuery({
+  const { data: allCategories = [], isLoading: loadingCategories } = useQuery({
     queryKey: ['categories'],
     queryFn: () => base44.entities.Category.list('order')
   });
 
-  const { data: tasks = [], isLoading: loadingTasks } = useQuery({
+  const { data: allTasks = [], isLoading: loadingTasks } = useQuery({
     queryKey: ['tasks'],
     queryFn: () => base44.entities.Task.list('order')
   });
 
-  const deleteTaskMutation = useMutation({
-    mutationFn: (id) => base44.entities.Task.delete(id),
+  // Filter active and archived items
+  const categories = allCategories.filter(c => !c.is_archived);
+  const archivedCategories = allCategories.filter(c => c.is_archived);
+  const tasks = allTasks.filter(t => !t.is_archived);
+  const archivedTasks = allTasks.filter(t => t.is_archived);
+
+  const archiveTaskMutation = useMutation({
+    mutationFn: ({ id }) => base44.entities.Task.update(id, { is_archived: true }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['tasks'] })
+  });
+
+  const restoreTaskMutation = useMutation({
+    mutationFn: ({ id }) => base44.entities.Task.update(id, { is_archived: false }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['tasks'] })
   });
 
@@ -49,8 +62,13 @@ export default function MiseEnPlace() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['categories'] })
   });
 
-  const deleteCategoryMutation = useMutation({
-    mutationFn: (id) => base44.entities.Category.delete(id),
+  const archiveCategoryMutation = useMutation({
+    mutationFn: ({ id }) => base44.entities.Category.update(id, { is_archived: true }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['categories'] })
+  });
+
+  const restoreCategoryMutation = useMutation({
+    mutationFn: ({ id }) => base44.entities.Category.update(id, { is_archived: false }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['categories'] })
   });
 
@@ -151,6 +169,34 @@ export default function MiseEnPlace() {
   const handleCloseTaskModal = () => {
     setShowTaskModal(false);
     setEditingTask(null);
+  };
+
+  const handleArchiveTask = (task) => {
+    setConfirmDialog({
+      open: true,
+      title: 'Archiver la tâche',
+      description: `Êtes-vous sûr de vouloir archiver la tâche "${task.name}" ? Vous pourrez la restaurer depuis les archives.`,
+      onConfirm: () => archiveTaskMutation.mutate({ id: task.id }),
+      variant: 'warning'
+    });
+  };
+
+  const handleRestoreTask = (taskId) => {
+    restoreTaskMutation.mutate({ id: taskId });
+  };
+
+  const handleArchiveCategory = (category) => {
+    setConfirmDialog({
+      open: true,
+      title: 'Archiver la catégorie',
+      description: `Êtes-vous sûr de vouloir archiver la catégorie "${category.name}" ? Vous pourrez la restaurer depuis les archives.`,
+      onConfirm: () => archiveCategoryMutation.mutate({ id: category.id }),
+      variant: 'warning'
+    });
+  };
+
+  const handleRestoreCategory = (categoryId) => {
+    restoreCategoryMutation.mutate({ id: categoryId });
   };
 
   const getTasksByCategory = (categoryId) => {
@@ -463,86 +509,190 @@ export default function MiseEnPlace() {
         )}
       </AnimatePresence>
 
-      {categories.length === 0 && tasks.length === 0 ? (
-        <EmptyState
-          icon={ClipboardList}
-          title="Aucune tâche"
-          description="Commencez par créer des catégories puis ajoutez vos premières tâches de mise en place."
-          action={
-            <Button
-              onClick={() => setShowCategoryManager(true)}
-              className="bg-orange-600 hover:bg-orange-700"
-            >
-              Créer une catégorie
-            </Button>
-          }
-        />
-      ) : (
-        <DragDropContext onDragEnd={handleDragEnd}>
-          <Droppable droppableId="categories" direction="horizontal" type="category">
-            {(provided) => (
-              <div 
-                {...provided.droppableProps}
-                ref={provided.innerRef}
-                className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6"
-              >
-                {/* Uncategorized tasks */}
-                {uncategorizedTasks.length > 0 && (
-                  <CategoryColumn
-                    categoryId="uncategorized"
-                    title="Sans catégorie"
-                    color="#64748b"
-                    tasks={uncategorizedTasks}
-                    onEditTask={handleEditTask}
-                    onDeleteTask={(id) => deleteTaskMutation.mutate(id)}
-                    onStartStopwatch={setStopwatchTask}
-                    isDraggable={false}
-                    selectedTasks={selectedTasks}
-                    onToggleSelection={toggleTaskSelection}
-                    stockInputs={stockInputs}
-                    onStockInput={handleStockInput}
-                    dayOfWeek={dayOfWeek}
-                  />
-                )}
+      <Tabs value={currentTab} onValueChange={setCurrentTab} className="w-full">
+        <TabsList className="bg-slate-800 mb-6">
+          <TabsTrigger value="active">Actif</TabsTrigger>
+          <TabsTrigger value="archived-categories">
+            <Archive className="w-4 h-4 mr-2" />
+            Catégories archivées
+          </TabsTrigger>
+          <TabsTrigger value="archived-tasks">
+            <Archive className="w-4 h-4 mr-2" />
+            Tâches archivées
+          </TabsTrigger>
+        </TabsList>
 
-                {/* Category columns */}
-                {categories.map((category, index) => (
-                  <Draggable key={category.id} draggableId={category.id} index={index} type="category">
-                    {(provided, snapshot) => (
-                      <div
-                        ref={provided.innerRef}
-                        {...provided.draggableProps}
-                      >
-                        <CategoryColumn
-                          categoryId={category.id}
-                          title={category.name}
-                          color={category.color || '#10b981'}
-                          tasks={getTasksByCategory(category.id)}
-                          onEditTask={handleEditTask}
-                          onDeleteTask={(id) => deleteTaskMutation.mutate(id)}
-                          onStartStopwatch={setStopwatchTask}
-                          category={category}
-                          onEditCategory={(cat) => updateCategoryMutation.mutate(cat)}
-                          onDeleteCategory={(id) => deleteCategoryMutation.mutate(id)}
-                          dragHandleProps={provided.dragHandleProps}
-                          isDragging={snapshot.isDragging}
-                          isDraggable={true}
-                          selectedTasks={selectedTasks}
-                          onToggleSelection={toggleTaskSelection}
-                          stockInputs={stockInputs}
-                          onStockInput={handleStockInput}
-                          dayOfWeek={dayOfWeek}
-                        />
-                      </div>
+        <TabsContent value="active">
+          {categories.length === 0 && tasks.length === 0 ? (
+            <EmptyState
+              icon={ClipboardList}
+              title="Aucune tâche"
+              description="Commencez par créer des catégories puis ajoutez vos premières tâches de mise en place."
+              action={
+                <Button
+                  onClick={() => setShowCategoryManager(true)}
+                  className="bg-orange-600 hover:bg-orange-700"
+                >
+                  Créer une catégorie
+                </Button>
+              }
+            />
+          ) : (
+            <DragDropContext onDragEnd={handleDragEnd}>
+              <Droppable droppableId="categories" direction="horizontal" type="category">
+                {(provided) => (
+                  <div 
+                    {...provided.droppableProps}
+                    ref={provided.innerRef}
+                    className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6"
+                  >
+                    {/* Uncategorized tasks */}
+                    {uncategorizedTasks.length > 0 && (
+                      <CategoryColumn
+                        categoryId="uncategorized"
+                        title="Sans catégorie"
+                        color="#64748b"
+                        tasks={uncategorizedTasks}
+                        onEditTask={handleEditTask}
+                        onArchiveTask={handleArchiveTask}
+                        onStartStopwatch={setStopwatchTask}
+                        isDraggable={false}
+                        selectedTasks={selectedTasks}
+                        onToggleSelection={toggleTaskSelection}
+                        stockInputs={stockInputs}
+                        onStockInput={handleStockInput}
+                        dayOfWeek={dayOfWeek}
+                      />
                     )}
-                  </Draggable>
-                ))}
-                {provided.placeholder}
-              </div>
-            )}
-          </Droppable>
-        </DragDropContext>
-      )}
+
+                    {/* Category columns */}
+                    {categories.map((category, index) => (
+                      <Draggable key={category.id} draggableId={category.id} index={index} type="category">
+                        {(provided, snapshot) => (
+                          <div
+                            ref={provided.innerRef}
+                            {...provided.draggableProps}
+                          >
+                            <CategoryColumn
+                              categoryId={category.id}
+                              title={category.name}
+                              color={category.color || '#10b981'}
+                              tasks={getTasksByCategory(category.id)}
+                              onEditTask={handleEditTask}
+                              onArchiveTask={handleArchiveTask}
+                              onStartStopwatch={setStopwatchTask}
+                              category={category}
+                              onEditCategory={(cat) => updateCategoryMutation.mutate(cat)}
+                              onArchiveCategory={() => handleArchiveCategory(category)}
+                              dragHandleProps={provided.dragHandleProps}
+                              isDragging={snapshot.isDragging}
+                              isDraggable={true}
+                              selectedTasks={selectedTasks}
+                              onToggleSelection={toggleTaskSelection}
+                              stockInputs={stockInputs}
+                              onStockInput={handleStockInput}
+                              dayOfWeek={dayOfWeek}
+                            />
+                          </div>
+                        )}
+                      </Draggable>
+                    ))}
+                    {provided.placeholder}
+                  </div>
+                )}
+              </Droppable>
+            </DragDropContext>
+          )}
+        </TabsContent>
+
+        <TabsContent value="archived-categories">
+          {archivedCategories.length === 0 ? (
+            <EmptyState
+              icon={Archive}
+              title="Aucune catégorie archivée"
+              description="Les catégories archivées apparaîtront ici."
+            />
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {archivedCategories.map((category) => (
+                <div
+                  key={category.id}
+                  className="bg-slate-800/50 rounded-xl border border-slate-700 p-4"
+                  style={{ borderLeftWidth: 4, borderLeftColor: category.color }}
+                >
+                  <div className="flex items-center justify-between mb-2">
+                    <h3 className="font-semibold">{category.name}</h3>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => handleRestoreCategory(category.id)}
+                      className="border-orange-600 text-orange-400 hover:bg-orange-600/20"
+                    >
+                      <RotateCcw className="w-4 h-4 mr-1" />
+                      Restaurer
+                    </Button>
+                  </div>
+                  <p className="text-sm text-slate-400">
+                    Archivée le {format(new Date(category.updated_date), 'dd/MM/yyyy')}
+                  </p>
+                </div>
+              ))}
+            </div>
+          )}
+        </TabsContent>
+
+        <TabsContent value="archived-tasks">
+          {archivedTasks.length === 0 ? (
+            <EmptyState
+              icon={Archive}
+              title="Aucune tâche archivée"
+              description="Les tâches archivées apparaîtront ici."
+            />
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {archivedTasks.map((task) => {
+                const category = allCategories.find(c => c.id === task.category_id);
+                return (
+                  <div
+                    key={task.id}
+                    className="bg-slate-800/50 rounded-xl border border-slate-700 p-4"
+                  >
+                    <div className="flex items-start gap-3 mb-3">
+                      {task.image_url && (
+                        <img 
+                          src={task.image_url} 
+                          alt={task.name}
+                          className="w-12 h-12 rounded-lg object-cover flex-shrink-0"
+                        />
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <h4 className="font-medium break-words">{task.name}</h4>
+                        {category && (
+                          <p className="text-xs text-slate-400 mt-1">{category.name}</p>
+                        )}
+                      </div>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <p className="text-sm text-slate-400">
+                        Archivée le {format(new Date(task.updated_date), 'dd/MM/yyyy')}
+                      </p>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => handleRestoreTask(task.id)}
+                        className="border-orange-600 text-orange-400 hover:bg-orange-600/20"
+                      >
+                        <RotateCcw className="w-4 h-4 mr-1" />
+                        Restaurer
+                      </Button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </TabsContent>
+      </Tabs>
 
       {/* Task Form Modal */}
       <TaskFormModal
@@ -583,21 +733,14 @@ export default function MiseEnPlace() {
   );
 }
 
-function CategoryColumn({ categoryId, title, color, tasks, onEditTask, onDeleteTask, onStartStopwatch, category, onEditCategory, onDeleteCategory, dragHandleProps, isDragging, isDraggable, selectedTasks, onToggleSelection, stockInputs, onStockInput, dayOfWeek }) {
+function CategoryColumn({ categoryId, title, color, tasks, onEditTask, onArchiveTask, onStartStopwatch, category, onEditCategory, onArchiveCategory, dragHandleProps, isDragging, isDraggable, selectedTasks, onToggleSelection, stockInputs, onStockInput, dayOfWeek }) {
   const [isEditing, setIsEditing] = useState(false);
   const [editName, setEditName] = useState(title);
-  const [confirmDeleteCategory, setConfirmDeleteCategory] = useState(false);
 
   const handleSaveEdit = () => {
     if (editName.trim() && category) {
       onEditCategory({ id: category.id, data: { name: editName.trim() } });
       setIsEditing(false);
-    }
-  };
-
-  const handleDelete = () => {
-    if (category) {
-      setConfirmDeleteCategory(true);
     }
   };
 
@@ -651,11 +794,11 @@ function CategoryColumn({ categoryId, title, color, tasks, onEditTask, onDeleteT
               <Pencil className="w-4 h-4" />
             </button>
             <button
-              onClick={handleDelete}
-              className="p-2 rounded-lg hover:bg-red-600/20 text-slate-400 hover:text-red-400 transition-colors"
-              title="Supprimer"
+              onClick={onArchiveCategory}
+              className="p-2 rounded-lg hover:bg-orange-600/20 text-slate-400 hover:text-orange-400 transition-colors"
+              title="Archiver"
             >
-              <Trash2 className="w-4 h-4" />
+              <Archive className="w-4 h-4" />
             </button>
           </div>
         )}
@@ -681,7 +824,7 @@ function CategoryColumn({ categoryId, title, color, tasks, onEditTask, onDeleteT
                     <TaskCard
                       task={task}
                       onEdit={() => onEditTask(task)}
-                      onDelete={() => onDeleteTask(task.id)}
+                      onArchive={() => onArchiveTask(task)}
                       onStartStopwatch={() => onStartStopwatch(task)}
                       isSelected={selectedTasks?.has(task.id)}
                       onToggleSelection={() => onToggleSelection?.(task.id)}
@@ -706,20 +849,11 @@ function CategoryColumn({ categoryId, title, color, tasks, onEditTask, onDeleteT
         )}
       </Droppable>
 
-      <ConfirmDialog
-        open={confirmDeleteCategory}
-        onOpenChange={setConfirmDeleteCategory}
-        title="Supprimer la catégorie"
-        description={`Êtes-vous sûr de vouloir supprimer la catégorie "${title}" ?`}
-        onConfirm={() => onDeleteCategory(category.id)}
-        variant="danger"
-        confirmText="Supprimer"
-      />
     </div>
   );
 }
 
-function TaskCard({ task, onEdit, onDelete, onStartStopwatch, isSelected, onToggleSelection, dragHandleProps, isDragging, stockValue, onStockChange, dayOfWeek }) {
+function TaskCard({ task, onEdit, onArchive, onStartStopwatch, isSelected, onToggleSelection, dragHandleProps, isDragging, stockValue, onStockChange, dayOfWeek }) {
   const formatDuration = () => {
     const mins = task.duration_minutes || 0;
     const secs = task.duration_seconds || 0;
@@ -844,12 +978,12 @@ function TaskCard({ task, onEdit, onDelete, onStartStopwatch, isSelected, onTogg
           <button
             onClick={(e) => {
               e.stopPropagation();
-              onDelete();
+              onArchive();
             }}
-            className="p-2 rounded-lg hover:bg-red-600/20 text-slate-400 hover:text-red-400 transition-colors"
-            title="Supprimer"
+            className="p-2 rounded-lg hover:bg-orange-600/20 text-slate-400 hover:text-orange-400 transition-colors"
+            title="Archiver"
           >
-            <Trash2 className="w-4 h-4" />
+            <Archive className="w-4 h-4" />
           </button>
         </div>
       </div>
