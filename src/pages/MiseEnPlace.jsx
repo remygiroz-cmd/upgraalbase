@@ -807,13 +807,6 @@ function CategoryColumn({ categoryId, title, color, tasks, onEditTask, onDeleteT
             >
               <Pencil className="w-4 h-4" />
             </button>
-            <button
-              onClick={handleDelete}
-              className="p-2 rounded-lg hover:bg-red-600/20 text-slate-400 hover:text-red-400 transition-colors"
-              title="Supprimer"
-            >
-              <Trash2 className="w-4 h-4" />
-            </button>
           </div>
         )}
       </div>
@@ -997,16 +990,6 @@ function TaskCard({ task, onEdit, onDelete, onStartStopwatch, isSelected, onTogg
             title="Modifier"
           >
             <Pencil className="w-4 h-4" />
-          </button>
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onDelete();
-            }}
-            className="p-2 rounded-lg hover:bg-red-600/20 text-slate-400 hover:text-red-400 transition-colors"
-            title="Supprimer"
-          >
-            <Trash2 className="w-4 h-4" />
           </button>
         </div>
       </div>
