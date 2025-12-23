@@ -186,14 +186,11 @@ export default function Layout({ children, currentPageName }) {
             theme === 'professional-light' ? 'border-gray-200' : 'border-slate-800'
           )}>
             <div className="flex items-center gap-3">
-              <div className={cn(
-                "w-10 h-10 rounded-xl flex items-center justify-center",
-                theme === 'professional-light' 
-                  ? 'bg-gradient-to-br from-blue-500 to-blue-700' 
-                  : 'bg-gradient-to-br from-violet-500 to-violet-700'
-              )}>
-                <ChefHat className="w-6 h-6 text-white" />
-              </div>
+              <img 
+                src={logoUrl} 
+                alt="UpGraal Logo" 
+                className="w-10 h-10 object-contain"
+              />
               <div>
                 <h1 className="font-bold text-base">UpGraal</h1>
                 <p className={cn(

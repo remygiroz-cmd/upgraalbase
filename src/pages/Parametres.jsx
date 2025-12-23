@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
-import { Settings, User, Bell, Palette, Clock, Save, Check } from 'lucide-react';
+import { Settings, User, Bell, Palette, Clock, Save, Check, Upload, Image } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -347,4 +347,105 @@ function SettingRow({ label, description, checked, onCheckedChange }) {
 
     </div>);
 
+}
+
+function LogoUploadSection() {
+  const queryClient = useQueryClient();
+  const [uploading, setUploading] = useState(false);
+
+  const { data: appSettings = [] } = useQuery({
+    queryKey: ['appSettings'],
+    queryFn: () => base44.entities.AppSettings.filter({ setting_key: 'app_logo' })
+  });
+
+  const currentLogo = appSettings[0]?.logo_url || 'https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/69497257a1b1a9a05e568521/71ee8b574_logonouveau.png';
+
+  const saveLogoMutation = useMutation({
+    mutationFn: async (logoUrl) => {
+      if (appSettings[0]?.id) {
+        return base44.entities.AppSettings.update(appSettings[0].id, { logo_url: logoUrl });
+      }
+      return base44.entities.AppSettings.create({ setting_key: 'app_logo', logo_url: logoUrl });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['appSettings'] });
+      toast.success('Logo mis à jour avec succès');
+      setUploading(false);
+    }
+  });
+
+  const handleFileUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      toast.error('Veuillez sélectionner une image');
+      return;
+    }
+
+    setUploading(true);
+    try {
+      const { file_url } = await base44.integrations.Core.UploadFile({ file });
+      saveLogoMutation.mutate(file_url);
+    } catch (error) {
+      toast.error('Erreur lors de l\'upload du logo');
+      setUploading(false);
+    }
+  };
+
+  return (
+    <div className="bg-white rounded-2xl border-2 border-gray-300 p-6 shadow-sm">
+      <div className="flex items-start justify-between mb-4">
+        <div>
+          <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+            <Image className="w-5 h-5" />
+            Logo de l'application
+          </h3>
+          <p className="text-sm text-gray-700 mt-1">
+            Personnalisez le logo affiché pour tous les utilisateurs
+          </p>
+        </div>
+      </div>
+
+      <div className="flex items-center gap-6">
+        <div className="flex-shrink-0">
+          <div className="w-24 h-24 rounded-xl border-2 border-gray-300 bg-gray-50 flex items-center justify-center overflow-hidden">
+            <img 
+              src={currentLogo} 
+              alt="Logo actuel" 
+              className="w-full h-full object-contain p-2"
+            />
+          </div>
+        </div>
+
+        <div className="flex-1">
+          <Label 
+            htmlFor="logo-upload" 
+            className="cursor-pointer"
+          >
+            <div className={cn(
+              "border-2 border-dashed rounded-xl p-6 text-center transition-all",
+              uploading ? "border-gray-300 bg-gray-100" : "border-gray-400 hover:border-orange-500 hover:bg-orange-50"
+            )}>
+              <Upload className="w-8 h-8 mx-auto mb-2 text-gray-600" />
+              <p className="text-sm font-medium text-gray-900">
+                {uploading ? 'Upload en cours...' : 'Cliquez pour uploader un nouveau logo'}
+              </p>
+              <p className="text-xs text-gray-600 mt-1">
+                PNG, JPG ou SVG (max 2MB)
+              </p>
+            </div>
+          </Label>
+          <Input
+            id="logo-upload"
+            type="file"
+            accept="image/*"
+            onChange={handleFileUpload}
+            disabled={uploading}
+            className="hidden"
+          />
+        </div>
+      </div>
+    </div>
+  );
 }
