@@ -903,10 +903,9 @@ function TaskCard({ task, onEdit, onDelete, onStartStopwatch, isSelected, onTogg
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, scale: 0.95 }}
-      onClick={requiresStock ? undefined : onToggleSelection}
+      onClick={onToggleSelection}
       className={cn(
-        "group bg-slate-700/50 rounded-xl p-3 border transition-all",
-        !requiresStock && "cursor-pointer",
+        "group bg-slate-700/50 rounded-xl p-3 border transition-all cursor-pointer",
         isSelected 
           ? "bg-orange-600/30 border-orange-600/70 ring-2 ring-orange-600/50" 
           : "border-slate-600/50 hover:bg-slate-700 hover:border-slate-500/50",
