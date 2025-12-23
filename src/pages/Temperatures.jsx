@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
-import { Thermometer, Plus, Settings, Download, AlertTriangle, CheckCircle2, Save, History } from 'lucide-react';
+import { Thermometer, Plus, Settings, Download, AlertTriangle, CheckCircle2, Save, History, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -11,6 +11,7 @@ import { Badge } from '@/components/ui/badge';
 import PageHeader from '@/components/ui/PageHeader';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import EmptyState from '@/components/ui/EmptyState';
+import ConfirmDialog from '@/components/ui/ConfirmDialog';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
@@ -480,11 +481,30 @@ function EquipmentModal({ open, onClose, equipment, onSave, isSaving }) {
 }
 
 function HistoryModal({ open, onClose }) {
+  const queryClient = useQueryClient();
+  const [confirmDelete, setConfirmDelete] = useState(null);
+
   const { data: snapshots = [], isLoading } = useQuery({
     queryKey: ['temperatureSnapshots'],
     queryFn: () => base44.entities.TemperatureSnapshot.list('-recorded_at'),
     enabled: open
   });
+
+  const { data: currentUser } = useQuery({
+    queryKey: ['currentUser'],
+    queryFn: () => base44.auth.me()
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (id) => base44.entities.TemperatureSnapshot.delete(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['temperatureSnapshots'] });
+      toast.success('Historique supprimé');
+      setConfirmDelete(null);
+    }
+  });
+
+  const isAdmin = currentUser?.role === 'admin';
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
@@ -506,7 +526,7 @@ function HistoryModal({ open, onClose }) {
             {snapshots.map((snapshot) => (
               <div key={snapshot.id} className="bg-slate-900 rounded-xl p-4 border border-slate-700">
                 <div className="flex items-center justify-between mb-3">
-                  <div>
+                  <div className="flex-1">
                     <h4 className="font-semibold text-white">
                       {format(new Date(snapshot.date), "EEEE d MMMM yyyy", { locale: fr })}
                     </h4>
@@ -514,11 +534,23 @@ function HistoryModal({ open, onClose }) {
                       Par {snapshot.recorded_by_name} • {format(new Date(snapshot.recorded_at), "dd/MM/yyyy à HH:mm")}
                     </p>
                   </div>
-                  <div className="text-right">
-                    <p className="text-sm text-slate-300">
-                      {snapshot.snapshot.filter(s => s.is_compliant).length}/{snapshot.snapshot.length}
-                    </p>
-                    <p className="text-xs text-slate-400">conformes</p>
+                  <div className="flex items-center gap-3">
+                    <div className="text-right">
+                      <p className="text-sm text-slate-300">
+                        {snapshot.snapshot.filter(s => s.is_compliant).length}/{snapshot.snapshot.length}
+                      </p>
+                      <p className="text-xs text-slate-400">conformes</p>
+                    </div>
+                    {isAdmin && (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => setConfirmDelete(snapshot.id)}
+                        className="text-red-400 hover:text-red-300 hover:bg-red-950/30"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    )}
                   </div>
                 </div>
 
@@ -568,6 +600,16 @@ function HistoryModal({ open, onClose }) {
             Fermer
           </Button>
         </div>
+
+        <ConfirmDialog
+          open={!!confirmDelete}
+          onOpenChange={(open) => !open && setConfirmDelete(null)}
+          title="Supprimer l'historique"
+          description="Êtes-vous sûr de vouloir supprimer cet enregistrement de températures ?"
+          onConfirm={() => deleteMutation.mutate(confirmDelete)}
+          variant="danger"
+          confirmText="Supprimer"
+        />
       </DialogContent>
     </Dialog>
   );
