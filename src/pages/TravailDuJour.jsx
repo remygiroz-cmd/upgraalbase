@@ -34,6 +34,11 @@ export default function TravailDuJour() {
     queryFn: () => base44.auth.me()
   });
 
+  const { data: tasks = [] } = useQuery({
+    queryKey: ['tasks'],
+    queryFn: () => base44.entities.Task.list()
+  });
+
   const updateSessionMutation = useMutation({
     mutationFn: ({ id, data }) => base44.entities.WorkSession.update(id, data),
     onSuccess: () => {
@@ -125,11 +130,6 @@ export default function TravailDuJour() {
       tasksByCategory[catId] = [];
     }
     tasksByCategory[catId].push({ ...task, originalIndex: index });
-  });
-
-  const { data: tasks = [] } = useQuery({
-    queryKey: ['tasks'],
-    queryFn: () => base44.entities.Task.list()
   });
 
   // Calculate progress and time
