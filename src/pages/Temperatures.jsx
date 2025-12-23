@@ -41,6 +41,11 @@ export default function Temperatures() {
     queryFn: () => base44.auth.me()
   });
 
+  const { data: todaySnapshots = [] } = useQuery({
+    queryKey: ['temperatureSnapshots', today],
+    queryFn: () => base44.entities.TemperatureSnapshot.filter({ date: today })
+  });
+
   const saveTempMutation = useMutation({
     mutationFn: async ({ equipmentId, temp, equipment: eq }) => {
       const existing = temperatures.find(t => t.equipment_id === equipmentId);
@@ -83,7 +88,7 @@ export default function Temperatures() {
   });
 
   const saveSnapshotMutation = useMutation({
-    mutationFn: async () => {
+    mutationFn: async (isAuto = false) => {
       const snapshot = equipment.map(eq => {
         const temp = temperatures.find(t => t.equipment_id === eq.id);
         return {
@@ -101,8 +106,8 @@ export default function Temperatures() {
         date: today,
         session,
         snapshot,
-        recorded_by: currentUser?.email,
-        recorded_by_name: currentUser?.full_name || currentUser?.email,
+        recorded_by: currentUser?.email || 'système',
+        recorded_by_name: isAuto ? 'Enregistrement automatique' : (currentUser?.full_name || currentUser?.email),
         recorded_at: new Date().toISOString()
       });
     },
@@ -110,6 +115,91 @@ export default function Temperatures() {
       queryClient.invalidateQueries({ queryKey: ['temperatureSnapshots'] });
     }
   });
+
+  // Auto-save logic
+  useEffect(() => {
+    if (!equipment.length || !todaySnapshots || !currentUser) return;
+
+    const now = new Date();
+    const currentHour = now.getHours();
+    
+    const hasMorningSnapshot = todaySnapshots.some(s => s.session === 'morning');
+    const hasEveningSnapshot = todaySnapshots.some(s => s.session === 'evening');
+
+    const shouldAutoSaveMorning = currentHour >= 14 && !hasMorningSnapshot;
+    const shouldAutoSaveEvening = currentHour >= 23 && !hasEveningSnapshot;
+
+    const autoSave = async (targetSession) => {
+      // Create auto temperatures if not exist
+      const autoTemps = [];
+      for (const eq of equipment) {
+        const existing = await base44.entities.Temperature.filter({ 
+          date: today, 
+          session: targetSession, 
+          equipment_id: eq.id 
+        });
+
+        if (existing.length === 0) {
+          const autoTemp = eq.type === 'positive' ? 3 : -18;
+          const isCompliant = autoTemp >= eq.target_min && autoTemp <= eq.target_max;
+          
+          await base44.entities.Temperature.create({
+            equipment_id: eq.id,
+            date: today,
+            session: targetSession,
+            temperature: autoTemp,
+            target_min: eq.target_min,
+            target_max: eq.target_max,
+            is_compliant: isCompliant,
+            is_auto_filled: true,
+            signed_by: 'système',
+            signed_by_name: 'Automatique',
+            signed_at: new Date().toISOString()
+          });
+          autoTemps.push({ equipment_id: eq.id, temperature: autoTemp, is_compliant: isCompliant });
+        }
+      }
+
+      // Create snapshot
+      if (autoTemps.length > 0) {
+        const snapshot = equipment.map(eq => {
+          const autoTemp = autoTemps.find(t => t.equipment_id === eq.id);
+          const defaultTemp = eq.type === 'positive' ? 3 : -18;
+          const temp = autoTemp?.temperature ?? defaultTemp;
+          const isCompliant = temp >= eq.target_min && temp <= eq.target_max;
+          
+          return {
+            equipment_id: eq.id,
+            equipment_name: eq.name,
+            equipment_type: eq.type,
+            temperature: temp,
+            target_min: eq.target_min,
+            target_max: eq.target_max,
+            is_compliant: isCompliant
+          };
+        });
+
+        await base44.entities.TemperatureSnapshot.create({
+          date: today,
+          session: targetSession,
+          snapshot,
+          recorded_by: 'système',
+          recorded_by_name: 'Enregistrement automatique',
+          recorded_at: new Date().toISOString()
+        });
+
+        queryClient.invalidateQueries({ queryKey: ['temperatures'] });
+        queryClient.invalidateQueries({ queryKey: ['temperatureSnapshots'] });
+      }
+    };
+
+    if (shouldAutoSaveMorning) {
+      autoSave('morning');
+    }
+    if (shouldAutoSaveEvening) {
+      autoSave('evening');
+    }
+  }, [equipment, todaySnapshots, currentUser, today, queryClient]);
 
   const handleExportCSV = () => {
     const rows = [['Équipement', 'Type', 'Température', 'Min', 'Max', 'Conforme', 'Signé par', 'Date/Heure']];
