@@ -216,18 +216,49 @@ export default function MiseEnPlace() {
     }
   };
 
-  // Auto-select tasks with stock requirements on mount
+  // Check if auto-schedule task should be triggered
+  const shouldAutoSchedule = (task) => {
+    if (!task.auto_schedule?.enabled) return false;
+    
+    const now = new Date();
+    const currentDay = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'][now.getDay()];
+    const currentTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+    
+    // Check if trigger day and time match
+    if (task.auto_schedule.trigger_day !== currentDay) return false;
+    if (!task.auto_schedule.trigger_time) return false;
+    
+    return currentTime >= task.auto_schedule.trigger_time;
+  };
+
+  // Auto-select tasks on mount
   React.useEffect(() => {
-    const stockTasks = tasks.filter(t => t.requires_stock_check && (t.weekly_targets?.[dayOfWeek] || 0) > 0);
-    const newSelected = new Set(selectedTasks);
-    stockTasks.forEach(task => {
-      const currentStock = stockInputs[task.id] || 0;
-      const targetQuantity = task.weekly_targets[dayOfWeek] || 0;
-      if (currentStock < targetQuantity) {
+    const newSelected = new Set();
+    const newStockInputs = {};
+    
+    tasks.forEach(task => {
+      // Auto-schedule tasks
+      if (shouldAutoSchedule(task)) {
         newSelected.add(task.id);
+        if (task.auto_schedule.quantity) {
+          newStockInputs[task.id] = task.auto_schedule.quantity;
+        }
+      }
+      
+      // Stock check tasks
+      if (task.requires_stock_check && (task.weekly_targets?.[dayOfWeek] || 0) > 0) {
+        const currentStock = stockInputs[task.id] || 0;
+        const targetQuantity = task.weekly_targets[dayOfWeek] || 0;
+        if (currentStock < targetQuantity) {
+          newSelected.add(task.id);
+        }
       }
     });
+    
     setSelectedTasks(newSelected);
+    if (Object.keys(newStockInputs).length > 0) {
+      setStockInputs(prev => ({ ...prev, ...newStockInputs }));
+    }
   }, [tasks]);
 
   const handleCreateNewSession = async () => {
@@ -253,6 +284,10 @@ export default function MiseEnPlace() {
         baseTask.current_stock = currentStock;
         baseTask.target_quantity = targetQuantity;
         baseTask.quantity_to_produce = quantityToProduce;
+      }
+      // Add auto-schedule quantity
+      else if (task?.auto_schedule?.enabled && task?.auto_schedule?.quantity) {
+        baseTask.quantity_to_produce = task.auto_schedule.quantity;
       }
 
       return baseTask;
@@ -296,6 +331,10 @@ export default function MiseEnPlace() {
         baseTask.current_stock = currentStock;
         baseTask.target_quantity = targetQuantity;
         baseTask.quantity_to_produce = quantityToProduce;
+      }
+      // Add auto-schedule quantity
+      else if (task?.auto_schedule?.enabled && task?.auto_schedule?.quantity) {
+        baseTask.quantity_to_produce = task.auto_schedule.quantity;
       }
 
       return baseTask;

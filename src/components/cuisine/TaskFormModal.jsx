@@ -45,6 +45,12 @@ export default function TaskFormModal({ open, onClose, task, categories }) {
     tracking_mode: 'binary',
     unit: '',
     requires_stock_check: false,
+    auto_schedule: {
+      enabled: false,
+      trigger_day: 'monday',
+      trigger_time: '19:00',
+      quantity: 0
+    },
     weekly_targets: {
       monday: 0,
       tuesday: 0,
@@ -70,6 +76,12 @@ export default function TaskFormModal({ open, onClose, task, categories }) {
         tracking_mode: task.tracking_mode || 'binary',
         unit: task.unit || '',
         requires_stock_check: task.requires_stock_check || false,
+        auto_schedule: task.auto_schedule || {
+          enabled: false,
+          trigger_day: 'monday',
+          trigger_time: '19:00',
+          quantity: 0
+        },
         weekly_targets: task.weekly_targets || {
           monday: 0, tuesday: 0, wednesday: 0, thursday: 0,
           friday: 0, saturday: 0, sunday: 0
@@ -88,6 +100,12 @@ export default function TaskFormModal({ open, onClose, task, categories }) {
         tracking_mode: 'binary',
         unit: '',
         requires_stock_check: false,
+        auto_schedule: {
+          enabled: false,
+          trigger_day: 'monday',
+          trigger_time: '19:00',
+          quantity: 0
+        },
         weekly_targets: {
           monday: 0, tuesday: 0, wednesday: 0, thursday: 0,
           friday: 0, saturday: 0, sunday: 0
@@ -169,9 +187,10 @@ export default function TaskFormModal({ open, onClose, task, categories }) {
 
         <form onSubmit={handleSubmit} className="space-y-6">
           <Tabs value={activeTab} onValueChange={setActiveTab}>
-            <TabsList className="grid w-full grid-cols-3 bg-slate-700">
+            <TabsList className="grid w-full grid-cols-4 bg-slate-700">
               <TabsTrigger value="general">Général</TabsTrigger>
               <TabsTrigger value="production">Production</TabsTrigger>
+              <TabsTrigger value="auto">Auto</TabsTrigger>
               <TabsTrigger value="visuel">Visuel</TabsTrigger>
             </TabsList>
 
@@ -339,6 +358,85 @@ export default function TaskFormModal({ open, onClose, task, categories }) {
                   ))}
                 </div>
               </div>
+            </TabsContent>
+
+            {/* Auto Schedule Tab */}
+            <TabsContent value="auto" className="space-y-4 mt-4">
+              <div className="flex items-center gap-3 p-4 bg-slate-700/50 rounded-xl">
+                <input
+                  type="checkbox"
+                  id="auto_schedule_enabled"
+                  checked={form.auto_schedule.enabled}
+                  onChange={(e) => setForm(prev => ({ 
+                    ...prev, 
+                    auto_schedule: { ...prev.auto_schedule, enabled: e.target.checked }
+                  }))}
+                  className="w-4 h-4 rounded border-slate-600 bg-slate-700 text-orange-600 focus:ring-orange-500"
+                />
+                <Label htmlFor="auto_schedule_enabled" className="cursor-pointer flex-1">
+                  Activer la planification automatique
+                  <p className="text-xs text-slate-400 font-normal mt-1">
+                    Cette tâche sera cochée automatiquement selon le jour et l'heure définis
+                  </p>
+                </Label>
+              </div>
+
+              {form.auto_schedule.enabled && (
+                <div className="space-y-4 p-4 bg-slate-700/30 rounded-xl">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label>Jour de déclenchement</Label>
+                      <Select
+                        value={form.auto_schedule.trigger_day}
+                        onValueChange={(value) => setForm(prev => ({ 
+                          ...prev, 
+                          auto_schedule: { ...prev.auto_schedule, trigger_day: value }
+                        }))}
+                      >
+                        <SelectTrigger className="bg-slate-700 border-slate-600 mt-1">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent className="bg-slate-700 border-slate-600">
+                          {DAYS.map(day => (
+                            <SelectItem key={day.key} value={day.key}>{day.label}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div>
+                      <Label>Heure de déclenchement</Label>
+                      <Input
+                        type="time"
+                        value={form.auto_schedule.trigger_time}
+                        onChange={(e) => setForm(prev => ({ 
+                          ...prev, 
+                          auto_schedule: { ...prev.auto_schedule, trigger_time: e.target.value }
+                        }))}
+                        className="bg-slate-700 border-slate-600 mt-1"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <Label>Quantité prédéfinie</Label>
+                    <Input
+                      type="number"
+                      min="0"
+                      value={form.auto_schedule.quantity}
+                      onChange={(e) => setForm(prev => ({ 
+                        ...prev, 
+                        auto_schedule: { ...prev.auto_schedule, quantity: parseInt(e.target.value) || 0 }
+                      }))}
+                      placeholder="Ex: 2 pour 2 saumons"
+                      className="bg-slate-700 border-slate-600 mt-1"
+                    />
+                    <p className="text-xs text-slate-400 mt-1">
+                      Le temps de production sera multiplié par cette quantité
+                    </p>
+                  </div>
+                </div>
+              )}
             </TabsContent>
 
             {/* Visual Tab */}
