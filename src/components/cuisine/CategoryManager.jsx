@@ -129,9 +129,9 @@ export default function CategoryManager({ onClose }) {
                     >
                       <div 
                         {...provided.dragHandleProps}
-                        className="cursor-grab active:cursor-grabbing touch-none"
+                        className="cursor-grab active:cursor-grabbing touch-none p-2 hover:bg-slate-600/50 rounded-lg transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center"
                       >
-                        <GripVertical className="w-5 h-5 text-slate-400 hover:text-orange-400" />
+                        <GripVertical className="w-6 h-6 text-orange-500" />
                       </div>
                       
                       {editingId === cat.id ? (
@@ -182,23 +182,25 @@ export default function CategoryManager({ onClose }) {
                       ) : (
                         <>
                           <div
-                            className="w-4 h-4 rounded-full flex-shrink-0"
+                            className="w-5 h-5 rounded-full flex-shrink-0 border-2 border-slate-600"
                             style={{ backgroundColor: cat.color || '#10b981' }}
                           />
-                          <span className="flex-1 truncate text-sm">{cat.name}</span>
+                          <span className="flex-1 truncate font-medium">{cat.name}</span>
                           <button
                             onClick={(e) => handleStartEdit(cat, e)}
-                            className="p-2 rounded-lg hover:bg-slate-600 text-slate-400 hover:text-orange-400 transition-colors flex-shrink-0"
+                            className="p-2.5 rounded-lg bg-slate-600/50 hover:bg-orange-600/30 text-slate-300 hover:text-orange-400 transition-colors flex-shrink-0 min-w-[44px] min-h-[44px] flex items-center justify-center"
                             type="button"
+                            title="Modifier"
                           >
-                            <Pencil className="w-4 h-4" />
+                            <Pencil className="w-5 h-5" />
                           </button>
                           <button
                             onClick={(e) => handleDelete(cat.id, e)}
-                            className="p-2 rounded-lg hover:bg-red-600/20 text-slate-400 hover:text-red-400 transition-colors flex-shrink-0"
+                            className="p-2.5 rounded-lg bg-slate-600/50 hover:bg-red-600/30 text-slate-300 hover:text-red-400 transition-colors flex-shrink-0 min-w-[44px] min-h-[44px] flex items-center justify-center"
                             type="button"
+                            title="Supprimer"
                           >
-                            <Trash2 className="w-4 h-4" />
+                            <Trash2 className="w-5 h-5" />
                           </button>
                         </>
                       )}
