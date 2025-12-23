@@ -209,13 +209,13 @@ export default function Pertes() {
                     whileTap={{ scale: 0.95 }}
                     onClick={() => addToCart(product)}
                     className={cn(
-                      "p-4 rounded-xl border text-left transition-all min-h-[80px]",
-                      "bg-slate-800/50 border-slate-700/50",
-                      "hover:bg-slate-700 hover:border-slate-600",
-                      "active:bg-slate-600"
+                      "p-4 rounded-xl border-2 text-left transition-all min-h-[80px]",
+                      "bg-white border-gray-300",
+                      "hover:bg-gray-50 hover:border-gray-400",
+                      "active:bg-gray-100"
                     )}
                   >
-                    <p className="font-medium text-sm line-clamp-2">{product.name}</p>
+                    <p className="font-semibold text-gray-900 text-sm line-clamp-2">{product.name}</p>
                     {product.unit_price > 0 && (
                       <p className="text-xs text-orange-400 mt-1">
                         {product.unit_price.toFixed(2)} € / {product.unit}
@@ -229,14 +229,14 @@ export default function Pertes() {
 
           {/* Cart */}
           <div className="lg:col-span-1">
-            <div className="bg-slate-800/50 rounded-2xl border border-slate-700/50 p-4 sticky top-4">
-              <h3 className="font-semibold mb-4 flex items-center gap-2">
+            <div className="bg-white rounded-2xl border-2 border-gray-300 p-4 sticky top-4 shadow-sm">
+              <h3 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
                 <ShoppingCart className="w-5 h-5" />
                 Ticket de pertes
               </h3>
 
               {cart.length === 0 ? (
-                <p className="text-center text-slate-500 py-8">
+                <p className="text-center text-gray-600 py-8">
                   Sélectionnez des produits
                 </p>
               ) : (
@@ -248,25 +248,25 @@ export default function Pertes() {
                         initial={{ opacity: 0, x: 20 }}
                         animate={{ opacity: 1, x: 0 }}
                         exit={{ opacity: 0, x: -20 }}
-                        className="flex items-center gap-3 p-3 bg-slate-700/50 rounded-lg"
+                        className="flex items-center gap-3 p-3 bg-gray-100 rounded-lg border border-gray-300"
                       >
                         <div className="flex-1 min-w-0">
-                          <p className="text-sm truncate">{item.product_name}</p>
-                          <p className="text-xs text-slate-400">
+                          <p className="text-sm font-medium text-gray-900 truncate">{item.product_name}</p>
+                          <p className="text-xs text-gray-600">
                             {item.unit_price.toFixed(2)} € × {item.quantity}
                           </p>
                         </div>
                         <div className="flex items-center gap-2">
                           <button
                             onClick={() => updateCartItem(item.product_id, item.quantity - 1)}
-                            className="w-8 h-8 rounded bg-slate-600 hover:bg-slate-500 flex items-center justify-center"
+                            className="w-8 h-8 rounded bg-gray-300 hover:bg-gray-400 flex items-center justify-center font-bold text-gray-900"
                           >
                             -
                           </button>
-                          <span className="w-8 text-center">{item.quantity}</span>
+                          <span className="w-8 text-center font-semibold text-gray-900">{item.quantity}</span>
                           <button
                             onClick={() => updateCartItem(item.product_id, item.quantity + 1)}
-                            className="w-8 h-8 rounded bg-slate-600 hover:bg-slate-500 flex items-center justify-center"
+                            className="w-8 h-8 rounded bg-gray-300 hover:bg-gray-400 flex items-center justify-center font-bold text-gray-900"
                           >
                             +
                           </button>
@@ -282,8 +282,8 @@ export default function Pertes() {
 
               {cart.length > 0 && (
                 <>
-                  <div className="border-t border-slate-600 pt-4 mb-4">
-                    <div className="flex justify-between text-lg font-bold">
+                  <div className="border-t-2 border-gray-300 pt-4 mb-4">
+                    <div className="flex justify-between text-lg font-bold text-gray-900">
                       <span>Total pertes</span>
                       <span className="text-red-400">{getTotalAmount().toFixed(2)} €</span>
                     </div>
@@ -322,14 +322,14 @@ export default function Pertes() {
             losses.map(loss => (
               <div
                 key={loss.id}
-                className="p-4 bg-slate-800/50 rounded-xl border border-slate-700/50"
+                className="p-4 bg-white rounded-xl border-2 border-gray-300"
               >
                 <div className="flex items-center justify-between mb-3">
                   <div>
-                    <p className="font-medium">
+                    <p className="font-semibold text-gray-900">
                       {format(parseISO(loss.date), "EEEE d MMMM yyyy", { locale: fr })}
                     </p>
-                    <p className="text-sm text-slate-400">
+                    <p className="text-sm text-gray-600">
                       Par {loss.recorded_by_name}
                     </p>
                   </div>
@@ -341,7 +341,7 @@ export default function Pertes() {
                 <div className="space-y-1">
                   {loss.items?.map((item, index) => (
                     <div key={index} className="flex justify-between text-sm">
-                      <span className="text-slate-400">
+                      <span className="text-gray-700">
                         {item.quantity}× {item.product_name}
                       </span>
                       <span>{item.total_price?.toFixed(2)} €</span>

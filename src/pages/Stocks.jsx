@@ -192,15 +192,15 @@ export default function Stocks() {
                 <div
                   key={product.id}
                   className={cn(
-                    "p-4 rounded-xl border flex items-center gap-4 transition-all",
+                    "p-4 rounded-xl border-2 flex items-center gap-4 transition-all",
                     product.need > 0
-                      ? "bg-amber-900/10 border-amber-600/30"
-                      : "bg-slate-800/50 border-slate-700/50"
+                      ? "bg-amber-50 border-amber-400"
+                      : "bg-white border-gray-300"
                   )}
                 >
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
-                      <h3 className="font-medium truncate">{product.name}</h3>
+                      <h3 className="font-semibold text-gray-900 truncate">{product.name}</h3>
                       {product.need > 0 && (
                         <Badge className="bg-amber-600/20 text-amber-400 border-amber-600/30">
                           <AlertTriangle className="w-3 h-3 mr-1" />
@@ -208,7 +208,7 @@ export default function Stocks() {
                         </Badge>
                       )}
                     </div>
-                    <p className="text-sm text-slate-400">
+                    <p className="text-sm text-gray-700">
                       Par-level: {product.parLevel} {product.unit} • Besoin: {product.need} {product.unit}
                     </p>
                   </div>
@@ -216,17 +216,17 @@ export default function Stocks() {
                   <div className="flex items-center gap-2">
                     <button
                       onClick={() => handleStockChange(product, -1)}
-                      className="w-10 h-10 rounded-lg bg-slate-700 hover:bg-slate-600 flex items-center justify-center text-lg font-bold"
+                      className="w-10 h-10 rounded-lg bg-gray-300 hover:bg-gray-400 flex items-center justify-center text-lg font-bold text-gray-900"
                     >
                       -
                     </button>
                     <div className="w-16 text-center">
-                      <p className="text-xl font-bold">{product.current_stock || 0}</p>
-                      <p className="text-xs text-slate-500">{product.unit}</p>
+                      <p className="text-xl font-bold text-gray-900">{product.current_stock || 0}</p>
+                      <p className="text-xs text-gray-700">{product.unit}</p>
                     </div>
                     <button
                       onClick={() => handleStockChange(product, 1)}
-                      className="w-10 h-10 rounded-lg bg-slate-700 hover:bg-slate-600 flex items-center justify-center text-lg font-bold"
+                      className="w-10 h-10 rounded-lg bg-gray-300 hover:bg-gray-400 flex items-center justify-center text-lg font-bold text-gray-900"
                     >
                       +
                     </button>
@@ -234,7 +234,7 @@ export default function Stocks() {
 
                   <button
                     onClick={() => handleEditProduct(product)}
-                    className="p-2 rounded-lg hover:bg-slate-700 text-slate-400 hover:text-white"
+                    className="p-2 rounded-lg hover:bg-gray-100 text-gray-600 hover:text-gray-900"
                   >
                     <Pencil className="w-4 h-4" />
                   </button>
@@ -253,36 +253,36 @@ export default function Stocks() {
                 key={supplier.id}
                 onClick={() => handleGenerateOrder(supplier)}
                 className={cn(
-                  "p-4 rounded-xl border text-left transition-all",
-                  "bg-slate-800/50 border-slate-700/50",
-                  "hover:bg-slate-700 hover:border-slate-600"
+                  "p-4 rounded-xl border-2 text-left transition-all",
+                  "bg-white border-gray-300",
+                  "hover:bg-gray-50 hover:border-gray-400"
                 )}
               >
                 <div className="flex items-center gap-3 mb-2">
-                  <Truck className="w-5 h-5 text-indigo-400" />
-                  <h3 className="font-medium">{supplier.name}</h3>
+                  <Truck className="w-5 h-5 text-indigo-600" />
+                  <h3 className="font-semibold text-gray-900">{supplier.name}</h3>
                 </div>
-                <p className="text-sm text-orange-400">
+                <p className="text-sm text-orange-600 font-medium">
                   Générer bon de commande →
                 </p>
               </button>
             ))}
           </div>
 
-          <h3 className="text-sm font-semibold text-slate-400 mb-3">Commandes récentes</h3>
+          <h3 className="text-sm font-semibold text-gray-700 mb-3">Commandes récentes</h3>
           {orders.length === 0 ? (
-            <p className="text-center text-slate-500 py-8">Aucune commande</p>
+            <p className="text-center text-gray-600 py-8">Aucune commande</p>
           ) : (
             <div className="space-y-2">
               {orders.map(order => (
                 <div
                   key={order.id}
-                  className="p-4 bg-slate-800/50 rounded-xl border border-slate-700/50"
+                  className="p-4 bg-white rounded-xl border-2 border-gray-300"
                 >
                   <div className="flex items-center justify-between mb-2">
                     <div>
-                      <p className="font-medium">{order.supplier_name}</p>
-                      <p className="text-sm text-slate-400">
+                      <p className="font-semibold text-gray-900">{order.supplier_name}</p>
+                      <p className="text-sm text-gray-600">
                         {format(new Date(order.date), "d MMMM yyyy", { locale: fr })}
                       </p>
                     </div>
@@ -295,7 +295,7 @@ export default function Stocks() {
                        order.status === 'received' ? 'Reçu' : 'Brouillon'}
                     </Badge>
                   </div>
-                  <p className="text-sm text-slate-400">
+                  <p className="text-sm text-gray-700">
                     {order.items?.length || 0} article(s)
                   </p>
                 </div>
@@ -327,17 +327,17 @@ export default function Stocks() {
               {suppliers.map(supplier => (
                 <div
                   key={supplier.id}
-                  className="p-4 bg-slate-800/50 rounded-xl border border-slate-700/50"
+                  className="p-4 bg-white rounded-xl border-2 border-gray-300"
                 >
-                  <h3 className="font-medium mb-2">{supplier.name}</h3>
+                  <h3 className="font-semibold text-gray-900 mb-2">{supplier.name}</h3>
                   {supplier.contact_name && (
-                    <p className="text-sm text-slate-400">Contact: {supplier.contact_name}</p>
+                    <p className="text-sm text-gray-700">Contact: {supplier.contact_name}</p>
                   )}
                   {supplier.email && (
-                    <p className="text-sm text-slate-400">{supplier.email}</p>
+                    <p className="text-sm text-gray-700">{supplier.email}</p>
                   )}
                   {supplier.phone && (
-                    <p className="text-sm text-slate-400">{supplier.phone}</p>
+                    <p className="text-sm text-gray-700">{supplier.phone}</p>
                   )}
                 </div>
               ))}

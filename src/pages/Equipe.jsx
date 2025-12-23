@@ -213,9 +213,9 @@ function EmployeeCard({ employee, onClick }) {
     <button
       onClick={onClick}
       className={cn(
-        "w-full p-4 rounded-2xl border text-left transition-all",
-        "bg-slate-800/50 border-slate-700/50",
-        "hover:bg-slate-800 hover:border-slate-600/50",
+        "w-full p-4 rounded-2xl border-2 text-left transition-all",
+        "bg-white border-gray-300",
+        "hover:bg-gray-50 hover:border-gray-400",
         !employee.is_active && "opacity-60"
       )}
     >
@@ -227,14 +227,14 @@ function EmployeeCard({ employee, onClick }) {
             className="w-14 h-14 rounded-full object-cover"
           />
         ) : (
-          <div className="w-14 h-14 rounded-full bg-slate-700 flex items-center justify-center">
-            <User className="w-6 h-6 text-slate-400" />
+          <div className="w-14 h-14 rounded-full bg-gray-200 flex items-center justify-center">
+            <User className="w-6 h-6 text-gray-500" />
           </div>
         )}
         
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
-            <h3 className="font-medium truncate">
+            <h3 className="font-semibold text-gray-900 truncate">
               {employee.first_name} {employee.last_name}
             </h3>
             {!employee.is_active && (
@@ -244,7 +244,7 @@ function EmployeeCard({ employee, onClick }) {
             )}
           </div>
           
-          <p className="text-sm text-slate-400 truncate">{employee.position || 'Non défini'}</p>
+          <p className="text-sm text-gray-600 truncate">{employee.position || 'Non défini'}</p>
           
           <div className="flex items-center gap-3 mt-2">
             {employee.contract_type && (
@@ -256,7 +256,7 @@ function EmployeeCard({ employee, onClick }) {
         </div>
       </div>
 
-      <div className="mt-3 pt-3 border-t border-slate-700/50 flex gap-4 text-xs text-slate-500">
+      <div className="mt-3 pt-3 border-t border-gray-200 flex gap-4 text-xs text-gray-600">
         {employee.phone && (
           <span className="flex items-center gap-1">
             <Phone className="w-3 h-3" />

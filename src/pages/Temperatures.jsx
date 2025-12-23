@@ -236,16 +236,16 @@ function TemperatureCard({ equipment, temperature, onSave, isSaving }) {
 
   return (
     <div className={cn(
-      "p-4 rounded-2xl border transition-all",
+      "p-4 rounded-2xl border-2 transition-all",
       hasValue
         ? isCompliant
-          ? "bg-orange-900/20 border-orange-600/30"
-          : "bg-red-900/20 border-red-600/30"
-        : "bg-slate-800/50 border-slate-700/50"
+          ? "bg-orange-50 border-orange-400"
+          : "bg-red-50 border-red-400"
+        : "bg-white border-gray-300"
     )}>
       <div className="flex items-start justify-between mb-4">
         <div>
-          <h3 className="font-medium">{equipment.name}</h3>
+          <h3 className="font-semibold text-gray-900">{equipment.name}</h3>
           <Badge
             variant="outline"
             className={cn(
@@ -269,7 +269,7 @@ function TemperatureCard({ equipment, temperature, onSave, isSaving }) {
       </div>
 
       <div className="mb-4">
-        <p className="text-xs text-slate-400 mb-1">
+        <p className="text-xs text-gray-700 font-medium mb-1">
           Cible: {equipment.target_min}°C à {equipment.target_max}°C
         </p>
         <div className="flex items-center gap-2">
@@ -279,14 +279,14 @@ function TemperatureCard({ equipment, temperature, onSave, isSaving }) {
             value={inputValue}
             onChange={(e) => setInputValue(e.target.value)}
             placeholder="°C"
-            className="bg-slate-700 border-slate-600 text-center text-2xl font-bold h-14"
+            className="bg-gray-50 border-gray-300 text-center text-2xl font-bold h-14"
           />
-          <span className="text-2xl text-slate-400">°C</span>
+          <span className="text-2xl text-gray-700">°C</span>
         </div>
       </div>
 
       {hasValue && temperature.signed_by_name && (
-        <p className="text-xs text-slate-500 mb-3">
+        <p className="text-xs text-gray-600 mb-3">
           Signé par {temperature.signed_by_name}
           {temperature.is_auto_filled && (
             <Badge variant="outline" className="ml-2 text-[10px] border-amber-600/50 text-amber-400">
