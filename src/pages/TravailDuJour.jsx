@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
-import { ChefHat, Check, CheckCircle2, X, Clock } from 'lucide-react';
+import { ChefHat, Check, CheckCircle2, X, Clock, RotateCcw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import PageHeader from '@/components/ui/PageHeader';
@@ -93,6 +93,17 @@ export default function TravailDuJour() {
     }
   };
 
+  const handleResetSession = () => {
+    if (!activeSession) return;
+    
+    if (window.confirm('Réinitialiser la mise en place ? Toutes les tâches seront effacées.')) {
+      updateSessionMutation.mutate({
+        id: activeSession.id,
+        data: { tasks: [] }
+      });
+    }
+  };
+
   if (isLoading) {
     return <LoadingSpinner />;
   }
@@ -159,13 +170,23 @@ export default function TravailDuJour() {
         title="Travail du Jour"
         subtitle={format(new Date(), "EEEE d MMMM yyyy", { locale: fr })}
         actions={
-          <Button
-            onClick={handleCompleteSession}
-            className="bg-orange-600 hover:bg-orange-700"
-          >
-            <CheckCircle2 className="w-4 h-4 mr-2" />
-            Mise en place terminée
-          </Button>
+          <>
+            <Button
+              onClick={handleResetSession}
+              variant="outline"
+              className="border-slate-600 text-slate-900 hover:text-slate-100 hover:bg-slate-700"
+            >
+              <RotateCcw className="w-4 h-4 mr-2" />
+              Réinitialiser
+            </Button>
+            <Button
+              onClick={handleCompleteSession}
+              className="bg-orange-600 hover:bg-orange-700"
+            >
+              <CheckCircle2 className="w-4 h-4 mr-2" />
+              Mise en place terminée
+            </Button>
+          </>
         }
       />
 
