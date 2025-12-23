@@ -87,21 +87,15 @@ export default function TravailDuJour() {
 
   const handleCompleteSession = () => {
     if (!activeSession) return;
-    
-    if (window.confirm('Terminer la mise en place du jour ?')) {
-      completeSessionMutation.mutate({ id: activeSession.id });
-    }
+    completeSessionMutation.mutate({ id: activeSession.id });
   };
 
   const handleResetSession = () => {
     if (!activeSession) return;
-    
-    if (window.confirm('Réinitialiser la mise en place ? Toutes les tâches seront effacées.')) {
-      updateSessionMutation.mutate({
-        id: activeSession.id,
-        data: { tasks: [] }
-      });
-    }
+    updateSessionMutation.mutate({
+      id: activeSession.id,
+      data: { tasks: [] }
+    });
   };
 
   if (isLoading) {
