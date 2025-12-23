@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { createPageUrl } from './utils';
+import { useQuery } from '@tanstack/react-query';
+import { base44 } from '@/api/base44Client';
 import { 
   ChefHat, 
   ClipboardList, 
@@ -18,6 +20,11 @@ import { cn } from '@/lib/utils';
 
 export default function Layout({ children, currentPageName }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  const { data: currentUser } = useQuery({
+    queryKey: ['currentUser'],
+    queryFn: () => base44.auth.me()
+  });
 
   const cuisineLinks = [
     { name: 'MiseEnPlace', label: 'Mise en Place', icon: ClipboardList },
@@ -113,7 +120,7 @@ export default function Layout({ children, currentPageName }) {
               </div>
               <div>
                 <h1 className="font-bold text-lg">UpGraal</h1>
-                <p className="text-xs text-slate-400">Kitchen OS</p>
+                <p className="text-xs text-slate-400">{currentUser?.full_name || currentUser?.email || 'Kitchen OS'}</p>
               </div>
             </div>
             <button
