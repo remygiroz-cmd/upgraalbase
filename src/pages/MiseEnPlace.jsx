@@ -23,7 +23,9 @@ export default function MiseEnPlace() {
   const [showCategoryManager, setShowCategoryManager] = useState(false);
   const [stopwatchTask, setStopwatchTask] = useState(null);
   const [selectedTasks, setSelectedTasks] = useState(new Set());
+  const [stockInputs, setStockInputs] = useState({});
   const today = format(new Date(), 'yyyy-MM-dd');
+  const dayOfWeek = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'][new Date().getDay()];
 
   const { data: categories = [], isLoading: loadingCategories } = useQuery({
     queryKey: ['categories'],
@@ -194,11 +196,46 @@ export default function MiseEnPlace() {
     setSelectedTasks(newSelected);
   };
 
+  const handleStockInput = (taskId, value) => {
+    const task = tasks.find(t => t.id === taskId);
+    if (!task) return;
+
+    const currentStock = parseFloat(value) || 0;
+    const targetQuantity = task.weekly_targets?.[dayOfWeek] || 0;
+    
+    setStockInputs(prev => ({
+      ...prev,
+      [taskId]: currentStock
+    }));
+
+    // Auto uncheck if current stock >= target
+    if (currentStock >= targetQuantity && selectedTasks.has(taskId)) {
+      const newSelected = new Set(selectedTasks);
+      newSelected.delete(taskId);
+      setSelectedTasks(newSelected);
+    }
+  };
+
+  // Auto-select tasks with stock requirements on mount
+  React.useEffect(() => {
+    const stockTasks = tasks.filter(t => t.requires_stock_check && (t.weekly_targets?.[dayOfWeek] || 0) > 0);
+    const newSelected = new Set(selectedTasks);
+    stockTasks.forEach(task => {
+      const currentStock = stockInputs[task.id] || 0;
+      const targetQuantity = task.weekly_targets[dayOfWeek] || 0;
+      if (currentStock < targetQuantity) {
+        newSelected.add(task.id);
+      }
+    });
+    setSelectedTasks(newSelected);
+  }, [tasks]);
+
   const handleCreateNewSession = async () => {
     const selectedTasksArray = Array.from(selectedTasks).map(taskId => {
       const task = tasks.find(t => t.id === taskId);
       const category = categories.find(c => c.id === task?.category_id);
-      return {
+      
+      const baseTask = {
         task_id: taskId,
         task_name: task?.name,
         category_id: task?.category_id,
@@ -206,6 +243,19 @@ export default function MiseEnPlace() {
         is_completed: false,
         added_at: new Date().toISOString()
       };
+
+      // Add stock info if task requires it
+      if (task?.requires_stock_check) {
+        const currentStock = stockInputs[taskId] || 0;
+        const targetQuantity = task.weekly_targets?.[dayOfWeek] || 0;
+        const quantityToProduce = Math.max(0, targetQuantity - currentStock);
+
+        baseTask.current_stock = currentStock;
+        baseTask.target_quantity = targetQuantity;
+        baseTask.quantity_to_produce = quantityToProduce;
+      }
+
+      return baseTask;
     });
 
     createSessionMutation.mutate({
@@ -216,6 +266,9 @@ export default function MiseEnPlace() {
       started_by_name: currentUser?.full_name || currentUser?.email,
       started_at: new Date().toISOString()
     });
+    
+    // Reset stock inputs
+    setStockInputs({});
   };
 
   const handleAddToSession = async () => {
@@ -224,7 +277,8 @@ export default function MiseEnPlace() {
     const selectedTasksArray = Array.from(selectedTasks).map(taskId => {
       const task = tasks.find(t => t.id === taskId);
       const category = categories.find(c => c.id === task?.category_id);
-      return {
+      
+      const baseTask = {
         task_id: taskId,
         task_name: task?.name,
         category_id: task?.category_id,
@@ -232,6 +286,19 @@ export default function MiseEnPlace() {
         is_completed: false,
         added_at: new Date().toISOString()
       };
+
+      // Add stock info if task requires it
+      if (task?.requires_stock_check) {
+        const currentStock = stockInputs[taskId] || 0;
+        const targetQuantity = task.weekly_targets?.[dayOfWeek] || 0;
+        const quantityToProduce = Math.max(0, targetQuantity - currentStock);
+
+        baseTask.current_stock = currentStock;
+        baseTask.target_quantity = targetQuantity;
+        baseTask.quantity_to_produce = quantityToProduce;
+      }
+
+      return baseTask;
     });
 
     const updatedTasks = [...(activeSession.tasks || []), ...selectedTasksArray];
@@ -240,6 +307,9 @@ export default function MiseEnPlace() {
       id: activeSession.id,
       data: { tasks: updatedTasks }
     });
+    
+    // Reset stock inputs
+    setStockInputs({});
   };
 
   if (loadingCategories || loadingTasks) {
@@ -352,6 +422,9 @@ export default function MiseEnPlace() {
                     isDraggable={false}
                     selectedTasks={selectedTasks}
                     onToggleSelection={toggleTaskSelection}
+                    stockInputs={stockInputs}
+                    onStockInput={handleStockInput}
+                    dayOfWeek={dayOfWeek}
                   />
                 )}
 
@@ -379,6 +452,9 @@ export default function MiseEnPlace() {
                           isDraggable={true}
                           selectedTasks={selectedTasks}
                           onToggleSelection={toggleTaskSelection}
+                          stockInputs={stockInputs}
+                          onStockInput={handleStockInput}
+                          dayOfWeek={dayOfWeek}
                         />
                       </div>
                     )}
@@ -420,7 +496,7 @@ export default function MiseEnPlace() {
   );
 }
 
-function CategoryColumn({ categoryId, title, color, tasks, onEditTask, onDeleteTask, onStartStopwatch, category, onEditCategory, onDeleteCategory, dragHandleProps, isDragging, isDraggable, selectedTasks, onToggleSelection }) {
+function CategoryColumn({ categoryId, title, color, tasks, onEditTask, onDeleteTask, onStartStopwatch, category, onEditCategory, onDeleteCategory, dragHandleProps, isDragging, isDraggable, selectedTasks, onToggleSelection, stockInputs, onStockInput, dayOfWeek }) {
   const [isEditing, setIsEditing] = useState(false);
   const [editName, setEditName] = useState(title);
 
@@ -523,6 +599,9 @@ function CategoryColumn({ categoryId, title, color, tasks, onEditTask, onDeleteT
                       onToggleSelection={() => onToggleSelection?.(task.id)}
                       dragHandleProps={provided.dragHandleProps}
                       isDragging={snapshot.isDragging}
+                      stockValue={stockInputs?.[task.id]}
+                      onStockChange={(value) => onStockInput?.(task.id, value)}
+                      dayOfWeek={dayOfWeek}
                     />
                   </div>
                 )}
@@ -542,7 +621,7 @@ function CategoryColumn({ categoryId, title, color, tasks, onEditTask, onDeleteT
   );
 }
 
-function TaskCard({ task, onEdit, onDelete, onStartStopwatch, isSelected, onToggleSelection, dragHandleProps, isDragging }) {
+function TaskCard({ task, onEdit, onDelete, onStartStopwatch, isSelected, onToggleSelection, dragHandleProps, isDragging, stockValue, onStockChange, dayOfWeek }) {
   const formatDuration = () => {
     const mins = task.duration_minutes || 0;
     const secs = task.duration_seconds || 0;
@@ -552,15 +631,21 @@ function TaskCard({ task, onEdit, onDelete, onStartStopwatch, isSelected, onTogg
     return `${mins}min ${secs}s`;
   };
 
+  const requiresStock = task.requires_stock_check && dayOfWeek && (task.weekly_targets?.[dayOfWeek] || 0) > 0;
+  const targetQuantity = task.weekly_targets?.[dayOfWeek] || 0;
+  const currentStock = stockValue || 0;
+  const quantityToProduce = Math.max(0, targetQuantity - currentStock);
+
   return (
     <motion.div
       layout
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, scale: 0.95 }}
-      onClick={onToggleSelection}
+      onClick={requiresStock ? undefined : onToggleSelection}
       className={cn(
-        "group bg-slate-700/50 rounded-xl p-3 border transition-all cursor-pointer",
+        "group bg-slate-700/50 rounded-xl p-3 border transition-all",
+        !requiresStock && "cursor-pointer",
         isSelected 
           ? "bg-orange-600/30 border-orange-600/70 ring-2 ring-orange-600/50" 
           : "border-slate-600/50 hover:bg-slate-700 hover:border-slate-500/50",
@@ -612,6 +697,29 @@ function TaskCard({ task, onEdit, onDelete, onStartStopwatch, isSelected, onTogg
               )}
             </span>
           </div>
+          
+          {requiresStock && (
+            <div className="mt-2 space-y-1">
+              <div className="flex items-center gap-2">
+                <label className="text-xs text-slate-400 flex-shrink-0">Stock restant :</label>
+                <Input
+                  type="number"
+                  min="0"
+                  value={currentStock}
+                  onChange={(e) => onStockChange?.(e.target.value)}
+                  onClick={(e) => e.stopPropagation()}
+                  className="h-7 w-20 bg-slate-800 border-slate-600 text-xs"
+                  placeholder="0"
+                />
+                <span className="text-xs text-slate-400">/ {targetQuantity}</span>
+              </div>
+              {quantityToProduce > 0 && (
+                <p className="text-xs text-orange-400">
+                  À produire : {quantityToProduce} {task.unit || 'unités'}
+                </p>
+              )}
+            </div>
+          )}
         </div>
 
         <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
