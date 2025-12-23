@@ -88,6 +88,8 @@ export default function Parametres() {
 
           {/* Profile Tab */}
           <TabsContent value="profile" className="space-y-6">
+            {currentUser?.role === 'admin' && <LogoUploadSection />}
+            
             <div className="bg-slate-100 p-6 rounded-2xl border border-slate-700/50">
               <h3 className="text-lg font-semibold text-gray-900 mb-4">Informations personnelles</h3>
               

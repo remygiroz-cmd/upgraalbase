@@ -27,6 +27,13 @@ export default function Layout({ children, currentPageName }) {
     queryFn: () => base44.auth.me()
   });
 
+  const { data: appSettings = [] } = useQuery({
+    queryKey: ['appSettings'],
+    queryFn: () => base44.entities.AppSettings.filter({ setting_key: 'app_logo' })
+  });
+
+  const logoUrl = appSettings[0]?.logo_url || 'https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/69497257a1b1a9a05e568521/71ee8b574_logonouveau.png';
+
   const theme = currentUser?.preferences?.theme || 'professional-light';
 
   const cuisineLinks = [
@@ -146,12 +153,11 @@ export default function Layout({ children, currentPageName }) {
             <Menu className="w-6 h-6" />
           </button>
           <div className="flex items-center gap-2">
-            <div className={cn(
-              "w-8 h-8 rounded-xl flex items-center justify-center",
-              theme === 'professional-light' ? 'bg-blue-600' : 'bg-violet-600'
-            )}>
-              <ChefHat className="w-5 h-5 text-white" />
-            </div>
+            <img 
+              src={logoUrl} 
+              alt="UpGraal Logo" 
+              className="w-8 h-8 object-contain"
+            />
             <span className="font-bold text-lg">UpGraal</span>
           </div>
           <div className="w-10" />

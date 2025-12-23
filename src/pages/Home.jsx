@@ -1,6 +1,8 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
+import { useQuery } from '@tanstack/react-query';
+import { base44 } from '@/api/base44Client';
 import { 
   ChefHat, 
   ClipboardList, 
@@ -15,6 +17,13 @@ import {
 import { motion } from 'framer-motion';
 
 export default function Home() {
+  const { data: appSettings = [] } = useQuery({
+    queryKey: ['appSettings'],
+    queryFn: () => base44.entities.AppSettings.filter({ setting_key: 'app_logo' })
+  });
+
+  const logoUrl = appSettings[0]?.logo_url || 'https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/69497257a1b1a9a05e568521/71ee8b574_logonouveau.png';
+
   const modules = [
     {
       title: 'Cuisine',
@@ -59,8 +68,12 @@ export default function Home() {
         animate={{ opacity: 1, y: 0 }}
         className="text-center mb-12"
       >
-        <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-gradient-to-br from-orange-500 to-orange-700 mb-6 shadow-lg shadow-orange-500/20">
-          <ChefHat className="w-10 h-10 text-white" />
+        <div className="inline-flex items-center justify-center mb-6">
+          <img 
+            src={logoUrl} 
+            alt="UpGraal Logo" 
+            className="w-32 h-32 object-contain"
+          />
         </div>
         <h1 className="text-4xl font-bold mb-3 text-gray-900">UpGraal</h1>
         <p className="text-gray-700 text-lg">Votre système de gestion cuisine temps réel</p>
