@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
-import { Thermometer, Plus, Settings, Download, AlertTriangle, CheckCircle2, Save, History, Trash2 } from 'lucide-react';
+import { Thermometer, Plus, Settings, Download, AlertTriangle, CheckCircle2, Save, History, Trash2, Edit } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -22,8 +22,10 @@ export default function Temperatures() {
   const today = format(new Date(), 'yyyy-MM-dd');
 
   const [showEquipmentModal, setShowEquipmentModal] = useState(false);
+  const [showEquipmentForm, setShowEquipmentForm] = useState(false);
   const [editingEquipment, setEditingEquipment] = useState(null);
   const [showHistoryModal, setShowHistoryModal] = useState(false);
+  const [confirmDeleteEquipment, setConfirmDeleteEquipment] = useState(null);
 
   const { data: equipment = [], isLoading: loadingEquipment } = useQuery({
     queryKey: ['equipment'],
@@ -74,8 +76,18 @@ export default function Temperatures() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['equipment'] });
-      setShowEquipmentModal(false);
+      setShowEquipmentForm(false);
       setEditingEquipment(null);
+      toast.success('Équipement sauvegardé');
+    }
+  });
+
+  const deleteEquipmentMutation = useMutation({
+    mutationFn: (id) => base44.entities.Equipment.delete(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['equipment'] });
+      toast.success('Équipement supprimé');
+      setConfirmDeleteEquipment(null);
     }
   });
 
@@ -182,14 +194,16 @@ export default function Temperatures() {
               <History className="w-4 h-4 mr-2" />
               Historique
             </Button>
-            <Button
-              variant="outline"
-              onClick={() => setShowEquipmentModal(true)}
-              className="border-slate-600 text-slate-900 hover:text-slate-100 hover:bg-slate-700"
-            >
-              <Settings className="w-4 h-4 mr-2" />
-              Équipements
-            </Button>
+            {currentUser?.role === 'admin' && (
+              <Button
+                variant="outline"
+                onClick={() => setShowEquipmentModal(true)}
+                className="border-slate-600 text-slate-900 hover:text-slate-100 hover:bg-slate-700"
+              >
+                <Settings className="w-4 h-4 mr-2" />
+                Équipements
+              </Button>
+            )}
             <Button
               variant="outline"
               onClick={handleExportCSV}
@@ -239,16 +253,43 @@ export default function Temperatures() {
         </div>
       )}
 
-      {/* Equipment Modal */}
-      <EquipmentModal
+      {/* Equipment List Modal */}
+      <EquipmentListModal
         open={showEquipmentModal}
+        onClose={() => setShowEquipmentModal(false)}
+        equipment={equipment}
+        onAdd={() => {
+          setEditingEquipment(null);
+          setShowEquipmentForm(true);
+        }}
+        onEdit={(eq) => {
+          setEditingEquipment(eq);
+          setShowEquipmentForm(true);
+        }}
+        onDelete={(eq) => setConfirmDeleteEquipment(eq)}
+        isAdmin={currentUser?.role === 'admin'}
+      />
+
+      {/* Equipment Form Modal */}
+      <EquipmentFormModal
+        open={showEquipmentForm}
         onClose={() => {
-          setShowEquipmentModal(false);
+          setShowEquipmentForm(false);
           setEditingEquipment(null);
         }}
         equipment={editingEquipment}
         onSave={(data) => saveEquipmentMutation.mutate(data)}
         isSaving={saveEquipmentMutation.isPending}
+      />
+
+      <ConfirmDialog
+        open={!!confirmDeleteEquipment}
+        onOpenChange={(open) => !open && setConfirmDeleteEquipment(null)}
+        title="Supprimer l'équipement"
+        description={`Êtes-vous sûr de vouloir supprimer "${confirmDeleteEquipment?.name}" ? Toutes les températures associées seront conservées.`}
+        onConfirm={() => deleteEquipmentMutation.mutate(confirmDeleteEquipment.id)}
+        variant="danger"
+        confirmText="Supprimer"
       />
 
       {/* History Modal */}
@@ -355,7 +396,95 @@ function TemperatureCard({ equipment, temperature, onSave, isSaving }) {
   );
 }
 
-function EquipmentModal({ open, onClose, equipment, onSave, isSaving }) {
+function EquipmentListModal({ open, onClose, equipment, onAdd, onEdit, onDelete, isAdmin }) {
+  return (
+    <Dialog open={open} onOpenChange={onClose}>
+      <DialogContent className="bg-slate-800 border-slate-700 max-w-2xl">
+        <DialogHeader>
+          <DialogTitle>Gestion des équipements</DialogTitle>
+        </DialogHeader>
+
+        {equipment.length === 0 ? (
+          <EmptyState
+            icon={Thermometer}
+            title="Aucun équipement"
+            description="Commencez par ajouter vos frigos et congélateurs"
+          />
+        ) : (
+          <div className="space-y-2 max-h-[60vh] overflow-y-auto pr-2">
+            {equipment.map((eq) => (
+              <div
+                key={eq.id}
+                className="flex items-center justify-between p-4 bg-slate-900 rounded-lg border border-slate-700"
+              >
+                <div className="flex-1">
+                  <h4 className="font-semibold text-white">{eq.name}</h4>
+                  <div className="flex items-center gap-3 mt-1">
+                    <Badge
+                      variant="outline"
+                      className={cn(
+                        eq.type === 'positive'
+                          ? "border-cyan-600/50 text-cyan-400"
+                          : "border-indigo-600/50 text-indigo-400"
+                      )}
+                    >
+                      {eq.type === 'positive' ? 'Positif' : 'Négatif'}
+                    </Badge>
+                    <span className="text-xs text-slate-400">
+                      {eq.target_min}°C à {eq.target_max}°C
+                    </span>
+                    {eq.location && (
+                      <span className="text-xs text-slate-400">• {eq.location}</span>
+                    )}
+                  </div>
+                </div>
+                {isAdmin && (
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => onEdit(eq)}
+                      className="text-slate-400 hover:text-white hover:bg-slate-700"
+                    >
+                      <Edit className="w-4 h-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => onDelete(eq)}
+                      className="text-red-400 hover:text-red-300 hover:bg-red-950/30"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+
+        <div className="flex justify-between pt-4 border-t border-slate-700">
+          <Button
+            onClick={onAdd}
+            className="bg-orange-600 hover:bg-orange-700"
+          >
+            <Plus className="w-4 h-4 mr-2" />
+            Nouvel équipement
+          </Button>
+          <Button
+            variant="outline"
+            onClick={onClose}
+            className="border-slate-600 text-slate-900 hover:text-slate-100 hover:bg-slate-700"
+          >
+            Fermer
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function EquipmentFormModal({ open, onClose, equipment, onSave, isSaving }) {
   const [form, setForm] = useState({
     name: '',
     type: 'positive',
