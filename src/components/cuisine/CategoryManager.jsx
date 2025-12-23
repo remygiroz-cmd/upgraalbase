@@ -46,7 +46,8 @@ export default function CategoryManager({ onClose }) {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['categories'] })
   });
 
-  const handleCreate = () => {
+  const handleCreate = (e) => {
+    e?.preventDefault();
     if (!newName.trim()) return;
     createMutation.mutate({
       name: newName.trim(),
@@ -55,13 +56,15 @@ export default function CategoryManager({ onClose }) {
     });
   };
 
-  const handleStartEdit = (cat) => {
+  const handleStartEdit = (cat, e) => {
+    e.stopPropagation();
     setEditingId(cat.id);
     setEditName(cat.name);
     setEditColor(cat.color || COLORS[0]);
   };
 
-  const handleSaveEdit = () => {
+  const handleSaveEdit = (e) => {
+    e?.stopPropagation();
     if (!editName.trim()) return;
     updateMutation.mutate({
       id: editingId,
@@ -69,10 +72,18 @@ export default function CategoryManager({ onClose }) {
     });
   };
 
-  const handleCancelEdit = () => {
+  const handleCancelEdit = (e) => {
+    e?.stopPropagation();
     setEditingId(null);
     setEditName('');
     setEditColor('');
+  };
+
+  const handleDelete = (id, e) => {
+    e.stopPropagation();
+    if (window.confirm('Supprimer cette catégorie ?')) {
+      deleteMutation.mutate(id);
+    }
   };
 
   const handleDragEnd = async (result) => {
@@ -83,12 +94,15 @@ export default function CategoryManager({ onClose }) {
     items.splice(result.destination.index, 0, reorderedItem);
 
     // Update order for all categories
-    const updates = items.map((item, index) => 
-      base44.entities.Category.update(item.id, { order: index })
-    );
-    
-    await Promise.all(updates);
-    queryClient.invalidateQueries({ queryKey: ['categories'] });
+    try {
+      const updates = items.map((item, index) => 
+        base44.entities.Category.update(item.id, { order: index })
+      );
+      await Promise.all(updates);
+      queryClient.invalidateQueries({ queryKey: ['categories'] });
+    } catch (error) {
+      console.error('Error reordering:', error);
+    }
   };
 
   return (
@@ -100,7 +114,7 @@ export default function CategoryManager({ onClose }) {
             <div
               {...provided.droppableProps}
               ref={provided.innerRef}
-              className="space-y-2 max-h-[400px] overflow-y-auto"
+              className="space-y-2 max-h-[400px] overflow-y-auto pr-2"
             >
               {categories.map((cat, index) => (
                 <Draggable key={cat.id} draggableId={cat.id} index={index}>
@@ -109,50 +123,57 @@ export default function CategoryManager({ onClose }) {
                       ref={provided.innerRef}
                       {...provided.draggableProps}
                       className={cn(
-                        "flex items-center gap-3 p-3 bg-slate-700/50 rounded-lg transition-colors",
-                        snapshot.isDragging && "bg-slate-600 shadow-xl ring-2 ring-orange-500/50"
+                        "flex items-center gap-2 p-3 bg-slate-700/50 rounded-lg transition-all",
+                        snapshot.isDragging && "bg-slate-600 shadow-xl ring-2 ring-orange-500/50 scale-105"
                       )}
                     >
-                      <button 
+                      <div 
                         {...provided.dragHandleProps}
                         className="cursor-grab active:cursor-grabbing touch-none"
-                        type="button"
                       >
-                        <GripVertical className="w-5 h-5 text-slate-400 hover:text-slate-200" />
-                      </button>
+                        <GripVertical className="w-5 h-5 text-slate-400 hover:text-orange-400" />
+                      </div>
                       
                       {editingId === cat.id ? (
                         <>
-                          <div className="flex gap-1.5 flex-wrap items-center">
-                            {COLORS.slice(0, 6).map((color) => (
+                          <Input
+                            value={editName}
+                            onChange={(e) => setEditName(e.target.value)}
+                            className="flex-1 bg-slate-600 border-slate-500 h-9 text-sm"
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') handleSaveEdit(e);
+                              if (e.key === 'Escape') handleCancelEdit(e);
+                            }}
+                            autoFocus
+                            onClick={(e) => e.stopPropagation()}
+                          />
+                          <div className="flex gap-1 flex-shrink-0">
+                            {COLORS.slice(0, 5).map((color) => (
                               <button
                                 key={color}
-                                onClick={() => setEditColor(color)}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setEditColor(color);
+                                }}
                                 className={cn(
-                                  "w-7 h-7 rounded-full transition-all",
-                                  editColor === color && "ring-2 ring-white ring-offset-2 ring-offset-slate-700"
+                                  "w-6 h-6 rounded-full transition-all flex-shrink-0",
+                                  editColor === color && "ring-2 ring-white scale-110"
                                 )}
                                 style={{ backgroundColor: color }}
                                 type="button"
                               />
                             ))}
                           </div>
-                          <Input
-                            value={editName}
-                            onChange={(e) => setEditName(e.target.value)}
-                            className="flex-1 bg-slate-600 border-slate-500 h-8"
-                            onKeyDown={(e) => e.key === 'Enter' && handleSaveEdit()}
-                          />
                           <button
                             onClick={handleSaveEdit}
-                            className="p-2 rounded-lg hover:bg-green-600/20 text-slate-400 hover:text-green-400 transition-colors"
+                            className="p-2 rounded-lg hover:bg-green-600/20 text-green-400 hover:text-green-300 transition-colors flex-shrink-0"
                             type="button"
                           >
                             <Check className="w-4 h-4" />
                           </button>
                           <button
                             onClick={handleCancelEdit}
-                            className="p-2 rounded-lg hover:bg-slate-600 text-slate-400 transition-colors"
+                            className="p-2 rounded-lg hover:bg-slate-600 text-slate-400 hover:text-slate-300 transition-colors flex-shrink-0"
                             type="button"
                           >
                             <X className="w-4 h-4" />
@@ -164,21 +185,17 @@ export default function CategoryManager({ onClose }) {
                             className="w-4 h-4 rounded-full flex-shrink-0"
                             style={{ backgroundColor: cat.color || '#10b981' }}
                           />
-                          <span className="flex-1 truncate">{cat.name}</span>
+                          <span className="flex-1 truncate text-sm">{cat.name}</span>
                           <button
-                            onClick={() => handleStartEdit(cat)}
-                            className="p-2 rounded-lg hover:bg-slate-600 text-slate-400 hover:text-slate-200 transition-colors"
+                            onClick={(e) => handleStartEdit(cat, e)}
+                            className="p-2 rounded-lg hover:bg-slate-600 text-slate-400 hover:text-orange-400 transition-colors flex-shrink-0"
                             type="button"
                           >
                             <Pencil className="w-4 h-4" />
                           </button>
                           <button
-                            onClick={() => {
-                              if (window.confirm('Supprimer cette catégorie ?')) {
-                                deleteMutation.mutate(cat.id);
-                              }
-                            }}
-                            className="p-2 rounded-lg hover:bg-red-600/20 text-slate-400 hover:text-red-400 transition-colors"
+                            onClick={(e) => handleDelete(cat.id, e)}
+                            className="p-2 rounded-lg hover:bg-red-600/20 text-slate-400 hover:text-red-400 transition-colors flex-shrink-0"
                             type="button"
                           >
                             <Trash2 className="w-4 h-4" />
@@ -192,7 +209,7 @@ export default function CategoryManager({ onClose }) {
               {provided.placeholder}
               
               {categories.length === 0 && (
-                <p className="text-center text-slate-500 py-4">
+                <p className="text-center text-slate-500 py-8 text-sm">
                   Aucune catégorie créée
                 </p>
               )}
@@ -208,13 +225,13 @@ export default function CategoryManager({ onClose }) {
             value={newName}
             onChange={(e) => setNewName(e.target.value)}
             placeholder="Nom de la catégorie"
-            className="bg-slate-700 border-slate-600"
-            onKeyDown={(e) => e.key === 'Enter' && handleCreate()}
+            className="bg-slate-700 border-slate-600 text-sm"
+            onKeyDown={(e) => e.key === 'Enter' && handleCreate(e)}
           />
           <Button
             onClick={handleCreate}
             disabled={!newName.trim() || createMutation.isPending}
-            className="bg-orange-600 hover:bg-orange-700"
+            className="bg-orange-600 hover:bg-orange-700 flex-shrink-0"
           >
             <Plus className="w-4 h-4" />
           </Button>
@@ -227,16 +244,21 @@ export default function CategoryManager({ onClose }) {
               onClick={() => setNewColor(color)}
               className={cn(
                 "w-8 h-8 rounded-lg transition-all",
-                newColor === color && "ring-2 ring-white ring-offset-2 ring-offset-slate-800"
+                newColor === color && "ring-2 ring-white ring-offset-2 ring-offset-slate-800 scale-110"
               )}
               style={{ backgroundColor: color }}
+              type="button"
             />
           ))}
         </div>
       </div>
 
       <div className="flex justify-end pt-2">
-        <Button variant="outline" onClick={onClose} className="border-slate-600 text-slate-900 hover:text-slate-100 hover:bg-slate-700">
+        <Button 
+          variant="outline" 
+          onClick={onClose} 
+          className="border-slate-600 text-slate-900 hover:text-slate-100 hover:bg-slate-700"
+        >
           Fermer
         </Button>
       </div>
