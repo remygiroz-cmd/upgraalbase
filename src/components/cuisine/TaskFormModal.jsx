@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Loader2, Upload, Sparkles, Pencil } from 'lucide-react';
+import { Loader2, Upload, Sparkles, Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const POSTES = [
@@ -35,6 +35,7 @@ export default function TaskFormModal({ open, onClose, task, categories }) {
   const [activeTab, setActiveTab] = useState('general');
   const [generating, setGenerating] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
 
   const [form, setForm] = useState({
     name: '',
@@ -128,6 +129,14 @@ export default function TaskFormModal({ open, onClose, task, categories }) {
       }
       return base44.entities.Task.create(data);
     },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['tasks'] });
+      onClose();
+    }
+  });
+
+  const archiveTaskMutation = useMutation({
+    mutationFn: (id) => base44.entities.Task.update(id, { is_archived: true, archived_at: new Date().toISOString() }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['tasks'] });
       onClose();
@@ -528,20 +537,61 @@ export default function TaskFormModal({ open, onClose, task, categories }) {
             </TabsContent>
           </Tabs>
 
-          <div className="flex justify-end gap-3 pt-4 border-t border-slate-700">
-            <Button type="button" variant="outline" onClick={onClose} className="border-slate-600 text-slate-900 hover:text-slate-100 hover:bg-slate-700">
-              Annuler
-            </Button>
-            <Button 
-              type="submit" 
-              className="bg-orange-600 hover:bg-orange-700"
-              disabled={saveMutation.isPending}
-            >
-              {saveMutation.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-              {task ? 'Mettre à jour' : 'Créer'}
-            </Button>
+          <div className="flex justify-between pt-4 border-t border-slate-700">
+            {task && (
+              <Button 
+                type="button" 
+                variant="outline" 
+                onClick={() => setConfirmDelete(true)}
+                className="border-red-600 text-red-400 hover:bg-red-600/20"
+              >
+                <Trash2 className="w-4 h-4 mr-2" />
+                Archiver
+              </Button>
+            )}
+            <div className="flex gap-3 ml-auto">
+              <Button type="button" variant="outline" onClick={onClose} className="border-slate-600 text-slate-900 hover:text-slate-100 hover:bg-slate-700">
+                Annuler
+              </Button>
+              <Button 
+                type="submit" 
+                className="bg-orange-600 hover:bg-orange-700"
+                disabled={saveMutation.isPending}
+              >
+                {saveMutation.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                {task ? 'Mettre à jour' : 'Créer'}
+              </Button>
+            </div>
           </div>
         </form>
+
+        {/* Confirm Delete Dialog */}
+        {confirmDelete && (
+          <Dialog open={confirmDelete} onOpenChange={setConfirmDelete}>
+            <DialogContent className="bg-slate-800 border-slate-700 max-w-md">
+              <DialogHeader>
+                <DialogTitle>Archiver la tâche</DialogTitle>
+              </DialogHeader>
+              <p className="text-slate-300 text-sm">
+                Êtes-vous sûr de vouloir archiver la tâche "{task?.name}" ? Vous pourrez la restaurer depuis les archives.
+              </p>
+              <div className="flex justify-end gap-3 mt-4">
+                <Button variant="outline" onClick={() => setConfirmDelete(false)} className="border-slate-600 text-slate-900 hover:text-slate-100 hover:bg-slate-700">
+                  Annuler
+                </Button>
+                <Button 
+                  onClick={() => {
+                    archiveTaskMutation.mutate(task.id);
+                    setConfirmDelete(false);
+                  }}
+                  className="bg-red-600 hover:bg-red-700"
+                >
+                  Archiver
+                </Button>
+              </div>
+            </DialogContent>
+          </Dialog>
+        )}
       </DialogContent>
     </Dialog>
   );
