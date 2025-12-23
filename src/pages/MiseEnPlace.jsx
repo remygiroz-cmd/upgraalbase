@@ -311,8 +311,11 @@ export default function MiseEnPlace() {
         baseTask.quantity_to_produce = quantityToProduce;
       }
       // Add auto-schedule quantity
-      else if (task?.auto_schedule?.enabled && task?.auto_schedule?.quantity) {
-        baseTask.quantity_to_produce = task.auto_schedule.quantity;
+      else if (task?.auto_schedule?.enabled) {
+        const quantity = getAutoScheduleQuantity(task);
+        if (quantity) {
+          baseTask.quantity_to_produce = quantity;
+        }
       }
 
       return baseTask;
@@ -397,8 +400,11 @@ export default function MiseEnPlace() {
         baseTask.quantity_to_produce = quantityToProduce;
       }
       // Add auto-schedule quantity
-      else if (task?.auto_schedule?.enabled && task?.auto_schedule?.quantity) {
-        baseTask.quantity_to_produce = task.auto_schedule.quantity;
+      else if (task?.auto_schedule?.enabled) {
+        const quantity = getAutoScheduleQuantity(task);
+        if (quantity) {
+          baseTask.quantity_to_produce = quantity;
+        }
       }
 
       return baseTask;
