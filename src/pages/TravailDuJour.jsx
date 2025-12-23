@@ -47,7 +47,8 @@ export default function TravailDuJour() {
   });
 
   const completeSessionMutation = useMutation({
-    mutationFn: ({ id }) => base44.entities.WorkSession.update(id, {
+    mutationFn: ({ id, data = {} }) => base44.entities.WorkSession.update(id, {
+      ...data,
       status: 'completed',
       completed_at: new Date().toISOString()
     }),
@@ -72,8 +73,11 @@ export default function TravailDuJour() {
     const allCompleted = updatedTasks.every(t => t.is_completed);
 
     if (allCompleted) {
-      // Auto-complete the session
-      completeSessionMutation.mutate({ id: activeSession.id });
+      // Auto-complete the session with updated tasks
+      completeSessionMutation.mutate({ 
+        id: activeSession.id, 
+        data: { tasks: updatedTasks } 
+      });
     } else {
       updateSessionMutation.mutate({
         id: activeSession.id,
