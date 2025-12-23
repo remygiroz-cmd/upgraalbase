@@ -14,7 +14,7 @@ import { cn } from '@/lib/utils';
 
 export default function Parametres() {
   const queryClient = useQueryClient();
-  
+
   const { data: currentUser, isLoading } = useQuery({
     queryKey: ['currentUser'],
     queryFn: () => base44.auth.me()
@@ -31,7 +31,7 @@ export default function Parametres() {
 
   useEffect(() => {
     if (currentUser?.preferences) {
-      setPreferences(prev => ({
+      setPreferences((prev) => ({
         ...prev,
         ...currentUser.preferences
       }));
@@ -62,8 +62,8 @@ export default function Parametres() {
       <PageHeader
         icon={Settings}
         title="Paramètres"
-        subtitle="Personnalisez votre expérience UpGraal"
-      />
+        subtitle="Personnalisez votre expérience UpGraal" />
+
 
       <div className="max-w-4xl mx-auto">
         <Tabs defaultValue="profile" className="space-y-6">
@@ -88,7 +88,7 @@ export default function Parametres() {
 
           {/* Profile Tab */}
           <TabsContent value="profile" className="space-y-6">
-            <div className="bg-slate-800/50 rounded-2xl border border-slate-700/50 p-6">
+            <div className="bg-slate-100 p-6 rounded-2xl border border-slate-700/50">
               <h3 className="text-lg font-semibold text-gray-900 mb-4">Informations personnelles</h3>
               
               <div className="space-y-4">
@@ -98,8 +98,8 @@ export default function Parametres() {
                     id="full_name"
                     defaultValue={currentUser?.full_name}
                     className="bg-slate-700 border-slate-600 mt-2"
-                    disabled
-                  />
+                    disabled />
+
                   <p className="text-xs text-slate-400 mt-1">
                     Contactez un administrateur pour modifier votre nom
                   </p>
@@ -112,8 +112,8 @@ export default function Parametres() {
                     type="email"
                     defaultValue={currentUser?.email}
                     className="bg-slate-700 border-slate-600 mt-2"
-                    disabled
-                  />
+                    disabled />
+
                   <p className="text-xs text-slate-400 mt-1">
                     L'email ne peut pas être modifié
                   </p>
@@ -125,8 +125,8 @@ export default function Parametres() {
                     id="role"
                     defaultValue={currentUser?.role === 'admin' ? 'Administrateur' : 'Utilisateur'}
                     className="bg-slate-700 border-slate-600 mt-2"
-                    disabled
-                  />
+                    disabled />
+
                 </div>
               </div>
             </div>
@@ -142,28 +142,28 @@ export default function Parametres() {
                   label="Activer les notifications"
                   description="Recevoir des notifications dans l'application"
                   checked={preferences.notifications_enabled}
-                  onCheckedChange={(checked) => 
-                    setPreferences({ ...preferences, notifications_enabled: checked })
-                  }
-                />
+                  onCheckedChange={(checked) =>
+                  setPreferences({ ...preferences, notifications_enabled: checked })
+                  } />
+
 
                 <SettingRow
                   label="Résumé quotidien"
                   description="Recevoir un résumé de la journée en fin de service"
                   checked={preferences.daily_summary}
-                  onCheckedChange={(checked) => 
-                    setPreferences({ ...preferences, daily_summary: checked })
-                  }
-                />
+                  onCheckedChange={(checked) =>
+                  setPreferences({ ...preferences, daily_summary: checked })
+                  } />
+
 
                 <SettingRow
                   label="Rappels de tâches"
                   description="Être notifié des tâches à venir"
                   checked={preferences.task_reminders}
-                  onCheckedChange={(checked) => 
-                    setPreferences({ ...preferences, task_reminders: checked })
-                  }
-                />
+                  onCheckedChange={(checked) =>
+                  setPreferences({ ...preferences, task_reminders: checked })
+                  } />
+
               </div>
             </div>
           </TabsContent>
@@ -182,16 +182,16 @@ export default function Parametres() {
                       onClick={() => setPreferences({ ...preferences, theme: 'professional-light' })}
                       className={cn(
                         "group relative p-5 rounded-2xl border-2 transition-all text-left",
-                        preferences.theme === 'professional-light'
-                          ? "border-blue-600 bg-blue-600/10 shadow-lg"
-                          : "border-slate-700 bg-slate-800 hover:border-slate-600"
-                      )}
-                    >
-                      {preferences.theme === 'professional-light' && (
-                        <div className="absolute top-3 right-3 w-6 h-6 rounded-full bg-blue-600 flex items-center justify-center">
+                        preferences.theme === 'professional-light' ?
+                        "border-blue-600 bg-blue-600/10 shadow-lg" :
+                        "border-slate-700 bg-slate-800 hover:border-slate-600"
+                      )}>
+
+                      {preferences.theme === 'professional-light' &&
+                      <div className="absolute top-3 right-3 w-6 h-6 rounded-full bg-blue-600 flex items-center justify-center">
                           <Check className="w-4 h-4 text-white" />
                         </div>
-                      )}
+                      }
                       <div className="space-y-3">
                         <div className="w-full h-24 bg-gradient-to-br from-gray-50 to-gray-100 rounded-lg p-3 border border-gray-200">
                           <div className="flex gap-2 mb-2">
@@ -220,16 +220,16 @@ export default function Parametres() {
                       onClick={() => setPreferences({ ...preferences, theme: 'dark-premium' })}
                       className={cn(
                         "group relative p-5 rounded-2xl border-2 transition-all text-left",
-                        preferences.theme === 'dark-premium'
-                          ? "border-violet-600 bg-violet-600/10 shadow-lg"
-                          : "border-slate-700 bg-slate-800 hover:border-slate-600"
-                      )}
-                    >
-                      {preferences.theme === 'dark-premium' && (
-                        <div className="absolute top-3 right-3 w-6 h-6 rounded-full bg-violet-600 flex items-center justify-center">
+                        preferences.theme === 'dark-premium' ?
+                        "border-violet-600 bg-violet-600/10 shadow-lg" :
+                        "border-slate-700 bg-slate-800 hover:border-slate-600"
+                      )}>
+
+                      {preferences.theme === 'dark-premium' &&
+                      <div className="absolute top-3 right-3 w-6 h-6 rounded-full bg-violet-600 flex items-center justify-center">
                           <Check className="w-4 h-4 text-white" />
                         </div>
-                      )}
+                      }
                       <div className="space-y-3">
                         <div className="w-full h-24 bg-gradient-to-br from-slate-950 to-slate-900 rounded-lg p-3 border border-slate-800">
                           <div className="flex gap-2 mb-2">
@@ -265,8 +265,8 @@ export default function Parametres() {
                     id="default_view"
                     value={preferences.default_view}
                     onChange={(e) => setPreferences({ ...preferences, default_view: e.target.value })}
-                    className="w-full mt-2 px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-slate-100"
-                  >
+                    className="w-full mt-2 px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-slate-100">
+
                     <option value="home">Accueil</option>
                     <option value="mise_en_place">Mise en Place</option>
                     <option value="travail_du_jour">Travail du Jour</option>
@@ -295,8 +295,8 @@ export default function Parametres() {
                     max="120"
                     value={preferences.session_timeout}
                     onChange={(e) => setPreferences({ ...preferences, session_timeout: parseInt(e.target.value) })}
-                    className="bg-slate-700 border-slate-600 mt-2"
-                  />
+                    className="bg-slate-700 border-slate-600 mt-2" />
+
                   <p className="text-xs text-slate-400 mt-1">
                     Temps avant déconnexion automatique (5 à 120 minutes)
                   </p>
@@ -306,8 +306,8 @@ export default function Parametres() {
                   <Button
                     variant="outline"
                     className="border-red-600 text-red-400 hover:bg-red-600/20"
-                    onClick={() => base44.auth.logout()}
-                  >
+                    onClick={() => base44.auth.logout()}>
+
                     Se déconnecter
                   </Button>
                 </div>
@@ -321,15 +321,15 @@ export default function Parametres() {
           <Button
             onClick={handleSavePreferences}
             className="bg-orange-600 hover:bg-orange-700 shadow-lg"
-            disabled={updateUserMutation.isPending}
-          >
+            disabled={updateUserMutation.isPending}>
+
             <Save className="w-4 h-4 mr-2" />
             Enregistrer les paramètres
           </Button>
         </div>
       </div>
-    </div>
-  );
+    </div>);
+
 }
 
 function SettingRow({ label, description, checked, onCheckedChange }) {
@@ -341,8 +341,8 @@ function SettingRow({ label, description, checked, onCheckedChange }) {
       </div>
       <Switch
         checked={checked}
-        onCheckedChange={onCheckedChange}
-      />
-    </div>
-  );
+        onCheckedChange={onCheckedChange} />
+
+    </div>);
+
 }
