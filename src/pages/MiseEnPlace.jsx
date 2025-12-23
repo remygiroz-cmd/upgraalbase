@@ -672,11 +672,11 @@ function CategoryColumn({ categoryId, title, color, tasks, onEditTask, onDeleteT
 
   return (
     <div className={cn(
-      "bg-slate-800/50 rounded-2xl border border-slate-700/50 overflow-hidden transition-all",
-      isDragging && "ring-2 ring-orange-500/50 shadow-xl scale-105"
+      "bg-white rounded-2xl border-2 border-gray-200 overflow-hidden transition-all shadow-sm",
+      isDragging && "ring-2 ring-orange-500 shadow-xl scale-105"
     )}>
       <div 
-        className="px-4 py-3 border-b border-slate-700/50 flex items-center gap-2"
+        className="px-4 py-3 border-b-2 border-gray-200 flex items-center gap-2"
         style={{ borderLeftWidth: 4, borderLeftColor: color }}
       >
         {isDraggable && (
@@ -705,8 +705,8 @@ function CategoryColumn({ categoryId, title, color, tasks, onEditTask, onDeleteT
           />
         ) : (
           <div className="flex-1">
-            <h3 className="font-semibold">{title}</h3>
-            <p className="text-xs text-slate-400">{tasks.length} tâche{tasks.length > 1 ? 's' : ''}</p>
+            <h3 className="font-semibold text-gray-900">{title}</h3>
+            <p className="text-xs text-gray-600">{tasks.length} tâche{tasks.length > 1 ? 's' : ''}</p>
           </div>
         )}
         
@@ -714,14 +714,14 @@ function CategoryColumn({ categoryId, title, color, tasks, onEditTask, onDeleteT
           <div className="flex items-center gap-1">
             <button
               onClick={() => setIsEditing(true)}
-              className="p-2 rounded-lg hover:bg-slate-700 text-slate-400 hover:text-orange-400 transition-colors"
+              className="p-2 rounded-lg hover:bg-orange-50 text-gray-600 hover:text-orange-600 transition-colors"
               title="Modifier"
             >
               <Pencil className="w-4 h-4" />
             </button>
             <button
               onClick={handleDelete}
-              className="p-2 rounded-lg hover:bg-red-600/20 text-slate-400 hover:text-red-400 transition-colors"
+              className="p-2 rounded-lg hover:bg-red-50 text-gray-600 hover:text-red-600 transition-colors"
               title="Supprimer"
             >
               <Trash2 className="w-4 h-4" />
@@ -737,7 +737,7 @@ function CategoryColumn({ categoryId, title, color, tasks, onEditTask, onDeleteT
             {...provided.droppableProps}
             className={cn(
               "p-3 space-y-2 min-h-[100px] transition-colors",
-              snapshot.isDraggingOver && "bg-orange-600/10"
+              snapshot.isDraggingOver && "bg-orange-50"
             )}
           >
             {tasks.map((task, index) => (
@@ -767,7 +767,7 @@ function CategoryColumn({ categoryId, title, color, tasks, onEditTask, onDeleteT
             {provided.placeholder}
             
             {tasks.length === 0 && (
-              <p className="text-center text-slate-500 text-sm py-8">
+              <p className="text-center text-gray-500 text-sm py-8">
                 Aucune tâche
               </p>
             )}
@@ -813,18 +813,18 @@ function TaskCard({ task, onEdit, onDelete, onStartStopwatch, isSelected, onTogg
       exit={{ opacity: 0, scale: 0.95 }}
       onClick={requiresStock ? undefined : onToggleSelection}
       className={cn(
-        "group bg-slate-700/50 rounded-xl p-3 border transition-all",
+        "group bg-white rounded-xl p-3 border-2 transition-all",
         !requiresStock && "cursor-pointer",
         isSelected 
-          ? "bg-orange-600/30 border-orange-600/70 ring-2 ring-orange-600/50" 
-          : "border-slate-600/50 hover:bg-slate-700 hover:border-slate-500/50",
-        isDragging && "shadow-2xl ring-2 ring-orange-500/50 scale-105 rotate-2"
+          ? "bg-orange-50 border-orange-500 ring-2 ring-orange-300" 
+          : "border-gray-300 hover:bg-gray-50 hover:border-gray-400",
+        isDragging && "shadow-2xl ring-2 ring-orange-400 scale-105 rotate-2"
       )}
     >
       <div className="flex items-start gap-3">
         <div 
           {...dragHandleProps}
-          className="text-slate-500 cursor-grab active:cursor-grabbing touch-none"
+          className="text-gray-400 cursor-grab active:cursor-grabbing touch-none"
           onClick={(e) => e.stopPropagation()}
         >
           <GripVertical className="w-4 h-4" />
@@ -839,8 +839,8 @@ function TaskCard({ task, onEdit, onDelete, onStartStopwatch, isSelected, onTogg
         )}
         
         <div className="flex-1 min-w-0">
-          <h4 className="font-medium break-words">{task.name}</h4>
-          <div className="flex items-center gap-3 mt-1 text-xs text-slate-400">
+          <h4 className="font-semibold text-gray-900 break-words">{task.name}</h4>
+          <div className="flex items-center gap-3 mt-1 text-xs text-gray-600">
             {formatDuration() && (
               <span className="flex items-center gap-1">
                 <Clock className="w-3 h-3" />
@@ -848,10 +848,10 @@ function TaskCard({ task, onEdit, onDelete, onStartStopwatch, isSelected, onTogg
               </span>
             )}
             <span className={cn(
-              "px-2 py-0.5 rounded-full text-[10px] font-medium uppercase",
+              "px-2 py-0.5 rounded-full text-[10px] font-bold uppercase",
               task.tracking_mode === 'binary' 
-                ? "bg-amber-600/20 text-amber-400"
-                : "bg-indigo-600/20 text-indigo-400"
+                ? "bg-amber-100 text-amber-700"
+                : "bg-indigo-100 text-indigo-700"
             )}>
               {task.tracking_mode === 'binary' ? (
                 <span className="flex items-center gap-1">
@@ -870,20 +870,20 @@ function TaskCard({ task, onEdit, onDelete, onStartStopwatch, isSelected, onTogg
           {requiresStock && (
             <div className="mt-2 space-y-1">
               <div className="flex items-center gap-2">
-                <label className="text-xs text-slate-400 flex-shrink-0">Stock restant :</label>
+                <label className="text-xs text-gray-700 font-medium flex-shrink-0">Stock restant :</label>
                 <Input
                   type="number"
                   min="0"
                   value={currentStock}
                   onChange={(e) => onStockChange?.(e.target.value)}
                   onClick={(e) => e.stopPropagation()}
-                  className="h-7 w-20 bg-slate-800 border-slate-600 text-xs"
+                  className="h-7 w-20 bg-gray-50 border-gray-300 text-xs font-semibold"
                   placeholder="0"
                 />
-                <span className="text-xs text-slate-400">/ {targetQuantity}</span>
+                <span className="text-xs text-gray-700 font-medium">/ {targetQuantity}</span>
               </div>
               {quantityToProduce > 0 && (
-                <p className="text-xs text-orange-400">
+                <p className="text-xs text-orange-600 font-semibold">
                   À produire : {quantityToProduce} {task.unit || 'unités'}
                 </p>
               )}
@@ -897,7 +897,7 @@ function TaskCard({ task, onEdit, onDelete, onStartStopwatch, isSelected, onTogg
               e.stopPropagation();
               onStartStopwatch();
             }}
-            className="p-2 rounded-lg hover:bg-orange-600/20 text-slate-300 hover:text-orange-400 transition-colors"
+            className="p-2 rounded-lg hover:bg-orange-100 text-gray-600 hover:text-orange-600 transition-colors"
             title="Chronométrer"
           >
             <Play className="w-4 h-4" />
@@ -907,7 +907,7 @@ function TaskCard({ task, onEdit, onDelete, onStartStopwatch, isSelected, onTogg
               e.stopPropagation();
               onEdit();
             }}
-            className="p-2 rounded-lg hover:bg-slate-600 text-slate-400 hover:text-white transition-colors"
+            className="p-2 rounded-lg hover:bg-blue-100 text-gray-600 hover:text-blue-600 transition-colors"
             title="Modifier"
           >
             <Pencil className="w-4 h-4" />
@@ -917,7 +917,7 @@ function TaskCard({ task, onEdit, onDelete, onStartStopwatch, isSelected, onTogg
               e.stopPropagation();
               setConfirmDelete(true);
             }}
-            className="p-2 rounded-lg hover:bg-red-600/20 text-slate-400 hover:text-red-400 transition-colors"
+            className="p-2 rounded-lg hover:bg-red-100 text-gray-600 hover:text-red-600 transition-colors"
             title="Supprimer"
           >
             <Trash2 className="w-4 h-4" />
