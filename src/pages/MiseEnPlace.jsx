@@ -14,6 +14,7 @@ import StopwatchModal from '@/components/cuisine/StopwatchModal';
 import { motion, AnimatePresence } from 'framer-motion';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import { cn } from '@/lib/utils';
+import { format } from 'date-fns';
 
 export default function MiseEnPlace() {
   const queryClient = useQueryClient();
@@ -21,6 +22,8 @@ export default function MiseEnPlace() {
   const [editingTask, setEditingTask] = useState(null);
   const [showCategoryManager, setShowCategoryManager] = useState(false);
   const [stopwatchTask, setStopwatchTask] = useState(null);
+  const [selectedTasks, setSelectedTasks] = useState(new Set());
+  const today = format(new Date(), 'yyyy-MM-dd');
 
   const { data: categories = [], isLoading: loadingCategories } = useQuery({
     queryKey: ['categories'],
@@ -81,6 +84,93 @@ export default function MiseEnPlace() {
 
   const uncategorizedTasks = tasks.filter(t => !t.category_id);
 
+  const { data: currentUser } = useQuery({
+    queryKey: ['currentUser'],
+    queryFn: () => base44.auth.me()
+  });
+
+  const { data: activeSessions = [] } = useQuery({
+    queryKey: ['workSessions', 'active'],
+    queryFn: () => base44.entities.WorkSession.filter({ date: today, status: 'active' })
+  });
+
+  const hasActiveSession = activeSessions.length > 0;
+  const activeSession = activeSessions[0];
+
+  const createSessionMutation = useMutation({
+    mutationFn: (data) => base44.entities.WorkSession.create(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['workSessions'] });
+      setSelectedTasks(new Set());
+    }
+  });
+
+  const updateSessionMutation = useMutation({
+    mutationFn: ({ id, data }) => base44.entities.WorkSession.update(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['workSessions'] });
+      setSelectedTasks(new Set());
+    }
+  });
+
+  const toggleTaskSelection = (taskId) => {
+    const newSelected = new Set(selectedTasks);
+    if (newSelected.has(taskId)) {
+      newSelected.delete(taskId);
+    } else {
+      newSelected.add(taskId);
+    }
+    setSelectedTasks(newSelected);
+  };
+
+  const handleCreateNewSession = async () => {
+    const selectedTasksArray = Array.from(selectedTasks).map(taskId => {
+      const task = tasks.find(t => t.id === taskId);
+      const category = categories.find(c => c.id === task?.category_id);
+      return {
+        task_id: taskId,
+        task_name: task?.name,
+        category_id: task?.category_id,
+        category_name: category?.name,
+        is_completed: false,
+        added_at: new Date().toISOString()
+      };
+    });
+
+    createSessionMutation.mutate({
+      date: today,
+      status: 'active',
+      tasks: selectedTasksArray,
+      started_by: currentUser?.email,
+      started_by_name: currentUser?.full_name || currentUser?.email,
+      started_at: new Date().toISOString()
+    });
+  };
+
+  const handleAddToSession = async () => {
+    if (!activeSession) return;
+    
+    const selectedTasksArray = Array.from(selectedTasks).map(taskId => {
+      const task = tasks.find(t => t.id === taskId);
+      const category = categories.find(c => c.id === task?.category_id);
+      return {
+        task_id: taskId,
+        task_name: task?.name,
+        category_id: task?.category_id,
+        category_name: category?.name,
+        is_completed: false,
+        added_at: new Date().toISOString()
+      };
+    });
+
+    const updatedTasks = [...(activeSession.tasks || []), ...selectedTasksArray];
+    
+    updateSessionMutation.mutate({
+      id: activeSession.id,
+      data: { tasks: updatedTasks }
+    });
+  };
+
   if (loadingCategories || loadingTasks) {
     return <LoadingSpinner />;
   }
@@ -110,6 +200,50 @@ export default function MiseEnPlace() {
           </>
         }
       />
+
+      {/* Selection Actions */}
+      <AnimatePresence>
+        {selectedTasks.size > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            className="mb-6 p-4 bg-orange-600/20 border border-orange-600/30 rounded-xl flex items-center justify-between"
+          >
+            <span className="font-medium text-orange-200">
+              {selectedTasks.size} tâche{selectedTasks.size > 1 ? 's' : ''} sélectionnée{selectedTasks.size > 1 ? 's' : ''}
+            </span>
+            <div className="flex gap-3">
+              <Button
+                variant="outline"
+                onClick={() => setSelectedTasks(new Set())}
+                className="border-orange-600 text-orange-300 hover:bg-orange-600/20"
+              >
+                Annuler
+              </Button>
+              {hasActiveSession ? (
+                <Button
+                  onClick={handleAddToSession}
+                  disabled={updateSessionMutation.isPending}
+                  className="bg-orange-600 hover:bg-orange-700"
+                >
+                  <Plus className="w-4 h-4 mr-2" />
+                  Ajouter à la liste
+                </Button>
+              ) : (
+                <Button
+                  onClick={handleCreateNewSession}
+                  disabled={createSessionMutation.isPending}
+                  className="bg-orange-600 hover:bg-orange-700"
+                >
+                  <Plus className="w-4 h-4 mr-2" />
+                  Créer nouvelle liste
+                </Button>
+              )}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {categories.length === 0 && tasks.length === 0 ? (
         <EmptyState
@@ -144,6 +278,8 @@ export default function MiseEnPlace() {
                     onDeleteTask={(id) => deleteTaskMutation.mutate(id)}
                     onStartStopwatch={setStopwatchTask}
                     isDraggable={false}
+                    selectedTasks={selectedTasks}
+                    onToggleSelection={toggleTaskSelection}
                   />
                 )}
 
@@ -168,6 +304,8 @@ export default function MiseEnPlace() {
                           dragHandleProps={provided.dragHandleProps}
                           isDragging={snapshot.isDragging}
                           isDraggable={true}
+                          selectedTasks={selectedTasks}
+                          onToggleSelection={toggleTaskSelection}
                         />
                       </div>
                     )}
@@ -209,7 +347,7 @@ export default function MiseEnPlace() {
   );
 }
 
-function CategoryColumn({ title, color, tasks, onEditTask, onDeleteTask, onStartStopwatch, category, onEditCategory, onDeleteCategory, dragHandleProps, isDragging, isDraggable }) {
+function CategoryColumn({ title, color, tasks, onEditTask, onDeleteTask, onStartStopwatch, category, onEditCategory, onDeleteCategory, dragHandleProps, isDragging, isDraggable, selectedTasks, onToggleSelection }) {
   const [isEditing, setIsEditing] = useState(false);
   const [editName, setEditName] = useState(title);
 
@@ -295,6 +433,8 @@ function CategoryColumn({ title, color, tasks, onEditTask, onDeleteTask, onStart
               onEdit={() => onEditTask(task)}
               onDelete={() => onDeleteTask(task.id)}
               onStartStopwatch={() => onStartStopwatch(task)}
+              isSelected={selectedTasks?.has(task.id)}
+              onToggleSelection={() => onToggleSelection?.(task.id)}
             />
           ))}
         </AnimatePresence>
@@ -309,7 +449,7 @@ function CategoryColumn({ title, color, tasks, onEditTask, onDeleteTask, onStart
   );
 }
 
-function TaskCard({ task, onEdit, onDelete, onStartStopwatch }) {
+function TaskCard({ task, onEdit, onDelete, onStartStopwatch, isSelected, onToggleSelection }) {
   const formatDuration = () => {
     const mins = task.duration_minutes || 0;
     const secs = task.duration_seconds || 0;
@@ -325,9 +465,12 @@ function TaskCard({ task, onEdit, onDelete, onStartStopwatch }) {
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, scale: 0.95 }}
+      onClick={onToggleSelection}
       className={cn(
-        "group bg-slate-700/50 rounded-xl p-3 border border-slate-600/50",
-        "hover:bg-slate-700 hover:border-slate-500/50 transition-all"
+        "group bg-slate-700/50 rounded-xl p-3 border transition-all cursor-pointer",
+        isSelected 
+          ? "bg-orange-600/30 border-orange-600/70 ring-2 ring-orange-600/50" 
+          : "border-slate-600/50 hover:bg-slate-700 hover:border-slate-500/50"
       )}
     >
       <div className="flex items-start gap-3">
@@ -375,21 +518,30 @@ function TaskCard({ task, onEdit, onDelete, onStartStopwatch }) {
 
         <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
           <button
-            onClick={onStartStopwatch}
+            onClick={(e) => {
+              e.stopPropagation();
+              onStartStopwatch();
+            }}
             className="p-2 rounded-lg hover:bg-orange-600/20 text-slate-300 hover:text-orange-400 transition-colors"
             title="Chronométrer"
           >
             <Play className="w-4 h-4" />
           </button>
           <button
-            onClick={onEdit}
+            onClick={(e) => {
+              e.stopPropagation();
+              onEdit();
+            }}
             className="p-2 rounded-lg hover:bg-slate-600 text-slate-400 hover:text-white transition-colors"
             title="Modifier"
           >
             <Pencil className="w-4 h-4" />
           </button>
           <button
-            onClick={onDelete}
+            onClick={(e) => {
+              e.stopPropagation();
+              onDelete();
+            }}
             className="p-2 rounded-lg hover:bg-red-600/20 text-slate-400 hover:text-red-400 transition-colors"
             title="Supprimer"
           >
