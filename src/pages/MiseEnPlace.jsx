@@ -26,37 +26,20 @@ export default function MiseEnPlace() {
   const [selectedTasks, setSelectedTasks] = useState(new Set());
   const [stockInputs, setStockInputs] = useState({});
   const [confirmDialog, setConfirmDialog] = useState({ open: false, title: '', description: '', onConfirm: null });
-  const [showArchives, setShowArchives] = useState(false);
-  const [archiveTab, setArchiveTab] = useState('categories');
   const today = format(new Date(), 'yyyy-MM-dd');
   const dayOfWeek = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'][new Date().getDay()];
 
-  const { data: allCategories = [], isLoading: loadingCategories } = useQuery({
+  const { data: categories = [], isLoading: loadingCategories } = useQuery({
     queryKey: ['categories'],
     queryFn: () => base44.entities.Category.list('order')
   });
 
-  const { data: allTasks = [], isLoading: loadingTasks } = useQuery({
+  const { data: tasks = [], isLoading: loadingTasks } = useQuery({
     queryKey: ['tasks'],
     queryFn: () => base44.entities.Task.list('order')
   });
 
-  const categories = allCategories.filter(c => !c.is_archived);
-  const tasks = allTasks.filter(t => !t.is_archived);
-  const archivedCategories = allCategories.filter(c => c.is_archived);
-  const archivedTasks = allTasks.filter(t => t.is_archived);
-
-  const archiveTaskMutation = useMutation({
-    mutationFn: (id) => base44.entities.Task.update(id, { is_archived: true, archived_at: new Date().toISOString() }),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['tasks'] })
-  });
-
-  const restoreTaskMutation = useMutation({
-    mutationFn: (id) => base44.entities.Task.update(id, { is_archived: false, archived_at: null }),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['tasks'] })
-  });
-
-  const deleteTaskPermanentlyMutation = useMutation({
+  const deleteTaskMutation = useMutation({
     mutationFn: (id) => base44.entities.Task.delete(id),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['tasks'] })
   });
@@ -66,17 +49,7 @@ export default function MiseEnPlace() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['categories'] })
   });
 
-  const archiveCategoryMutation = useMutation({
-    mutationFn: (id) => base44.entities.Category.update(id, { is_archived: true, archived_at: new Date().toISOString() }),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['categories'] })
-  });
-
-  const restoreCategoryMutation = useMutation({
-    mutationFn: (id) => base44.entities.Category.update(id, { is_archived: false, archived_at: null }),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['categories'] })
-  });
-
-  const deleteCategoryPermanentlyMutation = useMutation({
+  const deleteCategoryMutation = useMutation({
     mutationFn: (id) => base44.entities.Category.delete(id),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['categories'] })
   });
@@ -521,7 +494,7 @@ export default function MiseEnPlace() {
                     color="#64748b"
                     tasks={uncategorizedTasks}
                     onEditTask={handleEditTask}
-                    onDeleteTask={(id) => archiveTaskMutation.mutate(id)}
+                    onDeleteTask={(id) => deleteTaskMutation.mutate(id)}
                     onStartStopwatch={setStopwatchTask}
                     isDraggable={false}
                     selectedTasks={selectedTasks}
@@ -546,11 +519,11 @@ export default function MiseEnPlace() {
                           color={category.color || '#10b981'}
                           tasks={getTasksByCategory(category.id)}
                           onEditTask={handleEditTask}
-                          onDeleteTask={(id) => archiveTaskMutation.mutate(id)}
+                          onDeleteTask={(id) => deleteTaskMutation.mutate(id)}
                           onStartStopwatch={setStopwatchTask}
                           category={category}
                           onEditCategory={(cat) => updateCategoryMutation.mutate(cat)}
-                          onDeleteCategory={(id) => archiveCategoryMutation.mutate(id)}
+                          onDeleteCategory={(id) => deleteCategoryMutation.mutate(id)}
                           dragHandleProps={provided.dragHandleProps}
                           isDragging={snapshot.isDragging}
                           isDraggable={true}
@@ -597,136 +570,6 @@ export default function MiseEnPlace() {
         />
       )}
 
-      {/* Archives Section */}
-      <div className="mt-12 border-t border-slate-700 pt-8 pb-32">
-        <Button
-          variant="outline"
-          onClick={() => setShowArchives(!showArchives)}
-          className="mb-6 border-slate-600 hover:bg-slate-700 text-slate-900 hover:text-slate-100"
-        >
-          {showArchives ? 'Masquer les archives' : 'Afficher les archives'}
-        </Button>
-
-        <AnimatePresence>
-          {showArchives && (
-            <motion.div
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: 'auto' }}
-              exit={{ opacity: 0, height: 0 }}
-            >
-              <div className="mb-4 flex gap-2">
-                <Button
-                  variant={archiveTab === 'categories' ? 'default' : 'outline'}
-                  onClick={() => setArchiveTab('categories')}
-                  className={archiveTab === 'categories' ? 'bg-orange-600 hover:bg-orange-700' : 'border-slate-600 text-slate-900 hover:text-slate-100 hover:bg-slate-700'}
-                >
-                  Catégories archivées ({archivedCategories.length})
-                </Button>
-                <Button
-                  variant={archiveTab === 'tasks' ? 'default' : 'outline'}
-                  onClick={() => setArchiveTab('tasks')}
-                  className={archiveTab === 'tasks' ? 'bg-orange-600 hover:bg-orange-700' : 'border-slate-600 text-slate-900 hover:text-slate-100 hover:bg-slate-700'}
-                >
-                  Tâches archivées ({archivedTasks.length})
-                </Button>
-              </div>
-
-              {archiveTab === 'categories' && (
-                <div className="space-y-3">
-                  {archivedCategories.length === 0 ? (
-                    <p className="text-center text-slate-500 py-8">Aucune catégorie archivée</p>
-                  ) : (
-                    archivedCategories.map(category => (
-                      <div key={category.id} className="bg-slate-800/50 rounded-xl p-4 border border-slate-700/50 flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                          <div className="w-1 h-12 rounded-full" style={{ backgroundColor: category.color || '#64748b' }} />
-                          <div>
-                            <h4 className="font-medium">{category.name}</h4>
-                            <p className="text-xs text-slate-400">
-                              Archivée le {format(new Date(category.archived_at), 'dd/MM/yyyy')}
-                            </p>
-                          </div>
-                        </div>
-                        <div className="flex gap-2">
-                          <Button
-                            variant="outline"
-                            onClick={() => restoreCategoryMutation.mutate(category.id)}
-                            className="border-green-600 text-green-400 hover:bg-green-600/20"
-                          >
-                            Restaurer
-                          </Button>
-                          <Button
-                            variant="outline"
-                            onClick={() => {
-                              setConfirmDialog({
-                                open: true,
-                                title: 'Supprimer définitivement',
-                                description: `Êtes-vous sûr de vouloir supprimer définitivement la catégorie "${category.name}" ? Cette action est irréversible.`,
-                                onConfirm: () => deleteCategoryPermanentlyMutation.mutate(category.id)
-                              });
-                            }}
-                            className="border-red-600 text-red-400 hover:bg-red-600/20"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
-                        </div>
-                      </div>
-                    ))
-                  )}
-                </div>
-              )}
-
-              {archiveTab === 'tasks' && (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                  {archivedTasks.length === 0 ? (
-                    <p className="col-span-full text-center text-slate-500 py-8">Aucune tâche archivée</p>
-                  ) : (
-                    archivedTasks.map(task => (
-                      <div key={task.id} className="bg-slate-800/50 rounded-xl p-4 border border-slate-700/50">
-                        <div className="flex items-start gap-3 mb-3">
-                          {task.image_url && (
-                            <img src={task.image_url} alt={task.name} className="w-12 h-12 rounded-lg object-cover" />
-                          )}
-                          <div className="flex-1 min-w-0">
-                            <h4 className="font-medium break-words">{task.name}</h4>
-                            <p className="text-xs text-slate-400">
-                              Archivée le {format(new Date(task.archived_at), 'dd/MM/yyyy')}
-                            </p>
-                          </div>
-                        </div>
-                        <div className="flex gap-2">
-                          <Button
-                            variant="outline"
-                            onClick={() => restoreTaskMutation.mutate(task.id)}
-                            className="flex-1 border-green-600 text-green-400 hover:bg-green-600/20"
-                          >
-                            Restaurer
-                          </Button>
-                          <Button
-                            variant="outline"
-                            onClick={() => {
-                              setConfirmDialog({
-                                open: true,
-                                title: 'Supprimer définitivement',
-                                description: `Êtes-vous sûr de vouloir supprimer définitivement la tâche "${task.name}" ? Cette action est irréversible.`,
-                                onConfirm: () => deleteTaskPermanentlyMutation.mutate(task.id)
-                              });
-                            }}
-                            className="border-red-600 text-red-400 hover:bg-red-600/20"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
-                        </div>
-                      </div>
-                    ))
-                  )}
-                </div>
-              )}
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </div>
-
       {/* Confirm Dialog */}
       <ConfirmDialog
         open={confirmDialog.open}
@@ -734,7 +577,7 @@ export default function MiseEnPlace() {
         title={confirmDialog.title}
         description={confirmDialog.description}
         onConfirm={confirmDialog.onConfirm}
-        variant={confirmDialog.title === 'Supprimer définitivement' ? 'danger' : 'warning'}
+        variant="warning"
       />
     </div>
   );
@@ -866,11 +709,11 @@ function CategoryColumn({ categoryId, title, color, tasks, onEditTask, onDeleteT
       <ConfirmDialog
         open={confirmDeleteCategory}
         onOpenChange={setConfirmDeleteCategory}
-        title="Archiver la catégorie"
-        description={`Êtes-vous sûr de vouloir archiver la catégorie "${title}" ? Vous pourrez la restaurer depuis les archives.`}
+        title="Supprimer la catégorie"
+        description={`Êtes-vous sûr de vouloir supprimer la catégorie "${title}" ?`}
         onConfirm={() => onDeleteCategory(category.id)}
-        variant="warning"
-        confirmText="Archiver"
+        variant="danger"
+        confirmText="Supprimer"
       />
     </div>
   );
