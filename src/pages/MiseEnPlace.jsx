@@ -56,6 +56,11 @@ export default function MiseEnPlace() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['tasks'] })
   });
 
+  const deleteTaskPermanentlyMutation = useMutation({
+    mutationFn: (id) => base44.entities.Task.delete(id),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['tasks'] })
+  });
+
   const updateCategoryMutation = useMutation({
     mutationFn: ({ id, data }) => base44.entities.Category.update(id, data),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['categories'] })
@@ -68,6 +73,11 @@ export default function MiseEnPlace() {
 
   const restoreCategoryMutation = useMutation({
     mutationFn: (id) => base44.entities.Category.update(id, { is_archived: false, archived_at: null }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['categories'] })
+  });
+
+  const deleteCategoryPermanentlyMutation = useMutation({
+    mutationFn: (id) => base44.entities.Category.delete(id),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['categories'] })
   });
 
@@ -637,13 +647,29 @@ export default function MiseEnPlace() {
                             </p>
                           </div>
                         </div>
-                        <Button
-                          variant="outline"
-                          onClick={() => restoreCategoryMutation.mutate(category.id)}
-                          className="border-green-600 text-green-400 hover:bg-green-600/20"
-                        >
-                          Restaurer
-                        </Button>
+                        <div className="flex gap-2">
+                          <Button
+                            variant="outline"
+                            onClick={() => restoreCategoryMutation.mutate(category.id)}
+                            className="border-green-600 text-green-400 hover:bg-green-600/20"
+                          >
+                            Restaurer
+                          </Button>
+                          <Button
+                            variant="outline"
+                            onClick={() => {
+                              setConfirmDialog({
+                                open: true,
+                                title: 'Supprimer définitivement',
+                                description: `Êtes-vous sûr de vouloir supprimer définitivement la catégorie "${category.name}" ? Cette action est irréversible.`,
+                                onConfirm: () => deleteCategoryPermanentlyMutation.mutate(category.id)
+                              });
+                            }}
+                            className="border-red-600 text-red-400 hover:bg-red-600/20"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </div>
                       </div>
                     ))
                   )}
@@ -668,13 +694,29 @@ export default function MiseEnPlace() {
                             </p>
                           </div>
                         </div>
-                        <Button
-                          variant="outline"
-                          onClick={() => restoreTaskMutation.mutate(task.id)}
-                          className="w-full border-green-600 text-green-400 hover:bg-green-600/20"
-                        >
-                          Restaurer
-                        </Button>
+                        <div className="flex gap-2">
+                          <Button
+                            variant="outline"
+                            onClick={() => restoreTaskMutation.mutate(task.id)}
+                            className="flex-1 border-green-600 text-green-400 hover:bg-green-600/20"
+                          >
+                            Restaurer
+                          </Button>
+                          <Button
+                            variant="outline"
+                            onClick={() => {
+                              setConfirmDialog({
+                                open: true,
+                                title: 'Supprimer définitivement',
+                                description: `Êtes-vous sûr de vouloir supprimer définitivement la tâche "${task.name}" ? Cette action est irréversible.`,
+                                onConfirm: () => deleteTaskPermanentlyMutation.mutate(task.id)
+                              });
+                            }}
+                            className="border-red-600 text-red-400 hover:bg-red-600/20"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </div>
                       </div>
                     ))
                   )}
@@ -692,7 +734,7 @@ export default function MiseEnPlace() {
         title={confirmDialog.title}
         description={confirmDialog.description}
         onConfirm={confirmDialog.onConfirm}
-        variant="warning"
+        variant={confirmDialog.title === 'Supprimer définitivement' ? 'danger' : 'warning'}
       />
     </div>
   );
