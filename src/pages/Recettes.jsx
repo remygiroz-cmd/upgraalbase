@@ -93,17 +93,7 @@ export default function Recettes() {
       <PageHeader
         icon={BookOpen}
         title="Recettes & Créations"
-        subtitle={
-          <div className="flex items-center gap-2">
-            <span>Fiches techniques et créations culinaires</span>
-            {currentUser && (
-              <>
-                <span className="text-slate-600">•</span>
-                <span className="text-orange-400">{currentUser.full_name || currentUser.email}</span>
-              </>
-            )}
-          </div>
-        }
+        subtitle="Fiches techniques et créations culinaires"
         actions={
           <Button
             onClick={() => setShowFormModal(true)}
