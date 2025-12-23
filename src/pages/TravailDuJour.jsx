@@ -1,9 +1,8 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
-import { ChefHat, Check, CheckCircle2, X, Clock, RotateCcw, Pencil } from 'lucide-react';
+import { ChefHat, Check, CheckCircle2, X, Clock, RotateCcw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Progress } from '@/components/ui/progress';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import PageHeader from '@/components/ui/PageHeader';
@@ -62,28 +61,16 @@ export default function TravailDuJour() {
     }
   });
 
-  const handleCompleteTask = (taskIndex, completedQuantity = null) => {
+  const handleCompleteTask = (taskIndex) => {
     if (!activeSession) return;
     
     const updatedTasks = [...activeSession.tasks];
-    const task = updatedTasks[taskIndex];
-    
-    // If completedQuantity is provided, use it; otherwise use the full quantity
-    const finalQuantity = completedQuantity !== null 
-      ? completedQuantity 
-      : (task.quantity_to_produce || 1);
-    
-    const isFullyCompleted = finalQuantity >= (task.quantity_to_produce || 1);
-    
     updatedTasks[taskIndex] = {
       ...updatedTasks[taskIndex],
-      completed_quantity: finalQuantity,
-      is_completed: isFullyCompleted,
-      ...(isFullyCompleted && {
-        completed_by: currentUser?.email,
-        completed_by_name: currentUser?.full_name || currentUser?.email,
-        completed_at: new Date().toISOString()
-      })
+      is_completed: true,
+      completed_by: currentUser?.email,
+      completed_by_name: currentUser?.full_name || currentUser?.email,
+      completed_at: new Date().toISOString()
     };
 
     updateSessionMutation.mutate({
@@ -147,65 +134,27 @@ export default function TravailDuJour() {
     tasksByCategory[catId].push({ ...task, originalIndex: index });
   });
 
-  // Pass the global tasks array to components
-  const globalTasks = tasks;
-
-  // Calculate progress with partial completion
-  const calculateProgress = () => {
-    if (!activeSession.tasks?.length) return { completed: 0, total: 0, percent: 0 };
-    
-    let totalUnits = 0;
-    let completedUnits = 0;
-    
-    activeSession.tasks.forEach(task => {
-      const units = task.quantity_to_produce || 1;
-      totalUnits += units;
-      
-      if (task.completed_quantity !== undefined) {
-        completedUnits += Math.min(task.completed_quantity, units);
-      } else if (task.is_completed) {
-        completedUnits += units;
-      }
-    });
-    
-    return {
-      completed: completedUnits,
-      total: totalUnits,
-      percent: totalUnits > 0 ? (completedUnits / totalUnits) * 100 : 0
-    };
-  };
-  
-  const progress = calculateProgress();
+  // Calculate progress
   const completedCount = activeSession.tasks?.filter(t => t.is_completed).length || 0;
   const totalCount = activeSession.tasks?.length || 0;
+  const progressPercent = totalCount > 0 ? (completedCount / totalCount) * 100 : 0;
 
   // Calculate time with quantity
-  const calculateTimeForTask = (sessionTask, remaining = false) => {
+  const calculateTimeForTask = (sessionTask) => {
     const task = tasks.find(t => t.id === sessionTask.task_id);
     if (!task) return 0;
     const baseTime = (task.duration_minutes || 0) * 60 + (task.duration_seconds || 0);
-    
-    if (remaining) {
-      // If task is completed, no time remaining
-      if (sessionTask.is_completed) return 0;
-      
-      // Calculate remaining units based on completed quantity
-      const totalUnits = sessionTask.quantity_to_produce || 1;
-      const completedUnits = sessionTask.completed_quantity || 0;
-      const remainingUnits = Math.max(0, totalUnits - completedUnits);
-      return baseTime * remainingUnits;
-    }
-    
     const multiplier = sessionTask.quantity_to_produce || 1;
     return baseTime * multiplier;
   };
 
   const totalTimeSeconds = activeSession.tasks?.reduce((acc, sessionTask) => {
-    return acc + calculateTimeForTask(sessionTask, false);
+    return acc + calculateTimeForTask(sessionTask);
   }, 0) || 0;
 
   const remainingTimeSeconds = activeSession.tasks?.reduce((acc, sessionTask) => {
-    return acc + calculateTimeForTask(sessionTask, true);
+    if (sessionTask.is_completed) return acc;
+    return acc + calculateTimeForTask(sessionTask);
   }, 0) || 0;
 
   const formatTime = (seconds) => {
@@ -246,9 +195,8 @@ export default function TravailDuJour() {
       <div className="mb-6 p-4 bg-slate-800/50 rounded-2xl border border-slate-700/50">
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-4">
-            <span className="text-2xl font-bold text-orange-400">{progress.completed}/{progress.total}</span>
-            <span className="text-slate-300">unités complétées</span>
-            <span className="text-sm text-slate-400">({completedCount}/{totalCount} tâches)</span>
+            <span className="text-2xl font-bold text-orange-400">{completedCount}/{totalCount}</span>
+            <span className="text-slate-300">tâches complétées</span>
           </div>
           <div className="flex items-center gap-4 text-sm">
             <div className="flex items-center gap-2 text-slate-400">
@@ -261,7 +209,7 @@ export default function TravailDuJour() {
             </div>
           </div>
         </div>
-        <Progress value={progress.percent} className="h-3 bg-slate-700" />
+        <Progress value={progressPercent} className="h-3 bg-slate-700" />
       </div>
 
       {/* Tasks by Category */}
@@ -289,9 +237,9 @@ export default function TravailDuJour() {
                     <WorkTaskCard
                       key={task.originalIndex}
                       task={task}
-                      onComplete={(qty) => handleCompleteTask(task.originalIndex, qty)}
+                      onComplete={() => handleCompleteTask(task.originalIndex)}
                       onRemove={() => handleRemoveTask(task.originalIndex)}
-                      allTasksEntities={globalTasks}
+                      allTasks={tasks}
                     />
                   ))}
                 </AnimatePresence>
@@ -326,30 +274,9 @@ export default function TravailDuJour() {
   );
 }
 
-function WorkTaskCard({ task, onComplete, onRemove, allTasksEntities }) {
-  const taskDetails = allTasksEntities.find(t => t.id === task.task_id);
+function WorkTaskCard({ task, onComplete, onRemove, allTasks }) {
+  const taskDetails = allTasks.find(t => t.id === task.task_id);
   const hasQuantity = task.quantity_to_produce !== undefined && task.quantity_to_produce > 0;
-  const [manualQuantity, setManualQuantity] = useState(task.completed_quantity || 0);
-  const [showQuantityInput, setShowQuantityInput] = useState(false);
-  
-  // Sync manualQuantity with task.completed_quantity when it changes
-  React.useEffect(() => {
-    setManualQuantity(task.completed_quantity || 0);
-  }, [task.completed_quantity]);
-  
-  const completedQuantity = task.completed_quantity || 0;
-  const totalQuantity = task.quantity_to_produce || 1;
-  const remainingQuantity = Math.max(0, totalQuantity - completedQuantity);
-  const isPartiallyComplete = completedQuantity > 0 && completedQuantity < totalQuantity;
-  
-  const handleCompleteWithQuantity = () => {
-    if (showQuantityInput) {
-      onComplete(manualQuantity);
-      setShowQuantityInput(false);
-    } else {
-      onComplete(totalQuantity);
-    }
-  };
   
   return (
     <motion.div
@@ -361,14 +288,12 @@ function WorkTaskCard({ task, onComplete, onRemove, allTasksEntities }) {
         "p-4 rounded-xl border transition-all",
         task.is_completed
           ? "bg-orange-900/20 border-orange-600/30"
-          : isPartiallyComplete
-          ? "bg-indigo-900/20 border-indigo-600/30"
           : "bg-slate-700/50 border-slate-600/50"
       )}
     >
-      <div className="flex items-center justify-between gap-3">
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-3 flex-wrap">
+      <div className="flex items-center justify-between">
+        <div className="flex-1">
+          <div className="flex items-center gap-3">
             <h4 className={cn(
               "font-medium",
               task.is_completed && "line-through text-slate-500"
@@ -376,38 +301,11 @@ function WorkTaskCard({ task, onComplete, onRemove, allTasksEntities }) {
               {task.task_name}
             </h4>
             {hasQuantity && (
-              <span className={cn(
-                "px-2 py-1 rounded-lg text-xs font-medium whitespace-nowrap",
-                task.is_completed 
-                  ? "bg-orange-600/20 text-orange-400"
-                  : isPartiallyComplete
-                  ? "bg-indigo-600/20 text-indigo-400"
-                  : "bg-slate-600/20 text-slate-400"
-              )}>
-                {task.is_completed 
-                  ? `${totalQuantity} ${taskDetails?.unit || 'unités'} ✓`
-                  : isPartiallyComplete
-                  ? `Restant : ${remainingQuantity} ${taskDetails?.unit || 'unités'} (${completedQuantity}/${totalQuantity})`
-                  : `À faire : ${totalQuantity} ${taskDetails?.unit || 'unités'}`
-                }
+              <span className="px-2 py-1 rounded-lg bg-indigo-600/20 text-indigo-400 text-xs font-medium">
+                À faire : {task.quantity_to_produce} {taskDetails?.unit || 'unités'}
               </span>
             )}
           </div>
-          
-          {!task.is_completed && hasQuantity && showQuantityInput && (
-            <div className="mt-2 flex items-center gap-2">
-              <Input
-                type="number"
-                min="0"
-                max={totalQuantity}
-                value={manualQuantity}
-                onChange={(e) => setManualQuantity(parseInt(e.target.value) || 0)}
-                className="h-8 w-24 bg-slate-800 border-slate-600 text-sm"
-                placeholder="0"
-              />
-              <span className="text-xs text-slate-400">unités effectuées</span>
-            </div>
-          )}
           
           {task.is_completed && task.completed_by_name && (
             <div className="mt-2 flex items-center gap-2">
@@ -422,7 +320,7 @@ function WorkTaskCard({ task, onComplete, onRemove, allTasksEntities }) {
           )}
         </div>
 
-        <div className="flex items-center gap-2 flex-shrink-0">
+        <div className="flex items-center gap-2">
           {!task.is_completed && (
             <>
               <Button
@@ -433,26 +331,12 @@ function WorkTaskCard({ task, onComplete, onRemove, allTasksEntities }) {
               >
                 <X className="w-4 h-4" />
               </Button>
-              {hasQuantity && !showQuantityInput && (
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => {
-                    setManualQuantity(completedQuantity);
-                    setShowQuantityInput(true);
-                  }}
-                  className="border-slate-600 text-slate-300 hover:bg-slate-700"
-                >
-                  <Pencil className="w-4 h-4 mr-2" />
-                  Modifier
-                </Button>
-              )}
               <Button
-                onClick={handleCompleteWithQuantity}
+                onClick={onComplete}
                 className="bg-orange-600 hover:bg-orange-700 min-h-[44px]"
               >
                 <Check className="w-4 h-4 mr-2" />
-                {showQuantityInput ? 'Valider' : 'Terminé'}
+                Terminé
               </Button>
             </>
           )}
