@@ -14,7 +14,8 @@ import {
   Package,
   Menu,
   X,
-  Home
+  Home,
+  Settings
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -181,8 +182,14 @@ export default function Layout({ children, currentPageName }) {
           </nav>
 
           {/* Footer */}
-          <div className="p-4 border-t border-slate-700">
-            <p className="text-xs text-slate-500 text-center">
+          <div className="p-4 border-t border-slate-700 space-y-2">
+            <NavLink 
+              to="Parametres" 
+              icon={Settings} 
+              label="Paramètres" 
+              active={currentPageName === 'Parametres'} 
+            />
+            <p className="text-xs text-slate-500 text-center pt-2">
               UpGraal v1.0 — Kitchen Slate
             </p>
           </div>
