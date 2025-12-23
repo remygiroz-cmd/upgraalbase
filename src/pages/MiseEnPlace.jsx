@@ -788,11 +788,16 @@ function CategoryColumn({ categoryId, title, color, tasks, onEditTask, onDeleteT
                   setIsEditing(false);
                 }
               }}
+              onBlur={handleSaveEdit}
               className="flex-1 h-8 bg-slate-700 border-slate-600 text-sm"
               autoFocus
             />
             <button
-              onClick={handleDelete}
+              onClick={(e) => {
+                e.preventDefault();
+                handleDelete();
+              }}
+              onMouseDown={(e) => e.preventDefault()}
               className="p-2 rounded-lg hover:bg-red-600/20 text-slate-400 hover:text-red-400 transition-colors"
               title="Archiver"
             >
