@@ -57,7 +57,7 @@ export default function TravailDuJour() {
     }
   });
 
-  const handleCompleteTask = async (taskIndex) => {
+  const handleCompleteTask = (taskIndex) => {
     if (!activeSession) return;
     
     const updatedTasks = [...activeSession.tasks];
@@ -73,21 +73,18 @@ export default function TravailDuJour() {
     const allCompleted = updatedTasks.every(t => t.is_completed);
 
     if (allCompleted) {
-      // Update tasks and complete session in one call
-      await base44.entities.WorkSession.update(activeSession.id, {
-        tasks: updatedTasks,
-        status: 'completed',
-        completed_at: new Date().toISOString()
+      completeSessionMutation.mutate({ 
+        id: activeSession.id, 
+        data: { 
+          tasks: updatedTasks
+        } 
       });
     } else {
-      // Just update tasks
-      await base44.entities.WorkSession.update(activeSession.id, { 
-        tasks: updatedTasks 
+      updateSessionMutation.mutate({
+        id: activeSession.id,
+        data: { tasks: updatedTasks }
       });
     }
-
-    // Force refresh
-    await queryClient.invalidateQueries({ queryKey: ['workSessions'] });
   };
 
   const handleRemoveTask = (taskIndex) => {
