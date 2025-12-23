@@ -107,20 +107,17 @@ export default function Recettes() {
 
       {/* Tabs */}
       <Tabs value={activeSection} onValueChange={setActiveSection} className="mb-6">
-        <TabsList className="bg-slate-800 p-1">
-          {SECTIONS.map((section) => {
-            const Icon = section.icon;
-            return (
-              <TabsTrigger
-                key={section.value}
-                value={section.value}
-                className="text-slate-200 px-3 py-1 text-sm font-medium rounded-md inline-flex items-center justify-center whitespace-nowrap ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:text-foreground data-[state=active]:shadow data-[state=active]:bg-slate-700"
-              >
-                <Icon className="w-4 h-4 mr-2" />
-                {section.label}
-              </TabsTrigger>
-            );
-          })}
+        <TabsList className="bg-slate-50 text-muted-foreground p-1 rounded-lg inline-flex h-9 items-center justify-center">
+          {SECTIONS.map((section) =>
+          <TabsTrigger
+            key={section.value}
+            value={section.value} className="bg-slate-600 text-slate-200 px-3 py-1 text-sm font-medium rounded-md inline-flex items-center justify-center whitespace-nowrap ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:text-foreground data-[state=active]:shadow data-[state=active]:bg-slate-700">
+
+
+              <section.icon className="bg-slate-50 mr-2 lucide lucide-file-text w-4 h-4" />
+              {section.label}
+            </TabsTrigger>
+          )}
         </TabsList>
       </Tabs>
 
@@ -130,7 +127,7 @@ export default function Recettes() {
         <Input
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          placeholder="Rechercher une recette..." className="bg-slate-800 text-slate-100 pl-10 px-3 py-1 text-base rounded-md flex h-9 w-full border shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 md:text-sm border-slate-700" />
+          placeholder="Rechercher une recette..." className="bg-slate-50 text-slate-100 px-3 py-1 text-base rounded-md flex h-9 w-full border shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 md:text-sm border-slate-700" />
 
 
       </div>
