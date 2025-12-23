@@ -100,7 +100,7 @@ export default function CategoryManager({ onClose }) {
             <div
               {...provided.droppableProps}
               ref={provided.innerRef}
-              className="space-y-2 max-h-[300px] overflow-y-auto"
+              className="space-y-2 max-h-[400px] overflow-y-auto"
             >
               {categories.map((cat, index) => (
                 <Draggable key={cat.id} draggableId={cat.id} index={index}>
@@ -110,25 +110,30 @@ export default function CategoryManager({ onClose }) {
                       {...provided.draggableProps}
                       className={cn(
                         "flex items-center gap-3 p-3 bg-slate-700/50 rounded-lg transition-colors",
-                        snapshot.isDragging && "bg-slate-600/70 shadow-lg"
+                        snapshot.isDragging && "bg-slate-600 shadow-xl ring-2 ring-orange-500/50"
                       )}
                     >
-                      <div {...provided.dragHandleProps}>
-                        <GripVertical className="w-4 h-4 text-slate-500 cursor-grab active:cursor-grabbing" />
-                      </div>
+                      <button 
+                        {...provided.dragHandleProps}
+                        className="cursor-grab active:cursor-grabbing touch-none"
+                        type="button"
+                      >
+                        <GripVertical className="w-5 h-5 text-slate-400 hover:text-slate-200" />
+                      </button>
                       
                       {editingId === cat.id ? (
                         <>
-                          <div className="flex gap-2 flex-wrap items-center">
-                            {COLORS.map((color) => (
+                          <div className="flex gap-1.5 flex-wrap items-center">
+                            {COLORS.slice(0, 6).map((color) => (
                               <button
                                 key={color}
                                 onClick={() => setEditColor(color)}
                                 className={cn(
-                                  "w-6 h-6 rounded-full transition-all",
-                                  editColor === color && "ring-2 ring-white"
+                                  "w-7 h-7 rounded-full transition-all",
+                                  editColor === color && "ring-2 ring-white ring-offset-2 ring-offset-slate-700"
                                 )}
                                 style={{ backgroundColor: color }}
+                                type="button"
                               />
                             ))}
                           </div>
@@ -140,13 +145,15 @@ export default function CategoryManager({ onClose }) {
                           />
                           <button
                             onClick={handleSaveEdit}
-                            className="p-1.5 rounded hover:bg-green-600/20 text-slate-400 hover:text-green-400 transition-colors"
+                            className="p-2 rounded-lg hover:bg-green-600/20 text-slate-400 hover:text-green-400 transition-colors"
+                            type="button"
                           >
                             <Check className="w-4 h-4" />
                           </button>
                           <button
                             onClick={handleCancelEdit}
-                            className="p-1.5 rounded hover:bg-slate-600 text-slate-400 transition-colors"
+                            className="p-2 rounded-lg hover:bg-slate-600 text-slate-400 transition-colors"
+                            type="button"
                           >
                             <X className="w-4 h-4" />
                           </button>
@@ -160,13 +167,19 @@ export default function CategoryManager({ onClose }) {
                           <span className="flex-1 truncate">{cat.name}</span>
                           <button
                             onClick={() => handleStartEdit(cat)}
-                            className="p-1.5 rounded hover:bg-slate-600 text-slate-400 hover:text-slate-200 transition-colors"
+                            className="p-2 rounded-lg hover:bg-slate-600 text-slate-400 hover:text-slate-200 transition-colors"
+                            type="button"
                           >
                             <Pencil className="w-4 h-4" />
                           </button>
                           <button
-                            onClick={() => deleteMutation.mutate(cat.id)}
-                            className="p-1.5 rounded hover:bg-red-600/20 text-slate-400 hover:text-red-400 transition-colors"
+                            onClick={() => {
+                              if (window.confirm('Supprimer cette catégorie ?')) {
+                                deleteMutation.mutate(cat.id);
+                              }
+                            }}
+                            className="p-2 rounded-lg hover:bg-red-600/20 text-slate-400 hover:text-red-400 transition-colors"
+                            type="button"
                           >
                             <Trash2 className="w-4 h-4" />
                           </button>
