@@ -741,6 +741,22 @@ export default function MiseEnPlace() {
 }
 
 function CategoryColumn({ categoryId, title, color, tasks, onEditTask, onDeleteTask, onStartStopwatch, category, onEditCategory, onDeleteCategory, dragHandleProps, isDragging, isDraggable, selectedTasks, onToggleSelection, stockInputs, onStockInput, dayOfWeek }) {
+  const [isEditing, setIsEditing] = useState(false);
+  const [editName, setEditName] = useState(title);
+  const [confirmDeleteCategory, setConfirmDeleteCategory] = useState(false);
+
+  const handleSaveEdit = () => {
+    if (editName.trim() && category) {
+      onEditCategory({ id: category.id, data: { name: editName.trim() } });
+      setIsEditing(false);
+    }
+  };
+
+  const handleDelete = () => {
+    if (category) {
+      setConfirmDeleteCategory(true);
+    }
+  };
 
   return (
     <div className={cn(
@@ -760,10 +776,46 @@ function CategoryColumn({ categoryId, title, color, tasks, onEditTask, onDeleteT
           </div>
         )}
         
-        <div className="flex-1">
-          <h3 className="font-semibold">{title}</h3>
-          <p className="text-xs text-slate-400">{tasks.length} tâche{tasks.length > 1 ? 's' : ''}</p>
-        </div>
+        {isEditing ? (
+          <Input
+            value={editName}
+            onChange={(e) => setEditName(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') handleSaveEdit();
+              if (e.key === 'Escape') {
+                setEditName(title);
+                setIsEditing(false);
+              }
+            }}
+            onBlur={handleSaveEdit}
+            className="flex-1 h-8 bg-slate-700 border-slate-600 text-sm"
+            autoFocus
+          />
+        ) : (
+          <div className="flex-1">
+            <h3 className="font-semibold">{title}</h3>
+            <p className="text-xs text-slate-400">{tasks.length} tâche{tasks.length > 1 ? 's' : ''}</p>
+          </div>
+        )}
+        
+        {isDraggable && !isEditing && (
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => setIsEditing(true)}
+              className="p-2 rounded-lg hover:bg-slate-700 text-slate-400 hover:text-orange-400 transition-colors"
+              title="Modifier"
+            >
+              <Pencil className="w-4 h-4" />
+            </button>
+            <button
+              onClick={handleDelete}
+              className="p-2 rounded-lg hover:bg-red-600/20 text-slate-400 hover:text-red-400 transition-colors"
+              title="Supprimer"
+            >
+              <Trash2 className="w-4 h-4" />
+            </button>
+          </div>
+        )}
       </div>
       
       <Droppable droppableId={categoryId} type="task">
@@ -810,6 +862,16 @@ function CategoryColumn({ categoryId, title, color, tasks, onEditTask, onDeleteT
           </div>
         )}
       </Droppable>
+
+      <ConfirmDialog
+        open={confirmDeleteCategory}
+        onOpenChange={setConfirmDeleteCategory}
+        title="Archiver la catégorie"
+        description={`Êtes-vous sûr de vouloir archiver la catégorie "${title}" ? Vous pourrez la restaurer depuis les archives.`}
+        onConfirm={() => onDeleteCategory(category.id)}
+        variant="warning"
+        confirmText="Archiver"
+      />
     </div>
   );
 }
