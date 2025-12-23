@@ -777,33 +777,20 @@ function CategoryColumn({ categoryId, title, color, tasks, onEditTask, onDeleteT
         )}
         
         {isEditing ? (
-          <div className="flex-1 flex items-center gap-2">
-            <Input
-              value={editName}
-              onChange={(e) => setEditName(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') handleSaveEdit();
-                if (e.key === 'Escape') {
-                  setEditName(title);
-                  setIsEditing(false);
-                }
-              }}
-              onBlur={handleSaveEdit}
-              className="flex-1 h-8 bg-slate-700 border-slate-600 text-sm"
-              autoFocus
-            />
-            <button
-              onClick={(e) => {
-                e.preventDefault();
-                handleDelete();
-              }}
-              onMouseDown={(e) => e.preventDefault()}
-              className="p-2 rounded-lg hover:bg-red-600/20 text-slate-400 hover:text-red-400 transition-colors"
-              title="Archiver"
-            >
-              <Trash2 className="w-4 h-4" />
-            </button>
-          </div>
+          <Input
+            value={editName}
+            onChange={(e) => setEditName(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') handleSaveEdit();
+              if (e.key === 'Escape') {
+                setEditName(title);
+                setIsEditing(false);
+              }
+            }}
+            onBlur={handleSaveEdit}
+            className="flex-1 h-8 bg-slate-700 border-slate-600 text-sm"
+            autoFocus
+          />
         ) : (
           <div className="flex-1">
             <h3 className="font-semibold">{title}</h3>
@@ -903,9 +890,10 @@ function TaskCard({ task, onEdit, onDelete, onStartStopwatch, isSelected, onTogg
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, scale: 0.95 }}
-      onClick={onToggleSelection}
+      onClick={requiresStock ? undefined : onToggleSelection}
       className={cn(
-        "group bg-slate-700/50 rounded-xl p-3 border transition-all cursor-pointer",
+        "group bg-slate-700/50 rounded-xl p-3 border transition-all",
+        !requiresStock && "cursor-pointer",
         isSelected 
           ? "bg-orange-600/30 border-orange-600/70 ring-2 ring-orange-600/50" 
           : "border-slate-600/50 hover:bg-slate-700 hover:border-slate-500/50",
@@ -982,7 +970,7 @@ function TaskCard({ task, onEdit, onDelete, onStartStopwatch, isSelected, onTogg
           )}
         </div>
 
-        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none group-hover:pointer-events-auto">
+        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
           <button
             onClick={(e) => {
               e.stopPropagation();
