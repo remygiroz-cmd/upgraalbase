@@ -331,8 +331,8 @@ function TemperatureCard({ equipment, temperature, onSave, isSaving }) {
   const [eveningValue, setEveningValue] = useState('');
   
   useEffect(() => {
-    setMorningValue(temperature?.morning_temp !== undefined ? temperature.morning_temp.toString() : defaultTemp.toString());
-    setEveningValue(temperature?.evening_temp !== undefined ? temperature.evening_temp.toString() : defaultTemp.toString());
+    setMorningValue(temperature?.morning_temp !== undefined && temperature?.morning_temp !== null ? temperature.morning_temp.toString() : defaultTemp.toString());
+    setEveningValue(temperature?.evening_temp !== undefined && temperature?.evening_temp !== null ? temperature.evening_temp.toString() : defaultTemp.toString());
   }, [temperature, defaultTemp]);
 
   const handleSave = (type) => {
