@@ -4,6 +4,7 @@ import { base44 } from '@/api/base44Client';
 import { ClipboardList, Plus, GripVertical, Clock, Hash, ToggleLeft, Pencil, Trash2, Play } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
 import PageHeader from '@/components/ui/PageHeader';
 import EmptyState from '@/components/ui/EmptyState';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
@@ -11,6 +12,7 @@ import TaskFormModal from '@/components/cuisine/TaskFormModal';
 import CategoryManager from '@/components/cuisine/CategoryManager';
 import StopwatchModal from '@/components/cuisine/StopwatchModal';
 import { motion, AnimatePresence } from 'framer-motion';
+import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import { cn } from '@/lib/utils';
 
 export default function MiseEnPlace() {
@@ -34,6 +36,34 @@ export default function MiseEnPlace() {
     mutationFn: (id) => base44.entities.Task.delete(id),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['tasks'] })
   });
+
+  const updateCategoryMutation = useMutation({
+    mutationFn: ({ id, data }) => base44.entities.Category.update(id, data),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['categories'] })
+  });
+
+  const deleteCategoryMutation = useMutation({
+    mutationFn: (id) => base44.entities.Category.delete(id),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['categories'] })
+  });
+
+  const handleDragEnd = async (result) => {
+    if (!result.destination) return;
+    
+    const items = Array.from(categories);
+    const [reorderedItem] = items.splice(result.source.index, 1);
+    items.splice(result.destination.index, 0, reorderedItem);
+
+    try {
+      const updates = items.map((item, index) => 
+        base44.entities.Category.update(item.id, { order: index })
+      );
+      await Promise.all(updates);
+      queryClient.invalidateQueries({ queryKey: ['categories'] });
+    } catch (error) {
+      console.error('Error reordering:', error);
+    }
+  };
 
   const handleEditTask = (task) => {
     setEditingTask(task);
@@ -96,32 +126,58 @@ export default function MiseEnPlace() {
           }
         />
       ) : (
-        <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
-          {/* Uncategorized tasks */}
-          {uncategorizedTasks.length > 0 && (
-            <CategoryColumn
-              title="Sans catégorie"
-              color="#64748b"
-              tasks={uncategorizedTasks}
-              onEditTask={handleEditTask}
-              onDeleteTask={(id) => deleteTaskMutation.mutate(id)}
-              onStartStopwatch={setStopwatchTask}
-            />
-          )}
+        <DragDropContext onDragEnd={handleDragEnd}>
+          <Droppable droppableId="categories" direction="horizontal">
+            {(provided) => (
+              <div 
+                {...provided.droppableProps}
+                ref={provided.innerRef}
+                className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6"
+              >
+                {/* Uncategorized tasks */}
+                {uncategorizedTasks.length > 0 && (
+                  <CategoryColumn
+                    title="Sans catégorie"
+                    color="#64748b"
+                    tasks={uncategorizedTasks}
+                    onEditTask={handleEditTask}
+                    onDeleteTask={(id) => deleteTaskMutation.mutate(id)}
+                    onStartStopwatch={setStopwatchTask}
+                    isDraggable={false}
+                  />
+                )}
 
-          {/* Category columns */}
-          {categories.map((category) => (
-            <CategoryColumn
-              key={category.id}
-              title={category.name}
-              color={category.color || '#10b981'}
-              tasks={getTasksByCategory(category.id)}
-              onEditTask={handleEditTask}
-              onDeleteTask={(id) => deleteTaskMutation.mutate(id)}
-              onStartStopwatch={setStopwatchTask}
-            />
-          ))}
-        </div>
+                {/* Category columns */}
+                {categories.map((category, index) => (
+                  <Draggable key={category.id} draggableId={category.id} index={index}>
+                    {(provided, snapshot) => (
+                      <div
+                        ref={provided.innerRef}
+                        {...provided.draggableProps}
+                      >
+                        <CategoryColumn
+                          title={category.name}
+                          color={category.color || '#10b981'}
+                          tasks={getTasksByCategory(category.id)}
+                          onEditTask={handleEditTask}
+                          onDeleteTask={(id) => deleteTaskMutation.mutate(id)}
+                          onStartStopwatch={setStopwatchTask}
+                          category={category}
+                          onEditCategory={(cat) => updateCategoryMutation.mutate(cat)}
+                          onDeleteCategory={(id) => deleteCategoryMutation.mutate(id)}
+                          dragHandleProps={provided.dragHandleProps}
+                          isDragging={snapshot.isDragging}
+                          isDraggable={true}
+                        />
+                      </div>
+                    )}
+                  </Draggable>
+                ))}
+                {provided.placeholder}
+              </div>
+            )}
+          </Droppable>
+        </DragDropContext>
       )}
 
       {/* Task Form Modal */}
@@ -153,15 +209,81 @@ export default function MiseEnPlace() {
   );
 }
 
-function CategoryColumn({ title, color, tasks, onEditTask, onDeleteTask, onStartStopwatch }) {
+function CategoryColumn({ title, color, tasks, onEditTask, onDeleteTask, onStartStopwatch, category, onEditCategory, onDeleteCategory, dragHandleProps, isDragging, isDraggable }) {
+  const [isEditing, setIsEditing] = useState(false);
+  const [editName, setEditName] = useState(title);
+
+  const handleSaveEdit = () => {
+    if (editName.trim() && category) {
+      onEditCategory({ id: category.id, data: { name: editName.trim() } });
+      setIsEditing(false);
+    }
+  };
+
+  const handleDelete = () => {
+    if (category && window.confirm(`Supprimer la catégorie "${title}" ?`)) {
+      onDeleteCategory(category.id);
+    }
+  };
+
   return (
-    <div className="bg-slate-800/50 rounded-2xl border border-slate-700/50 overflow-hidden">
+    <div className={cn(
+      "bg-slate-800/50 rounded-2xl border border-slate-700/50 overflow-hidden transition-all",
+      isDragging && "ring-2 ring-orange-500/50 shadow-xl scale-105"
+    )}>
       <div 
-        className="px-4 py-3 border-b border-slate-700/50"
+        className="px-4 py-3 border-b border-slate-700/50 flex items-center gap-2"
         style={{ borderLeftWidth: 4, borderLeftColor: color }}
       >
-        <h3 className="font-semibold">{title}</h3>
-        <p className="text-xs text-slate-400">{tasks.length} tâche{tasks.length > 1 ? 's' : ''}</p>
+        {isDraggable && (
+          <div 
+            {...dragHandleProps}
+            className="cursor-grab active:cursor-grabbing touch-none p-1 hover:bg-slate-700/50 rounded transition-colors"
+          >
+            <GripVertical className="w-4 h-4 text-orange-500" />
+          </div>
+        )}
+        
+        {isEditing ? (
+          <Input
+            value={editName}
+            onChange={(e) => setEditName(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') handleSaveEdit();
+              if (e.key === 'Escape') {
+                setEditName(title);
+                setIsEditing(false);
+              }
+            }}
+            onBlur={handleSaveEdit}
+            className="flex-1 h-8 bg-slate-700 border-slate-600 text-sm"
+            autoFocus
+          />
+        ) : (
+          <div className="flex-1">
+            <h3 className="font-semibold">{title}</h3>
+            <p className="text-xs text-slate-400">{tasks.length} tâche{tasks.length > 1 ? 's' : ''}</p>
+          </div>
+        )}
+        
+        {isDraggable && !isEditing && (
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => setIsEditing(true)}
+              className="p-2 rounded-lg hover:bg-slate-700 text-slate-400 hover:text-orange-400 transition-colors"
+              title="Modifier"
+            >
+              <Pencil className="w-4 h-4" />
+            </button>
+            <button
+              onClick={handleDelete}
+              className="p-2 rounded-lg hover:bg-red-600/20 text-slate-400 hover:text-red-400 transition-colors"
+              title="Supprimer"
+            >
+              <Trash2 className="w-4 h-4" />
+            </button>
+          </div>
+        )}
       </div>
       
       <div className="p-3 space-y-2 max-h-[60vh] overflow-y-auto">
