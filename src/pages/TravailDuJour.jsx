@@ -20,6 +20,7 @@ import { createPageUrl } from '../utils';
 export default function TravailDuJour() {
   const queryClient = useQueryClient();
   const today = format(new Date(), 'yyyy-MM-dd');
+  const dayOfWeek = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'][new Date().getDay()];
   const [showCompletionModal, setShowCompletionModal] = useState(false);
   const [confirmDialog, setConfirmDialog] = useState({ open: false, title: '', description: '', onConfirm: null });
 
@@ -282,6 +283,8 @@ export default function TravailDuJour() {
                       onComplete={() => handleCompleteTask(task.originalIndex)}
                       onRemove={() => handleRemoveTask(task.originalIndex)}
                       allTasks={tasks}
+                      taskEntities={tasks}
+                      dayOfWeek={dayOfWeek}
                     />
                   ))}
                 </AnimatePresence>
@@ -326,10 +329,21 @@ export default function TravailDuJour() {
   );
 }
 
-function WorkTaskCard({ task, onComplete, onRemove, allTasks }) {
-  const taskDetails = allTasks.find(t => t.id === task.task_id);
+function WorkTaskCard({ task, onComplete, onRemove, allTasks, taskEntities, dayOfWeek }) {
+  const { data: tasks = [] } = useQuery({
+    queryKey: ['tasks'],
+    queryFn: () => base44.entities.Task.list()
+  });
+  
+  const taskDetails = tasks.find(t => t.id === task.task_id);
   const hasQuantity = task.quantity_to_produce !== undefined && task.quantity_to_produce > 0;
   const isAdHoc = !task.task_id;
+  
+  // For binary tasks, get the multiplier from weekly_targets
+  const isBinaryTask = taskDetails?.tracking_mode === 'binary';
+  const binaryMultiplier = isBinaryTask && taskDetails?.weekly_targets?.[dayOfWeek] 
+    ? taskDetails.weekly_targets[dayOfWeek] 
+    : null;
   
   return (
     <motion.div
@@ -361,6 +375,11 @@ function WorkTaskCard({ task, onComplete, onRemove, allTasks }) {
             {hasQuantity && (
               <span className="px-2 py-1 rounded-lg bg-indigo-600/20 text-indigo-400 text-xs font-medium">
                 À faire : {task.quantity_to_produce} {taskDetails?.unit || 'unités'}
+              </span>
+            )}
+            {binaryMultiplier && binaryMultiplier > 0 && (
+              <span className="px-2 py-1 rounded-lg bg-amber-600/20 text-amber-400 text-xs font-medium">
+                Quantité : {binaryMultiplier}
               </span>
             )}
           </div>
