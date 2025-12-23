@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
-import { Thermometer, Plus, Settings, Download, AlertTriangle, CheckCircle2, Sun, Moon, Save, History } from 'lucide-react';
+import { Thermometer, Plus, Settings, Download, AlertTriangle, CheckCircle2, Save, History } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -14,14 +14,12 @@ import EmptyState from '@/components/ui/EmptyState';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
+import { toast } from 'sonner';
 
 export default function Temperatures() {
   const queryClient = useQueryClient();
   const today = format(new Date(), 'yyyy-MM-dd');
-  const currentHour = new Date().getHours();
-  const autoSession = currentHour < 12 ? 'morning' : 'evening';
 
-  const [session, setSession] = useState(autoSession);
   const [showEquipmentModal, setShowEquipmentModal] = useState(false);
   const [editingEquipment, setEditingEquipment] = useState(null);
   const [showHistoryModal, setShowHistoryModal] = useState(false);
@@ -32,18 +30,13 @@ export default function Temperatures() {
   });
 
   const { data: temperatures = [], isLoading: loadingTemps } = useQuery({
-    queryKey: ['temperatures', today, session],
-    queryFn: () => base44.entities.Temperature.filter({ date: today, session })
+    queryKey: ['temperatures', today],
+    queryFn: () => base44.entities.Temperature.filter({ date: today })
   });
 
   const { data: currentUser } = useQuery({
     queryKey: ['currentUser'],
     queryFn: () => base44.auth.me()
-  });
-
-  const { data: todaySnapshots = [] } = useQuery({
-    queryKey: ['temperatureSnapshots', today],
-    queryFn: () => base44.entities.TemperatureSnapshot.filter({ date: today })
   });
 
   const saveTempMutation = useMutation({
@@ -54,12 +47,10 @@ export default function Temperatures() {
       const data = {
         equipment_id: equipmentId,
         date: today,
-        session,
         temperature: temp,
         target_min: eq.target_min,
         target_max: eq.target_max,
         is_compliant: isCompliant,
-        is_auto_filled: false,
         signed_by: currentUser?.email,
         signed_by_name: currentUser?.full_name || currentUser?.email,
         signed_at: new Date().toISOString()
@@ -70,7 +61,7 @@ export default function Temperatures() {
       }
       return base44.entities.Temperature.create(data);
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['temperatures', today, session] })
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['temperatures', today] })
   });
 
   const saveEquipmentMutation = useMutation({
@@ -88,118 +79,60 @@ export default function Temperatures() {
   });
 
   const saveSnapshotMutation = useMutation({
-    mutationFn: async (isAuto = false) => {
+    mutationFn: async () => {
       const snapshot = equipment.map(eq => {
         const temp = temperatures.find(t => t.equipment_id === eq.id);
         return {
           equipment_id: eq.id,
           equipment_name: eq.name,
           equipment_type: eq.type,
-          temperature: temp?.temperature,
+          temperature: temp?.temperature ?? (eq.type === 'positive' ? 3 : -18),
           target_min: eq.target_min,
           target_max: eq.target_max,
-          is_compliant: temp?.is_compliant
+          is_compliant: temp?.is_compliant ?? true
         };
       });
 
-      return base44.entities.TemperatureSnapshot.create({
+      await base44.entities.TemperatureSnapshot.create({
         date: today,
-        session,
         snapshot,
-        recorded_by: currentUser?.email || 'système',
-        recorded_by_name: isAuto ? 'Enregistrement automatique' : (currentUser?.full_name || currentUser?.email),
+        recorded_by: currentUser?.email,
+        recorded_by_name: currentUser?.full_name || currentUser?.email,
         recorded_at: new Date().toISOString()
       });
+
+      // Reset all temperatures to default values
+      const resetPromises = equipment.map(async (eq) => {
+        const existing = temperatures.find(t => t.equipment_id === eq.id);
+        const defaultTemp = eq.type === 'positive' ? 3 : -18;
+        const isCompliant = defaultTemp >= eq.target_min && defaultTemp <= eq.target_max;
+
+        const data = {
+          equipment_id: eq.id,
+          date: today,
+          temperature: defaultTemp,
+          target_min: eq.target_min,
+          target_max: eq.target_max,
+          is_compliant: isCompliant,
+          signed_by: 'système',
+          signed_by_name: 'Valeur par défaut',
+          signed_at: new Date().toISOString()
+        };
+
+        if (existing) {
+          return base44.entities.Temperature.update(existing.id, data);
+        }
+        return base44.entities.Temperature.create(data);
+      });
+
+      await Promise.all(resetPromises);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['temperatureSnapshots'] });
+      queryClient.invalidateQueries({ queryKey: ['temperatures', today] });
+      toast.success('Températures enregistrées et réinitialisées');
     }
   });
-
-  // Auto-save logic
-  useEffect(() => {
-    if (!equipment.length || !todaySnapshots || !currentUser) return;
-
-    const now = new Date();
-    const currentHour = now.getHours();
-    
-    const hasMorningSnapshot = todaySnapshots.some(s => s.session === 'morning');
-    const hasEveningSnapshot = todaySnapshots.some(s => s.session === 'evening');
-
-    const shouldAutoSaveMorning = currentHour >= 14 && !hasMorningSnapshot;
-    const shouldAutoSaveEvening = currentHour >= 23 && !hasEveningSnapshot;
-
-    const autoSave = async (targetSession) => {
-      // Create auto temperatures if not exist
-      const autoTemps = [];
-      for (const eq of equipment) {
-        const existing = await base44.entities.Temperature.filter({ 
-          date: today, 
-          session: targetSession, 
-          equipment_id: eq.id 
-        });
-
-        if (existing.length === 0) {
-          const autoTemp = eq.type === 'positive' ? 3 : -18;
-          const isCompliant = autoTemp >= eq.target_min && autoTemp <= eq.target_max;
-          
-          await base44.entities.Temperature.create({
-            equipment_id: eq.id,
-            date: today,
-            session: targetSession,
-            temperature: autoTemp,
-            target_min: eq.target_min,
-            target_max: eq.target_max,
-            is_compliant: isCompliant,
-            is_auto_filled: true,
-            signed_by: 'système',
-            signed_by_name: 'Automatique',
-            signed_at: new Date().toISOString()
-          });
-          autoTemps.push({ equipment_id: eq.id, temperature: autoTemp, is_compliant: isCompliant });
-        }
-      }
-
-      // Create snapshot
-      if (autoTemps.length > 0) {
-        const snapshot = equipment.map(eq => {
-          const autoTemp = autoTemps.find(t => t.equipment_id === eq.id);
-          const defaultTemp = eq.type === 'positive' ? 3 : -18;
-          const temp = autoTemp?.temperature ?? defaultTemp;
-          const isCompliant = temp >= eq.target_min && temp <= eq.target_max;
-          
-          return {
-            equipment_id: eq.id,
-            equipment_name: eq.name,
-            equipment_type: eq.type,
-            temperature: temp,
-            target_min: eq.target_min,
-            target_max: eq.target_max,
-            is_compliant: isCompliant
-          };
-        });
-
-        await base44.entities.TemperatureSnapshot.create({
-          date: today,
-          session: targetSession,
-          snapshot,
-          recorded_by: 'système',
-          recorded_by_name: 'Enregistrement automatique',
-          recorded_at: new Date().toISOString()
-        });
-
-        queryClient.invalidateQueries({ queryKey: ['temperatures'] });
-        queryClient.invalidateQueries({ queryKey: ['temperatureSnapshots'] });
-      }
-    };
-
-    if (shouldAutoSaveMorning) {
-      autoSave('morning');
-    }
-    if (shouldAutoSaveEvening) {
-      autoSave('evening');
-    }
-  }, [equipment, todaySnapshots, currentUser, today, queryClient]);
 
   const handleExportCSV = () => {
     const rows = [['Équipement', 'Type', 'Température', 'Min', 'Max', 'Conforme', 'Signé par', 'Date/Heure']];
@@ -222,7 +155,7 @@ export default function Temperatures() {
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
     link.href = URL.createObjectURL(blob);
-    link.download = `temperatures_${today}_${session}.csv`;
+    link.download = `temperatures_${today}.csv`;
     link.click();
   };
 
@@ -275,34 +208,6 @@ export default function Temperatures() {
           </>
         }
       />
-
-      {/* Session Selector */}
-      <div className="mb-6 flex gap-2">
-        <Button
-          variant={session === 'morning' ? 'default' : 'outline'}
-          onClick={() => setSession('morning')}
-          className={cn(
-            session === 'morning'
-              ? "bg-amber-600 hover:bg-amber-700"
-              : "border-slate-600 text-slate-900 hover:text-slate-100 hover:bg-slate-700"
-          )}
-        >
-          <Sun className="w-4 h-4 mr-2" />
-          Matin (avant 12h)
-        </Button>
-        <Button
-          variant={session === 'evening' ? 'default' : 'outline'}
-          onClick={() => setSession('evening')}
-          className={cn(
-            session === 'evening'
-              ? "bg-indigo-600 hover:bg-indigo-700"
-              : "border-slate-600 text-slate-900 hover:text-slate-100 hover:bg-slate-700"
-          )}
-        >
-          <Moon className="w-4 h-4 mr-2" />
-          Soir (après 16h)
-        </Button>
-      </div>
 
       {equipment.length === 0 ? (
         <EmptyState
@@ -430,11 +335,6 @@ function TemperatureCard({ equipment, temperature, onSave, isSaving }) {
       {hasValue && temperature.signed_by_name && (
         <p className="text-xs text-gray-600 mb-3">
           Signé par {temperature.signed_by_name}
-          {temperature.is_auto_filled && (
-            <Badge variant="outline" className="ml-2 text-[10px] border-amber-600/50 text-amber-400">
-              Auto
-            </Badge>
-          )}
         </p>
       )}
 
@@ -609,19 +509,6 @@ function HistoryModal({ open, onClose }) {
                   <div>
                     <h4 className="font-semibold text-white">
                       {format(new Date(snapshot.date), "EEEE d MMMM yyyy", { locale: fr })}
-                      <Badge variant="outline" className="ml-2 text-xs">
-                        {snapshot.session === 'morning' ? (
-                          <>
-                            <Sun className="w-3 h-3 mr-1" />
-                            Matin
-                          </>
-                        ) : (
-                          <>
-                            <Moon className="w-3 h-3 mr-1" />
-                            Soir
-                          </>
-                        )}
-                      </Badge>
                     </h4>
                     <p className="text-xs text-slate-400 mt-1">
                       Par {snapshot.recorded_by_name} • {format(new Date(snapshot.recorded_at), "dd/MM/yyyy à HH:mm")}
