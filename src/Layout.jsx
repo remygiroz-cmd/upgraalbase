@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { createPageUrl } from './utils';
 import { 
@@ -12,44 +12,12 @@ import {
   Package,
   Menu,
   X,
-  Home,
-  Sun,
-  Moon
+  Home
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 export default function Layout({ children, currentPageName }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [theme, setTheme] = useState(() => {
-    const saved = localStorage.getItem('upgraal-theme');
-    if (saved) return saved;
-    
-    // Respect system preference if no saved preference
-    if (window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches) {
-      return 'light';
-    }
-    return 'dark';
-  });
-
-  useEffect(() => {
-    // Apply theme immediately on mount to prevent flash
-    const applyTheme = () => {
-      if (theme === 'light') {
-        document.documentElement.classList.add('light-mode');
-        document.body.classList.add('light-mode');
-      } else {
-        document.documentElement.classList.remove('light-mode');
-        document.body.classList.remove('light-mode');
-      }
-    };
-    
-    applyTheme();
-    localStorage.setItem('upgraal-theme', theme);
-  }, [theme]);
-
-  const toggleTheme = () => {
-    setTheme(prev => prev === 'dark' ? 'light' : 'dark');
-  };
 
   const cuisineLinks = [
     { name: 'MiseEnPlace', label: 'Mise en Place', icon: ClipboardList },
@@ -70,10 +38,9 @@ export default function Layout({ children, currentPageName }) {
       to={createPageUrl(to)}
       onClick={() => setSidebarOpen(false)}
       className={cn(
-        "flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 active:scale-95",
-        active 
-          ? "bg-orange-600/20 text-orange-400 border border-orange-600/30" 
-          : "text-[rgb(var(--text-primary))] hover:bg-[rgb(var(--bg-hover))]"
+        "flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 text-slate-200",
+        "hover:bg-slate-700/50 active:scale-95",
+        active && "bg-orange-600/20 text-orange-400 border border-orange-600/30"
       )}
     >
       <Icon className="w-5 h-5" />
@@ -82,27 +49,44 @@ export default function Layout({ children, currentPageName }) {
   );
 
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen bg-slate-900 text-slate-100">
+      <style>{`
+        :root {
+          --success: #f97316;
+          --warning: #f59e0b;
+          --cold: #6366f1;
+          --danger: #ef4444;
+        }
+        * {
+          -webkit-tap-highlight-color: transparent;
+        }
+        ::-webkit-scrollbar {
+          width: 6px;
+          height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+          background: transparent;
+        }
+        ::-webkit-scrollbar-thumb {
+          background: #475569;
+          border-radius: 3px;
+        }
+      `}</style>
 
       {/* Mobile Header */}
-      <header className="lg:hidden fixed top-0 left-0 right-0 z-50 backdrop-blur-sm border-b border-[rgb(var(--border-primary))] px-4 py-3 bg-[rgb(var(--bg-secondary))/95]">
+      <header className="lg:hidden fixed top-0 left-0 right-0 z-50 bg-slate-800/95 backdrop-blur-sm border-b border-slate-700 px-4 py-3">
         <div className="flex items-center justify-between">
           <button
             onClick={() => setSidebarOpen(true)}
-            className="p-2 rounded-lg transition-colors hover:bg-[rgb(var(--bg-hover))]"
+            className="p-2 rounded-lg hover:bg-slate-700 transition-colors"
           >
             <Menu className="w-6 h-6" />
           </button>
           <div className="flex items-center gap-2">
-            <ChefHat className="w-6 h-6 text-orange-500" />
+            <ChefHat className="w-6 h-6 text-emerald-500" />
             <span className="font-bold text-lg">UpGraal</span>
           </div>
-          <button
-            onClick={toggleTheme}
-            className="p-2 rounded-lg transition-colors hover:bg-[rgb(var(--bg-hover))]"
-          >
-            {theme === 'dark' ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
-          </button>
+          <div className="w-10" />
         </div>
       </header>
 
@@ -116,26 +100,25 @@ export default function Layout({ children, currentPageName }) {
 
       {/* Sidebar */}
       <aside className={cn(
-        "fixed top-0 left-0 h-full w-72 z-50 transition-all duration-200 ease-out",
-        "bg-[rgb(var(--bg-secondary))] light-mode:border-r border-[rgb(var(--border-primary))]",
+        "fixed top-0 left-0 h-full w-72 bg-slate-800 z-50 transition-transform duration-300 ease-out",
         "lg:translate-x-0",
         sidebarOpen ? "translate-x-0" : "-translate-x-full"
       )}>
         <div className="flex flex-col h-full">
           {/* Logo */}
-          <div className="flex items-center justify-between p-5 border-b border-[rgb(var(--border-primary))]">
+          <div className="flex items-center justify-between p-5 border-b border-slate-700">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-orange-500 to-orange-700 flex items-center justify-center">
                 <ChefHat className="w-6 h-6 text-white" />
               </div>
               <div>
                 <h1 className="font-bold text-lg">UpGraal</h1>
-                <p className="text-xs text-[rgb(var(--text-secondary))]">Kitchen OS</p>
+                <p className="text-xs text-slate-400">Kitchen OS</p>
               </div>
             </div>
             <button
               onClick={() => setSidebarOpen(false)}
-              className="lg:hidden p-2 rounded-lg transition-colors hover:bg-[rgb(var(--bg-hover))]"
+              className="lg:hidden p-2 rounded-lg hover:bg-slate-700"
             >
               <X className="w-5 h-5" />
             </button>
@@ -155,7 +138,7 @@ export default function Layout({ children, currentPageName }) {
 
             {/* Cuisine */}
             <div>
-              <h2 className="px-4 text-xs font-semibold uppercase tracking-wider mb-2 text-[rgb(var(--text-tertiary))]">
+              <h2 className="px-4 text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
                 Cuisine
               </h2>
               <div className="space-y-1">
@@ -173,7 +156,7 @@ export default function Layout({ children, currentPageName }) {
 
             {/* Gestion */}
             <div>
-              <h2 className="px-4 text-xs font-semibold uppercase tracking-wider mb-2 text-[rgb(var(--text-tertiary))]">
+              <h2 className="px-4 text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
                 Gestion
               </h2>
               <div className="space-y-1">
@@ -191,28 +174,10 @@ export default function Layout({ children, currentPageName }) {
           </nav>
 
           {/* Footer */}
-          <div className="p-4 border-t border-[rgb(var(--border-primary))]">
-            <div className="flex items-center justify-between mb-2">
-              <p className="text-xs text-center flex-1 text-[rgb(var(--text-tertiary))]">
-                UpGraal v1.0
-              </p>
-            </div>
-            <button
-              onClick={toggleTheme}
-              className="w-full flex items-center justify-center gap-2 py-2 px-3 rounded-lg transition-colors text-sm bg-[rgb(var(--bg-tertiary))] hover:bg-[rgb(var(--bg-hover))]"
-            >
-              {theme === 'dark' ? (
-                <>
-                  <Sun className="w-4 h-4" />
-                  <span>Mode clair</span>
-                </>
-              ) : (
-                <>
-                  <Moon className="w-4 h-4" />
-                  <span>Mode sombre</span>
-                </>
-              )}
-            </button>
+          <div className="p-4 border-t border-slate-700">
+            <p className="text-xs text-slate-500 text-center">
+              UpGraal v1.0 — Kitchen Slate
+            </p>
           </div>
         </div>
       </aside>

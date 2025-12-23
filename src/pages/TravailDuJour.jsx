@@ -201,38 +201,38 @@ export default function TravailDuJour() {
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0 }}
-            className="mb-4 p-4 bg-amber-50 border border-amber-200 rounded-xl light-mode:bg-amber-50 light-mode:border-amber-200 dark:bg-amber-600/20 dark:border-amber-600/30"
+            className="mb-4 p-4 bg-amber-600/20 border border-amber-600/30 rounded-xl"
           >
-            <p className="text-amber-900 light-mode:text-amber-900 dark:text-amber-200">{msg.content}</p>
-            <p className="text-xs text-amber-700 light-mode:text-amber-700 dark:text-amber-400/70 mt-2">— {msg.author_name}</p>
+            <p className="text-amber-200">{msg.content}</p>
+            <p className="text-xs text-amber-400/70 mt-2">— {msg.author_name}</p>
           </motion.div>
         ))}
       </AnimatePresence>
 
       {/* Progress Section */}
-      <div className="mb-6 p-4 bg-[rgb(var(--bg-card))] rounded-2xl border border-[rgb(var(--border-primary))] shadow-sm">
+      <div className="mb-6 p-4 bg-slate-800/50 rounded-2xl border border-slate-700/50">
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-4">
-            <span className="text-2xl font-bold text-orange-500">{completedCount}/{totalCount}</span>
-            <span className="text-[rgb(var(--text-secondary))]">tâches complétées</span>
+            <span className="text-2xl font-bold text-orange-400">{completedCount}/{totalCount}</span>
+            <span className="text-slate-300">tâches complétées</span>
           </div>
-          <div className="flex items-center gap-2 text-[rgb(var(--text-secondary))]">
+          <div className="flex items-center gap-2 text-slate-400">
             <Clock className="w-4 h-4" />
             <span>{formatTotalTime()} restant</span>
           </div>
         </div>
-        <Progress value={progressPercent} className="h-3 bg-[rgb(var(--bg-tertiary))]" />
+        <Progress value={progressPercent} className="h-3 bg-slate-700" />
       </div>
 
       {/* Filters */}
       <div className="flex flex-wrap gap-3 mb-6">
         <div className="flex items-center gap-2">
-          <Filter className="w-4 h-4 text-[rgb(var(--text-secondary))]" />
+          <Filter className="w-4 h-4 text-slate-400" />
           <Select value={filterPoste} onValueChange={setFilterPoste}>
-            <SelectTrigger className="w-32 bg-[rgb(var(--bg-card))] border-[rgb(var(--border-secondary))]">
+            <SelectTrigger className="w-32 bg-slate-800 border-slate-600">
               <SelectValue placeholder="Poste" />
             </SelectTrigger>
-            <SelectContent className="bg-[rgb(var(--bg-card))] border-[rgb(var(--border-primary))]">
+            <SelectContent className="bg-slate-800 border-slate-600">
               <SelectItem value="all">Tous postes</SelectItem>
               <SelectItem value="chaud">Chaud</SelectItem>
               <SelectItem value="froid">Froid</SelectItem>
@@ -245,10 +245,10 @@ export default function TravailDuJour() {
         </div>
 
         <Select value={filterCategory} onValueChange={setFilterCategory}>
-          <SelectTrigger className="w-36 bg-[rgb(var(--bg-card))] border-[rgb(var(--border-secondary))]">
+          <SelectTrigger className="w-36 bg-slate-800 border-slate-600">
             <SelectValue placeholder="Catégorie" />
           </SelectTrigger>
-          <SelectContent className="bg-[rgb(var(--bg-card))] border-[rgb(var(--border-primary))]">
+          <SelectContent className="bg-slate-800 border-slate-600">
             <SelectItem value="all">Toutes catégories</SelectItem>
             {categories.map(cat => (
               <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>
@@ -282,24 +282,24 @@ export default function TravailDuJour() {
 
       {/* Chef Message Modal */}
       <Dialog open={showChefMessage} onOpenChange={setShowChefMessage}>
-        <DialogContent className="bg-[rgb(var(--bg-secondary))] border-[rgb(var(--border-primary))]">
+        <DialogContent className="bg-slate-800 border-slate-700">
           <DialogHeader>
-            <DialogTitle className="text-[rgb(var(--text-primary))]">Post-it du Chef</DialogTitle>
+            <DialogTitle>Post-it du Chef</DialogTitle>
           </DialogHeader>
           <Textarea
             value={newMessage}
             onChange={(e) => setNewMessage(e.target.value)}
             placeholder="Message pour l'équipe..."
-            className="bg-[rgb(var(--bg-tertiary))] border-[rgb(var(--border-secondary))] text-[rgb(var(--text-primary))] min-h-[100px]"
+            className="bg-slate-700 border-slate-600 min-h-[100px]"
           />
           <div className="flex justify-end gap-3">
-            <Button variant="outline" onClick={() => setShowChefMessage(false)} className="border-[rgb(var(--border-secondary))] text-[rgb(var(--text-primary))] hover:bg-[rgb(var(--bg-hover))]">
+            <Button variant="outline" onClick={() => setShowChefMessage(false)} className="border-slate-600 text-slate-900 hover:text-slate-100 hover:bg-slate-700">
               Annuler
             </Button>
             <Button 
               onClick={handleAddMessage}
               disabled={!newMessage.trim()}
-              className="bg-amber-600 hover:bg-amber-700 text-white"
+              className="bg-amber-600 hover:bg-amber-700"
             >
               Publier
             </Button>
@@ -330,10 +330,10 @@ function DailyTaskCard({ dailyTask, task, onComplete, onAdjustStock }) {
       animate={{ opacity: 1, scale: 1 }}
       exit={{ opacity: 0, scale: 0.95 }}
       className={cn(
-        "p-4 rounded-2xl border transition-all shadow-sm",
+        "p-4 rounded-2xl border transition-all",
         dailyTask.is_completed
-          ? "bg-orange-50 border-orange-200 light-mode:bg-orange-50 dark:bg-orange-900/20 dark:border-orange-600/30"
-          : "bg-[rgb(var(--bg-card))] border-[rgb(var(--border-primary))]"
+          ? "bg-orange-900/20 border-orange-600/30"
+          : "bg-slate-800/50 border-slate-700/50"
       )}
     >
       <div className="flex gap-4">
@@ -350,28 +350,28 @@ function DailyTaskCard({ dailyTask, task, onComplete, onAdjustStock }) {
         
         <div className="flex-1 min-w-0">
           <h3 className={cn(
-            "font-medium truncate text-[rgb(var(--text-primary))]",
-            dailyTask.is_completed && "line-through text-[rgb(var(--text-tertiary))]"
+            "font-medium truncate",
+            dailyTask.is_completed && "line-through text-slate-500"
           )}>
             {task.name}
           </h3>
           
           {!isBinary && (
             <div className="flex items-center gap-2 mt-2">
-              <span className="text-indigo-500 font-semibold">
+              <span className="text-indigo-400 font-semibold">
                 {dailyTask.quantity_to_produce} {task.unit}
               </span>
-              <span className="text-[rgb(var(--text-secondary))] text-sm">à produire</span>
+              <span className="text-slate-500 text-sm">à produire</span>
             </div>
           )}
           
           {isBinary && dailyTask.target_quantity > 1 && (
-            <p className="text-amber-500 text-sm mt-1">
+            <p className="text-amber-400 text-sm mt-1">
               ×{dailyTask.target_quantity}
             </p>
           )}
 
-          <div className="flex items-center gap-2 mt-2 text-xs text-[rgb(var(--text-secondary))]">
+          <div className="flex items-center gap-2 mt-2 text-xs text-slate-400">
             <Clock className="w-3 h-3" />
             <span>{estimatedTime()}</span>
           </div>
@@ -380,12 +380,12 @@ function DailyTaskCard({ dailyTask, task, onComplete, onAdjustStock }) {
 
       {/* Completed by */}
       {dailyTask.is_completed && dailyTask.completed_by_name && (
-        <div className="mt-3 pt-3 border-t border-[rgb(var(--border-primary))] flex items-center gap-2">
+        <div className="mt-3 pt-3 border-t border-slate-700/50 flex items-center gap-2">
           <div className="w-6 h-6 rounded-full bg-orange-600 flex items-center justify-center text-xs font-medium text-white">
             {dailyTask.completed_by_name.charAt(0).toUpperCase()}
           </div>
-          <span className="text-sm text-[rgb(var(--text-secondary))]">{dailyTask.completed_by_name}</span>
-          <Check className="w-4 h-4 text-orange-500 ml-auto" />
+          <span className="text-sm text-slate-300">{dailyTask.completed_by_name}</span>
+          <Check className="w-4 h-4 text-orange-400 ml-auto" />
         </div>
       )}
 
@@ -416,7 +416,7 @@ function DailyTaskCard({ dailyTask, task, onComplete, onAdjustStock }) {
           
           <Button
             onClick={onComplete}
-            className="bg-orange-600 hover:bg-orange-700 text-white min-h-[44px]"
+            className="bg-orange-600 hover:bg-orange-700 min-h-[44px]"
           >
             <Check className="w-4 h-4 mr-2" />
             Terminé
