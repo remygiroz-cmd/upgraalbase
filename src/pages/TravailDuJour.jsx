@@ -228,31 +228,31 @@ export default function TravailDuJour() {
       </AnimatePresence>
 
       {/* Progress Section */}
-      <div className="mb-6 p-4 bg-slate-800/50 rounded-2xl border border-slate-700/50">
+      <div className="mb-6 p-4 bg-white rounded-2xl border-2 border-gray-300">
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-4">
-            <span className="text-2xl font-bold text-orange-400">{completedCount}/{totalCount}</span>
-            <span className="text-slate-300">tâches complétées</span>
+            <span className="text-2xl font-bold text-orange-600">{completedCount}/{totalCount}</span>
+            <span className="text-gray-900 font-medium">tâches complétées</span>
           </div>
           <div className="flex flex-col sm:flex-row items-end sm:items-center gap-2 sm:gap-4 text-sm">
             {activeSession.started_at && (
-              <div className="text-slate-400 text-xs">
+              <div className="text-gray-700 text-xs font-medium">
                 Créée le {format(new Date(activeSession.started_at), "d MMM 'à' HH:mm", { locale: fr })}
               </div>
             )}
             <div className="flex items-center gap-4">
-              <div className="flex items-center gap-2 text-slate-400">
+              <div className="flex items-center gap-2 text-gray-700 font-medium">
                 <Clock className="w-4 h-4" />
                 <span>Total: {formatTime(totalTimeSeconds)}</span>
               </div>
-              <div className="flex items-center gap-2 text-orange-400">
+              <div className="flex items-center gap-2 text-orange-600 font-semibold">
                 <Clock className="w-4 h-4" />
                 <span>Restant: {formatTime(remainingTimeSeconds)}</span>
               </div>
             </div>
           </div>
         </div>
-        <Progress value={progressPercent} className="h-3 bg-slate-700" />
+        <Progress value={progressPercent} className="h-3 bg-gray-200" />
       </div>
 
       {/* Tasks by Category */}
@@ -263,13 +263,13 @@ export default function TravailDuJour() {
           const categoryColor = category?.color || '#64748b';
 
           return (
-            <div key={categoryId} className="bg-slate-800/50 rounded-2xl border border-slate-700/50 overflow-hidden">
+            <div key={categoryId} className="bg-white rounded-2xl border-2 border-gray-300 overflow-hidden shadow-sm">
               <div 
-                className="px-4 py-3 border-b border-slate-700/50"
+                className="px-4 py-3 border-b-2 border-gray-200"
                 style={{ borderLeftWidth: 4, borderLeftColor: categoryColor }}
               >
-                <h3 className="font-semibold">{categoryName}</h3>
-                <p className="text-xs text-slate-400">
+                <h3 className="font-semibold text-gray-900">{categoryName}</h3>
+                <p className="text-xs text-gray-700 font-medium">
                   {tasks.filter(t => t.is_completed).length}/{tasks.length} complété{tasks.length > 1 ? 's' : ''}
                 </p>
               </div>
@@ -352,10 +352,10 @@ function WorkTaskCard({ task, onComplete, onRemove, allTasks, taskEntities, dayO
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, scale: 0.95 }}
       className={cn(
-        "p-3 sm:p-4 rounded-xl border transition-all",
+        "p-3 sm:p-4 rounded-xl border-2 transition-all",
         task.is_completed
-          ? "bg-orange-900/20 border-orange-600/30"
-          : "bg-slate-700/50 border-slate-600/50"
+          ? "bg-orange-50 border-orange-400"
+          : "bg-white border-gray-300"
       )}
     >
       <div className="flex gap-3">
@@ -377,11 +377,11 @@ function WorkTaskCard({ task, onComplete, onRemove, allTasks, taskEntities, dayO
           <div className="flex-1">
             <div className="flex items-start gap-2 flex-wrap mb-2">
               <h4 className={cn(
-                "font-medium text-base flex-shrink-0",
-                task.is_completed && "line-through text-slate-500"
-              )}>
-                {task.task_name}
-              </h4>
+                  "font-semibold text-gray-900 text-base flex-shrink-0",
+                  task.is_completed && "line-through text-gray-500"
+                )}>
+                  {task.task_name}
+                </h4>
               {isAdHoc && (
                 <span className="px-2 py-1 rounded-lg bg-purple-600/20 text-purple-400 text-xs font-medium whitespace-nowrap">
                   Ponctuelle
@@ -403,7 +403,7 @@ function WorkTaskCard({ task, onComplete, onRemove, allTasks, taskEntities, dayO
             </div>
             
             {task.ad_hoc_comment && (
-              <p className="text-sm text-slate-400 mt-2 italic">
+              <p className="text-sm text-gray-700 mt-2 italic">
                 {task.ad_hoc_comment}
               </p>
             )}
@@ -413,8 +413,8 @@ function WorkTaskCard({ task, onComplete, onRemove, allTasks, taskEntities, dayO
                 <div className="w-6 h-6 rounded-full bg-orange-600 flex items-center justify-center text-xs font-medium text-white">
                   {task.completed_by_name.charAt(0).toUpperCase()}
                 </div>
-                <span className="text-sm text-slate-400">{task.completed_by_name}</span>
-                <span className="text-xs text-slate-500">
+                <span className="text-sm text-gray-900 font-medium">{task.completed_by_name}</span>
+                <span className="text-xs text-gray-700">
                   {format(new Date(task.completed_at), 'HH:mm')}
                 </span>
               </div>
@@ -428,7 +428,7 @@ function WorkTaskCard({ task, onComplete, onRemove, allTasks, taskEntities, dayO
                   size="sm"
                   variant="ghost"
                   onClick={onRemove}
-                  className="text-slate-400 hover:text-red-400 hover:bg-red-600/20 min-h-[44px] px-3"
+                  className="text-gray-600 hover:text-red-600 hover:bg-red-50 min-h-[44px] px-3"
                 >
                   <X className="w-4 h-4" />
                 </Button>
@@ -442,7 +442,7 @@ function WorkTaskCard({ task, onComplete, onRemove, allTasks, taskEntities, dayO
               </>
             )}
             {task.is_completed && (
-              <Check className="w-6 h-6 text-orange-400" />
+              <Check className="w-6 h-6 text-orange-600" />
             )}
           </div>
         </div>

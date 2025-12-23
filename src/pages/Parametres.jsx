@@ -89,7 +89,7 @@ export default function Parametres() {
           {/* Profile Tab */}
           <TabsContent value="profile" className="space-y-6">
             <div className="bg-slate-800/50 rounded-2xl border border-slate-700/50 p-6">
-              <h3 className="text-lg font-semibold mb-4">Informations personnelles</h3>
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">Informations personnelles</h3>
               
               <div className="space-y-4">
                 <div>
