@@ -63,10 +63,10 @@ export default function Layout({ children, currentPageName }) {
       to={createPageUrl(to)}
       onClick={() => setSidebarOpen(false)}
       className={cn(
-        "flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200",
-        "text-slate-200 dark:text-slate-200 light-mode:text-slate-700",
-        "hover:bg-slate-700/50 light-mode:hover:bg-slate-200 active:scale-95",
-        active && "bg-orange-600/20 text-orange-400 border border-orange-600/30"
+        "flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 active:scale-95",
+        active 
+          ? "bg-orange-600/20 text-orange-400 border border-orange-600/30" 
+          : "text-[rgb(var(--text-primary))] hover:bg-[rgb(var(--bg-hover))]"
       )}
     >
       <Icon className="w-5 h-5" />
@@ -78,18 +78,11 @@ export default function Layout({ children, currentPageName }) {
     <div className="min-h-screen">
 
       {/* Mobile Header */}
-      <header className={cn(
-        "lg:hidden fixed top-0 left-0 right-0 z-50 backdrop-blur-sm border-b px-4 py-3",
-        "bg-slate-800/95 border-slate-700",
-        "light-mode:bg-white/95 light-mode:border-slate-200"
-      )}>
+      <header className="lg:hidden fixed top-0 left-0 right-0 z-50 backdrop-blur-sm border-b border-[rgb(var(--border-primary))] px-4 py-3 bg-[rgb(var(--bg-secondary))/95]">
         <div className="flex items-center justify-between">
           <button
             onClick={() => setSidebarOpen(true)}
-            className={cn(
-              "p-2 rounded-lg transition-colors",
-              "hover:bg-slate-700 light-mode:hover:bg-slate-100"
-            )}
+            className="p-2 rounded-lg transition-colors hover:bg-[rgb(var(--bg-hover))]"
           >
             <Menu className="w-6 h-6" />
           </button>
@@ -99,10 +92,7 @@ export default function Layout({ children, currentPageName }) {
           </div>
           <button
             onClick={toggleTheme}
-            className={cn(
-              "p-2 rounded-lg transition-colors",
-              "hover:bg-slate-700 light-mode:hover:bg-slate-100"
-            )}
+            className="p-2 rounded-lg transition-colors hover:bg-[rgb(var(--bg-hover))]"
           >
             {theme === 'dark' ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
           </button>
@@ -119,35 +109,26 @@ export default function Layout({ children, currentPageName }) {
 
       {/* Sidebar */}
       <aside className={cn(
-        "fixed top-0 left-0 h-full w-72 z-50 transition-all duration-300 ease-out",
-        "bg-slate-800 light-mode:bg-white light-mode:border-r light-mode:border-slate-200",
+        "fixed top-0 left-0 h-full w-72 z-50 transition-all duration-200 ease-out",
+        "bg-[rgb(var(--bg-secondary))] light-mode:border-r border-[rgb(var(--border-primary))]",
         "lg:translate-x-0",
         sidebarOpen ? "translate-x-0" : "-translate-x-full"
       )}>
         <div className="flex flex-col h-full">
           {/* Logo */}
-          <div className={cn(
-            "flex items-center justify-between p-5 border-b",
-            "border-slate-700 light-mode:border-slate-200"
-          )}>
+          <div className="flex items-center justify-between p-5 border-b border-[rgb(var(--border-primary))]">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-orange-500 to-orange-700 flex items-center justify-center">
                 <ChefHat className="w-6 h-6 text-white" />
               </div>
               <div>
                 <h1 className="font-bold text-lg">UpGraal</h1>
-                <p className={cn(
-                  "text-xs",
-                  "text-slate-400 light-mode:text-slate-500"
-                )}>Kitchen OS</p>
+                <p className="text-xs text-[rgb(var(--text-secondary))]">Kitchen OS</p>
               </div>
             </div>
             <button
               onClick={() => setSidebarOpen(false)}
-              className={cn(
-                "lg:hidden p-2 rounded-lg transition-colors",
-                "hover:bg-slate-700 light-mode:hover:bg-slate-100"
-              )}
+              className="lg:hidden p-2 rounded-lg transition-colors hover:bg-[rgb(var(--bg-hover))]"
             >
               <X className="w-5 h-5" />
             </button>
@@ -167,10 +148,7 @@ export default function Layout({ children, currentPageName }) {
 
             {/* Cuisine */}
             <div>
-              <h2 className={cn(
-                "px-4 text-xs font-semibold uppercase tracking-wider mb-2",
-                "text-slate-500 light-mode:text-slate-600"
-              )}>
+              <h2 className="px-4 text-xs font-semibold uppercase tracking-wider mb-2 text-[rgb(var(--text-tertiary))]">
                 Cuisine
               </h2>
               <div className="space-y-1">
@@ -188,10 +166,7 @@ export default function Layout({ children, currentPageName }) {
 
             {/* Gestion */}
             <div>
-              <h2 className={cn(
-                "px-4 text-xs font-semibold uppercase tracking-wider mb-2",
-                "text-slate-500 light-mode:text-slate-600"
-              )}>
+              <h2 className="px-4 text-xs font-semibold uppercase tracking-wider mb-2 text-[rgb(var(--text-tertiary))]">
                 Gestion
               </h2>
               <div className="space-y-1">
@@ -209,24 +184,15 @@ export default function Layout({ children, currentPageName }) {
           </nav>
 
           {/* Footer */}
-          <div className={cn(
-            "p-4 border-t",
-            "border-slate-700 light-mode:border-slate-200"
-          )}>
+          <div className="p-4 border-t border-[rgb(var(--border-primary))]">
             <div className="flex items-center justify-between mb-2">
-              <p className={cn(
-                "text-xs text-center flex-1",
-                "text-slate-500 light-mode:text-slate-600"
-              )}>
+              <p className="text-xs text-center flex-1 text-[rgb(var(--text-tertiary))]">
                 UpGraal v1.0
               </p>
             </div>
             <button
               onClick={toggleTheme}
-              className={cn(
-                "w-full flex items-center justify-center gap-2 py-2 px-3 rounded-lg transition-colors text-sm",
-                "bg-slate-700 hover:bg-slate-600 light-mode:bg-slate-100 light-mode:hover:bg-slate-200"
-              )}
+              className="w-full flex items-center justify-center gap-2 py-2 px-3 rounded-lg transition-colors text-sm bg-[rgb(var(--bg-tertiary))] hover:bg-[rgb(var(--bg-hover))]"
             >
               {theme === 'dark' ? (
                 <>
