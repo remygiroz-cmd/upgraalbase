@@ -2,9 +2,10 @@ import React, { useState } from 'react';
 import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Bell, X, Clock, Eye, EyeOff } from 'lucide-react';
+import { Bell, X, Clock, Eye, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import ConfirmDialog from '@/components/ui/ConfirmDialog';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
@@ -12,6 +13,7 @@ import { cn } from '@/lib/utils';
 export default function DailyNoteCard({ note }) {
   const queryClient = useQueryClient();
   const [showReaders, setShowReaders] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
 
   const { data: currentUser } = useQuery({
     queryKey: ['currentUser'],
@@ -32,6 +34,15 @@ export default function DailyNoteCard({ note }) {
         }
       ];
       return base44.entities.DailyNote.update(note.id, { read_by: updatedReadBy });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['dailyNotes'] });
+    }
+  });
+
+  const deleteNoteMutation = useMutation({
+    mutationFn: async () => {
+      return base44.entities.DailyNote.delete(note.id);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['dailyNotes'] });
@@ -113,7 +124,7 @@ export default function DailyNoteCard({ note }) {
           </p>
 
           {isAuthor && (
-            <div className="mt-4 pt-4 border-t border-orange-500/30">
+            <div className="mt-4 pt-4 border-t border-orange-500/30 flex items-center justify-between gap-2">
               <Button
                 size="sm"
                 variant="ghost"
@@ -122,6 +133,15 @@ export default function DailyNoteCard({ note }) {
               >
                 <Eye className="w-4 h-4 mr-2" />
                 {note.read_by?.length || 0} personne{(note.read_by?.length || 0) > 1 ? 's ont' : ' a'} lu
+              </Button>
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => setConfirmDelete(true)}
+                className="text-red-300 hover:text-red-100 hover:bg-red-600/30 text-xs"
+              >
+                <Trash2 className="w-4 h-4 mr-2" />
+                Supprimer
               </Button>
             </div>
           )}
@@ -161,6 +181,17 @@ export default function DailyNoteCard({ note }) {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Delete Confirmation */}
+      <ConfirmDialog
+        open={confirmDelete}
+        onOpenChange={setConfirmDelete}
+        title="Supprimer la note"
+        description="Cette note sera supprimée pour tous les utilisateurs. Cette action est irréversible."
+        onConfirm={() => deleteNoteMutation.mutate()}
+        variant="danger"
+        confirmText="Supprimer"
+      />
     </>
   );
 }
