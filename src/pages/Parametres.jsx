@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
-import { Settings, User, Bell, Palette, Clock, Save, Check, Upload, Image } from 'lucide-react';
+import { Settings, User, Bell, Palette, Clock, Save, Check, Upload, Image, Sparkles, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -88,7 +88,12 @@ export default function Parametres() {
 
           {/* Profile Tab */}
           <TabsContent value="profile" className="space-y-6">
-            {currentUser?.role === 'admin' && <LogoUploadSection />}
+            {currentUser?.role === 'admin' && (
+              <>
+                <LogoUploadSection />
+                <GenerateMissingImagesSection />
+              </>
+            )}
             
             <div className="bg-slate-100 p-6 rounded-2xl border border-slate-700/50">
               <h3 className="text-lg font-semibold text-gray-900 mb-4">Informations personnelles</h3>
@@ -347,6 +352,99 @@ function SettingRow({ label, description, checked, onCheckedChange }) {
 
     </div>);
 
+}
+
+function GenerateMissingImagesSection() {
+  const queryClient = useQueryClient();
+  const [generating, setGenerating] = useState(false);
+  const [progress, setProgress] = useState({ current: 0, total: 0 });
+
+  const { data: tasks = [] } = useQuery({
+    queryKey: ['tasks'],
+    queryFn: () => base44.entities.Task.list()
+  });
+
+  const tasksWithoutImages = tasks.filter(task => !task.image_url);
+
+  const handleGenerateAllImages = async () => {
+    setGenerating(true);
+    setProgress({ current: 0, total: tasksWithoutImages.length });
+
+    for (let i = 0; i < tasksWithoutImages.length; i++) {
+      const task = tasksWithoutImages[i];
+      try {
+        const result = await base44.integrations.Core.GenerateImage({
+          prompt: `Professional high-quality photograph of "${task.name}" in a professional kitchen, realistic food photography, commercial kitchen setting, professional lighting, sharp focus, clean white background or minimal kitchen background, photorealistic, 8k quality`
+        });
+        
+        if (result?.url) {
+          await base44.entities.Task.update(task.id, { image_url: result.url });
+        }
+        
+        setProgress({ current: i + 1, total: tasksWithoutImages.length });
+      } catch (error) {
+        console.error(`Failed to generate image for task ${task.name}:`, error);
+      }
+    }
+
+    queryClient.invalidateQueries({ queryKey: ['tasks'] });
+    toast.success(`${tasksWithoutImages.length} images générées avec succès`);
+    setGenerating(false);
+    setProgress({ current: 0, total: 0 });
+  };
+
+  if (tasksWithoutImages.length === 0) {
+    return null;
+  }
+
+  return (
+    <div className="bg-white rounded-2xl border-2 border-gray-300 p-6 shadow-sm">
+      <div className="flex items-start justify-between mb-4">
+        <div>
+          <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+            <Image className="w-5 h-5" />
+            Génération automatique d'images
+          </h3>
+          <p className="text-sm text-gray-700 mt-1">
+            {tasksWithoutImages.length} tâche{tasksWithoutImages.length > 1 ? 's' : ''} sans image
+          </p>
+        </div>
+      </div>
+
+      {generating && (
+        <div className="mb-4">
+          <div className="flex justify-between text-sm text-gray-700 mb-2">
+            <span>Génération en cours...</span>
+            <span>{progress.current} / {progress.total}</span>
+          </div>
+          <div className="w-full bg-gray-200 rounded-full h-2">
+            <div 
+              className="bg-orange-600 h-2 rounded-full transition-all duration-300"
+              style={{ width: `${(progress.current / progress.total) * 100}%` }}
+            />
+          </div>
+        </div>
+      )}
+
+      <Button
+        onClick={handleGenerateAllImages}
+        disabled={generating}
+        className="w-full bg-orange-600 hover:bg-orange-700"
+      >
+        {generating ? (
+          <>
+            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+            Génération en cours...
+          </>
+        ) : (
+          <>
+            <Sparkles className="w-4 h-4 mr-2" />
+            Générer toutes les images manquantes
+          </>
+        )}
+      </Button>
+    </div>
+  );
 }
 
 function LogoUploadSection() {
