@@ -720,6 +720,8 @@ function CategoryColumn({ categoryId, title, color, tasks, onEditTask, onDeleteT
 }
 
 function TaskCard({ task, onEdit, onDelete, onStartStopwatch, isSelected, onToggleSelection, dragHandleProps, isDragging, stockValue, onStockChange, dayOfWeek }) {
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  
   const formatDuration = () => {
     const mins = task.duration_minutes || 0;
     const secs = task.duration_seconds || 0;
@@ -844,7 +846,7 @@ function TaskCard({ task, onEdit, onDelete, onStartStopwatch, isSelected, onTogg
           <button
             onClick={(e) => {
               e.stopPropagation();
-              onDelete();
+              setConfirmDelete(true);
             }}
             className="p-2 rounded-lg hover:bg-red-600/20 text-slate-400 hover:text-red-400 transition-colors"
             title="Supprimer"
@@ -853,6 +855,16 @@ function TaskCard({ task, onEdit, onDelete, onStartStopwatch, isSelected, onTogg
           </button>
         </div>
       </div>
+
+      <ConfirmDialog
+        open={confirmDelete}
+        onOpenChange={setConfirmDelete}
+        title="Supprimer la tâche"
+        description={`Êtes-vous sûr de vouloir supprimer la tâche "${task.name}" ?`}
+        onConfirm={onDelete}
+        variant="danger"
+        confirmText="Supprimer"
+      />
     </motion.div>
   );
 }
