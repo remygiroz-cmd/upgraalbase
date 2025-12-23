@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
-import { History, Download, Check, ClipboardList, Clock } from 'lucide-react';
+import { History, Download, Check, ClipboardList, Clock, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import PageHeader from '@/components/ui/PageHeader';
@@ -13,17 +13,50 @@ import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 
 export default function Historique() {
+  const queryClient = useQueryClient();
   const [selectedDay, setSelectedDay] = useState(null);
 
   const { data: workSessions = [], isLoading: loadingSessions } = useQuery({
     queryKey: ['workSessions', 'completed'],
-    queryFn: () => base44.entities.WorkSession.filter({ status: 'completed' }, '-date')
+    queryFn: () => base44.entities.WorkSession.filter({ status: 'completed' }, '-created_date')
   });
 
   const { data: tasks = [] } = useQuery({
     queryKey: ['tasks'],
     queryFn: () => base44.entities.Task.list()
   });
+
+  const deleteSessionMutation = useMutation({
+    mutationFn: (id) => base44.entities.WorkSession.delete(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['workSessions'] });
+    }
+  });
+
+  const deleteAllSessionsMutation = useMutation({
+    mutationFn: async () => {
+      const deletePromises = workSessions.map(session => 
+        base44.entities.WorkSession.delete(session.id)
+      );
+      return Promise.all(deletePromises);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['workSessions'] });
+    }
+  });
+
+  const handleDeleteSession = (sessionId, e) => {
+    e.stopPropagation();
+    if (window.confirm('Supprimer cet historique ?')) {
+      deleteSessionMutation.mutate(sessionId);
+    }
+  };
+
+  const handleDeleteAll = () => {
+    if (window.confirm(`Supprimer tous les ${workSessions.length} historiques ? Cette action est irréversible.`)) {
+      deleteAllSessionsMutation.mutate();
+    }
+  };
 
   const calculateSessionTimes = (session) => {
     let totalSeconds = 0;
@@ -111,14 +144,25 @@ export default function Historique() {
         title="Historique"
         subtitle="Historique des mises en place"
         actions={
-          <Button
-            onClick={exportToCSV}
-            variant="outline"
-            className="border-slate-600 text-slate-900 hover:text-slate-100 hover:bg-slate-700"
-          >
-            <Download className="w-4 h-4 mr-2" />
-            Exporter CSV
-          </Button>
+          <>
+            <Button
+              onClick={handleDeleteAll}
+              variant="outline"
+              className="border-red-600 text-red-400 hover:text-red-300 hover:bg-red-600/20"
+              disabled={deleteAllSessionsMutation.isPending}
+            >
+              <Trash2 className="w-4 h-4 mr-2" />
+              Tout supprimer
+            </Button>
+            <Button
+              onClick={exportToCSV}
+              variant="outline"
+              className="border-slate-600 text-slate-900 hover:text-slate-100 hover:bg-slate-700"
+            >
+              <Download className="w-4 h-4 mr-2" />
+              Exporter CSV
+            </Button>
+          </>
         }
       />
 
@@ -133,11 +177,11 @@ export default function Historique() {
               key={session.id}
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              className="bg-slate-800/50 rounded-2xl border border-slate-700/50 p-4 hover:border-slate-600 transition-all cursor-pointer"
+              className="bg-slate-800/50 rounded-2xl border border-slate-700/50 p-4 hover:border-slate-600 transition-all cursor-pointer group"
               onClick={() => setSelectedDay(session)}
             >
-              <div className="flex items-center justify-between">
-                <div className="flex-1">
+              <div className="flex items-center justify-between gap-4">
+                <div className="flex-1 min-w-0">
                   <h3 className="font-semibold text-lg">
                     {format(new Date(session.date), 'EEEE d MMMM yyyy', { locale: fr })}
                   </h3>
@@ -163,13 +207,23 @@ export default function Historique() {
                     )}
                   </div>
                 </div>
-                <div className={cn(
-                  "w-16 h-16 rounded-xl flex items-center justify-center font-bold text-2xl flex-shrink-0",
-                  completed === total && total > 0
-                    ? "bg-orange-600/20 text-orange-400"
-                    : "bg-slate-700 text-slate-400"
-                )}>
-                  {Math.round(total > 0 ? (completed / total) * 100 : 0)}%
+                <div className="flex items-center gap-3 flex-shrink-0">
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={(e) => handleDeleteSession(session.id, e)}
+                    className="opacity-0 group-hover:opacity-100 transition-opacity text-red-400 hover:text-red-300 hover:bg-red-600/20"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </Button>
+                  <div className={cn(
+                    "w-16 h-16 rounded-xl flex items-center justify-center font-bold text-2xl",
+                    completed === total && total > 0
+                      ? "bg-orange-600/20 text-orange-400"
+                      : "bg-slate-700 text-slate-400"
+                  )}>
+                    {Math.round(total > 0 ? (completed / total) * 100 : 0)}%
+                  </div>
                 </div>
               </div>
             </motion.div>
