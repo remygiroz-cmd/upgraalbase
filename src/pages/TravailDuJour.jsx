@@ -139,20 +139,22 @@ export default function TravailDuJour() {
   const totalCount = activeSession.tasks?.length || 0;
   const progressPercent = totalCount > 0 ? (completedCount / totalCount) * 100 : 0;
 
-  // Calculate time
-  const calculateTimeForTask = (taskId) => {
-    const task = tasks.find(t => t.id === taskId);
+  // Calculate time with quantity
+  const calculateTimeForTask = (sessionTask) => {
+    const task = tasks.find(t => t.id === sessionTask.task_id);
     if (!task) return 0;
-    return (task.duration_minutes || 0) * 60 + (task.duration_seconds || 0);
+    const baseTime = (task.duration_minutes || 0) * 60 + (task.duration_seconds || 0);
+    const multiplier = sessionTask.quantity_to_produce || 1;
+    return baseTime * multiplier;
   };
 
   const totalTimeSeconds = activeSession.tasks?.reduce((acc, sessionTask) => {
-    return acc + calculateTimeForTask(sessionTask.task_id);
+    return acc + calculateTimeForTask(sessionTask);
   }, 0) || 0;
 
   const remainingTimeSeconds = activeSession.tasks?.reduce((acc, sessionTask) => {
     if (sessionTask.is_completed) return acc;
-    return acc + calculateTimeForTask(sessionTask.task_id);
+    return acc + calculateTimeForTask(sessionTask);
   }, 0) || 0;
 
   const formatTime = (seconds) => {
@@ -237,6 +239,7 @@ export default function TravailDuJour() {
                       task={task}
                       onComplete={() => handleCompleteTask(task.originalIndex)}
                       onRemove={() => handleRemoveTask(task.originalIndex)}
+                      allTasks={tasks}
                     />
                   ))}
                 </AnimatePresence>
@@ -271,7 +274,10 @@ export default function TravailDuJour() {
   );
 }
 
-function WorkTaskCard({ task, onComplete, onRemove }) {
+function WorkTaskCard({ task, onComplete, onRemove, allTasks }) {
+  const taskDetails = allTasks.find(t => t.id === task.task_id);
+  const hasQuantity = task.quantity_to_produce !== undefined && task.quantity_to_produce > 0;
+  
   return (
     <motion.div
       layout
@@ -287,12 +293,19 @@ function WorkTaskCard({ task, onComplete, onRemove }) {
     >
       <div className="flex items-center justify-between">
         <div className="flex-1">
-          <h4 className={cn(
-            "font-medium",
-            task.is_completed && "line-through text-slate-500"
-          )}>
-            {task.task_name}
-          </h4>
+          <div className="flex items-center gap-3">
+            <h4 className={cn(
+              "font-medium",
+              task.is_completed && "line-through text-slate-500"
+            )}>
+              {task.task_name}
+            </h4>
+            {hasQuantity && (
+              <span className="px-2 py-1 rounded-lg bg-indigo-600/20 text-indigo-400 text-xs font-medium">
+                À faire : {task.quantity_to_produce} {taskDetails?.unit || 'unités'}
+              </span>
+            )}
+          </div>
           
           {task.is_completed && task.completed_by_name && (
             <div className="mt-2 flex items-center gap-2">
