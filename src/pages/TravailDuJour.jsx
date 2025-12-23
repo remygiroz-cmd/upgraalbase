@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
-import { ChefHat, Check, CheckCircle2, X } from 'lucide-react';
+import { ChefHat, Check, CheckCircle2, X, Clock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import PageHeader from '@/components/ui/PageHeader';
@@ -27,6 +27,11 @@ export default function TravailDuJour() {
   const { data: categories = [] } = useQuery({
     queryKey: ['categories'],
     queryFn: () => base44.entities.Category.list('order')
+  });
+
+  const { data: tasks = [] } = useQuery({
+    queryKey: ['tasks'],
+    queryFn: () => base44.entities.Task.list()
   });
 
   const { data: currentUser } = useQuery({
@@ -124,6 +129,29 @@ export default function TravailDuJour() {
   const totalCount = activeSession.tasks?.length || 0;
   const progressPercent = totalCount > 0 ? (completedCount / totalCount) * 100 : 0;
 
+  // Calculate time
+  const calculateTimeForTask = (taskId) => {
+    const task = tasks.find(t => t.id === taskId);
+    if (!task) return 0;
+    return (task.duration_minutes || 0) * 60 + (task.duration_seconds || 0);
+  };
+
+  const totalTimeSeconds = activeSession.tasks?.reduce((acc, sessionTask) => {
+    return acc + calculateTimeForTask(sessionTask.task_id);
+  }, 0) || 0;
+
+  const remainingTimeSeconds = activeSession.tasks?.reduce((acc, sessionTask) => {
+    if (sessionTask.is_completed) return acc;
+    return acc + calculateTimeForTask(sessionTask.task_id);
+  }, 0) || 0;
+
+  const formatTime = (seconds) => {
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    if (hours > 0) return `${hours}h ${minutes}min`;
+    return `${minutes}min`;
+  };
+
   return (
     <div>
       <PageHeader
@@ -147,6 +175,16 @@ export default function TravailDuJour() {
           <div className="flex items-center gap-4">
             <span className="text-2xl font-bold text-orange-400">{completedCount}/{totalCount}</span>
             <span className="text-slate-300">tâches complétées</span>
+          </div>
+          <div className="flex items-center gap-4 text-sm">
+            <div className="flex items-center gap-2 text-slate-400">
+              <Clock className="w-4 h-4" />
+              <span>Total: {formatTime(totalTimeSeconds)}</span>
+            </div>
+            <div className="flex items-center gap-2 text-orange-400">
+              <Clock className="w-4 h-4" />
+              <span>Restant: {formatTime(remainingTimeSeconds)}</span>
+            </div>
           </div>
         </div>
         <Progress value={progressPercent} className="h-3 bg-slate-700" />
