@@ -101,8 +101,8 @@ export default function TaskFormModal({ open, onClose, task, categories }) {
           schedules: []
         },
         weekly_targets: {
-          monday: 0, tuesday: 0, wednesday: 0, thursday: 0,
-          friday: 0, saturday: 0, sunday: 0
+          monday: 1, tuesday: 1, wednesday: 1, thursday: 1,
+          friday: 1, saturday: 1, sunday: 1
         },
         image_url: '',
         instructions: '',
