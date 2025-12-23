@@ -43,21 +43,35 @@ export default function Temperatures() {
   });
 
   const saveTempMutation = useMutation({
-    mutationFn: async ({ equipmentId, temp, equipment: eq }) => {
+    mutationFn: async ({ equipmentId, morningTemp, eveningTemp, equipment: eq }) => {
       const existing = temperatures.find(t => t.equipment_id === equipmentId);
-      const isCompliant = temp >= eq.target_min && temp <= eq.target_max;
+      const morningCompliant = morningTemp !== undefined && morningTemp !== null ? 
+        morningTemp >= eq.target_min && morningTemp <= eq.target_max : null;
+      const eveningCompliant = eveningTemp !== undefined && eveningTemp !== null ?
+        eveningTemp >= eq.target_min && eveningTemp <= eq.target_max : null;
       
       const data = {
         equipment_id: equipmentId,
         date: today,
-        temperature: temp,
         target_min: eq.target_min,
-        target_max: eq.target_max,
-        is_compliant: isCompliant,
-        signed_by: currentUser?.email,
-        signed_by_name: currentUser?.full_name || currentUser?.email,
-        signed_at: new Date().toISOString()
+        target_max: eq.target_max
       };
+
+      if (morningTemp !== undefined && morningTemp !== null) {
+        data.morning_temp = morningTemp;
+        data.morning_compliant = morningCompliant;
+        data.morning_signed_by = currentUser?.email;
+        data.morning_signed_by_name = currentUser?.full_name || currentUser?.email;
+        data.morning_signed_at = new Date().toISOString();
+      }
+
+      if (eveningTemp !== undefined && eveningTemp !== null) {
+        data.evening_temp = eveningTemp;
+        data.evening_compliant = eveningCompliant;
+        data.evening_signed_by = currentUser?.email;
+        data.evening_signed_by_name = currentUser?.full_name || currentUser?.email;
+        data.evening_signed_at = new Date().toISOString();
+      }
 
       if (existing) {
         return base44.entities.Temperature.update(existing.id, data);
@@ -95,14 +109,17 @@ export default function Temperatures() {
     mutationFn: async () => {
       const snapshot = equipment.map(eq => {
         const temp = temperatures.find(t => t.equipment_id === eq.id);
+        const defaultTemp = eq.type === 'positive' ? 3 : -18;
         return {
           equipment_id: eq.id,
           equipment_name: eq.name,
           equipment_type: eq.type,
-          temperature: temp?.temperature ?? (eq.type === 'positive' ? 3 : -18),
+          morning_temp: temp?.morning_temp ?? defaultTemp,
+          evening_temp: temp?.evening_temp ?? defaultTemp,
           target_min: eq.target_min,
           target_max: eq.target_max,
-          is_compliant: temp?.is_compliant ?? true
+          morning_compliant: temp?.morning_compliant ?? true,
+          evening_compliant: temp?.evening_compliant ?? true
         };
       });
 
@@ -123,13 +140,18 @@ export default function Temperatures() {
         const data = {
           equipment_id: eq.id,
           date: today,
-          temperature: defaultTemp,
+          morning_temp: defaultTemp,
+          evening_temp: defaultTemp,
           target_min: eq.target_min,
           target_max: eq.target_max,
-          is_compliant: isCompliant,
-          signed_by: 'système',
-          signed_by_name: 'Valeur par défaut',
-          signed_at: new Date().toISOString()
+          morning_compliant: isCompliant,
+          evening_compliant: isCompliant,
+          morning_signed_by: 'système',
+          morning_signed_by_name: 'Valeur par défaut',
+          morning_signed_at: new Date().toISOString(),
+          evening_signed_by: 'système',
+          evening_signed_by_name: 'Valeur par défaut',
+          evening_signed_at: new Date().toISOString()
         };
 
         if (existing) {
@@ -148,19 +170,19 @@ export default function Temperatures() {
   });
 
   const handleExportCSV = () => {
-    const rows = [['Équipement', 'Type', 'Température', 'Min', 'Max', 'Conforme', 'Signé par', 'Date/Heure']];
+    const rows = [['Équipement', 'Type', 'Matin', 'Conforme Matin', 'Soir', 'Conforme Soir', 'Min', 'Max']];
     
     equipment.forEach(eq => {
       const temp = temperatures.find(t => t.equipment_id === eq.id);
       rows.push([
         eq.name,
         eq.type === 'positive' ? 'Positif' : 'Négatif',
-        temp?.temperature ?? 'Non relevé',
+        temp?.morning_temp ?? 'Non relevé',
+        temp?.morning_compliant ? 'Oui' : (temp?.morning_temp !== undefined ? 'NON' : '-'),
+        temp?.evening_temp ?? 'Non relevé',
+        temp?.evening_compliant ? 'Oui' : (temp?.evening_temp !== undefined ? 'NON' : '-'),
         eq.target_min,
-        eq.target_max,
-        temp ? (temp.is_compliant ? 'Oui' : 'NON') : '-',
-        temp?.signed_by_name || '-',
-        temp?.signed_at ? format(new Date(temp.signed_at), 'dd/MM/yyyy HH:mm') : '-'
+        eq.target_max
       ]);
     });
 
@@ -246,7 +268,9 @@ export default function Temperatures() {
               key={eq.id}
               equipment={eq}
               temperature={getTempForEquipment(eq.id)}
-              onSave={(temp) => saveTempMutation.mutate({ equipmentId: eq.id, temp, equipment: eq })}
+              onSave={({ morningTemp, eveningTemp }) => 
+                saveTempMutation.mutate({ equipmentId: eq.id, morningTemp, eveningTemp, equipment: eq })
+              }
               isSaving={saveTempMutation.isPending}
             />
           ))}
@@ -302,36 +326,32 @@ export default function Temperatures() {
 }
 
 function TemperatureCard({ equipment, temperature, onSave, isSaving }) {
-  const [inputValue, setInputValue] = useState('');
+  const defaultTemp = equipment.type === 'positive' ? 3 : -18;
+  const [morningValue, setMorningValue] = useState('');
+  const [eveningValue, setEveningValue] = useState('');
   
   useEffect(() => {
-    if (temperature?.temperature !== undefined) {
-      setInputValue(temperature.temperature.toString());
-    } else {
-      setInputValue('');
-    }
-  }, [temperature]);
+    setMorningValue(temperature?.morning_temp !== undefined ? temperature.morning_temp.toString() : defaultTemp.toString());
+    setEveningValue(temperature?.evening_temp !== undefined ? temperature.evening_temp.toString() : defaultTemp.toString());
+  }, [temperature, defaultTemp]);
 
-  const handleSave = () => {
-    const temp = parseFloat(inputValue);
-    if (!isNaN(temp)) {
-      onSave(temp);
+  const handleSave = (type) => {
+    const morningTemp = type === 'morning' || type === 'both' ? parseFloat(morningValue) : undefined;
+    const eveningTemp = type === 'evening' || type === 'both' ? parseFloat(eveningValue) : undefined;
+    
+    if ((morningTemp !== undefined && !isNaN(morningTemp)) || (eveningTemp !== undefined && !isNaN(eveningTemp))) {
+      onSave({ morningTemp, eveningTemp });
     }
   };
 
   const isPositive = equipment.type === 'positive';
-  const isCompliant = temperature?.is_compliant;
-  const hasValue = temperature?.temperature !== undefined;
+  const morningCompliant = temperature?.morning_compliant;
+  const eveningCompliant = temperature?.evening_compliant;
+  const hasMorning = temperature?.morning_temp !== undefined;
+  const hasEvening = temperature?.evening_temp !== undefined;
 
   return (
-    <div className={cn(
-      "p-4 rounded-2xl border-2 transition-all",
-      hasValue
-        ? isCompliant
-          ? "bg-orange-50 border-orange-400"
-          : "bg-red-50 border-red-400"
-        : "bg-white border-gray-300"
-    )}>
+    <div className="p-4 rounded-2xl border-2 bg-white border-gray-300 transition-all">
       <div className="flex items-start justify-between mb-4">
         <div>
           <h3 className="font-semibold text-gray-900">{equipment.name}</h3>
@@ -347,51 +367,85 @@ function TemperatureCard({ equipment, temperature, onSave, isSaving }) {
             {isPositive ? 'Positif' : 'Négatif'}
           </Badge>
         </div>
-        
-        {hasValue && (
-          isCompliant ? (
-            <CheckCircle2 className="w-6 h-6 text-orange-400" />
-          ) : (
-            <AlertTriangle className="w-6 h-6 text-red-400" />
-          )
-        )}
       </div>
 
-      <div className="mb-4">
-        <p className="text-xs text-gray-700 font-medium mb-1">
-          Cible: {equipment.target_min}°C à {equipment.target_max}°C
-        </p>
-        <div className="flex items-center gap-2">
+      <p className="text-xs text-gray-700 font-medium mb-3">
+        Cible: {equipment.target_min}°C à {equipment.target_max}°C
+      </p>
+
+      {/* Morning Temperature */}
+      <div className="mb-4 p-3 rounded-lg bg-gray-50 border border-gray-200">
+        <div className="flex items-center justify-between mb-2">
+          <Label className="text-xs font-semibold text-gray-700">Début de service</Label>
+          {hasMorning && (
+            morningCompliant ? (
+              <CheckCircle2 className="w-4 h-4 text-green-600" />
+            ) : (
+              <AlertTriangle className="w-4 h-4 text-red-600" />
+            )
+          )}
+        </div>
+        <div className="flex items-center gap-2 mb-2">
           <Input
             type="number"
             step="0.1"
-            value={inputValue}
-            onChange={(e) => setInputValue(e.target.value)}
-            placeholder="°C"
-            className="bg-gray-50 border-gray-300 text-center text-2xl font-bold h-14"
+            value={morningValue}
+            onChange={(e) => setMorningValue(e.target.value)}
+            className="bg-white border-gray-300 text-center text-lg font-bold h-10"
           />
-          <span className="text-2xl text-gray-700">°C</span>
+          <span className="text-lg text-gray-700">°C</span>
         </div>
+        {hasMorning && temperature.morning_signed_by_name && (
+          <p className="text-[10px] text-gray-500">
+            {temperature.morning_signed_by_name}
+          </p>
+        )}
+        <Button
+          onClick={() => handleSave('morning')}
+          disabled={!morningValue || isSaving}
+          size="sm"
+          className="w-full mt-2 h-8 text-xs bg-blue-600 hover:bg-blue-700"
+        >
+          {hasMorning ? 'Modifier' : 'Enregistrer'}
+        </Button>
       </div>
 
-      {hasValue && temperature.signed_by_name && (
-        <p className="text-xs text-gray-600 mb-3">
-          Signé par {temperature.signed_by_name}
-        </p>
-      )}
-
-      <Button
-        onClick={handleSave}
-        disabled={!inputValue || isSaving}
-        className={cn(
-          "w-full min-h-[44px]",
-          hasValue
-            ? "bg-slate-600 hover:bg-slate-500"
-            : "bg-orange-600 hover:bg-orange-700"
+      {/* Evening Temperature */}
+      <div className="p-3 rounded-lg bg-gray-50 border border-gray-200">
+        <div className="flex items-center justify-between mb-2">
+          <Label className="text-xs font-semibold text-gray-700">Fin de service</Label>
+          {hasEvening && (
+            eveningCompliant ? (
+              <CheckCircle2 className="w-4 h-4 text-green-600" />
+            ) : (
+              <AlertTriangle className="w-4 h-4 text-red-600" />
+            )
+          )}
+        </div>
+        <div className="flex items-center gap-2 mb-2">
+          <Input
+            type="number"
+            step="0.1"
+            value={eveningValue}
+            onChange={(e) => setEveningValue(e.target.value)}
+            className="bg-white border-gray-300 text-center text-lg font-bold h-10"
+          />
+          <span className="text-lg text-gray-700">°C</span>
+        </div>
+        {hasEvening && temperature.evening_signed_by_name && (
+          <p className="text-[10px] text-gray-500">
+            {temperature.evening_signed_by_name}
+          </p>
         )}
-      >
-        {hasValue ? 'Mettre à jour' : 'Enregistrer'}
-      </Button>
+        <Button
+          onClick={() => handleSave('evening')}
+          disabled={!eveningValue || isSaving}
+          size="sm"
+          className="w-full mt-2 h-8 text-xs bg-orange-600 hover:bg-orange-700"
+        >
+          {hasEvening ? 'Modifier' : 'Enregistrer'}
+        </Button>
+      </div>
     </div>
   );
 }
@@ -687,35 +741,50 @@ function HistoryModal({ open, onClose }) {
                   {snapshot.snapshot.map((item, idx) => (
                     <div
                       key={idx}
-                      className={cn(
-                        "p-3 rounded-lg border",
-                        item.temperature !== undefined && item.temperature !== null
-                          ? item.is_compliant
-                            ? "bg-green-950/30 border-green-800/50"
-                            : "bg-red-950/30 border-red-800/50"
-                          : "bg-slate-800 border-slate-700"
-                      )}
+                      className="p-3 rounded-lg border bg-slate-800 border-slate-700"
                     >
-                      <div className="flex items-start justify-between">
+                      <div className="flex items-start justify-between mb-2">
                         <div className="flex-1 min-w-0">
                           <p className="font-medium text-white text-sm truncate">{item.equipment_name}</p>
                           <p className="text-xs text-slate-400">
                             Cible: {item.target_min}°C à {item.target_max}°C
                           </p>
                         </div>
-                        {item.temperature !== undefined && item.temperature !== null ? (
-                          item.is_compliant ? (
-                            <CheckCircle2 className="w-4 h-4 text-green-400 flex-shrink-0 ml-2" />
-                          ) : (
-                            <AlertTriangle className="w-4 h-4 text-red-400 flex-shrink-0 ml-2" />
-                          )
-                        ) : null}
                       </div>
-                      <p className="text-xl font-bold text-white mt-2">
-                        {item.temperature !== undefined && item.temperature !== null
-                          ? `${item.temperature}°C`
-                          : 'Non relevé'}
-                      </p>
+                      
+                      <div className="space-y-2 mt-2">
+                        <div className="flex items-center justify-between p-2 rounded bg-slate-900/50">
+                          <div>
+                            <p className="text-xs text-slate-400">Matin</p>
+                            <p className="text-base font-bold text-white">
+                              {item.morning_temp !== undefined ? `${item.morning_temp}°C` : 'N/A'}
+                            </p>
+                          </div>
+                          {item.morning_temp !== undefined && (
+                            item.morning_compliant ? (
+                              <CheckCircle2 className="w-4 h-4 text-green-400" />
+                            ) : (
+                              <AlertTriangle className="w-4 h-4 text-red-400" />
+                            )
+                          )}
+                        </div>
+
+                        <div className="flex items-center justify-between p-2 rounded bg-slate-900/50">
+                          <div>
+                            <p className="text-xs text-slate-400">Soir</p>
+                            <p className="text-base font-bold text-white">
+                              {item.evening_temp !== undefined ? `${item.evening_temp}°C` : 'N/A'}
+                            </p>
+                          </div>
+                          {item.evening_temp !== undefined && (
+                            item.evening_compliant ? (
+                              <CheckCircle2 className="w-4 h-4 text-green-400" />
+                            ) : (
+                              <AlertTriangle className="w-4 h-4 text-red-400" />
+                            )
+                          )}
+                        </div>
+                      </div>
                     </div>
                   ))}
                 </div>

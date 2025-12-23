@@ -61,10 +61,12 @@ Deno.serve(async (req) => {
         equipment_id: eq.id,
         equipment_name: eq.name,
         equipment_type: eq.type,
-        temperature: defaultTemp,
+        morning_temp: defaultTemp,
+        evening_temp: defaultTemp,
         target_min: eq.target_min,
         target_max: eq.target_max,
-        is_compliant: isCompliant
+        morning_compliant: isCompliant,
+        evening_compliant: isCompliant
       };
     });
     
@@ -90,13 +92,18 @@ Deno.serve(async (req) => {
       const data = {
         equipment_id: eq.id,
         date: today,
-        temperature: defaultTemp,
+        morning_temp: defaultTemp,
+        evening_temp: defaultTemp,
         target_min: eq.target_min,
         target_max: eq.target_max,
-        is_compliant: isCompliant,
-        signed_by: 'système',
-        signed_by_name: 'Enregistrement automatique',
-        signed_at: new Date().toISOString()
+        morning_compliant: isCompliant,
+        evening_compliant: isCompliant,
+        morning_signed_by: 'système',
+        morning_signed_by_name: 'Enregistrement automatique',
+        morning_signed_at: new Date().toISOString(),
+        evening_signed_by: 'système',
+        evening_signed_by_name: 'Enregistrement automatique',
+        evening_signed_at: new Date().toISOString()
       };
       
       if (existing.length > 0) {
