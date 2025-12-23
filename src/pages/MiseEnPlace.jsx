@@ -225,18 +225,34 @@ export default function MiseEnPlace() {
 
   // Check if auto-schedule task should be triggered
   const shouldAutoSchedule = (task) => {
-    if (!task.auto_schedule?.enabled) return false;
+    if (!task.auto_schedule?.enabled || !task.auto_schedule?.schedules?.length) return false;
     
     const now = new Date();
     const currentDay = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'][now.getDay()];
     const currentTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
     
-    // Check if trigger day matches
-    if (task.auto_schedule.trigger_day !== currentDay) return false;
-    if (!task.auto_schedule.trigger_time_start || !task.auto_schedule.trigger_time_end) return false;
+    // Check if any schedule matches current day and time
+    return task.auto_schedule.schedules.some(schedule => {
+      if (schedule.trigger_day !== currentDay) return false;
+      if (!schedule.trigger_time_start || !schedule.trigger_time_end) return false;
+      return currentTime >= schedule.trigger_time_start && currentTime <= schedule.trigger_time_end;
+    });
+  };
+
+  const getAutoScheduleQuantity = (task) => {
+    if (!task.auto_schedule?.enabled || !task.auto_schedule?.schedules?.length) return null;
     
-    // Check if current time is within the time range
-    return currentTime >= task.auto_schedule.trigger_time_start && currentTime <= task.auto_schedule.trigger_time_end;
+    const now = new Date();
+    const currentDay = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'][now.getDay()];
+    const currentTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+    
+    const matchingSchedule = task.auto_schedule.schedules.find(schedule => {
+      if (schedule.trigger_day !== currentDay) return false;
+      if (!schedule.trigger_time_start || !schedule.trigger_time_end) return false;
+      return currentTime >= schedule.trigger_time_start && currentTime <= schedule.trigger_time_end;
+    });
+
+    return matchingSchedule?.quantity || null;
   };
 
   // Auto-select tasks on mount
@@ -248,8 +264,9 @@ export default function MiseEnPlace() {
       // Auto-schedule tasks
       if (shouldAutoSchedule(task)) {
         newSelected.add(task.id);
-        if (task.auto_schedule.quantity) {
-          newStockInputs[task.id] = task.auto_schedule.quantity;
+        const quantity = getAutoScheduleQuantity(task);
+        if (quantity) {
+          newStockInputs[task.id] = quantity;
         }
       }
       

@@ -47,10 +47,7 @@ export default function TaskFormModal({ open, onClose, task, categories }) {
     requires_stock_check: false,
     auto_schedule: {
       enabled: false,
-      trigger_day: 'monday',
-      trigger_time_start: '19:00',
-      trigger_time_end: '23:59',
-      quantity: 0
+      schedules: []
     },
     weekly_targets: {
       monday: 0,
@@ -79,10 +76,7 @@ export default function TaskFormModal({ open, onClose, task, categories }) {
         requires_stock_check: task.requires_stock_check || false,
         auto_schedule: task.auto_schedule || {
           enabled: false,
-          trigger_day: 'monday',
-          trigger_time_start: '19:00',
-          trigger_time_end: '23:59',
-          quantity: 0
+          schedules: []
         },
         weekly_targets: task.weekly_targets || {
           monday: 0, tuesday: 0, wednesday: 0, thursday: 0,
@@ -104,10 +98,7 @@ export default function TaskFormModal({ open, onClose, task, categories }) {
         requires_stock_check: false,
         auto_schedule: {
           enabled: false,
-          trigger_day: 'monday',
-          trigger_time_start: '19:00',
-          trigger_time_end: '23:59',
-          quantity: 0
+          schedules: []
         },
         weekly_targets: {
           monday: 0, tuesday: 0, wednesday: 0, thursday: 0,
@@ -379,82 +370,131 @@ export default function TaskFormModal({ open, onClose, task, categories }) {
                 <Label htmlFor="auto_schedule_enabled" className="cursor-pointer flex-1">
                   Activer la planification automatique
                   <p className="text-xs text-slate-400 font-normal mt-1">
-                    Cette tâche sera cochée automatiquement selon le jour et l'heure définis
+                    Cette tâche sera cochée automatiquement selon les jours et heures définis
                   </p>
                 </Label>
               </div>
 
               {form.auto_schedule.enabled && (
-                <div className="space-y-4 p-4 bg-slate-700/30 rounded-xl">
-                  <div>
-                    <Label>Jour de déclenchement</Label>
-                    <Select
-                      value={form.auto_schedule.trigger_day}
-                      onValueChange={(value) => setForm(prev => ({ 
-                        ...prev, 
-                        auto_schedule: { ...prev.auto_schedule, trigger_day: value }
-                      }))}
-                    >
-                      <SelectTrigger className="bg-slate-700 border-slate-600 mt-1">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent className="bg-slate-700 border-slate-600">
-                        {DAYS.map(day => (
-                          <SelectItem key={day.key} value={day.key}>{day.label}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div>
-                    <Label>Créneau de déclenchement</Label>
-                    <div className="grid grid-cols-2 gap-4 mt-1">
+                <div className="space-y-4">
+                  {form.auto_schedule.schedules?.map((schedule, index) => (
+                    <div key={index} className="p-4 bg-slate-700/30 rounded-xl space-y-3 relative">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const newSchedules = form.auto_schedule.schedules.filter((_, i) => i !== index);
+                          setForm(prev => ({
+                            ...prev,
+                            auto_schedule: { ...prev.auto_schedule, schedules: newSchedules }
+                          }));
+                        }}
+                        className="absolute top-2 right-2 text-red-400 hover:text-red-300"
+                      >
+                        <Pencil className="w-4 h-4" />
+                      </button>
 
                       <div>
-                        <Input
-                          type="time"
-                          value={form.auto_schedule.trigger_time_start}
-                          onChange={(e) => setForm(prev => ({ 
-                            ...prev, 
-                            auto_schedule: { ...prev.auto_schedule, trigger_time_start: e.target.value }
-                          }))}
-                          className="bg-slate-700 border-slate-600"
-                        />
-                        <p className="text-xs text-slate-500 mt-1">Début</p>
+                        <Label className="text-xs">Jour</Label>
+                        <Select
+                          value={schedule.trigger_day}
+                          onValueChange={(value) => {
+                            const newSchedules = [...form.auto_schedule.schedules];
+                            newSchedules[index].trigger_day = value;
+                            setForm(prev => ({
+                              ...prev,
+                              auto_schedule: { ...prev.auto_schedule, schedules: newSchedules }
+                            }));
+                          }}
+                        >
+                          <SelectTrigger className="bg-slate-700 border-slate-600 mt-1">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent className="bg-slate-700 border-slate-600">
+                            {DAYS.map(day => (
+                              <SelectItem key={day.key} value={day.key}>{day.label}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <Label className="text-xs">Début</Label>
+                          <Input
+                            type="time"
+                            value={schedule.trigger_time_start}
+                            onChange={(e) => {
+                              const newSchedules = [...form.auto_schedule.schedules];
+                              newSchedules[index].trigger_time_start = e.target.value;
+                              setForm(prev => ({
+                                ...prev,
+                                auto_schedule: { ...prev.auto_schedule, schedules: newSchedules }
+                              }));
+                            }}
+                            className="bg-slate-700 border-slate-600 mt-1"
+                          />
+                        </div>
+
+                        <div>
+                          <Label className="text-xs">Fin</Label>
+                          <Input
+                            type="time"
+                            value={schedule.trigger_time_end}
+                            onChange={(e) => {
+                              const newSchedules = [...form.auto_schedule.schedules];
+                              newSchedules[index].trigger_time_end = e.target.value;
+                              setForm(prev => ({
+                                ...prev,
+                                auto_schedule: { ...prev.auto_schedule, schedules: newSchedules }
+                              }));
+                            }}
+                            className="bg-slate-700 border-slate-600 mt-1"
+                          />
+                        </div>
                       </div>
 
                       <div>
+                        <Label className="text-xs">Quantité</Label>
                         <Input
-                          type="time"
-                          value={form.auto_schedule.trigger_time_end}
-                          onChange={(e) => setForm(prev => ({ 
-                            ...prev, 
-                            auto_schedule: { ...prev.auto_schedule, trigger_time_end: e.target.value }
-                          }))}
-                          className="bg-slate-700 border-slate-600"
+                          type="number"
+                          min="0"
+                          value={schedule.quantity}
+                          onChange={(e) => {
+                            const newSchedules = [...form.auto_schedule.schedules];
+                            newSchedules[index].quantity = parseInt(e.target.value) || 0;
+                            setForm(prev => ({
+                              ...prev,
+                              auto_schedule: { ...prev.auto_schedule, schedules: newSchedules }
+                            }));
+                          }}
+                          className="bg-slate-700 border-slate-600 mt-1"
                         />
-                        <p className="text-xs text-slate-500 mt-1">Fin</p>
                       </div>
                     </div>
-                  </div>
+                  ))}
 
-                  <div>
-                    <Label>Quantité prédéfinie</Label>
-                    <Input
-                      type="number"
-                      min="0"
-                      value={form.auto_schedule.quantity}
-                      onChange={(e) => setForm(prev => ({ 
-                        ...prev, 
-                        auto_schedule: { ...prev.auto_schedule, quantity: parseInt(e.target.value) || 0 }
-                      }))}
-                      placeholder="Ex: 2 pour 2 saumons"
-                      className="bg-slate-700 border-slate-600 mt-1"
-                    />
-                    <p className="text-xs text-slate-400 mt-1">
-                      Le temps de production sera multiplié par cette quantité
-                    </p>
-                  </div>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => {
+                      const newSchedules = [
+                        ...(form.auto_schedule.schedules || []),
+                        {
+                          trigger_day: 'monday',
+                          trigger_time_start: '19:00',
+                          trigger_time_end: '23:59',
+                          quantity: 0
+                        }
+                      ];
+                      setForm(prev => ({
+                        ...prev,
+                        auto_schedule: { ...prev.auto_schedule, schedules: newSchedules }
+                      }));
+                    }}
+                    className="w-full border-slate-600 text-slate-900 hover:text-slate-100 hover:bg-slate-700 border-dashed"
+                  >
+                    + Ajouter un créneau
+                  </Button>
                 </div>
               )}
             </TabsContent>
