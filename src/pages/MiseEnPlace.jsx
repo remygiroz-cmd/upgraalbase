@@ -50,21 +50,92 @@ export default function MiseEnPlace() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['categories'] })
   });
 
+  const updateTaskMutation = useMutation({
+    mutationFn: ({ id, data }) => base44.entities.Task.update(id, data),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['tasks'] })
+  });
+
   const handleDragEnd = async (result) => {
     if (!result.destination) return;
     
-    const items = Array.from(categories);
-    const [reorderedItem] = items.splice(result.source.index, 1);
-    items.splice(result.destination.index, 0, reorderedItem);
+    const { source, destination, type } = result;
 
-    try {
-      const updates = items.map((item, index) => 
-        base44.entities.Category.update(item.id, { order: index })
-      );
-      await Promise.all(updates);
-      queryClient.invalidateQueries({ queryKey: ['categories'] });
-    } catch (error) {
-      console.error('Error reordering:', error);
+    // Handle category reordering
+    if (type === 'category') {
+      const items = Array.from(categories);
+      const [reorderedItem] = items.splice(source.index, 1);
+      items.splice(destination.index, 0, reorderedItem);
+
+      try {
+        const updates = items.map((item, index) => 
+          base44.entities.Category.update(item.id, { order: index })
+        );
+        await Promise.all(updates);
+        queryClient.invalidateQueries({ queryKey: ['categories'] });
+      } catch (error) {
+        console.error('Error reordering:', error);
+      }
+      return;
+    }
+
+    // Handle task reordering
+    if (type === 'task') {
+      const sourceCategoryId = source.droppableId;
+      const destCategoryId = destination.droppableId;
+
+      // Get source and destination tasks
+      const sourceTasks = sourceCategoryId === 'uncategorized' 
+        ? uncategorizedTasks 
+        : getTasksByCategory(sourceCategoryId);
+      
+      const destTasks = destCategoryId === 'uncategorized'
+        ? uncategorizedTasks
+        : getTasksByCategory(destCategoryId);
+
+      // Same category reorder
+      if (sourceCategoryId === destCategoryId) {
+        const items = Array.from(sourceTasks);
+        const [reorderedItem] = items.splice(source.index, 1);
+        items.splice(destination.index, 0, reorderedItem);
+
+        try {
+          const updates = items.map((item, index) => 
+            base44.entities.Task.update(item.id, { order: index })
+          );
+          await Promise.all(updates);
+          queryClient.invalidateQueries({ queryKey: ['tasks'] });
+        } catch (error) {
+          console.error('Error reordering tasks:', error);
+        }
+      } else {
+        // Move between categories
+        const sourceItems = Array.from(sourceTasks);
+        const destItems = Array.from(destTasks);
+        const [movedItem] = sourceItems.splice(source.index, 1);
+        destItems.splice(destination.index, 0, movedItem);
+
+        try {
+          const updates = [
+            // Update moved item's category
+            base44.entities.Task.update(movedItem.id, { 
+              category_id: destCategoryId === 'uncategorized' ? null : destCategoryId,
+              order: destination.index 
+            }),
+            // Reorder source category tasks
+            ...sourceItems.map((item, index) => 
+              base44.entities.Task.update(item.id, { order: index })
+            ),
+            // Reorder destination category tasks
+            ...destItems.map((item, index) => 
+              base44.entities.Task.update(item.id, { order: index })
+            )
+          ];
+          await Promise.all(updates);
+          queryClient.invalidateQueries({ queryKey: ['tasks'] });
+        } catch (error) {
+          console.error('Error moving task:', error);
+        }
+      }
     }
   };
 
@@ -261,7 +332,7 @@ export default function MiseEnPlace() {
         />
       ) : (
         <DragDropContext onDragEnd={handleDragEnd}>
-          <Droppable droppableId="categories" direction="horizontal">
+          <Droppable droppableId="categories" direction="horizontal" type="category">
             {(provided) => (
               <div 
                 {...provided.droppableProps}
@@ -271,6 +342,7 @@ export default function MiseEnPlace() {
                 {/* Uncategorized tasks */}
                 {uncategorizedTasks.length > 0 && (
                   <CategoryColumn
+                    categoryId="uncategorized"
                     title="Sans catégorie"
                     color="#64748b"
                     tasks={uncategorizedTasks}
@@ -285,13 +357,14 @@ export default function MiseEnPlace() {
 
                 {/* Category columns */}
                 {categories.map((category, index) => (
-                  <Draggable key={category.id} draggableId={category.id} index={index}>
+                  <Draggable key={category.id} draggableId={category.id} index={index} type="category">
                     {(provided, snapshot) => (
                       <div
                         ref={provided.innerRef}
                         {...provided.draggableProps}
                       >
                         <CategoryColumn
+                          categoryId={category.id}
                           title={category.name}
                           color={category.color || '#10b981'}
                           tasks={getTasksByCategory(category.id)}
@@ -347,7 +420,7 @@ export default function MiseEnPlace() {
   );
 }
 
-function CategoryColumn({ title, color, tasks, onEditTask, onDeleteTask, onStartStopwatch, category, onEditCategory, onDeleteCategory, dragHandleProps, isDragging, isDraggable, selectedTasks, onToggleSelection }) {
+function CategoryColumn({ categoryId, title, color, tasks, onEditTask, onDeleteTask, onStartStopwatch, category, onEditCategory, onDeleteCategory, dragHandleProps, isDragging, isDraggable, selectedTasks, onToggleSelection }) {
   const [isEditing, setIsEditing] = useState(false);
   const [editName, setEditName] = useState(title);
 
@@ -424,32 +497,52 @@ function CategoryColumn({ title, color, tasks, onEditTask, onDeleteTask, onStart
         )}
       </div>
       
-      <div className="p-3 space-y-2">
-        <AnimatePresence>
-          {tasks.map((task) => (
-            <TaskCard
-              key={task.id}
-              task={task}
-              onEdit={() => onEditTask(task)}
-              onDelete={() => onDeleteTask(task.id)}
-              onStartStopwatch={() => onStartStopwatch(task)}
-              isSelected={selectedTasks?.has(task.id)}
-              onToggleSelection={() => onToggleSelection?.(task.id)}
-            />
-          ))}
-        </AnimatePresence>
-        
-        {tasks.length === 0 && (
-          <p className="text-center text-slate-500 text-sm py-8">
-            Aucune tâche
-          </p>
+      <Droppable droppableId={categoryId} type="task">
+        {(provided, snapshot) => (
+          <div 
+            ref={provided.innerRef}
+            {...provided.droppableProps}
+            className={cn(
+              "p-3 space-y-2 min-h-[100px] transition-colors",
+              snapshot.isDraggingOver && "bg-orange-600/10"
+            )}
+          >
+            {tasks.map((task, index) => (
+              <Draggable key={task.id} draggableId={task.id} index={index} type="task">
+                {(provided, snapshot) => (
+                  <div
+                    ref={provided.innerRef}
+                    {...provided.draggableProps}
+                  >
+                    <TaskCard
+                      task={task}
+                      onEdit={() => onEditTask(task)}
+                      onDelete={() => onDeleteTask(task.id)}
+                      onStartStopwatch={() => onStartStopwatch(task)}
+                      isSelected={selectedTasks?.has(task.id)}
+                      onToggleSelection={() => onToggleSelection?.(task.id)}
+                      dragHandleProps={provided.dragHandleProps}
+                      isDragging={snapshot.isDragging}
+                    />
+                  </div>
+                )}
+              </Draggable>
+            ))}
+            {provided.placeholder}
+            
+            {tasks.length === 0 && (
+              <p className="text-center text-slate-500 text-sm py-8">
+                Aucune tâche
+              </p>
+            )}
+          </div>
         )}
-      </div>
+      </Droppable>
     </div>
   );
 }
 
-function TaskCard({ task, onEdit, onDelete, onStartStopwatch, isSelected, onToggleSelection }) {
+function TaskCard({ task, onEdit, onDelete, onStartStopwatch, isSelected, onToggleSelection, dragHandleProps, isDragging }) {
   const formatDuration = () => {
     const mins = task.duration_minutes || 0;
     const secs = task.duration_seconds || 0;
@@ -470,11 +563,16 @@ function TaskCard({ task, onEdit, onDelete, onStartStopwatch, isSelected, onTogg
         "group bg-slate-700/50 rounded-xl p-3 border transition-all cursor-pointer",
         isSelected 
           ? "bg-orange-600/30 border-orange-600/70 ring-2 ring-orange-600/50" 
-          : "border-slate-600/50 hover:bg-slate-700 hover:border-slate-500/50"
+          : "border-slate-600/50 hover:bg-slate-700 hover:border-slate-500/50",
+        isDragging && "shadow-2xl ring-2 ring-orange-500/50 scale-105 rotate-2"
       )}
     >
       <div className="flex items-start gap-3">
-        <div className="text-slate-500 cursor-grab">
+        <div 
+          {...dragHandleProps}
+          className="text-slate-500 cursor-grab active:cursor-grabbing touch-none"
+          onClick={(e) => e.stopPropagation()}
+        >
           <GripVertical className="w-4 h-4" />
         </div>
         
