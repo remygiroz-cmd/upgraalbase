@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
-import { History, Download, Check, ClipboardList } from 'lucide-react';
+import { History, Download, Check, ClipboardList, Clock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import PageHeader from '@/components/ui/PageHeader';
@@ -19,6 +19,42 @@ export default function Historique() {
     queryKey: ['workSessions', 'completed'],
     queryFn: () => base44.entities.WorkSession.filter({ status: 'completed' }, '-date')
   });
+
+  const { data: tasks = [] } = useQuery({
+    queryKey: ['tasks'],
+    queryFn: () => base44.entities.Task.list()
+  });
+
+  const calculateSessionTimes = (session) => {
+    let totalSeconds = 0;
+    let completedSeconds = 0;
+
+    session.tasks?.forEach(task => {
+      const taskData = tasks.find(t => t.id === task.task_id);
+      if (taskData) {
+        const taskSeconds = (taskData.duration_minutes || 0) * 60 + (taskData.duration_seconds || 0);
+        totalSeconds += taskSeconds;
+        if (task.is_completed) {
+          completedSeconds += taskSeconds;
+        }
+      }
+    });
+
+    return {
+      totalSeconds,
+      completedSeconds,
+      remainingSeconds: totalSeconds - completedSeconds
+    };
+  };
+
+  const formatTime = (seconds) => {
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    if (hours > 0) {
+      return `${hours}h ${minutes}min`;
+    }
+    return `${minutes}min`;
+  };
 
   const exportToCSV = () => {
     const rows = [
@@ -90,6 +126,7 @@ export default function Historique() {
         {workSessions.map(session => {
           const completed = session.tasks?.filter(t => t.is_completed).length || 0;
           const total = session.tasks?.length || 0;
+          const { totalSeconds, remainingSeconds } = calculateSessionTimes(session);
 
           return (
             <motion.div
@@ -100,12 +137,24 @@ export default function Historique() {
               onClick={() => setSelectedDay(session)}
             >
               <div className="flex items-center justify-between">
-                <div>
+                <div className="flex-1">
                   <h3 className="font-semibold text-lg">
                     {format(new Date(session.date), 'EEEE d MMMM yyyy', { locale: fr })}
                   </h3>
-                  <div className="flex items-center gap-4 mt-2 text-sm text-slate-400">
+                  <div className="flex items-center gap-4 mt-2 text-sm text-slate-400 flex-wrap">
                     <span>{completed}/{total} tâches complétées</span>
+                    {totalSeconds > 0 && (
+                      <>
+                        <span className="flex items-center gap-1">
+                          <Clock className="w-3 h-3" />
+                          Temps total: {formatTime(totalSeconds)}
+                        </span>
+                        <span className="flex items-center gap-1">
+                          <Clock className="w-3 h-3" />
+                          Temps restant: {formatTime(remainingSeconds)}
+                        </span>
+                      </>
+                    )}
                     {session.started_by_name && (
                       <span>Démarré par {session.started_by_name}</span>
                     )}
@@ -115,7 +164,7 @@ export default function Historique() {
                   </div>
                 </div>
                 <div className={cn(
-                  "w-16 h-16 rounded-xl flex items-center justify-center font-bold text-2xl",
+                  "w-16 h-16 rounded-xl flex items-center justify-center font-bold text-2xl flex-shrink-0",
                   completed === total && total > 0
                     ? "bg-orange-600/20 text-orange-400"
                     : "bg-slate-700 text-slate-400"
@@ -142,6 +191,11 @@ export default function Historique() {
 function DayDetailModal({ day, onClose }) {
   if (!day) return null;
 
+  const { data: tasks = [] } = useQuery({
+    queryKey: ['tasks'],
+    queryFn: () => base44.entities.Task.list()
+  });
+
   // Group tasks by category
   const tasksByCategory = {};
   day.tasks?.forEach(task => {
@@ -152,6 +206,32 @@ function DayDetailModal({ day, onClose }) {
     }
     tasksByCategory[catId].tasks.push(task);
   });
+
+  // Calculate total and remaining time
+  let totalSeconds = 0;
+  let completedSeconds = 0;
+
+  day.tasks?.forEach(task => {
+    const taskData = tasks.find(t => t.id === task.task_id);
+    if (taskData) {
+      const taskSeconds = (taskData.duration_minutes || 0) * 60 + (taskData.duration_seconds || 0);
+      totalSeconds += taskSeconds;
+      if (task.is_completed) {
+        completedSeconds += taskSeconds;
+      }
+    }
+  });
+
+  const remainingSeconds = totalSeconds - completedSeconds;
+
+  const formatTime = (seconds) => {
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    if (hours > 0) {
+      return `${hours}h ${minutes}min`;
+    }
+    return `${minutes}min`;
+  };
 
   return (
     <Dialog open={true} onOpenChange={onClose}>
@@ -183,6 +263,18 @@ function DayDetailModal({ day, onClose }) {
                   <span className="text-slate-400">Heure de fin :</span>
                   <span className="text-slate-200">{format(new Date(day.completed_at), 'HH:mm')}</span>
                 </div>
+              )}
+              {totalSeconds > 0 && (
+                <>
+                  <div className="flex justify-between">
+                    <span className="text-slate-400">Temps total :</span>
+                    <span className="text-slate-200 font-medium">{formatTime(totalSeconds)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-slate-400">Temps restant :</span>
+                    <span className="text-slate-200 font-medium">{formatTime(remainingSeconds)}</span>
+                  </div>
+                </>
               )}
             </div>
           </div>
