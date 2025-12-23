@@ -415,41 +415,45 @@ export default function MiseEnPlace() {
       <AnimatePresence>
         {selectedTasks.size > 0 && (
           <motion.div
-            initial={{ opacity: 0, y: -20 }}
+            initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -20 }}
-            className="mb-6 p-4 bg-orange-600/20 border border-orange-600/30 rounded-xl flex items-center justify-between"
+            exit={{ opacity: 0, y: 20 }}
+            className="fixed bottom-6 left-0 right-0 z-40 px-6 pointer-events-none"
           >
-            <span className="font-medium text-orange-200">
-              {selectedTasks.size} tâche{selectedTasks.size > 1 ? 's' : ''} sélectionnée{selectedTasks.size > 1 ? 's' : ''}
-            </span>
-            <div className="flex gap-3">
-              <Button
-                variant="outline"
-                onClick={() => setSelectedTasks(new Set())}
-                className="border-orange-600 text-orange-300 hover:bg-orange-600/20"
-              >
-                Annuler
-              </Button>
-              {hasActiveSession ? (
-                <Button
-                  onClick={handleAddToSession}
-                  disabled={updateSessionMutation.isPending}
-                  className="bg-orange-600 hover:bg-orange-700"
-                >
-                  <Plus className="w-4 h-4 mr-2" />
-                  Ajouter à la liste
-                </Button>
-              ) : (
-                <Button
-                  onClick={handleCreateNewSession}
-                  disabled={createSessionMutation.isPending}
-                  className="bg-orange-600 hover:bg-orange-700"
-                >
-                  <Plus className="w-4 h-4 mr-2" />
-                  Créer nouvelle liste
-                </Button>
-              )}
+            <div className="max-w-7xl mx-auto pointer-events-auto">
+              <div className="bg-orange-600/95 backdrop-blur-lg border-2 border-orange-500/50 rounded-2xl shadow-2xl p-4 flex items-center justify-between">
+                <span className="font-semibold text-white">
+                  {selectedTasks.size} tâche{selectedTasks.size > 1 ? 's' : ''} sélectionnée{selectedTasks.size > 1 ? 's' : ''}
+                </span>
+                <div className="flex gap-3">
+                  <Button
+                    variant="outline"
+                    onClick={() => setSelectedTasks(new Set())}
+                    className="border-white/30 text-white hover:bg-white/20 hover:border-white/50"
+                  >
+                    Annuler
+                  </Button>
+                  {hasActiveSession ? (
+                    <Button
+                      onClick={handleAddToSession}
+                      disabled={updateSessionMutation.isPending}
+                      className="bg-white text-orange-600 hover:bg-orange-50 font-semibold"
+                    >
+                      <Plus className="w-4 h-4 mr-2" />
+                      Ajouter à la liste
+                    </Button>
+                  ) : (
+                    <Button
+                      onClick={handleCreateNewSession}
+                      disabled={createSessionMutation.isPending}
+                      className="bg-white text-orange-600 hover:bg-orange-50 font-semibold"
+                    >
+                      <Plus className="w-4 h-4 mr-2" />
+                      Créer nouvelle liste
+                    </Button>
+                  )}
+                </div>
+              </div>
             </div>
           </motion.div>
         )}
