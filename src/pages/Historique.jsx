@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { History, Download, Check, ClipboardList, Clock, Trash2 } from 'lucide-react';
+import ConfirmDialog from '@/components/ui/ConfirmDialog';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import PageHeader from '@/components/ui/PageHeader';
@@ -15,6 +16,7 @@ import { fr } from 'date-fns/locale';
 export default function Historique() {
   const queryClient = useQueryClient();
   const [selectedDay, setSelectedDay] = useState(null);
+  const [confirmDialog, setConfirmDialog] = useState({ open: false, title: '', description: '', onConfirm: null });
 
   const { data: workSessions = [], isLoading: loadingSessions } = useQuery({
     queryKey: ['workSessions', 'completed'],
@@ -47,15 +49,21 @@ export default function Historique() {
 
   const handleDeleteSession = (sessionId, e) => {
     e.stopPropagation();
-    if (window.confirm('Supprimer cet historique ?')) {
-      deleteSessionMutation.mutate(sessionId);
-    }
+    setConfirmDialog({
+      open: true,
+      title: 'Supprimer cet historique',
+      description: 'Êtes-vous sûr de vouloir supprimer cet historique ? Cette action est irréversible.',
+      onConfirm: () => deleteSessionMutation.mutate(sessionId)
+    });
   };
 
   const handleDeleteAll = () => {
-    if (window.confirm(`Supprimer tous les ${workSessions.length} historiques ? Cette action est irréversible.`)) {
-      deleteAllSessionsMutation.mutate();
-    }
+    setConfirmDialog({
+      open: true,
+      title: 'Supprimer tous les historiques',
+      description: `Êtes-vous sûr de vouloir supprimer tous les ${workSessions.length} historiques ? Cette action est irréversible.`,
+      onConfirm: () => deleteAllSessionsMutation.mutate()
+    });
   };
 
   const calculateSessionTimes = (session) => {
@@ -238,6 +246,17 @@ export default function Historique() {
           onClose={() => setSelectedDay(null)}
         />
       )}
+
+      {/* Confirm Dialog */}
+      <ConfirmDialog
+        open={confirmDialog.open}
+        onOpenChange={(open) => setConfirmDialog({ ...confirmDialog, open })}
+        title={confirmDialog.title}
+        description={confirmDialog.description}
+        onConfirm={confirmDialog.onConfirm}
+        variant="danger"
+        confirmText="Supprimer"
+      />
     </div>
   );
 }

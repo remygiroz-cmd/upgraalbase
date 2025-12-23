@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { ChefHat, Check, CheckCircle2, X, Clock, RotateCcw } from 'lucide-react';
+import ConfirmDialog from '@/components/ui/ConfirmDialog';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -19,6 +20,7 @@ export default function TravailDuJour() {
   const queryClient = useQueryClient();
   const today = format(new Date(), 'yyyy-MM-dd');
   const [showCompletionModal, setShowCompletionModal] = useState(false);
+  const [confirmDialog, setConfirmDialog] = useState({ open: false, title: '', description: '', onConfirm: null });
 
   const { data: activeSession, isLoading } = useQuery({
     queryKey: ['workSessions', 'active', today],
@@ -92,14 +94,24 @@ export default function TravailDuJour() {
 
   const handleCompleteSession = () => {
     if (!activeSession) return;
-    completeSessionMutation.mutate({ id: activeSession.id });
+    setConfirmDialog({
+      open: true,
+      title: 'Terminer la mise en place',
+      description: 'Êtes-vous sûr de vouloir terminer la mise en place ? La session sera archivée dans l\'historique.',
+      onConfirm: () => completeSessionMutation.mutate({ id: activeSession.id })
+    });
   };
 
   const handleResetSession = () => {
     if (!activeSession) return;
-    updateSessionMutation.mutate({
-      id: activeSession.id,
-      data: { tasks: [] }
+    setConfirmDialog({
+      open: true,
+      title: 'Réinitialiser la liste',
+      description: 'Êtes-vous sûr de vouloir supprimer toutes les tâches de la liste ?',
+      onConfirm: () => updateSessionMutation.mutate({
+        id: activeSession.id,
+        data: { tasks: [] }
+      })
     });
   };
 
@@ -270,6 +282,16 @@ export default function TravailDuJour() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Confirm Dialog */}
+      <ConfirmDialog
+        open={confirmDialog.open}
+        onOpenChange={(open) => setConfirmDialog({ ...confirmDialog, open })}
+        title={confirmDialog.title}
+        description={confirmDialog.description}
+        onConfirm={confirmDialog.onConfirm}
+        variant="warning"
+      />
     </div>
   );
 }

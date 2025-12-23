@@ -11,6 +11,7 @@ import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import TaskFormModal from '@/components/cuisine/TaskFormModal';
 import CategoryManager from '@/components/cuisine/CategoryManager';
 import StopwatchModal from '@/components/cuisine/StopwatchModal';
+import ConfirmDialog from '@/components/ui/ConfirmDialog';
 import { motion, AnimatePresence } from 'framer-motion';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import { cn } from '@/lib/utils';
@@ -24,6 +25,7 @@ export default function MiseEnPlace() {
   const [stopwatchTask, setStopwatchTask] = useState(null);
   const [selectedTasks, setSelectedTasks] = useState(new Set());
   const [stockInputs, setStockInputs] = useState({});
+  const [confirmDialog, setConfirmDialog] = useState({ open: false, title: '', description: '', onConfirm: null });
   const today = format(new Date(), 'yyyy-MM-dd');
   const dayOfWeek = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'][new Date().getDay()];
 
@@ -324,11 +326,19 @@ export default function MiseEnPlace() {
         ? `La tâche "${duplicateNames}" est déjà présente dans la liste. Voulez-vous l'ajouter de nouveau ?`
         : `Les tâches suivantes sont déjà présentes dans la liste : ${duplicateNames}. Voulez-vous les ajouter de nouveau ?`;
       
-      if (!window.confirm(confirmMessage)) {
-        return;
-      }
+      setConfirmDialog({
+        open: true,
+        title: 'Tâche(s) déjà présente(s)',
+        description: confirmMessage,
+        onConfirm: () => proceedWithAddToSession()
+      });
+      return;
     }
     
+    proceedWithAddToSession();
+  };
+
+  const proceedWithAddToSession = () => {
     const selectedTasksArray = Array.from(selectedTasks).map(taskId => {
       const task = tasks.find(t => t.id === taskId);
       const category = categories.find(c => c.id === task?.category_id);
@@ -551,6 +561,16 @@ export default function MiseEnPlace() {
           onClose={() => setStopwatchTask(null)}
         />
       )}
+
+      {/* Confirm Dialog */}
+      <ConfirmDialog
+        open={confirmDialog.open}
+        onOpenChange={(open) => setConfirmDialog({ ...confirmDialog, open })}
+        title={confirmDialog.title}
+        description={confirmDialog.description}
+        onConfirm={confirmDialog.onConfirm}
+        variant="warning"
+      />
     </div>
   );
 }
@@ -558,6 +578,7 @@ export default function MiseEnPlace() {
 function CategoryColumn({ categoryId, title, color, tasks, onEditTask, onDeleteTask, onStartStopwatch, category, onEditCategory, onDeleteCategory, dragHandleProps, isDragging, isDraggable, selectedTasks, onToggleSelection, stockInputs, onStockInput, dayOfWeek }) {
   const [isEditing, setIsEditing] = useState(false);
   const [editName, setEditName] = useState(title);
+  const [confirmDeleteCategory, setConfirmDeleteCategory] = useState(false);
 
   const handleSaveEdit = () => {
     if (editName.trim() && category) {
@@ -567,8 +588,8 @@ function CategoryColumn({ categoryId, title, color, tasks, onEditTask, onDeleteT
   };
 
   const handleDelete = () => {
-    if (category && window.confirm(`Supprimer la catégorie "${title}" ?`)) {
-      onDeleteCategory(category.id);
+    if (category) {
+      setConfirmDeleteCategory(true);
     }
   };
 
@@ -676,6 +697,16 @@ function CategoryColumn({ categoryId, title, color, tasks, onEditTask, onDeleteT
           </div>
         )}
       </Droppable>
+
+      <ConfirmDialog
+        open={confirmDeleteCategory}
+        onOpenChange={setConfirmDeleteCategory}
+        title="Supprimer la catégorie"
+        description={`Êtes-vous sûr de vouloir supprimer la catégorie "${title}" ?`}
+        onConfirm={() => onDeleteCategory(category.id)}
+        variant="danger"
+        confirmText="Supprimer"
+      />
     </div>
   );
 }
