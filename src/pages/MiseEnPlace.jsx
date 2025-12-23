@@ -588,7 +588,7 @@ export default function MiseEnPlace() {
       )}
 
       {/* Archives Section */}
-      <div className="mt-12 border-t border-slate-700 pt-8">
+      <div className="mt-12 border-t border-slate-700 pt-8 pb-32">
         <Button
           variant="outline"
           onClick={() => setShowArchives(!showArchives)}
