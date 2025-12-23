@@ -37,8 +37,8 @@ export default function Historique() {
 
   const deleteAllSessionsMutation = useMutation({
     mutationFn: async () => {
-      const deletePromises = workSessions.map(session => 
-        base44.entities.WorkSession.delete(session.id)
+      const deletePromises = workSessions.map((session) =>
+      base44.entities.WorkSession.delete(session.id)
       );
       return Promise.all(deletePromises);
     },
@@ -70,8 +70,8 @@ export default function Historique() {
     let totalSeconds = 0;
     let completedSeconds = 0;
 
-    session.tasks?.forEach(task => {
-      const taskData = tasks.find(t => t.id === task.task_id);
+    session.tasks?.forEach((task) => {
+      const taskData = tasks.find((t) => t.id === task.task_id);
       if (taskData) {
         const taskSeconds = (taskData.duration_minutes || 0) * 60 + (taskData.duration_seconds || 0);
         totalSeconds += taskSeconds;
@@ -90,7 +90,7 @@ export default function Historique() {
 
   const formatTime = (seconds) => {
     const hours = Math.floor(seconds / 3600);
-    const minutes = Math.floor((seconds % 3600) / 60);
+    const minutes = Math.floor(seconds % 3600 / 60);
     if (hours > 0) {
       return `${hours}h ${minutes}min`;
     }
@@ -99,24 +99,24 @@ export default function Historique() {
 
   const exportToCSV = () => {
     const rows = [
-      ['Date', 'Tâche', 'Catégorie', 'Statut', 'Complété par', 'Complété à', 'Ajouté à']
-    ];
+    ['Date', 'Tâche', 'Catégorie', 'Statut', 'Complété par', 'Complété à', 'Ajouté à']];
 
-    workSessions.forEach(session => {
-      session.tasks?.forEach(task => {
+
+    workSessions.forEach((session) => {
+      session.tasks?.forEach((task) => {
         rows.push([
-          format(new Date(session.date), 'dd/MM/yyyy', { locale: fr }),
-          task.task_name,
-          task.category_name || '',
-          task.is_completed ? 'Complété' : 'Non complété',
-          task.completed_by_name || '',
-          task.completed_at ? format(new Date(task.completed_at), 'dd/MM/yyyy HH:mm') : '',
-          task.added_at ? format(new Date(task.added_at), 'dd/MM/yyyy HH:mm') : ''
-        ]);
+        format(new Date(session.date), 'dd/MM/yyyy', { locale: fr }),
+        task.task_name,
+        task.category_name || '',
+        task.is_completed ? 'Complété' : 'Non complété',
+        task.completed_by_name || '',
+        task.completed_at ? format(new Date(task.completed_at), 'dd/MM/yyyy HH:mm') : '',
+        task.added_at ? format(new Date(task.added_at), 'dd/MM/yyyy HH:mm') : '']
+        );
       });
     });
 
-    const csvContent = rows.map(row => row.join(';')).join('\n');
+    const csvContent = rows.map((row) => row.join(';')).join('\n');
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
     link.href = URL.createObjectURL(blob);
@@ -134,15 +134,15 @@ export default function Historique() {
         <PageHeader
           icon={History}
           title="Historique"
-          subtitle="Historique des mises en place"
-        />
+          subtitle="Historique des mises en place" />
+
         <EmptyState
           icon={History}
           title="Aucun historique"
-          description="L'historique apparaîtra après avoir terminé des mises en place"
-        />
-      </div>
-    );
+          description="L'historique apparaîtra après avoir terminé des mises en place" />
+
+      </div>);
+
   }
 
   return (
@@ -152,31 +152,31 @@ export default function Historique() {
         title="Historique"
         subtitle="Historique des mises en place"
         actions={
-          <>
+        <>
             <Button
-              onClick={handleDeleteAll}
-              variant="outline"
-              className="border-red-600 text-red-400 hover:text-red-300 hover:bg-red-600/20"
-              disabled={deleteAllSessionsMutation.isPending}
-            >
+            onClick={handleDeleteAll}
+            variant="outline"
+            className="border-red-600 text-red-400 hover:text-red-300 hover:bg-red-600/20"
+            disabled={deleteAllSessionsMutation.isPending}>
+
               <Trash2 className="w-4 h-4 mr-2" />
               Tout supprimer
             </Button>
             <Button
-              onClick={exportToCSV}
-              variant="outline"
-              className="border-slate-600 text-slate-900 hover:text-slate-100 hover:bg-slate-700"
-            >
+            onClick={exportToCSV}
+            variant="outline"
+            className="border-slate-600 text-slate-900 hover:text-slate-100 hover:bg-slate-700">
+
               <Download className="w-4 h-4 mr-2" />
               Exporter CSV
             </Button>
           </>
-        }
-      />
+        } />
+
 
       <div className="space-y-4">
-        {workSessions.map(session => {
-          const completed = session.tasks?.filter(t => t.is_completed).length || 0;
+        {workSessions.map((session) => {
+          const completed = session.tasks?.filter((t) => t.is_completed).length || 0;
           const total = session.tasks?.length || 0;
           const { totalSeconds, remainingSeconds } = calculateSessionTimes(session);
 
@@ -184,10 +184,10 @@ export default function Historique() {
             <motion.div
               key={session.id}
               initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="bg-slate-800/50 rounded-2xl border border-slate-700/50 p-4 hover:border-slate-600 transition-all cursor-pointer group"
-              onClick={() => setSelectedDay(session)}
-            >
+              animate={{ opacity: 1, y: 0 }} className="bg-slate-50 p-4 rounded-2xl border border-slate-700/50 hover:border-slate-600 transition-all cursor-pointer group"
+
+              onClick={() => setSelectedDay(session)}>
+
               <div className="flex items-center justify-between gap-4">
                 <div className="flex-1 min-w-0">
                   <h3 className="font-semibold text-lg">
@@ -195,8 +195,8 @@ export default function Historique() {
                   </h3>
                   <div className="flex items-center gap-4 mt-2 text-sm text-slate-400 flex-wrap">
                     <span>{completed}/{total} tâches complétées</span>
-                    {totalSeconds > 0 && (
-                      <>
+                    {totalSeconds > 0 &&
+                    <>
                         <span className="flex items-center gap-1">
                           <Clock className="w-3 h-3" />
                           Temps total: {formatTime(totalSeconds)}
@@ -206,13 +206,13 @@ export default function Historique() {
                           Temps restant: {formatTime(remainingSeconds)}
                         </span>
                       </>
-                    )}
-                    {session.started_by_name && (
-                      <span>Démarré par {session.started_by_name}</span>
-                    )}
-                    {session.completed_at && (
-                      <span>Terminé à {format(new Date(session.completed_at), 'HH:mm')}</span>
-                    )}
+                    }
+                    {session.started_by_name &&
+                    <span>Démarré par {session.started_by_name}</span>
+                    }
+                    {session.completed_at &&
+                    <span>Terminé à {format(new Date(session.completed_at), 'HH:mm')}</span>
+                    }
                   </div>
                 </div>
                 <div className="flex items-center gap-3 flex-shrink-0">
@@ -220,32 +220,32 @@ export default function Historique() {
                     size="sm"
                     variant="ghost"
                     onClick={(e) => handleDeleteSession(session.id, e)}
-                    className="opacity-0 group-hover:opacity-100 transition-opacity text-red-400 hover:text-red-300 hover:bg-red-600/20"
-                  >
+                    className="opacity-0 group-hover:opacity-100 transition-opacity text-red-400 hover:text-red-300 hover:bg-red-600/20">
+
                     <Trash2 className="w-4 h-4" />
                   </Button>
                   <div className={cn(
                     "w-16 h-16 rounded-xl flex items-center justify-center font-bold text-2xl",
-                    completed === total && total > 0
-                      ? "bg-orange-600/20 text-orange-400"
-                      : "bg-slate-700 text-slate-400"
+                    completed === total && total > 0 ?
+                    "bg-orange-600/20 text-orange-400" :
+                    "bg-slate-700 text-slate-400"
                   )}>
-                    {Math.round(total > 0 ? (completed / total) * 100 : 0)}%
+                    {Math.round(total > 0 ? completed / total * 100 : 0)}%
                   </div>
                 </div>
               </div>
-            </motion.div>
-          );
+            </motion.div>);
+
         })}
       </div>
 
       {/* Day Detail Modal */}
-      {selectedDay && (
-        <DayDetailModal
-          day={selectedDay}
-          onClose={() => setSelectedDay(null)}
-        />
-      )}
+      {selectedDay &&
+      <DayDetailModal
+        day={selectedDay}
+        onClose={() => setSelectedDay(null)} />
+
+      }
 
       {/* Confirm Dialog */}
       <ConfirmDialog
@@ -255,10 +255,10 @@ export default function Historique() {
         description={confirmDialog.description}
         onConfirm={confirmDialog.onConfirm}
         variant="danger"
-        confirmText="Supprimer"
-      />
-    </div>
-  );
+        confirmText="Supprimer" />
+
+    </div>);
+
 }
 
 function DayDetailModal({ day, onClose }) {
@@ -271,7 +271,7 @@ function DayDetailModal({ day, onClose }) {
 
   // Group tasks by category
   const tasksByCategory = {};
-  day.tasks?.forEach(task => {
+  day.tasks?.forEach((task) => {
     const catId = task.category_id || 'uncategorized';
     const catName = task.category_name || 'Sans catégorie';
     if (!tasksByCategory[catId]) {
@@ -284,8 +284,8 @@ function DayDetailModal({ day, onClose }) {
   let totalSeconds = 0;
   let completedSeconds = 0;
 
-  day.tasks?.forEach(task => {
-    const taskData = tasks.find(t => t.id === task.task_id);
+  day.tasks?.forEach((task) => {
+    const taskData = tasks.find((t) => t.id === task.task_id);
     if (taskData) {
       const taskSeconds = (taskData.duration_minutes || 0) * 60 + (taskData.duration_seconds || 0);
       totalSeconds += taskSeconds;
@@ -299,7 +299,7 @@ function DayDetailModal({ day, onClose }) {
 
   const formatTime = (seconds) => {
     const hours = Math.floor(seconds / 3600);
-    const minutes = Math.floor((seconds % 3600) / 60);
+    const minutes = Math.floor(seconds % 3600 / 60);
     if (hours > 0) {
       return `${hours}h ${minutes}min`;
     }
@@ -319,26 +319,26 @@ function DayDetailModal({ day, onClose }) {
           {/* Session Info */}
           <div className="p-3 bg-slate-700/30 rounded-lg">
             <div className="flex flex-col gap-2 text-sm">
-              {day.started_by_name && (
-                <div className="flex justify-between">
+              {day.started_by_name &&
+              <div className="flex justify-between">
                   <span className="text-slate-400">Démarré par :</span>
                   <span className="text-slate-200">{day.started_by_name}</span>
                 </div>
-              )}
-              {day.started_at && (
-                <div className="flex justify-between">
+              }
+              {day.started_at &&
+              <div className="flex justify-between">
                   <span className="text-slate-400">Heure de début :</span>
                   <span className="text-slate-200">{format(new Date(day.started_at), 'HH:mm')}</span>
                 </div>
-              )}
-              {day.completed_at && (
-                <div className="flex justify-between">
+              }
+              {day.completed_at &&
+              <div className="flex justify-between">
                   <span className="text-slate-400">Heure de fin :</span>
                   <span className="text-slate-200">{format(new Date(day.completed_at), 'HH:mm')}</span>
                 </div>
-              )}
-              {totalSeconds > 0 && (
-                <>
+              }
+              {totalSeconds > 0 &&
+              <>
                   <div className="flex justify-between">
                     <span className="text-slate-400">Temps total :</span>
                     <span className="text-slate-200 font-medium">{formatTime(totalSeconds)}</span>
@@ -348,7 +348,7 @@ function DayDetailModal({ day, onClose }) {
                     <span className="text-slate-200 font-medium">{formatTime(remainingSeconds)}</span>
                   </div>
                 </>
-              )}
+              }
             </div>
           </div>
 
@@ -359,53 +359,53 @@ function DayDetailModal({ day, onClose }) {
               Tâches ({day.tasks?.length || 0})
             </h3>
             <div className="space-y-4">
-              {Object.entries(tasksByCategory).map(([catId, categoryData]) => (
-                <div key={catId}>
+              {Object.entries(tasksByCategory).map(([catId, categoryData]) =>
+              <div key={catId}>
                   <h4 className="text-sm font-medium text-slate-300 mb-2">{categoryData.name}</h4>
                   <div className="space-y-2">
-                    {categoryData.tasks.map((task, idx) => (
-                      <div 
-                        key={idx}
-                        className={cn(
-                          "p-3 rounded-lg border",
-                          task.is_completed
-                            ? "bg-orange-900/20 border-orange-600/30"
-                            : "bg-slate-700/30 border-slate-600/30"
-                        )}
-                      >
+                    {categoryData.tasks.map((task, idx) =>
+                  <div
+                    key={idx}
+                    className={cn(
+                      "p-3 rounded-lg border",
+                      task.is_completed ?
+                      "bg-orange-900/20 border-orange-600/30" :
+                      "bg-slate-700/30 border-slate-600/30"
+                    )}>
+
                         <div className="flex items-start justify-between">
                           <div className="flex-1">
                             <h5 className={cn(
-                              "font-medium",
-                              task.is_completed && "line-through text-slate-500"
-                            )}>
+                          "font-medium",
+                          task.is_completed && "line-through text-slate-500"
+                        )}>
                               {task.task_name}
                             </h5>
-                            {task.added_at && (
-                              <p className="text-xs text-slate-500 mt-1">
+                            {task.added_at &&
+                        <p className="text-xs text-slate-500 mt-1">
                                 Ajouté à {format(new Date(task.added_at), 'HH:mm')}
                               </p>
-                            )}
+                        }
                           </div>
-                          {task.is_completed && (
-                            <div className="flex items-center gap-2 ml-4">
+                          {task.is_completed &&
+                      <div className="flex items-center gap-2 ml-4">
                               <Check className="w-5 h-5 text-orange-400" />
                               <div className="text-right">
                                 <p className="text-sm text-slate-300">{task.completed_by_name}</p>
-                                {task.completed_at && (
-                                  <p className="text-xs text-slate-500">
+                                {task.completed_at &&
+                          <p className="text-xs text-slate-500">
                                     {format(new Date(task.completed_at), 'HH:mm')}
                                   </p>
-                                )}
+                          }
                               </div>
                             </div>
-                          )}
+                      }
                         </div>
                       </div>
-                    ))}
+                  )}
                   </div>
                 </div>
-              ))}
+              )}
             </div>
           </div>
         </div>
@@ -416,6 +416,6 @@ function DayDetailModal({ day, onClose }) {
           </Button>
         </div>
       </DialogContent>
-    </Dialog>
-  );
+    </Dialog>);
+
 }
