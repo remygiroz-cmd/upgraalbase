@@ -530,7 +530,7 @@ export default function MiseEnPlace() {
               <div 
                 {...provided.droppableProps}
                 ref={provided.innerRef}
-                className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6"
+                className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6 pb-32"
               >
                 {/* Uncategorized tasks */}
                 {uncategorizedTasks.length > 0 && (
