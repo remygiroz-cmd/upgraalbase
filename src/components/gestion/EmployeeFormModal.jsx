@@ -182,27 +182,28 @@ export default function EmployeeFormModal({ open, onClose, employee }) {
                     Photo
                   </div>
                 )}
-                <label className="cursor-pointer">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="border-slate-600 text-slate-900 hover:text-slate-100 hover:bg-slate-700 pointer-events-none"
-                    disabled={uploading}
-                  >
-                    {uploading ? (
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    ) : (
-                      <Upload className="w-4 h-4 mr-2" />
-                    )}
-                    Upload photo
-                  </Button>
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={handleUploadPhoto}
-                    className="hidden"
-                  />
-                </label>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="border-slate-600 text-slate-900 hover:text-slate-100 hover:bg-slate-700"
+                  disabled={uploading}
+                  onClick={() => document.getElementById('employee-photo-upload').click()}
+                >
+                  {uploading ? (
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  ) : (
+                    <Upload className="w-4 h-4 mr-2" />
+                  )}
+                  Upload photo
+                </Button>
+                <input
+                  id="employee-photo-upload"
+                  type="file"
+                  accept="image/*"
+                  capture="user"
+                  onChange={handleUploadPhoto}
+                  className="hidden"
+                />
               </div>
 
               <div className="grid grid-cols-2 gap-4">

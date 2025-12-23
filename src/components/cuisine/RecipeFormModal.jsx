@@ -205,27 +205,28 @@ export default function RecipeFormModal({ open, onClose, recipe, currentSection 
                   Générer IA
                 </Button>
                 
-                <label className="cursor-pointer">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="border-slate-600 pointer-events-none"
-                    disabled={uploading}
-                  >
-                    {uploading ? (
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    ) : (
-                      <Upload className="w-4 h-4 mr-2" />
-                    )}
-                    Upload photo
-                  </Button>
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={handleUploadImage}
-                    className="hidden"
-                  />
-                </label>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="border-slate-600 text-slate-900 hover:text-slate-100 hover:bg-slate-700"
+                  disabled={uploading}
+                  onClick={() => document.getElementById('recipe-image-upload').click()}
+                >
+                  {uploading ? (
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  ) : (
+                    <Upload className="w-4 h-4 mr-2" />
+                  )}
+                  Upload photo
+                </Button>
+                <input
+                  id="recipe-image-upload"
+                  type="file"
+                  accept="image/*"
+                  capture="environment"
+                  onChange={handleUploadImage}
+                  className="hidden"
+                />
               </div>
             </div>
           </div>
