@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
-import { Settings, User, Bell, Palette, Clock, Save } from 'lucide-react';
+import { Settings, User, Bell, Palette, Clock, Save, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -24,16 +24,26 @@ export default function Parametres() {
     notifications_enabled: true,
     daily_summary: true,
     task_reminders: false,
-    theme: 'dark',
+    theme: 'professional-light',
     default_view: 'mise_en_place',
     session_timeout: 30
   });
+
+  useEffect(() => {
+    if (currentUser?.preferences) {
+      setPreferences(prev => ({
+        ...prev,
+        ...currentUser.preferences
+      }));
+    }
+  }, [currentUser]);
 
   const updateUserMutation = useMutation({
     mutationFn: (data) => base44.auth.updateMe(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['currentUser'] });
       toast.success('Paramètres enregistrés avec succès');
+      window.location.reload();
     }
   });
 
@@ -163,37 +173,89 @@ export default function Parametres() {
             <div className="bg-slate-800/50 rounded-2xl border border-slate-700/50 p-6">
               <h3 className="text-lg font-semibold mb-4">Apparence</h3>
               
-              <div className="space-y-4">
+              <div className="space-y-6">
                 <div>
-                  <Label>Thème</Label>
-                  <div className="grid grid-cols-2 gap-3 mt-2">
+                  <Label className="text-base font-semibold mb-4 block">Sélectionnez votre design</Label>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                    {/* Design A - Professional Light */}
                     <button
-                      onClick={() => setPreferences({ ...preferences, theme: 'dark' })}
+                      onClick={() => setPreferences({ ...preferences, theme: 'professional-light' })}
                       className={cn(
-                        "p-4 rounded-xl border-2 transition-all",
-                        preferences.theme === 'dark'
-                          ? "border-orange-600 bg-orange-600/10"
+                        "group relative p-5 rounded-2xl border-2 transition-all text-left",
+                        preferences.theme === 'professional-light'
+                          ? "border-blue-600 bg-blue-600/10 shadow-lg"
                           : "border-slate-700 bg-slate-800 hover:border-slate-600"
                       )}
                     >
-                      <div className="w-full h-16 bg-slate-900 rounded-lg mb-2"></div>
-                      <p className="text-sm font-medium">Sombre</p>
+                      {preferences.theme === 'professional-light' && (
+                        <div className="absolute top-3 right-3 w-6 h-6 rounded-full bg-blue-600 flex items-center justify-center">
+                          <Check className="w-4 h-4 text-white" />
+                        </div>
+                      )}
+                      <div className="space-y-3">
+                        <div className="w-full h-24 bg-gradient-to-br from-gray-50 to-gray-100 rounded-lg p-3 border border-gray-200">
+                          <div className="flex gap-2 mb-2">
+                            <div className="w-8 h-8 rounded-lg bg-blue-600"></div>
+                            <div className="flex-1 space-y-1">
+                              <div className="h-2 bg-gray-300 rounded w-2/3"></div>
+                              <div className="h-1.5 bg-gray-200 rounded w-1/2"></div>
+                            </div>
+                          </div>
+                          <div className="space-y-1.5">
+                            <div className="h-2 bg-gray-300 rounded"></div>
+                            <div className="h-2 bg-blue-200 rounded w-3/4"></div>
+                          </div>
+                        </div>
+                        <div>
+                          <p className="font-semibold text-sm mb-1">Professionnel Clair</p>
+                          <p className="text-xs text-slate-400 leading-relaxed">
+                            Design sobre et épuré avec fond clair, parfait pour une utilisation intensive en cuisine. Contraste optimal et lisibilité maximale.
+                          </p>
+                        </div>
+                      </div>
                     </button>
+
+                    {/* Design B - Dark Premium */}
                     <button
-                      onClick={() => setPreferences({ ...preferences, theme: 'light' })}
+                      onClick={() => setPreferences({ ...preferences, theme: 'dark-premium' })}
                       className={cn(
-                        "p-4 rounded-xl border-2 transition-all",
-                        preferences.theme === 'light'
-                          ? "border-orange-600 bg-orange-600/10"
+                        "group relative p-5 rounded-2xl border-2 transition-all text-left",
+                        preferences.theme === 'dark-premium'
+                          ? "border-violet-600 bg-violet-600/10 shadow-lg"
                           : "border-slate-700 bg-slate-800 hover:border-slate-600"
                       )}
                     >
-                      <div className="w-full h-16 bg-slate-100 rounded-lg mb-2"></div>
-                      <p className="text-sm font-medium">Clair</p>
+                      {preferences.theme === 'dark-premium' && (
+                        <div className="absolute top-3 right-3 w-6 h-6 rounded-full bg-violet-600 flex items-center justify-center">
+                          <Check className="w-4 h-4 text-white" />
+                        </div>
+                      )}
+                      <div className="space-y-3">
+                        <div className="w-full h-24 bg-gradient-to-br from-slate-950 to-slate-900 rounded-lg p-3 border border-slate-800">
+                          <div className="flex gap-2 mb-2">
+                            <div className="w-8 h-8 rounded-lg bg-violet-600"></div>
+                            <div className="flex-1 space-y-1">
+                              <div className="h-2 bg-slate-700 rounded w-2/3"></div>
+                              <div className="h-1.5 bg-slate-800 rounded w-1/2"></div>
+                            </div>
+                          </div>
+                          <div className="space-y-1.5">
+                            <div className="h-2 bg-slate-700 rounded"></div>
+                            <div className="h-2 bg-violet-900/50 rounded w-3/4"></div>
+                          </div>
+                        </div>
+                        <div>
+                          <p className="font-semibold text-sm mb-1">Dark Premium</p>
+                          <p className="text-xs text-slate-400 leading-relaxed">
+                            Mode sombre élégant et moderne, idéal pour réduire la fatigue visuelle. Interface épurée avec accent violet.
+                          </p>
+                        </div>
+                      </div>
                     </button>
                   </div>
-                  <p className="text-xs text-slate-400 mt-2">
-                    Le thème clair sera disponible prochainement
+                  <p className="text-xs text-slate-400 mt-4 flex items-center gap-2">
+                    <span className="w-1.5 h-1.5 rounded-full bg-blue-500"></span>
+                    Le changement de thème s'applique immédiatement après enregistrement
                   </p>
                 </div>
 
