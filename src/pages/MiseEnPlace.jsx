@@ -224,11 +224,12 @@ export default function MiseEnPlace() {
     const currentDay = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'][now.getDay()];
     const currentTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
     
-    // Check if trigger day and time match
+    // Check if trigger day matches
     if (task.auto_schedule.trigger_day !== currentDay) return false;
-    if (!task.auto_schedule.trigger_time) return false;
+    if (!task.auto_schedule.trigger_time_start || !task.auto_schedule.trigger_time_end) return false;
     
-    return currentTime >= task.auto_schedule.trigger_time;
+    // Check if current time is within the time range
+    return currentTime >= task.auto_schedule.trigger_time_start && currentTime <= task.auto_schedule.trigger_time_end;
   };
 
   // Auto-select tasks on mount

@@ -48,7 +48,8 @@ export default function TaskFormModal({ open, onClose, task, categories }) {
     auto_schedule: {
       enabled: false,
       trigger_day: 'monday',
-      trigger_time: '19:00',
+      trigger_time_start: '19:00',
+      trigger_time_end: '23:59',
       quantity: 0
     },
     weekly_targets: {
@@ -79,7 +80,8 @@ export default function TaskFormModal({ open, onClose, task, categories }) {
         auto_schedule: task.auto_schedule || {
           enabled: false,
           trigger_day: 'monday',
-          trigger_time: '19:00',
+          trigger_time_start: '19:00',
+          trigger_time_end: '23:59',
           quantity: 0
         },
         weekly_targets: task.weekly_targets || {
@@ -103,7 +105,8 @@ export default function TaskFormModal({ open, onClose, task, categories }) {
         auto_schedule: {
           enabled: false,
           trigger_day: 'monday',
-          trigger_time: '19:00',
+          trigger_time_start: '19:00',
+          trigger_time_end: '23:59',
           quantity: 0
         },
         weekly_targets: {
@@ -383,38 +386,55 @@ export default function TaskFormModal({ open, onClose, task, categories }) {
 
               {form.auto_schedule.enabled && (
                 <div className="space-y-4 p-4 bg-slate-700/30 rounded-xl">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <Label>Jour de déclenchement</Label>
-                      <Select
-                        value={form.auto_schedule.trigger_day}
-                        onValueChange={(value) => setForm(prev => ({ 
-                          ...prev, 
-                          auto_schedule: { ...prev.auto_schedule, trigger_day: value }
-                        }))}
-                      >
-                        <SelectTrigger className="bg-slate-700 border-slate-600 mt-1">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent className="bg-slate-700 border-slate-600">
-                          {DAYS.map(day => (
-                            <SelectItem key={day.key} value={day.key}>{day.label}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
+                  <div>
+                    <Label>Jour de déclenchement</Label>
+                    <Select
+                      value={form.auto_schedule.trigger_day}
+                      onValueChange={(value) => setForm(prev => ({ 
+                        ...prev, 
+                        auto_schedule: { ...prev.auto_schedule, trigger_day: value }
+                      }))}
+                    >
+                      <SelectTrigger className="bg-slate-700 border-slate-600 mt-1">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent className="bg-slate-700 border-slate-600">
+                        {DAYS.map(day => (
+                          <SelectItem key={day.key} value={day.key}>{day.label}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
 
-                    <div>
-                      <Label>Heure de déclenchement</Label>
-                      <Input
-                        type="time"
-                        value={form.auto_schedule.trigger_time}
-                        onChange={(e) => setForm(prev => ({ 
-                          ...prev, 
-                          auto_schedule: { ...prev.auto_schedule, trigger_time: e.target.value }
-                        }))}
-                        className="bg-slate-700 border-slate-600 mt-1"
-                      />
+                  <div>
+                    <Label>Créneau de déclenchement</Label>
+                    <div className="grid grid-cols-2 gap-4 mt-1">
+
+                      <div>
+                        <Input
+                          type="time"
+                          value={form.auto_schedule.trigger_time_start}
+                          onChange={(e) => setForm(prev => ({ 
+                            ...prev, 
+                            auto_schedule: { ...prev.auto_schedule, trigger_time_start: e.target.value }
+                          }))}
+                          className="bg-slate-700 border-slate-600"
+                        />
+                        <p className="text-xs text-slate-500 mt-1">Début</p>
+                      </div>
+
+                      <div>
+                        <Input
+                          type="time"
+                          value={form.auto_schedule.trigger_time_end}
+                          onChange={(e) => setForm(prev => ({ 
+                            ...prev, 
+                            auto_schedule: { ...prev.auto_schedule, trigger_time_end: e.target.value }
+                          }))}
+                          className="bg-slate-700 border-slate-600"
+                        />
+                        <p className="text-xs text-slate-500 mt-1">Fin</p>
+                      </div>
                     </div>
                   </div>
 
