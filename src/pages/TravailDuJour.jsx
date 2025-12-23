@@ -210,14 +210,21 @@ export default function TravailDuJour() {
             <span className="text-2xl font-bold text-orange-400">{completedCount}/{totalCount}</span>
             <span className="text-slate-300">tâches complétées</span>
           </div>
-          <div className="flex items-center gap-4 text-sm">
-            <div className="flex items-center gap-2 text-slate-400">
-              <Clock className="w-4 h-4" />
-              <span>Total: {formatTime(totalTimeSeconds)}</span>
-            </div>
-            <div className="flex items-center gap-2 text-orange-400">
-              <Clock className="w-4 h-4" />
-              <span>Restant: {formatTime(remainingTimeSeconds)}</span>
+          <div className="flex flex-col sm:flex-row items-end sm:items-center gap-2 sm:gap-4 text-sm">
+            {activeSession.started_at && (
+              <div className="text-slate-400 text-xs">
+                Créée le {format(new Date(activeSession.started_at), "d MMM 'à' HH:mm", { locale: fr })}
+              </div>
+            )}
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2 text-slate-400">
+                <Clock className="w-4 h-4" />
+                <span>Total: {formatTime(totalTimeSeconds)}</span>
+              </div>
+              <div className="flex items-center gap-2 text-orange-400">
+                <Clock className="w-4 h-4" />
+                <span>Restant: {formatTime(remainingTimeSeconds)}</span>
+              </div>
             </div>
           </div>
         </div>
