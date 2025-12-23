@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
-import { BookOpen, Plus, Search, CheckCircle2, Archive, FlaskConical, FileText, Pencil, Trash2 } from 'lucide-react';
+import { BookOpen, Plus, Search, CheckCircle2, Archive, FlaskConical, FileText, Pencil, Trash2, ArchiveRestore } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -48,6 +48,20 @@ export default function Recettes() {
       is_validated: true,
       validated_by: currentUser?.email,
       validated_at: new Date().toISOString()
+    }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['recipes'] })
+  });
+
+  const archiveMutation = useMutation({
+    mutationFn: (recipe) => base44.entities.Recipe.update(recipe.id, {
+      section: 'archives'
+    }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['recipes'] })
+  });
+
+  const restoreMutation = useMutation({
+    mutationFn: ({ recipeId, originalSection }) => base44.entities.Recipe.update(recipeId, {
+      section: originalSection
     }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['recipes'] })
   });
@@ -188,23 +202,55 @@ export default function Recettes() {
 
                 {/* Actions overlay */}
                 <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                  {activeSection === 'archives' ? (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        const originalSection = recipe.section === 'archives' ? 'fiches_techniques' : recipe.section;
+                        if (confirm('Restaurer cette recette ?')) {
+                          restoreMutation.mutate({ recipeId: recipe.id, originalSection });
+                        }
+                      }}
+                      className="p-2 rounded-lg bg-slate-800/90 hover:bg-green-600/80 text-slate-300 hover:text-white transition-colors"
+                      title="Restaurer"
+                    >
+                      <ArchiveRestore className="w-4 h-4" />
+                    </button>
+                  ) : (
+                    <>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleEdit(recipe);
+                        }}
+                        className="p-2 rounded-lg bg-slate-800/90 hover:bg-slate-700 text-slate-300 transition-colors"
+                        title="Modifier"
+                      >
+                        <Pencil className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (confirm('Archiver cette recette ?')) {
+                            archiveMutation.mutate(recipe);
+                          }
+                        }}
+                        className="p-2 rounded-lg bg-slate-800/90 hover:bg-orange-600/80 text-slate-300 hover:text-white transition-colors"
+                        title="Archiver"
+                      >
+                        <Archive className="w-4 h-4" />
+                      </button>
+                    </>
+                  )}
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
-                      handleEdit(recipe);
-                    }}
-                    className="p-2 rounded-lg bg-slate-800/90 hover:bg-slate-700 text-slate-300 transition-colors"
-                  >
-                    <Pencil className="w-4 h-4" />
-                  </button>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      if (confirm('Supprimer cette recette ?')) {
+                      if (confirm('Supprimer définitivement cette recette ?')) {
                         deleteMutation.mutate(recipe.id);
                       }
                     }}
                     className="p-2 rounded-lg bg-slate-800/90 hover:bg-red-600/80 text-slate-300 hover:text-white transition-colors"
+                    title="Supprimer"
                   >
                     <Trash2 className="w-4 h-4" />
                   </button>
