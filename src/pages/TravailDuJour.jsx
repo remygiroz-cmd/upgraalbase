@@ -182,10 +182,14 @@ export default function TravailDuJour() {
     if (!task) return 0;
     const baseTime = (task.duration_minutes || 0) * 60 + (task.duration_seconds || 0);
     
-    if (remaining && sessionTask.completed_quantity !== undefined) {
-      // Calculate remaining units
+    if (remaining) {
+      // If task is completed, no time remaining
+      if (sessionTask.is_completed) return 0;
+      
+      // Calculate remaining units based on completed quantity
       const totalUnits = sessionTask.quantity_to_produce || 1;
-      const remainingUnits = Math.max(0, totalUnits - sessionTask.completed_quantity);
+      const completedUnits = sessionTask.completed_quantity || 0;
+      const remainingUnits = Math.max(0, totalUnits - completedUnits);
       return baseTime * remainingUnits;
     }
     
@@ -282,7 +286,7 @@ export default function TravailDuJour() {
                     <WorkTaskCard
                       key={task.originalIndex}
                       task={task}
-                      onComplete={() => handleCompleteTask(task.originalIndex)}
+                      onComplete={(qty) => handleCompleteTask(task.originalIndex, qty)}
                       onRemove={() => handleRemoveTask(task.originalIndex)}
                       allTasks={tasks}
                     />
