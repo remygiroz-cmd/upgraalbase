@@ -1,11 +1,10 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
-import { ClipboardList, Plus, GripVertical, Clock, Hash, ToggleLeft, Pencil, Trash2, Play, Archive, ArchiveRestore } from 'lucide-react';
+import { ClipboardList, Plus, GripVertical, Clock, Hash, ToggleLeft, Pencil, Trash2, Play } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import PageHeader from '@/components/ui/PageHeader';
 import EmptyState from '@/components/ui/EmptyState';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
@@ -30,29 +29,18 @@ export default function MiseEnPlace() {
   const today = format(new Date(), 'yyyy-MM-dd');
   const dayOfWeek = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'][new Date().getDay()];
 
-  const { data: allCategories = [], isLoading: loadingCategories } = useQuery({
+  const { data: categories = [], isLoading: loadingCategories } = useQuery({
     queryKey: ['categories'],
     queryFn: () => base44.entities.Category.list('order')
   });
 
-  const { data: allTasks = [], isLoading: loadingTasks } = useQuery({
+  const { data: tasks = [], isLoading: loadingTasks } = useQuery({
     queryKey: ['tasks'],
     queryFn: () => base44.entities.Task.list('order')
   });
 
-  // Filter active and archived
-  const categories = allCategories.filter(c => c.is_active !== false);
-  const archivedCategories = allCategories.filter(c => c.is_active === false);
-  const tasks = allTasks.filter(t => t.is_active !== false);
-  const archivedTasks = allTasks.filter(t => t.is_active === false);
-
-  const archiveTaskMutation = useMutation({
-    mutationFn: (id) => base44.entities.Task.update(id, { is_active: false }),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['tasks'] })
-  });
-
-  const restoreTaskMutation = useMutation({
-    mutationFn: (id) => base44.entities.Task.update(id, { is_active: true }),
+  const deleteTaskMutation = useMutation({
+    mutationFn: (id) => base44.entities.Task.delete(id),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['tasks'] })
   });
 
@@ -61,13 +49,8 @@ export default function MiseEnPlace() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['categories'] })
   });
 
-  const archiveCategoryMutation = useMutation({
-    mutationFn: (id) => base44.entities.Category.update(id, { is_active: false }),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['categories'] })
-  });
-
-  const restoreCategoryMutation = useMutation({
-    mutationFn: (id) => base44.entities.Category.update(id, { is_active: true }),
+  const deleteCategoryMutation = useMutation({
+    mutationFn: (id) => base44.entities.Category.delete(id),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['categories'] })
   });
 
@@ -511,7 +494,7 @@ export default function MiseEnPlace() {
                     color="#64748b"
                     tasks={uncategorizedTasks}
                     onEditTask={handleEditTask}
-                    onArchiveTask={archiveTaskMutation.mutate}
+                    onDeleteTask={(id) => deleteTaskMutation.mutate(id)}
                     onStartStopwatch={setStopwatchTask}
                     isDraggable={false}
                     selectedTasks={selectedTasks}
@@ -536,11 +519,11 @@ export default function MiseEnPlace() {
                           color={category.color || '#10b981'}
                           tasks={getTasksByCategory(category.id)}
                           onEditTask={handleEditTask}
-                          onArchiveTask={archiveTaskMutation.mutate}
+                          onDeleteTask={(id) => deleteTaskMutation.mutate(id)}
                           onStartStopwatch={setStopwatchTask}
                           category={category}
                           onEditCategory={(cat) => updateCategoryMutation.mutate(cat)}
-                          onArchiveCategory={archiveCategoryMutation.mutate}
+                          onDeleteCategory={(id) => deleteCategoryMutation.mutate(id)}
                           dragHandleProps={provided.dragHandleProps}
                           isDragging={snapshot.isDragging}
                           isDraggable={true}
@@ -596,124 +579,14 @@ export default function MiseEnPlace() {
         onConfirm={confirmDialog.onConfirm}
         variant="warning"
       />
-
-      {/* Archives Section */}
-      <div className="mt-12 pt-8 border-t border-slate-700">
-        <div className="flex items-center gap-3 mb-6">
-          <Archive className="w-6 h-6 text-slate-400" />
-          <h2 className="text-xl font-bold">Archives</h2>
-        </div>
-
-        <Tabs defaultValue="categories" className="w-full">
-          <TabsList className="bg-slate-800 border border-slate-700">
-            <TabsTrigger value="categories" className="data-[state=active]:bg-orange-600">
-              Catégories archivées ({archivedCategories.length})
-            </TabsTrigger>
-            <TabsTrigger value="tasks" className="data-[state=active]:bg-orange-600">
-              Tâches archivées ({archivedTasks.length})
-            </TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="categories" className="mt-4">
-            {archivedCategories.length === 0 ? (
-              <EmptyState
-                icon={Archive}
-                title="Aucune catégorie archivée"
-                description="Les catégories archivées apparaîtront ici"
-              />
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {archivedCategories.map((category) => (
-                  <motion.div
-                    key={category.id}
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="bg-slate-800/50 rounded-xl border border-slate-700/50 p-4"
-                  >
-                    <div className="flex items-center justify-between mb-2">
-                      <div className="flex items-center gap-2">
-                        <div 
-                          className="w-3 h-3 rounded-full"
-                          style={{ backgroundColor: category.color }}
-                        />
-                        <h3 className="font-semibold">{category.name}</h3>
-                      </div>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => restoreCategoryMutation.mutate(category.id)}
-                        className="border-orange-600 text-orange-400 hover:bg-orange-600/20"
-                      >
-                        <ArchiveRestore className="w-4 h-4 mr-1" />
-                        Restaurer
-                      </Button>
-                    </div>
-                    <p className="text-xs text-slate-500">
-                      {allTasks.filter(t => t.category_id === category.id && t.is_active === false).length} tâche(s) archivée(s)
-                    </p>
-                  </motion.div>
-                ))}
-              </div>
-            )}
-          </TabsContent>
-
-          <TabsContent value="tasks" className="mt-4">
-            {archivedTasks.length === 0 ? (
-              <EmptyState
-                icon={Archive}
-                title="Aucune tâche archivée"
-                description="Les tâches archivées apparaîtront ici"
-              />
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {archivedTasks.map((task) => {
-                  const category = allCategories.find(c => c.id === task.category_id);
-                  return (
-                    <motion.div
-                      key={task.id}
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      className="bg-slate-800/50 rounded-xl border border-slate-700/50 p-4"
-                    >
-                      <div className="flex items-start gap-3">
-                        {task.image_url && (
-                          <img 
-                            src={task.image_url} 
-                            alt={task.name}
-                            className="w-12 h-12 rounded-lg object-cover flex-shrink-0"
-                          />
-                        )}
-                        <div className="flex-1 min-w-0">
-                          <h4 className="font-medium break-words">{task.name}</h4>
-                          {category && (
-                            <p className="text-xs text-slate-400 mt-1">{category.name}</p>
-                          )}
-                        </div>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => restoreTaskMutation.mutate(task.id)}
-                          className="border-orange-600 text-orange-400 hover:bg-orange-600/20 flex-shrink-0"
-                        >
-                          <ArchiveRestore className="w-4 h-4" />
-                        </Button>
-                      </div>
-                    </motion.div>
-                  );
-                })}
-              </div>
-            )}
-          </TabsContent>
-        </Tabs>
-      </div>
     </div>
   );
 }
 
-function CategoryColumn({ categoryId, title, color, tasks, onEditTask, onArchiveTask, onStartStopwatch, category, onEditCategory, onArchiveCategory, dragHandleProps, isDragging, isDraggable, selectedTasks, onToggleSelection, stockInputs, onStockInput, dayOfWeek }) {
+function CategoryColumn({ categoryId, title, color, tasks, onEditTask, onDeleteTask, onStartStopwatch, category, onEditCategory, onDeleteCategory, dragHandleProps, isDragging, isDraggable, selectedTasks, onToggleSelection, stockInputs, onStockInput, dayOfWeek }) {
   const [isEditing, setIsEditing] = useState(false);
   const [editName, setEditName] = useState(title);
-  const [confirmArchiveCategory, setConfirmArchiveCategory] = useState(false);
+  const [confirmDeleteCategory, setConfirmDeleteCategory] = useState(false);
 
   const handleSaveEdit = () => {
     if (editName.trim() && category) {
@@ -722,9 +595,9 @@ function CategoryColumn({ categoryId, title, color, tasks, onEditTask, onArchive
     }
   };
 
-  const handleArchive = () => {
+  const handleDelete = () => {
     if (category) {
-      setConfirmArchiveCategory(true);
+      setConfirmDeleteCategory(true);
     }
   };
 
@@ -778,11 +651,11 @@ function CategoryColumn({ categoryId, title, color, tasks, onEditTask, onArchive
               <Pencil className="w-4 h-4" />
             </button>
             <button
-              onClick={handleArchive}
+              onClick={handleDelete}
               className="p-2 rounded-lg hover:bg-red-600/20 text-slate-400 hover:text-red-400 transition-colors"
-              title="Archiver"
+              title="Supprimer"
             >
-              <Archive className="w-4 h-4" />
+              <Trash2 className="w-4 h-4" />
             </button>
           </div>
         )}
@@ -808,7 +681,7 @@ function CategoryColumn({ categoryId, title, color, tasks, onEditTask, onArchive
                     <TaskCard
                       task={task}
                       onEdit={() => onEditTask(task)}
-                      onArchive={() => onArchiveTask(task.id)}
+                      onDelete={() => onDeleteTask(task.id)}
                       onStartStopwatch={() => onStartStopwatch(task)}
                       isSelected={selectedTasks?.has(task.id)}
                       onToggleSelection={() => onToggleSelection?.(task.id)}
@@ -834,20 +707,19 @@ function CategoryColumn({ categoryId, title, color, tasks, onEditTask, onArchive
       </Droppable>
 
       <ConfirmDialog
-        open={confirmArchiveCategory}
-        onOpenChange={setConfirmArchiveCategory}
-        title="Archiver la catégorie"
-        description={`Êtes-vous sûr de vouloir archiver la catégorie "${title}" ? Elle pourra être restaurée depuis les archives.`}
-        onConfirm={() => onArchiveCategory(category.id)}
-        variant="warning"
-        confirmText="Archiver"
+        open={confirmDeleteCategory}
+        onOpenChange={setConfirmDeleteCategory}
+        title="Supprimer la catégorie"
+        description={`Êtes-vous sûr de vouloir supprimer la catégorie "${title}" ?`}
+        onConfirm={() => onDeleteCategory(category.id)}
+        variant="danger"
+        confirmText="Supprimer"
       />
     </div>
   );
 }
 
-function TaskCard({ task, onEdit, onArchive, onStartStopwatch, isSelected, onToggleSelection, dragHandleProps, isDragging, stockValue, onStockChange, dayOfWeek }) {
-  const [confirmArchive, setConfirmArchive] = useState(false);
+function TaskCard({ task, onEdit, onDelete, onStartStopwatch, isSelected, onToggleSelection, dragHandleProps, isDragging, stockValue, onStockChange, dayOfWeek }) {
   const formatDuration = () => {
     const mins = task.duration_minutes || 0;
     const secs = task.duration_seconds || 0;
@@ -972,28 +844,15 @@ function TaskCard({ task, onEdit, onArchive, onStartStopwatch, isSelected, onTog
           <button
             onClick={(e) => {
               e.stopPropagation();
-              setConfirmArchive(true);
+              onDelete();
             }}
             className="p-2 rounded-lg hover:bg-red-600/20 text-slate-400 hover:text-red-400 transition-colors"
-            title="Archiver"
+            title="Supprimer"
           >
-            <Archive className="w-4 h-4" />
+            <Trash2 className="w-4 h-4" />
           </button>
         </div>
       </div>
-
-      <ConfirmDialog
-        open={confirmArchive}
-        onOpenChange={setConfirmArchive}
-        title="Archiver la tâche"
-        description={`Êtes-vous sûr de vouloir archiver la tâche "${task.name}" ? Elle pourra être restaurée depuis les archives.`}
-        onConfirm={() => {
-          onArchive();
-          setConfirmArchive(false);
-        }}
-        variant="warning"
-        confirmText="Archiver"
-      />
     </motion.div>
   );
 }
