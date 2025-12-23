@@ -424,7 +424,7 @@ function CategoryColumn({ title, color, tasks, onEditTask, onDeleteTask, onStart
         )}
       </div>
       
-      <div className="p-3 space-y-2 max-h-[60vh] overflow-y-auto">
+      <div className="p-3 space-y-2">
         <AnimatePresence>
           {tasks.map((task) => (
             <TaskCard
