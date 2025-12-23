@@ -4,6 +4,7 @@ import { base44 } from '@/api/base44Client';
 import { ChefHat, Check, CheckCircle2, X, Clock, RotateCcw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import PageHeader from '@/components/ui/PageHeader';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import EmptyState from '@/components/ui/EmptyState';
@@ -11,10 +12,13 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
+import { Link } from 'react-router-dom';
+import { createPageUrl } from './utils';
 
 export default function TravailDuJour() {
   const queryClient = useQueryClient();
   const today = format(new Date(), 'yyyy-MM-dd');
+  const [showCompletionModal, setShowCompletionModal] = useState(false);
 
   const { data: activeSession, isLoading } = useQuery({
     queryKey: ['workSessions', 'active', today],
@@ -53,6 +57,7 @@ export default function TravailDuJour() {
     }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['workSessions'] });
+      setShowCompletionModal(true);
     }
   });
 
@@ -240,6 +245,28 @@ export default function TravailDuJour() {
           );
         })}
       </div>
+
+      {/* Completion Modal */}
+      <Dialog open={showCompletionModal} onOpenChange={setShowCompletionModal}>
+        <DialogContent className="bg-slate-800 border-slate-700">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-orange-400">
+              <CheckCircle2 className="w-6 h-6" />
+              Mise en place terminée !
+            </DialogTitle>
+          </DialogHeader>
+          <div className="py-4">
+            <p className="text-slate-300 mb-6">
+              La session a été enregistrée dans l'historique.
+            </p>
+            <Link to={createPageUrl('MiseEnPlace')}>
+              <Button className="w-full bg-orange-600 hover:bg-orange-700">
+                Créer une nouvelle mise en place
+              </Button>
+            </Link>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
