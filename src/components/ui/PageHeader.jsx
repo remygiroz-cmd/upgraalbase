@@ -17,8 +17,8 @@ export default function PageHeader({
           </div>
         )}
         <div>
-          <h1 className="text-2xl font-bold">{title}</h1>
-          {subtitle && <p className="text-slate-400 text-sm">{subtitle}</p>}
+          <h1 className="text-2xl font-bold text-[rgb(var(--text-primary))]">{title}</h1>
+          {subtitle && <p className="text-[rgb(var(--text-secondary))] text-sm">{subtitle}</p>}
         </div>
       </div>
       {actions && (
