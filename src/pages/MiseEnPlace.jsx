@@ -418,40 +418,44 @@ export default function MiseEnPlace() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 20 }}
-            className="fixed bottom-6 left-0 right-0 z-40 px-6 pointer-events-none"
+            className="fixed bottom-0 left-0 right-0 z-40 lg:bottom-6 lg:px-6 pointer-events-none"
           >
             <div className="max-w-7xl mx-auto pointer-events-auto">
-              <div className="bg-orange-600/95 backdrop-blur-lg border-2 border-orange-500/50 rounded-2xl shadow-2xl p-4 flex items-center justify-between">
-                <span className="font-semibold text-white">
-                  {selectedTasks.size} tâche{selectedTasks.size > 1 ? 's' : ''} sélectionnée{selectedTasks.size > 1 ? 's' : ''}
-                </span>
-                <div className="flex gap-3">
-                  <Button
-                    variant="outline"
-                    onClick={() => setSelectedTasks(new Set())}
-                    className="border-white/30 text-white hover:bg-white/20 hover:border-white/50"
-                  >
-                    Annuler
-                  </Button>
-                  {hasActiveSession ? (
+              <div className="bg-orange-600/95 backdrop-blur-lg border-t-2 lg:border-2 border-orange-500/50 lg:rounded-2xl shadow-2xl p-3 lg:p-4">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                  <span className="font-semibold text-white text-sm lg:text-base">
+                    {selectedTasks.size} tâche{selectedTasks.size > 1 ? 's' : ''} sélectionnée{selectedTasks.size > 1 ? 's' : ''}
+                  </span>
+                  <div className="flex gap-2 w-full sm:w-auto">
                     <Button
-                      onClick={handleAddToSession}
-                      disabled={updateSessionMutation.isPending}
-                      className="bg-white text-orange-600 hover:bg-orange-50 font-semibold"
+                      variant="outline"
+                      onClick={() => setSelectedTasks(new Set())}
+                      className="flex-1 sm:flex-none border-white/30 bg-white/10 text-white hover:bg-white/20 hover:border-white/50 text-sm"
                     >
-                      <Plus className="w-4 h-4 mr-2" />
-                      Ajouter à la liste
+                      Annuler
                     </Button>
-                  ) : (
-                    <Button
-                      onClick={handleCreateNewSession}
-                      disabled={createSessionMutation.isPending}
-                      className="bg-white text-orange-600 hover:bg-orange-50 font-semibold"
-                    >
-                      <Plus className="w-4 h-4 mr-2" />
-                      Créer nouvelle liste
-                    </Button>
-                  )}
+                    {hasActiveSession ? (
+                      <Button
+                        onClick={handleAddToSession}
+                        disabled={updateSessionMutation.isPending}
+                        className="flex-1 sm:flex-none bg-white text-orange-600 hover:bg-orange-50 font-semibold text-sm whitespace-nowrap"
+                      >
+                        <Plus className="w-4 h-4 mr-1 lg:mr-2" />
+                        <span className="hidden sm:inline">Ajouter à la liste</span>
+                        <span className="sm:hidden">Ajouter</span>
+                      </Button>
+                    ) : (
+                      <Button
+                        onClick={handleCreateNewSession}
+                        disabled={createSessionMutation.isPending}
+                        className="flex-1 sm:flex-none bg-white text-orange-600 hover:bg-orange-50 font-semibold text-sm whitespace-nowrap"
+                      >
+                        <Plus className="w-4 h-4 mr-1 lg:mr-2" />
+                        <span className="hidden sm:inline">Créer nouvelle liste</span>
+                        <span className="sm:hidden">Créer</span>
+                      </Button>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>
