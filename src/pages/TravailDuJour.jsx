@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { ChefHat, Check, CheckCircle2, X, Clock, RotateCcw } from 'lucide-react';
 import ConfirmDialog from '@/components/ui/ConfirmDialog';
+import DailyNoteCard from '@/components/cuisine/DailyNoteCard';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -43,6 +44,19 @@ export default function TravailDuJour() {
   const { data: currentUser } = useQuery({
     queryKey: ['currentUser'],
     queryFn: () => base44.auth.me()
+  });
+
+  const { data: activeNotes = [] } = useQuery({
+    queryKey: ['dailyNotes'],
+    queryFn: async () => {
+      const notes = await base44.entities.DailyNote.list('-created_date');
+      const now = new Date();
+      return notes.filter(note => {
+        const expires = new Date(note.expires_at);
+        return expires > now && note.is_active;
+      });
+    },
+    refetchInterval: 60000 // Refresh every minute
   });
 
   const updateSessionMutation = useMutation({
@@ -202,6 +216,15 @@ export default function TravailDuJour() {
           </>
         }
       />
+
+      {/* Active Daily Notes */}
+      <AnimatePresence>
+        {activeNotes.map(note => (
+          <div key={note.id} className="mb-4">
+            <DailyNoteCard note={note} />
+          </div>
+        ))}
+      </AnimatePresence>
 
       {/* Progress Section */}
       <div className="mb-6 p-4 bg-slate-800/50 rounded-2xl border border-slate-700/50">

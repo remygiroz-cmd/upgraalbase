@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
-import { ClipboardList, Plus, GripVertical, Clock, Hash, ToggleLeft, Pencil, Trash2, Play } from 'lucide-react';
+import { ClipboardList, Plus, GripVertical, Clock, Hash, ToggleLeft, Pencil, Trash2, Play, Bell } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
@@ -13,6 +13,7 @@ import CategoryManager from '@/components/cuisine/CategoryManager';
 import StopwatchModal from '@/components/cuisine/StopwatchModal';
 import ConfirmDialog from '@/components/ui/ConfirmDialog';
 import AdHocTaskModal from '@/components/cuisine/AdHocTaskModal';
+import DailyNoteModal from '@/components/cuisine/DailyNoteModal';
 import { motion, AnimatePresence } from 'framer-motion';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import { cn } from '@/lib/utils';
@@ -29,6 +30,7 @@ export default function MiseEnPlace() {
   const [confirmDialog, setConfirmDialog] = useState({ open: false, title: '', description: '', onConfirm: null });
   const [showAdHocModal, setShowAdHocModal] = useState(false);
   const [adHocTasks, setAdHocTasks] = useState([]);
+  const [showNoteModal, setShowNoteModal] = useState(false);
   const today = format(new Date(), 'yyyy-MM-dd');
   const dayOfWeek = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'][new Date().getDay()];
 
@@ -422,6 +424,14 @@ export default function MiseEnPlace() {
           <>
             <Button
               variant="outline"
+              onClick={() => setShowNoteModal(true)}
+              className="border-orange-600 text-orange-600 hover:bg-orange-600/20"
+            >
+              <Bell className="w-4 h-4 mr-2" />
+              Note d'équipe
+            </Button>
+            <Button
+              variant="outline"
               onClick={() => setShowCategoryManager(true)}
               className="border-slate-600 hover:bg-slate-700 text-slate-900 hover:text-slate-100"
             >
@@ -621,6 +631,12 @@ export default function MiseEnPlace() {
         open={showAdHocModal}
         onClose={() => setShowAdHocModal(false)}
         onAdd={(task) => setAdHocTasks(prev => [...prev, task])}
+      />
+
+      {/* Daily Note Modal */}
+      <DailyNoteModal
+        open={showNoteModal}
+        onClose={() => setShowNoteModal(false)}
       />
 
       {/* Confirm Dialog */}
