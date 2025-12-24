@@ -71,7 +71,7 @@ export default function Parametres() {
 
       <div className="max-w-4xl mx-auto">
         <Tabs defaultValue="profile" className="space-y-6">
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:flex lg:flex-wrap gap-2">
+          <TabsList className="grid grid-cols-2 sm:grid-cols-3 lg:flex lg:flex-wrap gap-2 bg-transparent p-0 h-auto">
             <TabsTrigger 
               value="profile" 
               className="data-[state=active]:bg-orange-100 data-[state=active]:text-orange-900 data-[state=active]:border-orange-500 bg-white border-2 border-gray-300 text-gray-900 px-4 py-3 rounded-lg hover:bg-gray-50 transition-colors"
@@ -118,7 +118,7 @@ export default function Parametres() {
                 <span>Utilisateurs</span>
               </TabsTrigger>
             )}
-          </div>
+          </TabsList>
 
           {/* Profile Tab */}
           <TabsContent value="profile" className="space-y-6">
