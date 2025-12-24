@@ -304,7 +304,7 @@ export default function GestionUtilisateurs() {
                   size="icon"
                   onClick={() => handleDeleteUser(user)}
                   className="border-red-300 hover:bg-red-50 text-red-600 min-h-[44px] min-w-[44px]"
-                  title="Supprimer définitivement"
+                  title="Archiver"
                 >
                   <Trash2 className="w-4 h-4" />
                 </Button>
