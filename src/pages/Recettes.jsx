@@ -117,12 +117,12 @@ export default function Recettes() {
               className={cn(
                 "border-slate-600 text-slate-900 hover:text-slate-100 hover:bg-slate-700",
                 activeSection === section.value && "bg-slate-700 text-slate-100"
-              )}
-            >
+              )}>
+
               <Icon className="w-4 h-4 mr-2" />
               {section.label}
-            </Button>
-          );
+            </Button>);
+
         })}
       </div>
 
@@ -187,7 +187,7 @@ export default function Recettes() {
             }
 
                 {/* Content */}
-                <div className="p-4">
+                <div className="bg-slate-50 p-4">
                   <div className="flex items-start justify-between gap-2">
                     <h3 className="font-medium line-clamp-2">{recipe.name}</h3>
                     {recipe.is_validated &&
