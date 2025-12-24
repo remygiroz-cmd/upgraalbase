@@ -115,6 +115,17 @@ export default function GestionUtilisateurs() {
     });
   };
 
+  const handleRestoreUser = (user) => {
+    setConfirmAction({
+      type: 'activate',
+      user,
+      onConfirm: () => updateUserMutation.mutate({
+        userId: user.id,
+        data: { status: 'active' }
+      })
+    });
+  };
+
   const getRoleName = (roleId) => {
     const role = roles.find(r => r.id === roleId);
     return role?.name || 'Aucun rôle';
