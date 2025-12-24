@@ -86,6 +86,10 @@ export default function UserPermissionsModal({ open, onClose, user, roles }) {
   };
 
   const toggleOverride = (moduleKey) => {
+    // Empêcher la modification si l'utilisateur est désactivé
+    if (user?.status === 'disabled') {
+      return;
+    }
     setOverrides(prev => {
       const newOverrides = { ...prev };
       if (moduleKey in newOverrides) {
@@ -100,6 +104,10 @@ export default function UserPermissionsModal({ open, onClose, user, roles }) {
   };
 
   const getEffectivePermission = (moduleKey) => {
+    // Si l'utilisateur est désactivé, toutes les permissions sont à false
+    if (user?.status === 'disabled') {
+      return false;
+    }
     if (moduleKey in overrides) {
       return overrides[moduleKey];
     }
@@ -119,11 +127,21 @@ export default function UserPermissionsModal({ open, onClose, user, roles }) {
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-6">
+          {user?.status === 'disabled' && (
+            <div className="bg-red-500/10 border border-red-500/50 rounded-lg p-4">
+              <p className="text-sm text-red-400">
+                ⚠️ Cet utilisateur est désactivé. Toutes les permissions sont automatiquement bloquées. 
+                Réactivez le compte pour restaurer les permissions.
+              </p>
+            </div>
+          )}
+
           <div>
             <Label htmlFor="role">Rôle de base</Label>
             <Select
               value={selectedRoleId}
               onValueChange={setSelectedRoleId}
+              disabled={user?.status === 'disabled'}
             >
               <SelectTrigger className="bg-slate-700 border-slate-600 mt-1">
                 <SelectValue placeholder="Sélectionner un rôle..." />
@@ -156,12 +174,14 @@ export default function UserPermissionsModal({ open, onClose, user, roles }) {
                     key={module.key}
                     type="button"
                     onClick={() => toggleOverride(module.key)}
+                    disabled={user?.status === 'disabled'}
                     className={cn(
                       "flex items-center justify-between p-3 rounded-lg border-2 transition-all text-left",
                       isActive
                         ? "bg-green-500/10 border-green-500"
                         : "bg-slate-700/50 border-slate-600",
-                      isOverridden && "ring-2 ring-orange-500"
+                      isOverridden && "ring-2 ring-orange-500",
+                      user?.status === 'disabled' && "opacity-50 cursor-not-allowed"
                     )}
                   >
                     <span className="text-sm font-medium">{module.label}</span>
