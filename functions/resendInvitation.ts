@@ -40,11 +40,30 @@ Deno.serve(async (req) => {
     const appUrl = `https://${req.headers.get('host')}`;
     const inviteUrl = `${appUrl}/invite?token=${newToken}`;
 
-    return Response.json({ 
-      success: true,
-      invite_url: inviteUrl,
-      message: 'Invitation générée. Partagez le lien avec l\'utilisateur.'
-    });
+    // Try to send email via EmailJS
+    try {
+      await base44.functions.invoke('sendInvitationEmail', {
+        to_email: invitation.email,
+        to_name: `${invitation.first_name} ${invitation.last_name}`,
+        invite_url: inviteUrl,
+        invited_by_name: invitation.invited_by_name
+      });
+      
+      return Response.json({ 
+        success: true,
+        invite_url: inviteUrl,
+        email_sent: true,
+        message: 'Email d\'invitation renvoyé avec succès'
+      });
+    } catch (emailError) {
+      console.error('Email sending failed:', emailError);
+      return Response.json({ 
+        success: true,
+        invite_url: inviteUrl,
+        email_sent: false,
+        message: 'Invitation générée mais email non envoyé. Copiez le lien pour l\'envoyer manuellement.'
+      });
+    }
 
   } catch (error) {
     console.error('Error resending invitation:', error);

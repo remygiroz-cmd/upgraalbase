@@ -52,11 +52,15 @@ export default function GestionUtilisateurs() {
   const resendInviteMutation = useMutation({
     mutationFn: (invitationId) => base44.functions.invoke('resendInvitation', { invitationId }),
     onSuccess: (response, invitationId) => {
-      const inviteUrl = response.data.invite_url;
-      navigator.clipboard.writeText(inviteUrl);
-      setCopiedInviteUrl(invitationId);
-      toast.success('Lien d\'invitation copié dans le presse-papier');
-      setTimeout(() => setCopiedInviteUrl(null), 3000);
+      if (response.data.email_sent) {
+        toast.success('Email d\'invitation renvoyé avec succès');
+      } else {
+        const inviteUrl = response.data.invite_url;
+        navigator.clipboard.writeText(inviteUrl);
+        setCopiedInviteUrl(invitationId);
+        toast.warning('Lien copié - envoyez-le manuellement (email non envoyé)');
+        setTimeout(() => setCopiedInviteUrl(null), 3000);
+      }
       queryClient.invalidateQueries({ queryKey: ['invitations'] });
     }
   });

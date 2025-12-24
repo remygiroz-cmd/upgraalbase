@@ -29,6 +29,8 @@ export default function InviteUserModal({ open, onClose, roles }) {
   const [inviteUrl, setInviteUrl] = React.useState('');
   const [showSuccess, setShowSuccess] = React.useState(false);
 
+  const [emailSent, setEmailSent] = React.useState(false);
+
   const inviteMutation = useMutation({
     mutationFn: async (data) => {
       return await base44.functions.invoke('inviteUser', data);
@@ -37,7 +39,11 @@ export default function InviteUserModal({ open, onClose, roles }) {
       queryClient.invalidateQueries({ queryKey: ['invitations'] });
       queryClient.invalidateQueries({ queryKey: ['users'] });
       setInviteUrl(response.data.invite_url);
+      setEmailSent(response.data.email_sent);
       setShowSuccess(true);
+      if (response.data.email_sent) {
+        toast.success('Email d\'invitation envoyé avec succès');
+      }
     }
   });
 
@@ -45,6 +51,7 @@ export default function InviteUserModal({ open, onClose, roles }) {
     onClose();
     setShowSuccess(false);
     setInviteUrl('');
+    setEmailSent(false);
     setForm({
       email: '',
       first_name: '',
@@ -90,25 +97,29 @@ export default function InviteUserModal({ open, onClose, roles }) {
 
         {showSuccess ? (
           <div className="space-y-4">
-            <div className="bg-green-500/10 border border-green-500/50 rounded-lg p-4">
-              <p className="text-sm text-green-400 mb-3">
-                L'invitation a été créée avec succès. Copiez le lien ci-dessous et envoyez-le à l'utilisateur par email ou message.
+            <div className={emailSent ? "bg-green-500/10 border border-green-500/50 rounded-lg p-4" : "bg-amber-500/10 border border-amber-500/50 rounded-lg p-4"}>
+              <p className="text-sm mb-3" style={{ color: emailSent ? 'rgb(74, 222, 128)' : 'rgb(251, 191, 36)' }}>
+                {emailSent 
+                  ? "L'invitation a été créée et l'email a été envoyé avec succès à l'utilisateur."
+                  : "L'invitation a été créée mais l'email n'a pas pu être envoyé. Copiez le lien ci-dessous et envoyez-le manuellement."}
               </p>
-              <div className="flex gap-2">
-                <Input
-                  value={inviteUrl}
-                  readOnly
-                  className="bg-slate-700 border-slate-600 text-xs"
-                />
-                <Button
-                  type="button"
-                  onClick={copyToClipboard}
-                  className="bg-orange-600 hover:bg-orange-700 flex-shrink-0"
-                >
-                  <Copy className="w-4 h-4 mr-2" />
-                  Copier
-                </Button>
-              </div>
+              {!emailSent && (
+                <div className="flex gap-2">
+                  <Input
+                    value={inviteUrl}
+                    readOnly
+                    className="bg-slate-700 border-slate-600 text-xs"
+                  />
+                  <Button
+                    type="button"
+                    onClick={copyToClipboard}
+                    className="bg-orange-600 hover:bg-orange-700 flex-shrink-0"
+                  >
+                    <Copy className="w-4 h-4 mr-2" />
+                    Copier
+                  </Button>
+                </div>
+              )}
             </div>
             <div className="flex justify-end">
               <Button

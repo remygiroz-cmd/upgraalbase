@@ -45,14 +45,33 @@ Deno.serve(async (req) => {
     const appUrl = `https://${req.headers.get('host')}`;
     const inviteUrl = `${appUrl}/invite?token=${token}`;
 
-    // Note: Base44 SendEmail only works for existing users in the app
-    // So we return the invite URL for manual sharing
-    return Response.json({ 
-      success: true, 
-      invitation,
-      invite_url: inviteUrl,
-      message: 'Invitation créée. Partagez le lien avec l\'utilisateur.'
-    });
+    // Try to send email via EmailJS
+    try {
+      await base44.functions.invoke('sendInvitationEmail', {
+        to_email: email,
+        to_name: `${first_name} ${last_name}`,
+        invite_url: inviteUrl,
+        invited_by_name: invited_by_name
+      });
+      
+      return Response.json({ 
+        success: true, 
+        invitation,
+        invite_url: inviteUrl,
+        email_sent: true,
+        message: 'Invitation créée et email envoyé avec succès'
+      });
+    } catch (emailError) {
+      console.error('Email sending failed:', emailError);
+      // Return success but indicate email wasn't sent
+      return Response.json({ 
+        success: true, 
+        invitation,
+        invite_url: inviteUrl,
+        email_sent: false,
+        message: 'Invitation créée mais email non envoyé. Copiez le lien pour l\'envoyer manuellement.'
+      });
+    }
 
   } catch (error) {
     console.error('Error inviting user:', error);
