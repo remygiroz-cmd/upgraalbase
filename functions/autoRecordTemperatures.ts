@@ -8,39 +8,41 @@ Deno.serve(async (req) => {
     const now = new Date();
     const parisTime = new Date(now.toLocaleString('en-US', { timeZone: 'Europe/Paris' }));
     const currentHour = parisTime.getHours();
+    const currentMinute = parisTime.getMinutes();
     const today = parisTime.toISOString().split('T')[0];
     
-    // Determine time slot
+    // Determine time slot - trigger at 14h30 and 23h00
     let timeSlot;
-    if (currentHour === 14) {
-      timeSlot = 'afternoon'; // 14h30 = between 13h-14h
-    } else if (currentHour === 23) {
-      timeSlot = 'evening'; // 23h = between 21h-23h
+    if (currentHour === 14 && currentMinute >= 30) {
+      timeSlot = 'afternoon'; // 14h30
+    } else if (currentHour === 23 && currentMinute >= 0) {
+      timeSlot = 'evening'; // 23h00
     } else {
       return Response.json({ 
-        message: 'Not a scheduled time',
-        currentHour 
+        message: 'Not a scheduled time (14h30 or 23h00)',
+        currentHour,
+        currentMinute
       });
     }
     
     // Get all snapshots for today
     const snapshots = await base44.asServiceRole.entities.TemperatureSnapshot.filter({ date: today });
     
-    // Check if there's already a manual recording in the time slot
-    const hasManualRecording = snapshots.some(snap => {
+    // Check if there's already a recording in the time slot (within 1 hour window)
+    const hasExistingRecording = snapshots.some(snap => {
       const recordedAt = new Date(snap.recorded_at);
       const recordedHour = recordedAt.getHours();
       
       if (timeSlot === 'afternoon') {
-        return recordedHour >= 13 && recordedHour < 14;
+        return recordedHour >= 14 && recordedHour < 15; // 14h00-15h00
       } else {
-        return recordedHour >= 21 && recordedHour < 23;
+        return recordedHour >= 22 && recordedHour < 24; // 22h00-00h00
       }
     });
     
-    if (hasManualRecording) {
+    if (hasExistingRecording) {
       return Response.json({ 
-        message: 'Manual recording already exists for this time slot',
+        message: 'Recording already exists for this time slot',
         timeSlot 
       });
     }
