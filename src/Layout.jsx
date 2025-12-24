@@ -15,7 +15,8 @@ import {
   Menu,
   X,
   Home,
-  Settings
+  Settings,
+  LogOut
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -273,6 +274,18 @@ export default function Layout({ children, currentPageName }) {
               label="Paramètres" 
               active={currentPageName === 'Parametres'} 
             />
+            <button
+              onClick={() => base44.auth.logout()}
+              className={cn(
+                "flex items-center gap-3 px-4 py-2.5 transition-all duration-200 w-full",
+                theme === 'professional-light' 
+                  ? "text-gray-700 hover:bg-gray-50" 
+                  : "text-slate-300 hover:bg-slate-800 rounded-lg"
+              )}
+            >
+              <LogOut className="w-5 h-5" />
+              <span className="font-medium text-sm">Se déconnecter</span>
+            </button>
             <p className={cn(
               "text-[10px] text-center pt-2 font-medium",
               theme === 'professional-light' ? 'text-gray-400' : 'text-slate-600'
