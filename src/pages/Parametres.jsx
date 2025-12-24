@@ -71,47 +71,54 @@ export default function Parametres() {
 
       <div className="max-w-4xl mx-auto">
         <Tabs defaultValue="profile" className="space-y-6">
-          <div className="overflow-x-auto -mx-4 px-4 pb-2 sm:mx-0 sm:px-0 scrollbar-hide">
-            <TabsList className="bg-white border-2 border-gray-300 p-1 inline-flex w-auto">
-              <TabsTrigger value="profile" className="data-[state=active]:bg-gray-100 text-gray-900 whitespace-nowrap text-sm px-4 py-2.5">
-                <User className="w-4 h-4 mr-2" />
-                <span>Profil</span>
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:flex lg:flex-wrap gap-2">
+            <TabsTrigger 
+              value="profile" 
+              className="data-[state=active]:bg-orange-100 data-[state=active]:text-orange-900 data-[state=active]:border-orange-500 bg-white border-2 border-gray-300 text-gray-900 px-4 py-3 rounded-lg hover:bg-gray-50 transition-colors"
+            >
+              <User className="w-4 h-4 mr-2" />
+              <span>Profil</span>
+            </TabsTrigger>
+            <TabsTrigger 
+              value="notifications" 
+              className="data-[state=active]:bg-orange-100 data-[state=active]:text-orange-900 data-[state=active]:border-orange-500 bg-white border-2 border-gray-300 text-gray-900 px-4 py-3 rounded-lg hover:bg-gray-50 transition-colors"
+            >
+              <Bell className="w-4 h-4 mr-2" />
+              <span>Notifications</span>
+            </TabsTrigger>
+            <TabsTrigger 
+              value="interface" 
+              className="data-[state=active]:bg-orange-100 data-[state=active]:text-orange-900 data-[state=active]:border-orange-500 bg-white border-2 border-gray-300 text-gray-900 px-4 py-3 rounded-lg hover:bg-gray-50 transition-colors"
+            >
+              <Palette className="w-4 h-4 mr-2" />
+              <span>Interface</span>
+            </TabsTrigger>
+            <TabsTrigger 
+              value="session" 
+              className="data-[state=active]:bg-orange-100 data-[state=active]:text-orange-900 data-[state=active]:border-orange-500 bg-white border-2 border-gray-300 text-gray-900 px-4 py-3 rounded-lg hover:bg-gray-50 transition-colors"
+            >
+              <Clock className="w-4 h-4 mr-2" />
+              <span>Session</span>
+            </TabsTrigger>
+            {isAdmin && (
+              <TabsTrigger 
+                value="roles" 
+                className="data-[state=active]:bg-orange-100 data-[state=active]:text-orange-900 data-[state=active]:border-orange-500 bg-white border-2 border-gray-300 text-gray-900 px-4 py-3 rounded-lg hover:bg-gray-50 transition-colors"
+              >
+                <Shield className="w-4 h-4 mr-2" />
+                <span>Rôles</span>
               </TabsTrigger>
-              <TabsTrigger value="notifications" className="data-[state=active]:bg-gray-100 text-gray-900 whitespace-nowrap text-sm px-4 py-2.5">
-                <Bell className="w-4 h-4 mr-2" />
-                <span>Notifications</span>
+            )}
+            {isAdmin && (
+              <TabsTrigger 
+                value="users" 
+                className="data-[state=active]:bg-orange-100 data-[state=active]:text-orange-900 data-[state=active]:border-orange-500 bg-white border-2 border-gray-300 text-gray-900 px-4 py-3 rounded-lg hover:bg-gray-50 transition-colors"
+              >
+                <UsersIcon className="w-4 h-4 mr-2" />
+                <span>Utilisateurs</span>
               </TabsTrigger>
-              <TabsTrigger value="interface" className="data-[state=active]:bg-gray-100 text-gray-900 whitespace-nowrap text-sm px-4 py-2.5">
-                <Palette className="w-4 h-4 mr-2" />
-                <span>Interface</span>
-              </TabsTrigger>
-              <TabsTrigger value="session" className="data-[state=active]:bg-gray-100 text-gray-900 whitespace-nowrap text-sm px-4 py-2.5">
-                <Clock className="w-4 h-4 mr-2" />
-                <span>Session</span>
-              </TabsTrigger>
-              {isAdmin && (
-                <TabsTrigger value="roles" className="data-[state=active]:bg-gray-100 text-gray-900 whitespace-nowrap text-sm px-4 py-2.5">
-                  <Shield className="w-4 h-4 mr-2" />
-                  <span>Rôles</span>
-                </TabsTrigger>
-              )}
-              {isAdmin && (
-                <TabsTrigger value="users" className="data-[state=active]:bg-gray-100 text-gray-900 whitespace-nowrap text-sm px-4 py-2.5">
-                  <UsersIcon className="w-4 h-4 mr-2" />
-                  <span>Utilisateurs</span>
-                </TabsTrigger>
-              )}
-            </TabsList>
+            )}
           </div>
-          <style>{`
-            .scrollbar-hide::-webkit-scrollbar {
-              display: none;
-            }
-            .scrollbar-hide {
-              -ms-overflow-style: none;
-              scrollbar-width: none;
-            }
-          `}</style>
 
           {/* Profile Tab */}
           <TabsContent value="profile" className="space-y-6">
