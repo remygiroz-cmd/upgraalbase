@@ -71,38 +71,52 @@ export default function Parametres() {
 
       <div className="max-w-4xl mx-auto">
         <Tabs defaultValue="profile" className="space-y-6">
-          <div className="overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0">
-            <TabsList className="bg-slate-800 p-1 inline-flex w-auto min-w-full sm:min-w-0">
-              <TabsTrigger value="profile" className="data-[state=active]:bg-slate-700 whitespace-nowrap">
-                <User className="w-4 h-4 mr-2" />
-                Profil
+          <div className="overflow-x-auto -mx-4 px-4 pb-2 sm:mx-0 sm:px-0 scrollbar-hide">
+            <TabsList className="bg-slate-800 p-1 inline-flex w-auto">
+              <TabsTrigger value="profile" className="data-[state=active]:bg-slate-700 whitespace-nowrap text-xs px-3 py-2">
+                <User className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1.5 sm:mr-2" />
+                <span className="hidden xs:inline">Profil</span>
               </TabsTrigger>
-              <TabsTrigger value="notifications" className="data-[state=active]:bg-slate-700 whitespace-nowrap">
-                <Bell className="w-4 h-4 mr-2" />
-                Notifications
+              <TabsTrigger value="notifications" className="data-[state=active]:bg-slate-700 whitespace-nowrap text-xs px-3 py-2">
+                <Bell className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1.5 sm:mr-2" />
+                <span className="hidden xs:inline">Notifs</span>
               </TabsTrigger>
-              <TabsTrigger value="interface" className="data-[state=active]:bg-slate-700 whitespace-nowrap">
-                <Palette className="w-4 h-4 mr-2" />
-                Interface
+              <TabsTrigger value="interface" className="data-[state=active]:bg-slate-700 whitespace-nowrap text-xs px-3 py-2">
+                <Palette className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1.5 sm:mr-2" />
+                <span className="hidden xs:inline">UI</span>
               </TabsTrigger>
-              <TabsTrigger value="session" className="data-[state=active]:bg-slate-700 whitespace-nowrap">
-                <Clock className="w-4 h-4 mr-2" />
-                Session
+              <TabsTrigger value="session" className="data-[state=active]:bg-slate-700 whitespace-nowrap text-xs px-3 py-2">
+                <Clock className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1.5 sm:mr-2" />
+                <span className="hidden xs:inline">Session</span>
               </TabsTrigger>
               {isAdmin && (
-                <TabsTrigger value="roles" className="data-[state=active]:bg-slate-700 whitespace-nowrap">
-                  <Shield className="w-4 h-4 mr-2" />
-                  Rôles
+                <TabsTrigger value="roles" className="data-[state=active]:bg-slate-700 whitespace-nowrap text-xs px-3 py-2">
+                  <Shield className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1.5 sm:mr-2" />
+                  <span className="hidden xs:inline">Rôles</span>
                 </TabsTrigger>
               )}
               {isAdmin && (
-                <TabsTrigger value="users" className="data-[state=active]:bg-slate-700 whitespace-nowrap">
-                  <UsersIcon className="w-4 h-4 mr-2" />
-                  Utilisateurs
+                <TabsTrigger value="users" className="data-[state=active]:bg-slate-700 whitespace-nowrap text-xs px-3 py-2">
+                  <UsersIcon className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1.5 sm:mr-2" />
+                  <span className="hidden xs:inline">Users</span>
                 </TabsTrigger>
               )}
             </TabsList>
           </div>
+          <style>{`
+            .scrollbar-hide::-webkit-scrollbar {
+              display: none;
+            }
+            .scrollbar-hide {
+              -ms-overflow-style: none;
+              scrollbar-width: none;
+            }
+            @media (min-width: 475px) {
+              .xs\\:inline {
+                display: inline;
+              }
+            }
+          `}</style>
 
           {/* Profile Tab */}
           <TabsContent value="profile" className="space-y-6">
