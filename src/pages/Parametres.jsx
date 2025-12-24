@@ -71,33 +71,38 @@ export default function Parametres() {
 
       <div className="max-w-4xl mx-auto">
         <Tabs defaultValue="profile" className="space-y-6">
-          <TabsList className="bg-slate-800 p-1">
-            <TabsTrigger value="profile" className="data-[state=active]:bg-slate-700">
-              <User className="w-4 h-4 mr-2" />
-              Profil
+          <TabsList className="bg-slate-800 p-1 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:flex lg:flex-wrap gap-1">
+            <TabsTrigger value="profile" className="data-[state=active]:bg-slate-700 text-xs sm:text-sm">
+              <User className="w-4 h-4 mr-1 sm:mr-2" />
+              <span className="hidden sm:inline">Profil</span>
+              <span className="sm:hidden">Profil</span>
             </TabsTrigger>
-            <TabsTrigger value="notifications" className="data-[state=active]:bg-slate-700">
-              <Bell className="w-4 h-4 mr-2" />
-              Notifications
+            <TabsTrigger value="notifications" className="data-[state=active]:bg-slate-700 text-xs sm:text-sm">
+              <Bell className="w-4 h-4 mr-1 sm:mr-2" />
+              <span className="hidden sm:inline">Notifications</span>
+              <span className="sm:hidden">Notif</span>
             </TabsTrigger>
-            <TabsTrigger value="interface" className="data-[state=active]:bg-slate-700">
-              <Palette className="w-4 h-4 mr-2" />
-              Interface
+            <TabsTrigger value="interface" className="data-[state=active]:bg-slate-700 text-xs sm:text-sm">
+              <Palette className="w-4 h-4 mr-1 sm:mr-2" />
+              <span className="hidden sm:inline">Interface</span>
+              <span className="sm:hidden">UI</span>
             </TabsTrigger>
-            <TabsTrigger value="session" className="data-[state=active]:bg-slate-700">
-              <Clock className="w-4 h-4 mr-2" />
-              Session
+            <TabsTrigger value="session" className="data-[state=active]:bg-slate-700 text-xs sm:text-sm">
+              <Clock className="w-4 h-4 mr-1 sm:mr-2" />
+              <span className="hidden sm:inline">Session</span>
+              <span className="sm:hidden">Session</span>
             </TabsTrigger>
             {isAdmin && (
-              <TabsTrigger value="roles" className="data-[state=active]:bg-slate-700">
-                <Shield className="w-4 h-4 mr-2" />
-                Rôles
+              <TabsTrigger value="roles" className="data-[state=active]:bg-slate-700 text-xs sm:text-sm">
+                <Shield className="w-4 h-4 mr-1 sm:mr-2" />
+                <span>Rôles</span>
               </TabsTrigger>
             )}
             {isAdmin && (
-              <TabsTrigger value="users" className="data-[state=active]:bg-slate-700">
-                <UsersIcon className="w-4 h-4 mr-2" />
-                Utilisateurs
+              <TabsTrigger value="users" className="data-[state=active]:bg-slate-700 text-xs sm:text-sm">
+                <UsersIcon className="w-4 h-4 mr-1 sm:mr-2" />
+                <span className="hidden sm:inline">Utilisateurs</span>
+                <span className="sm:hidden">Users</span>
               </TabsTrigger>
             )}
           </TabsList>
@@ -354,10 +359,10 @@ export default function Parametres() {
         </Tabs>
 
         {/* Save Button */}
-        <div className="sticky bottom-6 mt-6 flex justify-end">
+        <div className="sticky bottom-6 mt-6 flex justify-center sm:justify-end">
           <Button
             onClick={handleSavePreferences}
-            className="bg-orange-600 hover:bg-orange-700 shadow-lg"
+            className="bg-orange-600 hover:bg-orange-700 shadow-lg w-full sm:w-auto min-h-[48px]"
             disabled={updateUserMutation.isPending}>
 
             <Save className="w-4 h-4 mr-2" />
@@ -535,9 +540,9 @@ function LogoUploadSection() {
         </div>
       </div>
 
-      <div className="flex items-center gap-6">
+      <div className="flex flex-col sm:flex-row items-center gap-4 sm:gap-6">
         <div className="flex-shrink-0">
-          <div className="w-24 h-24 rounded-xl border-2 border-gray-300 bg-gray-50 flex items-center justify-center overflow-hidden">
+          <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-xl border-2 border-gray-300 bg-gray-50 flex items-center justify-center overflow-hidden">
             <img 
               src={currentLogo} 
               alt="Logo actuel" 
@@ -546,7 +551,7 @@ function LogoUploadSection() {
           </div>
         </div>
 
-        <div className="flex-1">
+        <div className="flex-1 w-full">
           <Label 
             htmlFor="logo-upload" 
             className="cursor-pointer"
