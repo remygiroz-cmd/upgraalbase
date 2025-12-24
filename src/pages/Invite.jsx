@@ -26,8 +26,9 @@ export default function Invite() {
     queryKey: ['invitation', token],
     queryFn: async () => {
       if (!token) return null;
-      const invitations = await base44.entities.Invitation.filter({ token, status: 'pending' });
-      return invitations[0] || null;
+      // Use function to fetch invitation (public access)
+      const response = await base44.functions.invoke('getInvitation', { token });
+      return response.data.invitation || null;
     },
     enabled: !!token
   });
