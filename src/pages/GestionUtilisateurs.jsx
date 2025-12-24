@@ -43,7 +43,13 @@ export default function GestionUtilisateurs() {
     mutationFn: ({ userId, data }) => base44.functions.invoke('updateUser', { userId, data }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['users'] });
+      queryClient.invalidateQueries({ queryKey: ['currentUser'] });
       setConfirmAction(null);
+      if (confirmAction?.type === 'disable') {
+        toast.success('Utilisateur désactivé - il sera déconnecté automatiquement');
+      } else if (confirmAction?.type === 'activate') {
+        toast.success('Utilisateur réactivé avec succès');
+      }
     }
   });
 
@@ -51,8 +57,9 @@ export default function GestionUtilisateurs() {
     mutationFn: (userId) => base44.functions.invoke('deleteUser', { userId }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['users'] });
+      queryClient.invalidateQueries({ queryKey: ['currentUser'] });
       setConfirmAction(null);
-      toast.success('Utilisateur supprimé avec succès');
+      toast.success('Utilisateur supprimé - il sera déconnecté automatiquement');
     },
     onError: (error) => {
       toast.error(error.response?.data?.error || 'Erreur lors de la suppression');

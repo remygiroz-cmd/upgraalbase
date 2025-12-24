@@ -1,14 +1,30 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { AlertCircle, Mail } from 'lucide-react';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
 
 export default function UserAccessCheck({ children }) {
-  const { data: currentUser, isLoading } = useQuery({
+  const { data: currentUser, isLoading, refetch } = useQuery({
     queryKey: ['currentUser'],
-    queryFn: () => base44.auth.me()
+    queryFn: async () => {
+      const user = await base44.auth.me();
+      // Si l'utilisateur est désactivé, le déconnecter immédiatement
+      if (user && user.status === 'disabled') {
+        setTimeout(() => {
+          base44.auth.logout();
+        }, 100);
+      }
+      return user;
+    },
+    refetchInterval: 5000, // Vérifier toutes les 5 secondes
+    refetchOnWindowFocus: true
   });
+
+  useEffect(() => {
+    // Force la vérification au chargement
+    refetch();
+  }, [refetch]);
 
   if (isLoading) {
     return <LoadingSpinner />;
