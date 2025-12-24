@@ -22,6 +22,10 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'Vous ne pouvez pas supprimer votre propre compte' }, { status: 400 });
     }
 
+    // Récupérer l'email de l'utilisateur avant de le modifier
+    const userToDelete = await base44.asServiceRole.entities.User.filter({ id: userId });
+    const userEmail = userToDelete[0]?.email;
+
     // Au lieu de supprimer, on désactive définitivement l'utilisateur
     // et on supprime toutes ses permissions
     await base44.asServiceRole.entities.User.update(userId, { 
@@ -30,10 +34,11 @@ Deno.serve(async (req) => {
     });
 
     // Supprimer les surcharges de permissions
-    const overrides = await base44.asServiceRole.entities.UserPermissionOverride.list();
-    const userOverrides = overrides.filter(o => o.user_email === (await base44.asServiceRole.entities.User.filter({ id: userId }))[0]?.email);
-    for (const override of userOverrides) {
-      await base44.asServiceRole.entities.UserPermissionOverride.delete(override.id);
+    if (userEmail) {
+      const overrides = await base44.asServiceRole.entities.UserPermissionOverride.filter({ user_email: userEmail });
+      for (const override of overrides) {
+        await base44.asServiceRole.entities.UserPermissionOverride.delete(override.id);
+      }
     }
 
     return Response.json({ 
