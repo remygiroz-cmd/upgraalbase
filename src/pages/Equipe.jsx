@@ -13,6 +13,7 @@ import EmptyState from '@/components/ui/EmptyState';
 import EmployeeFormModal from '@/components/gestion/EmployeeFormModal';
 import EmployeeDetailModal from '@/components/gestion/EmployeeDetailModal';
 import ShiftManager from '@/components/gestion/ShiftManager';
+import TeamManager from '@/components/gestion/TeamManager';
 import { cn } from '@/lib/utils';
 import { format, addDays, startOfWeek, parseISO } from 'date-fns';
 import { fr } from 'date-fns/locale';
@@ -27,7 +28,7 @@ const CONTRACT_LABELS = {
 
 export default function Equipe() {
   const queryClient = useQueryClient();
-  const [activeTab, setActiveTab] = useState('planning');
+  const [activeTab, setActiveTab] = useState('equipes');
   const [searchQuery, setSearchQuery] = useState('');
   const [filterStatus, setFilterStatus] = useState('active');
   const [showEmployeeForm, setShowEmployeeForm] = useState(false);
@@ -86,18 +87,24 @@ export default function Equipe() {
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="mb-6">
         <TabsList className="bg-white border-2 border-gray-300 p-1">
+          <TabsTrigger value="equipes" className="data-[state=active]:bg-gray-100 text-gray-900">
+            <Users className="w-4 h-4 mr-2" />
+            Équipes
+          </TabsTrigger>
           <TabsTrigger value="planning" className="data-[state=active]:bg-gray-100 text-gray-900">
             <Calendar className="w-4 h-4 mr-2" />
             Planning
           </TabsTrigger>
           <TabsTrigger value="annuaire" className="data-[state=active]:bg-gray-100 text-gray-900">
-            <Users className="w-4 h-4 mr-2" />
+            <User className="w-4 h-4 mr-2" />
             Annuaire
           </TabsTrigger>
         </TabsList>
       </Tabs>
 
-      {activeTab === 'planning' ? (
+      {activeTab === 'equipes' ? (
+        <TeamManager employees={filteredEmployees.filter(e => e.is_active)} />
+      ) : activeTab === 'planning' ? (
         <div>
           {/* Week navigation */}
           <div className="flex items-center justify-between gap-2 mb-4">
