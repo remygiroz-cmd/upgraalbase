@@ -226,8 +226,9 @@ export default function GestionUtilisateurs() {
         </div>
       )}
 
-      {/* Users List */}
-      <div className="grid gap-4">
+      {/* Active Users List */}
+      <h3 className="text-sm font-semibold text-gray-700 mb-3">Utilisateurs actifs</h3>
+      <div className="grid gap-4 mb-8">
         {filteredUsers.map((user) => (
           <div
             key={user.id}
