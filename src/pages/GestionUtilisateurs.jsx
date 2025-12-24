@@ -4,7 +4,7 @@ import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Users, Plus, Mail, UserX, UserCheck, Settings, Copy, CheckCircle2 } from 'lucide-react';
+import { Users, Plus, Mail, UserX, UserCheck, Settings, Copy, CheckCircle2, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import PageHeader from '@/components/ui/PageHeader';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
@@ -47,6 +47,18 @@ export default function GestionUtilisateurs() {
     }
   });
 
+  const deleteUserMutation = useMutation({
+    mutationFn: (userId) => base44.functions.invoke('deleteUser', { userId }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['users'] });
+      setConfirmAction(null);
+      toast.success('Utilisateur supprimé avec succès');
+    },
+    onError: (error) => {
+      toast.error(error.response?.data?.error || 'Erreur lors de la suppression');
+    }
+  });
+
   const [copiedInviteUrl, setCopiedInviteUrl] = useState(null);
 
   const resendInviteMutation = useMutation({
@@ -74,6 +86,14 @@ export default function GestionUtilisateurs() {
         userId: user.id,
         data: { status: newStatus }
       })
+    });
+  };
+
+  const handleDeleteUser = (user) => {
+    setConfirmAction({
+      type: 'delete',
+      user,
+      onConfirm: () => deleteUserMutation.mutate(user.id)
     });
   };
 
@@ -234,6 +254,15 @@ export default function GestionUtilisateurs() {
                     <UserCheck className="w-4 h-4" />
                   )}
                 </Button>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={() => handleDeleteUser(user)}
+                  className="border-red-300 hover:bg-red-50 text-red-600 min-h-[44px] min-w-[44px]"
+                  title="Supprimer définitivement"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </Button>
               </div>
             </div>
           </div>
@@ -259,15 +288,25 @@ export default function GestionUtilisateurs() {
       <ConfirmDialog
         open={!!confirmAction}
         onOpenChange={(open) => !open && setConfirmAction(null)}
-        title={confirmAction?.type === 'activate' ? 'Activer l\'utilisateur' : 'Désactiver l\'utilisateur'}
+        title={
+          confirmAction?.type === 'activate' ? 'Activer l\'utilisateur' :
+          confirmAction?.type === 'delete' ? 'Supprimer l\'utilisateur' :
+          'Désactiver l\'utilisateur'
+        }
         description={
           confirmAction?.type === 'activate'
             ? `Activer le compte de ${confirmAction?.user?.full_name} ?`
+            : confirmAction?.type === 'delete'
+            ? `Supprimer définitivement ${confirmAction?.user?.full_name} ? Cette action est irréversible et l'utilisateur sera immédiatement déconnecté.`
             : `Désactiver le compte de ${confirmAction?.user?.full_name} ? L'utilisateur ne pourra plus se connecter.`
         }
         onConfirm={confirmAction?.onConfirm}
-        variant={confirmAction?.type === 'activate' ? 'default' : 'warning'}
-        confirmText={confirmAction?.type === 'activate' ? 'Activer' : 'Désactiver'}
+        variant={confirmAction?.type === 'delete' ? 'danger' : confirmAction?.type === 'activate' ? 'info' : 'warning'}
+        confirmText={
+          confirmAction?.type === 'activate' ? 'Activer' :
+          confirmAction?.type === 'delete' ? 'Supprimer' :
+          'Désactiver'
+        }
       />
     </div>
   );
