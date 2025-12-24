@@ -583,6 +583,7 @@ export default function MiseEnPlace() {
                     stockInputs={stockInputs}
                     onStockInput={handleStockInput}
                     dayOfWeek={dayOfWeek}
+                    currentUser={currentUser}
                   />
                 )}
 
@@ -613,6 +614,7 @@ export default function MiseEnPlace() {
                           stockInputs={stockInputs}
                           onStockInput={handleStockInput}
                           dayOfWeek={dayOfWeek}
+                          currentUser={currentUser}
                         />
                       </div>
                     )}
@@ -677,7 +679,7 @@ export default function MiseEnPlace() {
   );
 }
 
-function CategoryColumn({ categoryId, title, color, tasks, onEditTask, onDeleteTask, onStartStopwatch, category, onEditCategory, onDeleteCategory, dragHandleProps, isDragging, isDraggable, selectedTasks, onToggleSelection, stockInputs, onStockInput, dayOfWeek }) {
+function CategoryColumn({ categoryId, title, color, tasks, onEditTask, onDeleteTask, onStartStopwatch, category, onEditCategory, onDeleteCategory, dragHandleProps, isDragging, isDraggable, selectedTasks, onToggleSelection, stockInputs, onStockInput, dayOfWeek, currentUser }) {
   const [isEditing, setIsEditing] = useState(false);
   const [editName, setEditName] = useState(title);
   const [confirmDeleteCategory, setConfirmDeleteCategory] = useState(false);
