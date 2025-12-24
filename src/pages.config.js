@@ -8,6 +8,9 @@ import Recettes from './pages/Recettes';
 import Stocks from './pages/Stocks';
 import Temperatures from './pages/Temperatures';
 import TravailDuJour from './pages/TravailDuJour';
+import Invite from './pages/Invite';
+import GestionRoles from './pages/GestionRoles';
+import GestionUtilisateurs from './pages/GestionUtilisateurs';
 import __Layout from './Layout.jsx';
 
 
@@ -22,6 +25,9 @@ export const PAGES = {
     "Stocks": Stocks,
     "Temperatures": Temperatures,
     "TravailDuJour": TravailDuJour,
+    "Invite": Invite,
+    "GestionRoles": GestionRoles,
+    "GestionUtilisateurs": GestionUtilisateurs,
 }
 
 export const pagesConfig = {

@@ -37,19 +37,54 @@ export default function Layout({ children, currentPageName }) {
 
   const theme = currentUser?.preferences?.theme || 'professional-light';
 
+  // Fetch user permissions
+  const { data: userRole } = useQuery({
+    queryKey: ['userRole', currentUser?.role_id],
+    queryFn: async () => {
+      if (!currentUser?.role_id) return null;
+      const roles = await base44.entities.Role.filter({ id: currentUser.role_id });
+      return roles[0] || null;
+    },
+    enabled: !!currentUser?.role_id
+  });
+
+  const { data: permissionOverride } = useQuery({
+    queryKey: ['permissionOverride', currentUser?.email],
+    queryFn: async () => {
+      if (!currentUser?.email) return null;
+      const overrides = await base44.entities.UserPermissionOverride.filter({ user_email: currentUser.email });
+      return overrides[0] || null;
+    },
+    enabled: !!currentUser?.email
+  });
+
+  // Calculate effective permissions
+  const hasPermission = (moduleKey) => {
+    // Admin has all permissions
+    if (currentUser?.role === 'admin') return true;
+    
+    // Check override first
+    if (permissionOverride?.permissions_override?.[moduleKey] !== undefined) {
+      return permissionOverride.permissions_override[moduleKey];
+    }
+    
+    // Fall back to role permissions
+    return userRole?.permissions?.[moduleKey] || false;
+  };
+
   const cuisineLinks = [
-    { name: 'MiseEnPlace', label: 'Mise en Place', icon: ClipboardList },
-    { name: 'TravailDuJour', label: 'Travail du Jour', icon: ChefHat },
-    { name: 'Temperatures', label: 'Températures', icon: Thermometer },
-    { name: 'Recettes', label: 'Recettes', icon: BookOpen },
-    { name: 'Historique', label: 'Historique', icon: History },
-  ];
+    { name: 'MiseEnPlace', label: 'Mise en Place', icon: ClipboardList, module: 'mise_en_place' },
+    { name: 'TravailDuJour', label: 'Travail du Jour', icon: ChefHat, module: 'travail_du_jour' },
+    { name: 'Temperatures', label: 'Températures', icon: Thermometer, module: 'temperatures' },
+    { name: 'Recettes', label: 'Recettes', icon: BookOpen, module: 'recettes' },
+    { name: 'Historique', label: 'Historique', icon: History, module: 'historique' },
+  ].filter(link => hasPermission(link.module));
 
   const gestionLinks = [
-    { name: 'Equipe', label: 'Équipe & Shifts', icon: Users },
-    { name: 'Pertes', label: 'Invendus & Pertes', icon: PackageMinus },
-    { name: 'Stocks', label: 'Inventaires', icon: Package },
-  ];
+    { name: 'Equipe', label: 'Équipe & Shifts', icon: Users, module: 'equipe' },
+    { name: 'Pertes', label: 'Invendus & Pertes', icon: PackageMinus, module: 'pertes' },
+    { name: 'Stocks', label: 'Inventaires', icon: Package, module: 'stocks' },
+  ].filter(link => hasPermission(link.module));
 
   const NavLink = ({ to, icon: Icon, label, active }) => (
     <Link
@@ -268,12 +303,14 @@ export default function Layout({ children, currentPageName }) {
             "p-4 border-t space-y-2",
             theme === 'professional-light' ? 'border-gray-200' : 'border-slate-800'
           )}>
-            <NavLink 
-              to="Parametres" 
-              icon={Settings} 
-              label="Paramètres" 
-              active={currentPageName === 'Parametres'} 
-            />
+            {hasPermission('parametres') && (
+              <NavLink 
+                to="Parametres" 
+                icon={Settings} 
+                label="Paramètres" 
+                active={currentPageName === 'Parametres'} 
+              />
+            )}
             <button
               onClick={() => {
                 base44.auth.logout();
