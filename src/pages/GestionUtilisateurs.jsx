@@ -77,6 +77,14 @@ export default function GestionUtilisateurs() {
     }
   });
 
+  const deleteInvitationMutation = useMutation({
+    mutationFn: (invitationId) => base44.entities.Invitation.delete(invitationId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['invitations'] });
+      toast.success('Invitation supprimée');
+    }
+  });
+
   const handleToggleStatus = (user) => {
     const newStatus = user.status === 'active' ? 'disabled' : 'active';
     setConfirmAction({
@@ -157,25 +165,37 @@ export default function GestionUtilisateurs() {
                     Invité par {inv.invited_by_name}
                   </p>
                 </div>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => resendInviteMutation.mutate(inv.id)}
-                  disabled={resendInviteMutation.isPending}
-                  className="border-amber-600 text-amber-700 hover:bg-amber-100"
-                >
-                  {copiedInviteUrl === inv.id ? (
-                    <>
-                      <CheckCircle2 className="w-4 h-4 mr-2" />
-                      Copié !
-                    </>
-                  ) : (
-                    <>
-                      <Copy className="w-4 h-4 mr-2" />
-                      Copier lien
-                    </>
-                  )}
-                </Button>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => resendInviteMutation.mutate(inv.id)}
+                    disabled={resendInviteMutation.isPending}
+                    className="border-amber-600 text-amber-700 hover:bg-amber-100"
+                  >
+                    {copiedInviteUrl === inv.id ? (
+                      <>
+                        <CheckCircle2 className="w-4 h-4 mr-2" />
+                        Copié !
+                      </>
+                    ) : (
+                      <>
+                        <Copy className="w-4 h-4 mr-2" />
+                        Copier lien
+                      </>
+                    )}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    onClick={() => deleteInvitationMutation.mutate(inv.id)}
+                    disabled={deleteInvitationMutation.isPending}
+                    className="border-red-300 text-red-600 hover:bg-red-50 min-h-[40px] min-w-[40px]"
+                    title="Supprimer l'invitation"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </Button>
+                </div>
               </div>
             ))}
           </div>
