@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
-import { Settings, User, Bell, Palette, Clock, Save, Check, Upload, Image, Sparkles, Loader2 } from 'lucide-react';
+import { Settings, User, Bell, Palette, Clock, Save, Check, Upload, Image, Sparkles, Loader2, Shield, Users as UsersIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -9,6 +9,8 @@ import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import PageHeader from '@/components/ui/PageHeader';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
+import GestionRoles from './GestionRoles';
+import GestionUtilisateurs from './GestionUtilisateurs';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 
@@ -53,6 +55,8 @@ export default function Parametres() {
     });
   };
 
+  const isAdmin = currentUser?.role === 'admin';
+
   if (isLoading) {
     return <LoadingSpinner />;
   }
@@ -84,6 +88,18 @@ export default function Parametres() {
               <Clock className="w-4 h-4 mr-2" />
               Session
             </TabsTrigger>
+            {isAdmin && (
+              <TabsTrigger value="roles" className="data-[state=active]:bg-slate-700">
+                <Shield className="w-4 h-4 mr-2" />
+                Rôles
+              </TabsTrigger>
+            )}
+            {isAdmin && (
+              <TabsTrigger value="users" className="data-[state=active]:bg-slate-700">
+                <UsersIcon className="w-4 h-4 mr-2" />
+                Utilisateurs
+              </TabsTrigger>
+            )}
           </TabsList>
 
           {/* Profile Tab */}
@@ -321,6 +337,20 @@ export default function Parametres() {
               </div>
             </div>
           </TabsContent>
+
+          {/* Roles Tab */}
+          {isAdmin && (
+            <TabsContent value="roles">
+              <GestionRoles />
+            </TabsContent>
+          )}
+
+          {/* Users Tab */}
+          {isAdmin && (
+            <TabsContent value="users">
+              <GestionUtilisateurs />
+            </TabsContent>
+          )}
         </Tabs>
 
         {/* Save Button */}
