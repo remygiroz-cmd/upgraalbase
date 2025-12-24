@@ -24,11 +24,12 @@ Deno.serve(async (req) => {
       }, { status: 500 });
     }
 
-    // Send email via EmailJS API
+    // Send email via EmailJS REST API
     const emailData = {
       service_id: serviceId,
       template_id: templateId,
       user_id: publicKey,
+      accessToken: Deno.env.get('EMAILJS_PRIVATE_KEY') || '',
       template_params: {
         to_email: to_email,
         to_name: to_name,
@@ -40,7 +41,8 @@ Deno.serve(async (req) => {
     const response = await fetch('https://api.emailjs.com/api/v1.0/email/send', {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
+        'Origin': `https://${Deno.env.get('BASE44_APP_ID')}.base44.com`
       },
       body: JSON.stringify(emailData)
     });
