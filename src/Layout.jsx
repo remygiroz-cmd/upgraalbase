@@ -19,6 +19,7 @@ import {
   LogOut
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import UserAccessCheck from '@/components/UserAccessCheck';
 
 export default function Layout({ children, currentPageName }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -151,8 +152,9 @@ export default function Layout({ children, currentPageName }) {
   const currentTheme = themes[theme] || themes['professional-light'];
 
   return (
-    <div className={cn("min-h-screen", currentTheme.bg, currentTheme.text)}>
-      <style>{`
+    <UserAccessCheck>
+      <div className={cn("min-h-screen", currentTheme.bg, currentTheme.text)}>
+        <style>{`
         :root {
           --accent-color: ${currentTheme.accent};
           --success: ${theme === 'professional-light' ? '#16a34a' : '#10b981'};
@@ -346,5 +348,6 @@ export default function Layout({ children, currentPageName }) {
         </div>
       </main>
     </div>
+    </UserAccessCheck>
   );
 }

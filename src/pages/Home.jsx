@@ -12,40 +12,84 @@ import {
   Users, 
   PackageMinus, 
   Package,
-  ArrowRight
+  ArrowRight,
+  AlertCircle
 } from 'lucide-react';
 import { motion } from 'framer-motion';
+import LoadingSpinner from '@/components/ui/LoadingSpinner';
 
 export default function Home() {
+  const { data: currentUser, isLoading: loadingUser } = useQuery({
+    queryKey: ['currentUser'],
+    queryFn: () => base44.auth.me()
+  });
+
   const { data: appSettings = [] } = useQuery({
     queryKey: ['appSettings'],
     queryFn: () => base44.entities.AppSettings.filter({ setting_key: 'app_logo' })
   });
 
+  const { data: userRole } = useQuery({
+    queryKey: ['userRole', currentUser?.role_id],
+    queryFn: async () => {
+      if (!currentUser?.role_id) return null;
+      const roles = await base44.entities.Role.filter({ id: currentUser.role_id });
+      return roles[0] || null;
+    },
+    enabled: !!currentUser?.role_id
+  });
+
+  const { data: permissionOverride } = useQuery({
+    queryKey: ['permissionOverride', currentUser?.email],
+    queryFn: async () => {
+      if (!currentUser?.email) return null;
+      const overrides = await base44.entities.UserPermissionOverride.filter({ user_email: currentUser.email });
+      return overrides[0] || null;
+    },
+    enabled: !!currentUser?.email
+  });
+
   const logoUrl = appSettings[0]?.logo_url || 'https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/69497257a1b1a9a05e568521/71ee8b574_logonouveau.png';
 
-  const modules = [
+  const hasPermission = (moduleKey) => {
+    if (currentUser?.role === 'admin') return true;
+    if (permissionOverride?.permissions_override?.[moduleKey] !== undefined) {
+      return permissionOverride.permissions_override[moduleKey];
+    }
+    return userRole?.permissions?.[moduleKey] || false;
+  };
+
+  const allModules = [
     {
       title: 'Cuisine',
       color: 'emerald',
       items: [
-        { name: 'MiseEnPlace', label: 'Mise en Place', icon: ClipboardList, desc: 'Catalogue des tâches' },
-        { name: 'TravailDuJour', label: 'Travail du Jour', icon: ChefHat, desc: 'Production quotidienne' },
-        { name: 'Temperatures', label: 'Températures', icon: Thermometer, desc: 'Conformité HACCP' },
-        { name: 'Recettes', label: 'Recettes', icon: BookOpen, desc: 'Fiches techniques' },
-        { name: 'Historique', label: 'Historique', icon: History, desc: 'Archives de production' },
+        { name: 'MiseEnPlace', label: 'Mise en Place', icon: ClipboardList, desc: 'Catalogue des tâches', module: 'mise_en_place' },
+        { name: 'TravailDuJour', label: 'Travail du Jour', icon: ChefHat, desc: 'Production quotidienne', module: 'travail_du_jour' },
+        { name: 'Temperatures', label: 'Températures', icon: Thermometer, desc: 'Conformité HACCP', module: 'temperatures' },
+        { name: 'Recettes', label: 'Recettes', icon: BookOpen, desc: 'Fiches techniques', module: 'recettes' },
+        { name: 'Historique', label: 'Historique', icon: History, desc: 'Archives de production', module: 'historique' },
       ]
     },
     {
       title: 'Gestion',
       color: 'indigo',
       items: [
-        { name: 'Equipe', label: 'Équipe & Shifts', icon: Users, desc: 'Planning et RH' },
-        { name: 'Pertes', label: 'Invendus & Pertes', icon: PackageMinus, desc: 'Contrôle Food Cost' },
-        { name: 'Stocks', label: 'Inventaires', icon: Package, desc: 'Stocks & Commandes' },
+        { name: 'Equipe', label: 'Équipe & Shifts', icon: Users, desc: 'Planning et RH', module: 'equipe' },
+        { name: 'Pertes', label: 'Invendus & Pertes', icon: PackageMinus, desc: 'Contrôle Food Cost', module: 'pertes' },
+        { name: 'Stocks', label: 'Inventaires', icon: Package, desc: 'Stocks & Commandes', module: 'stocks' },
       ]
     }
   ];
+
+  const modules = allModules.map(section => ({
+    ...section,
+    items: section.items.filter(item => hasPermission(item.module))
+  })).filter(section => section.items.length > 0);
+
+  if (loadingUser) {
+    return <LoadingSpinner />;
+  }
 
   const containerVariants = {
     hidden: { opacity: 0 },
@@ -59,6 +103,25 @@ export default function Home() {
     hidden: { opacity: 0, y: 20 },
     visible: { opacity: 1, y: 0 }
   };
+
+  if (modules.length === 0) {
+    return (
+      <div className="max-w-2xl mx-auto text-center py-12">
+        <div className="bg-amber-50 border-2 border-amber-300 rounded-2xl p-8">
+          <div className="w-16 h-16 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <AlertCircle className="w-8 h-8 text-amber-600" />
+          </div>
+          <h2 className="text-2xl font-bold text-gray-900 mb-3">Aucun accès autorisé</h2>
+          <p className="text-gray-700 mb-4">
+            Vous n'avez actuellement accès à aucun module de l'application.
+          </p>
+          <p className="text-sm text-gray-600">
+            Contactez votre administrateur pour obtenir les autorisations nécessaires.
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-6xl mx-auto">
