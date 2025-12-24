@@ -126,6 +126,9 @@ export default function GestionUtilisateurs() {
     user.team?.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
+  // Utilisateurs supprimés/archivés
+  const deletedUsers = allUsers.filter(user => user.status === 'deleted');
+
   if (loadingUsers) return <LoadingSpinner />;
 
   return (
