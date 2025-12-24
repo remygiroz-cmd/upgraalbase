@@ -275,7 +275,10 @@ export default function Layout({ children, currentPageName }) {
               active={currentPageName === 'Parametres'} 
             />
             <button
-              onClick={() => base44.auth.logout()}
+              onClick={() => {
+                base44.auth.logout();
+                window.location.href = '/login';
+              }}
               className={cn(
                 "flex items-center gap-3 px-4 py-2.5 transition-all duration-200 w-full",
                 theme === 'professional-light' 
