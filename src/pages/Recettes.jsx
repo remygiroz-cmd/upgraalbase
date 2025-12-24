@@ -106,23 +106,23 @@ export default function Recettes() {
 
 
       {/* Tabs */}
-      <div className="flex gap-2 mb-6">
+      <div className="flex flex-wrap gap-2 mb-6">
         {SECTIONS.map((section) => {
           const Icon = section.icon;
           return (
             <Button
               key={section.value}
               variant="outline"
+              size="sm"
               onClick={() => setActiveSection(section.value)}
               className={cn(
-                "border-slate-600 text-slate-900 hover:text-slate-100 hover:bg-slate-700",
+                "border-slate-600 text-slate-900 hover:text-slate-100 hover:bg-slate-700 text-xs sm:text-sm",
                 activeSection === section.value && "bg-slate-700 text-slate-100"
               )}>
-
-              <Icon className="w-4 h-4 mr-2" />
-              {section.label}
-            </Button>);
-
+              <Icon className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
+              <span className="whitespace-nowrap">{section.label}</span>
+            </Button>
+          );
         })}
       </div>
 
@@ -132,9 +132,9 @@ export default function Recettes() {
         <Input
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          placeholder="Rechercher une recette..." className="bg-slate-50 text-slate-100 px-3 py-1 text-base rounded-md flex h-9 w-full border shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 md:text-sm border-slate-700" />
-
-
+          placeholder="Rechercher une recette..."
+          className="bg-slate-50 text-slate-900 pl-10 border-slate-300"
+        />
       </div>
 
       {/* Recipes Grid */}
@@ -166,8 +166,8 @@ export default function Recettes() {
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.95 }}
             className={cn(
-              "group relative bg-slate-800/50 rounded-2xl border border-slate-700/50",
-              "hover:border-slate-600/50 transition-all cursor-pointer overflow-hidden"
+              "group relative bg-white rounded-xl border-2 border-gray-200",
+              "hover:border-gray-400 transition-all cursor-pointer overflow-hidden shadow-sm hover:shadow-md"
             )}
             onClick={() => setViewingRecipe(recipe)}>
 
@@ -187,36 +187,37 @@ export default function Recettes() {
             }
 
                 {/* Content */}
-                <div className="bg-slate-50 p-4">
+                <div className="bg-white p-4">
                   <div className="flex items-start justify-between gap-2">
-                    <h3 className="font-medium line-clamp-2">{recipe.name}</h3>
+                    <h3 className="font-medium text-gray-900 line-clamp-2 text-sm sm:text-base">{recipe.name}</h3>
                     {recipe.is_validated &&
-                <Badge className="bg-orange-600/20 text-orange-400 border-orange-600/30 flex-shrink-0">
+                <Badge className="bg-orange-100 text-orange-700 border-orange-300 flex-shrink-0">
                         <CheckCircle2 className="w-3 h-3 mr-1" />
-                        Validé
+                        <span className="hidden sm:inline">Validé</span>
+                        <span className="sm:hidden">✓</span>
                       </Badge>
                 }
                   </div>
                   
                   {recipe.author_name &&
-              <p className="text-sm text-slate-400 mt-2">
+              <p className="text-xs sm:text-sm text-gray-600 mt-2">
                       Par {recipe.author_name}
                     </p>
               }
                 </div>
 
                 {/* Actions overlay */}
-                <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                <div className="absolute top-2 right-2 flex gap-1 opacity-0 sm:group-hover:opacity-100 transition-opacity z-10">
                   {activeSection === 'archives' ?
               <button
                 onClick={(e) => {
-                  e.stopPropagation();
-                  const originalSection = recipe.section === 'archives' ? 'fiches_techniques' : recipe.section;
-                  if (confirm('Restaurer cette recette ?')) {
-                    restoreMutation.mutate({ recipeId: recipe.id, originalSection });
-                  }
+                e.stopPropagation();
+                const originalSection = recipe.section === 'archives' ? 'fiches_techniques' : recipe.section;
+                if (confirm('Restaurer cette recette ?')) {
+                  restoreMutation.mutate({ recipeId: recipe.id, originalSection });
+                }
                 }}
-                className="p-2 rounded-lg bg-slate-800/90 hover:bg-green-600/80 text-slate-300 hover:text-white transition-colors"
+                className="p-2 rounded-lg bg-white/95 border border-gray-300 hover:bg-green-50 text-gray-700 hover:text-green-700 transition-colors min-h-[40px] min-w-[40px] flex items-center justify-center"
                 title="Restaurer">
 
                       <ArchiveRestore className="w-4 h-4" />
@@ -228,9 +229,8 @@ export default function Recettes() {
                     e.stopPropagation();
                     handleEdit(recipe);
                   }}
-                  className="p-2 rounded-lg bg-slate-800/90 hover:bg-slate-700 text-slate-300 transition-colors"
+                  className="p-2 rounded-lg bg-white/95 border border-gray-300 hover:bg-blue-50 text-gray-700 hover:text-blue-700 transition-colors min-h-[40px] min-w-[40px] flex items-center justify-center"
                   title="Modifier">
-
                         <Pencil className="w-4 h-4" />
                       </button>
                       <button
@@ -240,9 +240,8 @@ export default function Recettes() {
                       archiveMutation.mutate(recipe);
                     }
                   }}
-                  className="p-2 rounded-lg bg-slate-800/90 hover:bg-orange-600/80 text-slate-300 hover:text-white transition-colors"
+                  className="p-2 rounded-lg bg-white/95 border border-gray-300 hover:bg-orange-50 text-gray-700 hover:text-orange-700 transition-colors min-h-[40px] min-w-[40px] flex items-center justify-center"
                   title="Archiver">
-
                         <Archive className="w-4 h-4" />
                       </button>
                     </>
@@ -254,9 +253,8 @@ export default function Recettes() {
                     deleteMutation.mutate(recipe.id);
                   }
                 }}
-                className="p-2 rounded-lg bg-slate-800/90 hover:bg-red-600/80 text-slate-300 hover:text-white transition-colors"
+                className="p-2 rounded-lg bg-white/95 border border-gray-300 hover:bg-red-50 text-gray-700 hover:text-red-700 transition-colors min-h-[40px] min-w-[40px] flex items-center justify-center"
                 title="Supprimer">
-
                     <Trash2 className="w-4 h-4" />
                   </button>
                 </div>
