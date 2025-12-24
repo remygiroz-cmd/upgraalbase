@@ -62,7 +62,7 @@ export default function GestionUtilisateurs() {
       queryClient.invalidateQueries({ queryKey: ['users'] });
       queryClient.invalidateQueries({ queryKey: ['currentUser'] });
       setConfirmAction(null);
-      toast.success('Utilisateur supprimé - il sera déconnecté automatiquement');
+      toast.success('Utilisateur archivé - il sera déconnecté automatiquement');
     },
     onError: (error) => {
       toast.error(error.response?.data?.error || 'Erreur lors de la suppression');
