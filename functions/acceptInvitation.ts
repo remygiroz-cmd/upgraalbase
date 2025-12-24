@@ -10,8 +10,8 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'Token et mot de passe requis' }, { status: 400 });
     }
 
-    // Find invitation
-    const invitations = await base44.asServiceRole.entities.Invitation.filter({ 
+    // Find invitation (no auth required for this endpoint)
+    const invitations = await base44.entities.Invitation.filter({ 
       token, 
       status: 'pending' 
     });
@@ -26,14 +26,14 @@ Deno.serve(async (req) => {
     const now = new Date();
     const expiresAt = new Date(invitation.expires_at);
     if (now > expiresAt) {
-      await base44.asServiceRole.entities.Invitation.update(invitation.id, { 
+      await base44.entities.Invitation.update(invitation.id, { 
         status: 'expired' 
       });
       return Response.json({ error: 'Invitation expirée' }, { status: 400 });
     }
 
     // Check if user already exists
-    const existingUsers = await base44.asServiceRole.entities.User.filter({ 
+    const existingUsers = await base44.entities.User.filter({ 
       email: invitation.email 
     });
 
@@ -41,7 +41,7 @@ Deno.serve(async (req) => {
     if (existingUsers.length > 0) {
       // Update existing user
       userId = existingUsers[0].id;
-      await base44.asServiceRole.entities.User.update(userId, {
+      await base44.entities.User.update(userId, {
         full_name: `${invitation.first_name} ${invitation.last_name}`,
         role_id: invitation.role_id,
         team: invitation.team,
@@ -57,7 +57,7 @@ Deno.serve(async (req) => {
     }
 
     // Mark invitation as accepted
-    await base44.asServiceRole.entities.Invitation.update(invitation.id, {
+    await base44.entities.Invitation.update(invitation.id, {
       status: 'accepted',
       accepted_at: new Date().toISOString()
     });

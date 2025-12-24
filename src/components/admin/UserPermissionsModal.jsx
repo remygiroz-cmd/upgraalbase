@@ -45,7 +45,7 @@ export default function UserPermissionsModal({ open, onClose, user, roles }) {
 
   const updateUserMutation = useMutation({
     mutationFn: async (data) => {
-      return await base44.asServiceRole.entities.User.update(user.id, data);
+      return await base44.functions.invoke('updateUser', { userId: user.id, data });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['users'] });

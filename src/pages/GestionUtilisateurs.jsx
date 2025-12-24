@@ -32,11 +32,14 @@ export default function GestionUtilisateurs() {
 
   const { data: invitations = [] } = useQuery({
     queryKey: ['invitations'],
-    queryFn: () => base44.entities.Invitation.filter({ status: 'pending' })
+    queryFn: async () => {
+      const response = await base44.functions.invoke('getPendingInvitations');
+      return response.data.invitations || [];
+    }
   });
 
   const updateUserMutation = useMutation({
-    mutationFn: ({ userId, data }) => base44.asServiceRole.entities.User.update(userId, data),
+    mutationFn: ({ userId, data }) => base44.functions.invoke('updateUser', { userId, data }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['users'] });
       setConfirmAction(null);

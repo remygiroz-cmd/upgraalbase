@@ -14,7 +14,7 @@ Deno.serve(async (req) => {
     const { invitationId } = body;
 
     // Get invitation
-    const invitations = await base44.asServiceRole.entities.Invitation.filter({ 
+    const invitations = await base44.entities.Invitation.filter({ 
       id: invitationId 
     });
 
@@ -30,7 +30,7 @@ Deno.serve(async (req) => {
     expiresAt.setDate(expiresAt.getDate() + 7);
 
     // Update invitation
-    await base44.asServiceRole.entities.Invitation.update(invitation.id, {
+    await base44.entities.Invitation.update(invitation.id, {
       token: newToken,
       expires_at: expiresAt.toISOString(),
       status: 'pending'
