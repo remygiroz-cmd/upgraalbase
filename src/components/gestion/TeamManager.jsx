@@ -109,6 +109,7 @@ export default function TeamManager({ employees }) {
       <DragDropContext onDragEnd={handleDragEnd}>
         <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4">
           {/* Unassigned employees */}
+          {unassignedEmployees.length > 0 && (
           <Droppable droppableId="unassigned">
             {(provided, snapshot) => (
               <div
@@ -162,6 +163,7 @@ export default function TeamManager({ employees }) {
               </div>
             )}
           </Droppable>
+          )}
 
           {/* Teams */}
           {teams.map((team) => {
