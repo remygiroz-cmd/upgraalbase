@@ -42,10 +42,11 @@ Deno.serve(async (req) => {
     });
 
     // Send invitation email
-    const appUrl = Deno.env.get('APP_URL') || 'https://your-app-url.com';
+    const appUrl = `https://${req.headers.get('host')}`;
     const inviteUrl = `${appUrl}/invite?token=${token}`;
 
     await base44.integrations.Core.SendEmail({
+      from_name: 'UpGraal',
       to: email,
       subject: `Invitation à rejoindre UpGraal`,
       body: `
