@@ -15,8 +15,8 @@ export default function UserAccessCheck({ children }) {
     return <LoadingSpinner />;
   }
 
-  // Vérifier si le compte est désactivé
-  if (currentUser && currentUser.status === 'disabled') {
+  // Vérifier si le compte est désactivé ou supprimé
+  if (!currentUser || currentUser.status === 'disabled' || currentUser.status === 'deleted') {
     return (
       <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-gray-50 to-gray-100">
         <div className="max-w-md w-full bg-white rounded-2xl shadow-xl border-2 border-red-300 p-8 text-center">
