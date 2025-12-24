@@ -21,7 +21,9 @@ import LoadingSpinner from '@/components/ui/LoadingSpinner';
 export default function Home() {
   const { data: currentUser, isLoading: loadingUser } = useQuery({
     queryKey: ['currentUser'],
-    queryFn: () => base44.auth.me()
+    queryFn: () => base44.auth.me(),
+    staleTime: 0,
+    refetchOnMount: true
   });
 
   const { data: appSettings = [] } = useQuery({
