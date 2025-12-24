@@ -21,10 +21,13 @@ export default function GestionUtilisateurs() {
   const [confirmAction, setConfirmAction] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
 
-  const { data: users = [], isLoading: loadingUsers } = useQuery({
+  const { data: allUsers = [], isLoading: loadingUsers } = useQuery({
     queryKey: ['users'],
     queryFn: () => base44.entities.User.list('-created_date')
   });
+
+  // Filtrer les utilisateurs supprimés
+  const users = allUsers.filter(user => user.status !== 'deleted');
 
   const { data: roles = [] } = useQuery({
     queryKey: ['roles'],
