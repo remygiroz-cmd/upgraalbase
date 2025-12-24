@@ -210,23 +210,25 @@ export default function TravailDuJour() {
         title="Travail du Jour"
         subtitle={format(new Date(), "EEEE d MMMM yyyy", { locale: fr })}
         actions={
-          <>
+          <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
             <Button
               onClick={handleResetSession}
               variant="outline"
-              className="border-slate-600 text-slate-900 hover:text-slate-100 hover:bg-slate-700"
+              className="border-slate-600 text-slate-900 hover:text-slate-100 hover:bg-slate-700 w-full sm:w-auto"
             >
               <RotateCcw className="w-4 h-4 mr-2" />
-              Réinitialiser
+              <span className="hidden sm:inline">Réinitialiser</span>
+              <span className="sm:hidden">Reset</span>
             </Button>
             <Button
               onClick={handleCompleteSession}
-              className="bg-orange-600 hover:bg-orange-700"
+              className="bg-orange-600 hover:bg-orange-700 w-full sm:w-auto"
             >
               <CheckCircle2 className="w-4 h-4 mr-2" />
-              Mise en place terminée
+              <span className="hidden sm:inline">Mise en place terminée</span>
+              <span className="sm:hidden">Terminée</span>
             </Button>
-          </>
+          </div>
         }
       />
 
@@ -241,23 +243,23 @@ export default function TravailDuJour() {
 
       {/* Progress Section */}
       <div className="mb-6 p-4 bg-white rounded-2xl border-2 border-gray-300">
-        <div className="flex items-center justify-between mb-3">
-          <div className="flex items-center gap-4">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-3">
+          <div className="flex items-center gap-3 sm:gap-4">
             <span className="text-2xl font-bold text-orange-600">{completedCount}/{totalCount}</span>
-            <span className="text-gray-900 font-medium">tâches complétées</span>
+            <span className="text-gray-900 font-medium text-sm sm:text-base">tâches complétées</span>
           </div>
-          <div className="flex flex-col sm:flex-row items-end sm:items-center gap-2 sm:gap-4 text-sm">
+          <div className="flex flex-col items-start sm:items-end gap-2 text-sm w-full sm:w-auto">
             {activeSession.started_at && (
               <div className="text-gray-700 text-xs font-medium">
                 Créée le {format(new Date(activeSession.started_at), "d MMM 'à' HH:mm", { locale: fr })}
               </div>
             )}
-            <div className="flex items-center gap-4">
-              <div className="flex items-center gap-2 text-gray-700 font-medium">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4">
+              <div className="flex items-center gap-2 text-gray-700 font-medium text-xs sm:text-sm">
                 <Clock className="w-4 h-4" />
                 <span>Total: {formatTime(totalTimeSeconds)}</span>
               </div>
-              <div className="flex items-center gap-2 text-orange-600 font-semibold">
+              <div className="flex items-center gap-2 text-orange-600 font-semibold text-xs sm:text-sm">
                 <Clock className="w-4 h-4" />
                 <span>Restant: {formatTime(remainingTimeSeconds)}</span>
               </div>
@@ -277,10 +279,10 @@ export default function TravailDuJour() {
           return (
             <div key={categoryId} className="bg-white rounded-2xl border-2 border-gray-300 overflow-hidden shadow-sm">
               <div 
-                className="px-4 py-3 border-b-2 border-gray-200"
+                className="px-3 sm:px-4 py-3 border-b-2 border-gray-200"
                 style={{ borderLeftWidth: 4, borderLeftColor: categoryColor }}
               >
-                <h3 className="font-semibold text-gray-900">{categoryName}</h3>
+                <h3 className="font-semibold text-gray-900 text-sm sm:text-base break-words">{categoryName}</h3>
                 <p className="text-xs text-gray-700 font-medium">
                   {tasks.filter(t => t.is_completed).length}/{tasks.length} complété{tasks.length > 1 ? 's' : ''}
                 </p>
@@ -308,19 +310,19 @@ export default function TravailDuJour() {
 
       {/* Completion Modal */}
       <Dialog open={showCompletionModal} onOpenChange={setShowCompletionModal}>
-        <DialogContent className="bg-slate-800 border-slate-700">
+        <DialogContent className="bg-slate-800 border-slate-700 max-w-[95vw] sm:max-w-lg mx-4">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-orange-400">
-              <CheckCircle2 className="w-6 h-6" />
+            <DialogTitle className="flex items-center gap-2 text-orange-400 text-base sm:text-lg">
+              <CheckCircle2 className="w-5 h-5 sm:w-6 sm:h-6" />
               Mise en place terminée !
             </DialogTitle>
           </DialogHeader>
           <div className="py-4">
-            <p className="text-slate-300 mb-6">
+            <p className="text-slate-300 mb-6 text-sm sm:text-base">
               La session a été enregistrée dans l'historique.
             </p>
             <Link to={createPageUrl('MiseEnPlace')}>
-              <Button className="w-full bg-orange-600 hover:bg-orange-700">
+              <Button className="w-full bg-orange-600 hover:bg-orange-700 min-h-[44px]">
                 Créer une nouvelle mise en place
               </Button>
             </Link>
