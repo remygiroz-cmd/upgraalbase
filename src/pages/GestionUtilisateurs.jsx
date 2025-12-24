@@ -4,7 +4,8 @@ import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Users, Plus, Mail, UserX, UserCheck, Settings } from 'lucide-react';
+import { Users, Plus, Mail, UserX, UserCheck, Settings, Copy, CheckCircle2 } from 'lucide-react';
+import { toast } from 'sonner';
 import PageHeader from '@/components/ui/PageHeader';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import InviteUserModal from '@/components/admin/InviteUserModal';
@@ -46,9 +47,16 @@ export default function GestionUtilisateurs() {
     }
   });
 
+  const [copiedInviteUrl, setCopiedInviteUrl] = useState(null);
+
   const resendInviteMutation = useMutation({
     mutationFn: (invitationId) => base44.functions.invoke('resendInvitation', { invitationId }),
-    onSuccess: () => {
+    onSuccess: (response, invitationId) => {
+      const inviteUrl = response.data.invite_url;
+      navigator.clipboard.writeText(inviteUrl);
+      setCopiedInviteUrl(invitationId);
+      toast.success('Lien d\'invitation copié dans le presse-papier');
+      setTimeout(() => setCopiedInviteUrl(null), 3000);
       queryClient.invalidateQueries({ queryKey: ['invitations'] });
     }
   });
@@ -132,8 +140,17 @@ export default function GestionUtilisateurs() {
                   disabled={resendInviteMutation.isPending}
                   className="border-amber-600 text-amber-700 hover:bg-amber-100"
                 >
-                  <Mail className="w-4 h-4 mr-2" />
-                  Renvoyer
+                  {copiedInviteUrl === inv.id ? (
+                    <>
+                      <CheckCircle2 className="w-4 h-4 mr-2" />
+                      Copié !
+                    </>
+                  ) : (
+                    <>
+                      <Copy className="w-4 h-4 mr-2" />
+                      Copier lien
+                    </>
+                  )}
                 </Button>
               </div>
             ))}

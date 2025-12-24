@@ -36,32 +36,14 @@ Deno.serve(async (req) => {
       status: 'pending'
     });
 
-    // Send email
+    // Generate invitation URL
     const appUrl = `https://${req.headers.get('host')}`;
     const inviteUrl = `${appUrl}/invite?token=${newToken}`;
 
-    await base44.integrations.Core.SendEmail({
-      from_name: 'UpGraal',
-      to: invitation.email,
-      subject: `Nouvelle invitation à rejoindre UpGraal`,
-      body: `
-Bonjour ${invitation.first_name},
-
-Voici une nouvelle invitation à rejoindre l'application UpGraal.
-
-Pour activer votre compte, cliquez sur le lien ci-dessous :
-${inviteUrl}
-
-Ce lien est valide pendant 7 jours.
-
-À bientôt !
-L'équipe UpGraal
-      `
-    });
-
     return Response.json({ 
       success: true,
-      message: 'Invitation renvoyée avec succès'
+      invite_url: inviteUrl,
+      message: 'Invitation générée. Partagez le lien avec l\'utilisateur.'
     });
 
   } catch (error) {

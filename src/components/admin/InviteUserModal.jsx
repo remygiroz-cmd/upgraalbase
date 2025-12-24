@@ -7,7 +7,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Loader2, Mail } from 'lucide-react';
+import { Loader2, Mail, Copy, CheckCircle2 } from 'lucide-react';
+import { toast } from 'sonner';
 
 export default function InviteUserModal({ open, onClose, roles }) {
   const queryClient = useQueryClient();
@@ -25,24 +26,34 @@ export default function InviteUserModal({ open, onClose, roles }) {
     queryFn: () => base44.auth.me()
   });
 
+  const [inviteUrl, setInviteUrl] = React.useState('');
+  const [showSuccess, setShowSuccess] = React.useState(false);
+
   const inviteMutation = useMutation({
     mutationFn: async (data) => {
       return await base44.functions.invoke('inviteUser', data);
     },
-    onSuccess: () => {
+    onSuccess: (response) => {
       queryClient.invalidateQueries({ queryKey: ['invitations'] });
       queryClient.invalidateQueries({ queryKey: ['users'] });
-      onClose();
-      setForm({
-        email: '',
-        first_name: '',
-        last_name: '',
-        role_id: '',
-        team: '',
-        notes: ''
-      });
+      setInviteUrl(response.data.invite_url);
+      setShowSuccess(true);
     }
   });
+
+  const handleClose = () => {
+    onClose();
+    setShowSuccess(false);
+    setInviteUrl('');
+    setForm({
+      email: '',
+      first_name: '',
+      last_name: '',
+      role_id: '',
+      team: '',
+      notes: ''
+    });
+  };
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -53,17 +64,63 @@ export default function InviteUserModal({ open, onClose, roles }) {
     });
   };
 
+  const copyToClipboard = () => {
+    navigator.clipboard.writeText(inviteUrl);
+    toast.success('Lien copié dans le presse-papier');
+  };
+
   return (
-    <Dialog open={open} onOpenChange={onClose}>
+    <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="bg-slate-800 border-slate-700 max-w-lg">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Mail className="w-5 h-5 text-orange-500" />
-            Inviter un utilisateur
+            {showSuccess ? (
+              <>
+                <CheckCircle2 className="w-5 h-5 text-green-500" />
+                Invitation créée
+              </>
+            ) : (
+              <>
+                <Mail className="w-5 h-5 text-orange-500" />
+                Inviter un utilisateur
+              </>
+            )}
           </DialogTitle>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        {showSuccess ? (
+          <div className="space-y-4">
+            <div className="bg-green-500/10 border border-green-500/50 rounded-lg p-4">
+              <p className="text-sm text-green-400 mb-3">
+                L'invitation a été créée avec succès. Copiez le lien ci-dessous et envoyez-le à l'utilisateur par email ou message.
+              </p>
+              <div className="flex gap-2">
+                <Input
+                  value={inviteUrl}
+                  readOnly
+                  className="bg-slate-700 border-slate-600 text-xs"
+                />
+                <Button
+                  type="button"
+                  onClick={copyToClipboard}
+                  className="bg-orange-600 hover:bg-orange-700 flex-shrink-0"
+                >
+                  <Copy className="w-4 h-4 mr-2" />
+                  Copier
+                </Button>
+              </div>
+            </div>
+            <div className="flex justify-end">
+              <Button
+                onClick={handleClose}
+                className="bg-slate-700 hover:bg-slate-600"
+              >
+                Fermer
+              </Button>
+            </div>
+          </div>
+        ) : (
+          <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div>
               <Label htmlFor="first_name">Prénom *</Label>
@@ -143,25 +200,26 @@ export default function InviteUserModal({ open, onClose, roles }) {
             />
           </div>
 
-          <div className="flex justify-end gap-3 pt-4 border-t border-slate-700">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={onClose}
-              className="border-slate-600 text-slate-900 hover:text-slate-100 hover:bg-slate-700"
-            >
-              Annuler
-            </Button>
-            <Button
-              type="submit"
-              disabled={inviteMutation.isPending}
-              className="bg-orange-600 hover:bg-orange-700"
-            >
-              {inviteMutation.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-              Envoyer l'invitation
-            </Button>
-          </div>
-        </form>
+            <div className="flex justify-end gap-3 pt-4 border-t border-slate-700">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={handleClose}
+                className="border-slate-600 text-slate-900 hover:text-slate-100 hover:bg-slate-700"
+              >
+                Annuler
+              </Button>
+              <Button
+                type="submit"
+                disabled={inviteMutation.isPending}
+                className="bg-orange-600 hover:bg-orange-700"
+              >
+                {inviteMutation.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                Créer l'invitation
+              </Button>
+            </div>
+          </form>
+        )}
       </DialogContent>
     </Dialog>
   );
