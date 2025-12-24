@@ -85,12 +85,12 @@ export default function Equipe() {
 
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="mb-6">
-        <TabsList className="bg-slate-800 p-1">
-          <TabsTrigger value="planning" className="data-[state=active]:bg-slate-700">
+        <TabsList className="bg-white border-2 border-gray-300 p-1">
+          <TabsTrigger value="planning" className="data-[state=active]:bg-gray-100 text-gray-900">
             <Calendar className="w-4 h-4 mr-2" />
             Planning
           </TabsTrigger>
-          <TabsTrigger value="annuaire" className="data-[state=active]:bg-slate-700">
+          <TabsTrigger value="annuaire" className="data-[state=active]:bg-gray-100 text-gray-900">
             <Users className="w-4 h-4 mr-2" />
             Annuaire
           </TabsTrigger>
