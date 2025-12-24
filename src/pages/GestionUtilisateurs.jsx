@@ -397,8 +397,8 @@ export default function GestionUtilisateurs() {
         onConfirm={confirmAction?.onConfirm}
         variant={confirmAction?.type === 'delete' ? 'danger' : confirmAction?.type === 'activate' ? 'info' : 'warning'}
         confirmText={
-          confirmAction?.type === 'activate' ? 'Activer' :
-          confirmAction?.type === 'delete' ? 'Supprimer' :
+          confirmAction?.type === 'activate' ? (confirmAction?.user?.status === 'deleted' ? 'Réactiver' : 'Activer') :
+          confirmAction?.type === 'delete' ? 'Archiver' :
           'Désactiver'
         }
       />
