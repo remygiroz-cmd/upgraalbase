@@ -72,33 +72,33 @@ export default function Parametres() {
       <div className="max-w-4xl mx-auto">
         <Tabs defaultValue="profile" className="space-y-6">
           <div className="overflow-x-auto -mx-4 px-4 pb-2 sm:mx-0 sm:px-0 scrollbar-hide">
-            <TabsList className="bg-slate-800 p-1 inline-flex w-auto">
-              <TabsTrigger value="profile" className="data-[state=active]:bg-slate-700 whitespace-nowrap text-xs px-3 py-2">
-                <User className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1.5 sm:mr-2" />
-                <span className="hidden xs:inline">Profil</span>
+            <TabsList className="bg-white border-2 border-gray-300 p-1 inline-flex w-auto">
+              <TabsTrigger value="profile" className="data-[state=active]:bg-gray-100 text-gray-900 whitespace-nowrap text-sm px-4 py-2.5">
+                <User className="w-4 h-4 mr-2" />
+                <span>Profil</span>
               </TabsTrigger>
-              <TabsTrigger value="notifications" className="data-[state=active]:bg-slate-700 whitespace-nowrap text-xs px-3 py-2">
-                <Bell className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1.5 sm:mr-2" />
-                <span className="hidden xs:inline">Notifs</span>
+              <TabsTrigger value="notifications" className="data-[state=active]:bg-gray-100 text-gray-900 whitespace-nowrap text-sm px-4 py-2.5">
+                <Bell className="w-4 h-4 mr-2" />
+                <span>Notifications</span>
               </TabsTrigger>
-              <TabsTrigger value="interface" className="data-[state=active]:bg-slate-700 whitespace-nowrap text-xs px-3 py-2">
-                <Palette className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1.5 sm:mr-2" />
-                <span className="hidden xs:inline">UI</span>
+              <TabsTrigger value="interface" className="data-[state=active]:bg-gray-100 text-gray-900 whitespace-nowrap text-sm px-4 py-2.5">
+                <Palette className="w-4 h-4 mr-2" />
+                <span>Interface</span>
               </TabsTrigger>
-              <TabsTrigger value="session" className="data-[state=active]:bg-slate-700 whitespace-nowrap text-xs px-3 py-2">
-                <Clock className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1.5 sm:mr-2" />
-                <span className="hidden xs:inline">Session</span>
+              <TabsTrigger value="session" className="data-[state=active]:bg-gray-100 text-gray-900 whitespace-nowrap text-sm px-4 py-2.5">
+                <Clock className="w-4 h-4 mr-2" />
+                <span>Session</span>
               </TabsTrigger>
               {isAdmin && (
-                <TabsTrigger value="roles" className="data-[state=active]:bg-slate-700 whitespace-nowrap text-xs px-3 py-2">
-                  <Shield className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1.5 sm:mr-2" />
-                  <span className="hidden xs:inline">Rôles</span>
+                <TabsTrigger value="roles" className="data-[state=active]:bg-gray-100 text-gray-900 whitespace-nowrap text-sm px-4 py-2.5">
+                  <Shield className="w-4 h-4 mr-2" />
+                  <span>Rôles</span>
                 </TabsTrigger>
               )}
               {isAdmin && (
-                <TabsTrigger value="users" className="data-[state=active]:bg-slate-700 whitespace-nowrap text-xs px-3 py-2">
-                  <UsersIcon className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1.5 sm:mr-2" />
-                  <span className="hidden xs:inline">Users</span>
+                <TabsTrigger value="users" className="data-[state=active]:bg-gray-100 text-gray-900 whitespace-nowrap text-sm px-4 py-2.5">
+                  <UsersIcon className="w-4 h-4 mr-2" />
+                  <span>Utilisateurs</span>
                 </TabsTrigger>
               )}
             </TabsList>
@@ -110,11 +110,6 @@ export default function Parametres() {
             .scrollbar-hide {
               -ms-overflow-style: none;
               scrollbar-width: none;
-            }
-            @media (min-width: 475px) {
-              .xs\\:inline {
-                display: inline;
-              }
             }
           `}</style>
 
