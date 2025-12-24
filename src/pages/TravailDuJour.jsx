@@ -96,6 +96,24 @@ export default function TravailDuJour() {
     });
   };
 
+  const handleUncompleteTask = (taskIndex) => {
+    if (!activeSession) return;
+    
+    const updatedTasks = [...activeSession.tasks];
+    updatedTasks[taskIndex] = {
+      ...updatedTasks[taskIndex],
+      is_completed: false,
+      completed_by: undefined,
+      completed_by_name: undefined,
+      completed_at: undefined
+    };
+
+    updateSessionMutation.mutate({
+      id: activeSession.id,
+      data: { tasks: updatedTasks }
+    });
+  };
+
   // Auto-complete session when all tasks are done
   useEffect(() => {
     if (!activeSession || activeSession.status === 'completed') return;
@@ -295,6 +313,7 @@ export default function TravailDuJour() {
                       key={task.originalIndex}
                       task={task}
                       onComplete={() => handleCompleteTask(task.originalIndex)}
+                      onUncomplete={() => handleUncompleteTask(task.originalIndex)}
                       onRemove={() => handleRemoveTask(task.originalIndex)}
                       allTasks={tasks}
                       taskEntities={tasks}
@@ -343,7 +362,7 @@ export default function TravailDuJour() {
   );
 }
 
-function WorkTaskCard({ task, onComplete, onRemove, allTasks, taskEntities, dayOfWeek }) {
+function WorkTaskCard({ task, onComplete, onUncomplete, onRemove, allTasks, taskEntities, dayOfWeek }) {
   const { data: tasks = [] } = useQuery({
     queryKey: ['tasks'],
     queryFn: () => base44.entities.Task.list()
@@ -456,7 +475,15 @@ function WorkTaskCard({ task, onComplete, onRemove, allTasks, taskEntities, dayO
               </>
             )}
             {task.is_completed && (
-              <Check className="w-6 h-6 text-orange-600" />
+              <Button
+                size="sm"
+                onClick={onUncomplete}
+                variant="outline"
+                className="border-orange-600 text-orange-600 hover:bg-orange-50 min-h-[44px]"
+              >
+                <RotateCcw className="w-4 h-4 mr-2" />
+                Annuler
+              </Button>
             )}
           </div>
         </div>
