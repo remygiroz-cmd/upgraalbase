@@ -71,41 +71,38 @@ export default function Parametres() {
 
       <div className="max-w-4xl mx-auto">
         <Tabs defaultValue="profile" className="space-y-6">
-          <TabsList className="bg-slate-800 p-1 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:flex lg:flex-wrap gap-1">
-            <TabsTrigger value="profile" className="data-[state=active]:bg-slate-700 text-xs sm:text-sm">
-              <User className="w-4 h-4 mr-1 sm:mr-2" />
-              <span className="hidden sm:inline">Profil</span>
-              <span className="sm:hidden">Profil</span>
-            </TabsTrigger>
-            <TabsTrigger value="notifications" className="data-[state=active]:bg-slate-700 text-xs sm:text-sm">
-              <Bell className="w-4 h-4 mr-1 sm:mr-2" />
-              <span className="hidden sm:inline">Notifications</span>
-              <span className="sm:hidden">Notif</span>
-            </TabsTrigger>
-            <TabsTrigger value="interface" className="data-[state=active]:bg-slate-700 text-xs sm:text-sm">
-              <Palette className="w-4 h-4 mr-1 sm:mr-2" />
-              <span className="hidden sm:inline">Interface</span>
-              <span className="sm:hidden">UI</span>
-            </TabsTrigger>
-            <TabsTrigger value="session" className="data-[state=active]:bg-slate-700 text-xs sm:text-sm">
-              <Clock className="w-4 h-4 mr-1 sm:mr-2" />
-              <span className="hidden sm:inline">Session</span>
-              <span className="sm:hidden">Session</span>
-            </TabsTrigger>
-            {isAdmin && (
-              <TabsTrigger value="roles" className="data-[state=active]:bg-slate-700 text-xs sm:text-sm">
-                <Shield className="w-4 h-4 mr-1 sm:mr-2" />
-                <span>Rôles</span>
+          <div className="overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0">
+            <TabsList className="bg-slate-800 p-1 inline-flex w-auto min-w-full sm:min-w-0">
+              <TabsTrigger value="profile" className="data-[state=active]:bg-slate-700 whitespace-nowrap">
+                <User className="w-4 h-4 mr-2" />
+                Profil
               </TabsTrigger>
-            )}
-            {isAdmin && (
-              <TabsTrigger value="users" className="data-[state=active]:bg-slate-700 text-xs sm:text-sm">
-                <UsersIcon className="w-4 h-4 mr-1 sm:mr-2" />
-                <span className="hidden sm:inline">Utilisateurs</span>
-                <span className="sm:hidden">Users</span>
+              <TabsTrigger value="notifications" className="data-[state=active]:bg-slate-700 whitespace-nowrap">
+                <Bell className="w-4 h-4 mr-2" />
+                Notifications
               </TabsTrigger>
-            )}
-          </TabsList>
+              <TabsTrigger value="interface" className="data-[state=active]:bg-slate-700 whitespace-nowrap">
+                <Palette className="w-4 h-4 mr-2" />
+                Interface
+              </TabsTrigger>
+              <TabsTrigger value="session" className="data-[state=active]:bg-slate-700 whitespace-nowrap">
+                <Clock className="w-4 h-4 mr-2" />
+                Session
+              </TabsTrigger>
+              {isAdmin && (
+                <TabsTrigger value="roles" className="data-[state=active]:bg-slate-700 whitespace-nowrap">
+                  <Shield className="w-4 h-4 mr-2" />
+                  Rôles
+                </TabsTrigger>
+              )}
+              {isAdmin && (
+                <TabsTrigger value="users" className="data-[state=active]:bg-slate-700 whitespace-nowrap">
+                  <UsersIcon className="w-4 h-4 mr-2" />
+                  Utilisateurs
+                </TabsTrigger>
+              )}
+            </TabsList>
+          </div>
 
           {/* Profile Tab */}
           <TabsContent value="profile" className="space-y-6">
