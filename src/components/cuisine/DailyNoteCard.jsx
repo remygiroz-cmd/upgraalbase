@@ -20,19 +20,19 @@ export default function DailyNoteCard({ note }) {
     queryFn: () => base44.auth.me()
   });
 
-  const hasRead = note.read_by?.some(r => r.user_email === currentUser?.email);
+  const hasRead = note.read_by?.some((r) => r.user_email === currentUser?.email);
   const isAuthor = note.author === currentUser?.email;
 
   const markAsReadMutation = useMutation({
     mutationFn: async () => {
       const updatedReadBy = [
-        ...(note.read_by || []),
-        {
-          user_email: currentUser?.email,
-          user_name: currentUser?.full_name || currentUser?.email,
-          read_at: new Date().toISOString()
-        }
-      ];
+      ...(note.read_by || []),
+      {
+        user_email: currentUser?.email,
+        user_name: currentUser?.full_name || currentUser?.email,
+        read_at: new Date().toISOString()
+      }];
+
       return base44.entities.DailyNote.update(note.id, { read_by: updatedReadBy });
     },
     onSuccess: () => {
@@ -64,8 +64,8 @@ export default function DailyNoteCard({ note }) {
     const expires = new Date(note.expires_at);
     const diff = expires - now;
     const hours = Math.floor(diff / (1000 * 60 * 60));
-    const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-    
+    const minutes = Math.floor(diff % (1000 * 60 * 60) / (1000 * 60));
+
     if (hours > 0) {
       return `${hours}h${minutes > 0 ? ` ${minutes}min` : ''} restantes`;
     }
@@ -79,27 +79,27 @@ export default function DailyNoteCard({ note }) {
         animate={{ opacity: 1, y: 0, scale: 1 }}
         exit={{ opacity: 0, scale: 0.95 }}
         className={cn(
-          "relative p-4 sm:p-5 rounded-2xl border-2 shadow-xl",
+          "relative p-5 rounded-2xl border-2 shadow-xl",
           "bg-gradient-to-br from-orange-600/20 to-orange-700/20",
           "border-orange-500/50"
-        )}
-      >
-        <div className="absolute inset-0 bg-gradient-to-br from-orange-600/10 to-transparent rounded-2xl" />
+        )}>
+
+        <div className="bg-slate-200 rounded-2xl absolute inset-0 from-orange-600/10 to-transparent" />
         
-        <div className="relative">
-          <div className="flex items-start justify-between gap-3 sm:gap-4 mb-3">
-            <div className="flex items-start sm:items-center gap-2 sm:gap-3 flex-1 min-w-0">
-              <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-orange-600 flex items-center justify-center flex-shrink-0">
-                <Bell className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
+        <div className="text-slate-900 relative">
+          <div className="flex items-start justify-between gap-4 mb-3">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-orange-600 flex items-center justify-center">
+                <Bell className="w-5 h-5 text-white" />
               </div>
-              <div className="flex-1 min-w-0">
-                <p className="font-semibold text-white text-sm sm:text-base">Note d'équipe</p>
-                <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 text-xs text-orange-200 mt-1">
-                  <span className="truncate max-w-[120px] sm:max-w-none">{note.author_name}</span>
+              <div>
+                <p className="text-slate-950 text-sm font-semibold sm:text-base">Note d'équipe</p>
+                <div className="flex items-center gap-2 text-xs text-orange-200 mt-1">
+                  <span className="text-slate-400 truncate max-w-[120px] sm:max-w-none">{note.author_name}</span>
                   <span>•</span>
-                  <span className="whitespace-nowrap">{format(new Date(note.created_date), 'HH:mm', { locale: fr })}</span>
+                  <span className="text-slate-400 whitespace-nowrap">{format(new Date(note.created_date), 'HH:mm', { locale: fr })}</span>
                   <span>•</span>
-                  <div className="flex items-center gap-1 whitespace-nowrap">
+                  <div className="text-slate-500 flex items-center gap-1 whitespace-nowrap">
                     <Clock className="w-3 h-3" />
                     {timeLeft()}
                   </div>
@@ -107,77 +107,77 @@ export default function DailyNoteCard({ note }) {
               </div>
             </div>
             
-            {!isAuthor && (
-              <Button
-                size="sm"
-                variant="ghost"
-                onClick={handleClose}
-                className="text-orange-200 hover:text-white hover:bg-orange-600/30 -mt-1 -mr-1 flex-shrink-0 min-h-[44px] min-w-[44px]"
-              >
+            {!isAuthor &&
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={handleClose}
+              className="text-orange-200 hover:text-white hover:bg-orange-600/30 -mt-1 -mr-1">
+
                 <X className="w-5 h-5" />
               </Button>
-            )}
+            }
           </div>
 
-          <p className="text-white text-sm sm:text-base leading-relaxed break-words whitespace-pre-wrap overflow-wrap-anywhere">
+          <p className="text-slate-950 text-sm leading-relaxed sm:text-base break-words whitespace-pre-wrap overflow-wrap-anywhere">
             {note.content}
           </p>
 
-          {isAuthor && (
-            <div className="mt-4 pt-4 border-t border-orange-500/30 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2">
+          {isAuthor &&
+          <div className="mt-4 pt-4 border-t border-orange-500/30 flex items-center justify-between gap-2">
               <Button
-                size="sm"
-                variant="ghost"
-                onClick={() => setShowReaders(true)}
-                className="text-orange-200 hover:text-white hover:bg-orange-600/30 text-xs min-h-[44px] justify-start sm:justify-center"
-              >
+              size="sm"
+              variant="ghost"
+              onClick={() => setShowReaders(true)} className="bg-slate-400 text-orange-200 px-3 text-xs font-medium rounded-md inline-flex items-center gap-2 whitespace-nowrap transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 h-8 hover:text-white hover:bg-orange-600/30 min-h-[44px] justify-start sm:justify-center">
+
+
                 <Eye className="w-4 h-4 mr-2" />
                 {note.read_by?.length || 0} personne{(note.read_by?.length || 0) > 1 ? 's ont' : ' a'} lu
               </Button>
               <Button
-                size="sm"
-                variant="ghost"
-                onClick={() => setConfirmDelete(true)}
-                className="text-red-300 hover:text-red-100 hover:bg-red-600/30 text-xs min-h-[44px] justify-start sm:justify-center"
-              >
+              size="sm"
+              variant="ghost"
+              onClick={() => setConfirmDelete(true)} className="text-slate-900 px-3 text-xs font-medium rounded-md inline-flex items-center gap-2 whitespace-nowrap transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 h-8 hover:text-red-100 hover:bg-red-600/30 min-h-[44px] justify-start sm:justify-center">
+
+
                 <Trash2 className="w-4 h-4 mr-2" />
                 Supprimer
               </Button>
             </div>
-          )}
+          }
         </div>
       </motion.div>
 
       {/* Readers Modal */}
       <Dialog open={showReaders} onOpenChange={setShowReaders}>
-        <DialogContent className="bg-slate-800 border-slate-700 max-w-[95vw] sm:max-w-md mx-4">
+        <DialogContent className="bg-slate-800 border-slate-700 max-w-md">
           <DialogHeader>
-            <DialogTitle className="text-base sm:text-lg">Lecture de la note</DialogTitle>
+            <DialogTitle>Lecture de la note</DialogTitle>
           </DialogHeader>
           
-          <div className="space-y-2 max-h-[60vh] overflow-y-auto">
-            {note.read_by?.length > 0 ? (
-              note.read_by.map((reader, index) => (
-                <div 
-                  key={index}
-                  className="flex items-center justify-between p-3 bg-slate-700/50 rounded-lg gap-2"
-                >
-                  <div className="flex items-center gap-3 min-w-0 flex-1">
-                    <div className="w-8 h-8 rounded-full bg-green-600 flex items-center justify-center text-xs font-medium text-white flex-shrink-0">
+          <div className="space-y-2">
+            {note.read_by?.length > 0 ?
+            note.read_by.map((reader, index) =>
+            <div
+              key={index}
+              className="flex items-center justify-between p-3 bg-slate-700/50 rounded-lg">
+
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-full bg-green-600 flex items-center justify-center text-xs font-medium text-white">
                       {reader.user_name.charAt(0).toUpperCase()}
                     </div>
-                    <span className="text-sm truncate">{reader.user_name}</span>
+                    <span className="text-sm">{reader.user_name}</span>
                   </div>
-                  <span className="text-xs text-slate-400 whitespace-nowrap">
+                  <span className="text-xs text-slate-400">
                     {format(new Date(reader.read_at), "HH:mm", { locale: fr })}
                   </span>
                 </div>
-              ))
-            ) : (
-              <p className="text-center text-slate-400 py-4 text-sm">
+            ) :
+
+            <p className="text-center text-slate-400 py-4">
                 Personne n'a encore lu cette note
               </p>
-            )}
+            }
           </div>
         </DialogContent>
       </Dialog>
@@ -190,8 +190,8 @@ export default function DailyNoteCard({ note }) {
         description="Cette note sera supprimée pour tous les utilisateurs. Cette action est irréversible."
         onConfirm={() => deleteNoteMutation.mutate()}
         variant="danger"
-        confirmText="Supprimer"
-      />
-    </>
-  );
+        confirmText="Supprimer" />
+
+    </>);
+
 }
