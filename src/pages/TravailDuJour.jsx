@@ -391,7 +391,7 @@ function WorkTaskCard({ task, onComplete, onUncomplete, onRemove, allTasks, task
           : "bg-white border-gray-300"
       )}
     >
-      <div className="flex gap-3">
+      <div className="flex flex-col sm:flex-row gap-3">
         {/* Task Image */}
         {taskDetails?.image_url && (
           <div className="flex-shrink-0">
@@ -399,18 +399,18 @@ function WorkTaskCard({ task, onComplete, onUncomplete, onRemove, allTasks, task
               src={taskDetails.image_url} 
               alt={task.task_name}
               className={cn(
-                "w-20 h-20 sm:w-24 sm:h-24 rounded-lg object-cover border-2",
+                "w-full sm:w-20 sm:h-20 h-32 rounded-lg object-cover border-2",
                 task.is_completed ? "border-orange-600/30 opacity-60" : "border-slate-600"
               )}
             />
           </div>
         )}
 
-        <div className="flex-1 flex flex-col gap-3">
+        <div className="flex-1 flex flex-col gap-3 min-w-0">
           <div className="flex-1">
             <div className="flex items-start gap-2 flex-wrap mb-2">
               <h4 className={cn(
-                  "font-semibold text-gray-900 text-base flex-shrink-0",
+                  "font-semibold text-gray-900 text-sm sm:text-base break-words",
                   task.is_completed && "line-through text-gray-500"
                 )}>
                   {task.task_name}
@@ -424,8 +424,8 @@ function WorkTaskCard({ task, onComplete, onUncomplete, onRemove, allTasks, task
             
             <div className="flex flex-wrap gap-2">
               {hasQuantity && (
-                <span className="px-2 py-1 rounded-lg bg-indigo-600/20 text-indigo-400 text-xs font-medium">
-                  À faire : {task.quantity_to_produce} {taskDetails?.unit || 'unités'}
+                <span className="px-2 py-1 rounded-lg bg-indigo-600/20 text-indigo-400 text-xs font-medium break-words">
+                  Quantité : {task.quantity_to_produce} {taskDetails?.unit || ''}
                 </span>
               )}
               {binaryMultiplier && binaryMultiplier > 0 && (
@@ -436,38 +436,38 @@ function WorkTaskCard({ task, onComplete, onUncomplete, onRemove, allTasks, task
             </div>
             
             {task.ad_hoc_comment && (
-              <p className="text-sm text-gray-700 mt-2 italic">
+              <p className="text-xs sm:text-sm text-gray-700 mt-2 italic break-words">
                 {task.ad_hoc_comment}
               </p>
             )}
             
             {task.is_completed && task.completed_by_name && (
-              <div className="mt-2 flex items-center gap-2">
-                <div className="w-6 h-6 rounded-full bg-orange-600 flex items-center justify-center text-xs font-medium text-white">
+              <div className="mt-2 flex items-center gap-2 flex-wrap">
+                <div className="w-6 h-6 rounded-full bg-orange-600 flex items-center justify-center text-xs font-medium text-white flex-shrink-0">
                   {task.completed_by_name.charAt(0).toUpperCase()}
                 </div>
-                <span className="text-sm text-gray-900 font-medium">{task.completed_by_name}</span>
-                <span className="text-xs text-gray-700">
+                <span className="text-xs sm:text-sm text-gray-900 font-medium truncate">{task.completed_by_name}</span>
+                <span className="text-xs text-gray-700 whitespace-nowrap">
                   {format(new Date(task.completed_at), 'HH:mm')}
                 </span>
               </div>
             )}
           </div>
 
-          <div className="flex items-center gap-2 justify-end">
+          <div className="flex items-center gap-2">
             {!task.is_completed && (
               <>
                 <Button
                   size="sm"
                   variant="ghost"
                   onClick={onRemove}
-                  className="text-gray-600 hover:text-red-600 hover:bg-red-50 min-h-[44px] px-3"
+                  className="text-gray-600 hover:text-red-600 hover:bg-red-50 min-h-[44px] min-w-[44px] px-2 sm:px-3"
                 >
                   <X className="w-4 h-4" />
                 </Button>
                 <Button
                   onClick={onComplete}
-                  className="bg-orange-600 hover:bg-orange-700 min-h-[44px] flex-1 sm:flex-none"
+                  className="bg-orange-600 hover:bg-orange-700 min-h-[44px] flex-1 text-sm"
                 >
                   <Check className="w-4 h-4 mr-2" />
                   Terminé
@@ -479,7 +479,7 @@ function WorkTaskCard({ task, onComplete, onUncomplete, onRemove, allTasks, task
                 size="sm"
                 onClick={onUncomplete}
                 variant="outline"
-                className="border-orange-600 text-orange-600 hover:bg-orange-50 min-h-[44px]"
+                className="border-orange-600 text-orange-600 hover:bg-orange-50 min-h-[44px] w-full sm:w-auto text-sm"
               >
                 <RotateCcw className="w-4 h-4 mr-2" />
                 Annuler
