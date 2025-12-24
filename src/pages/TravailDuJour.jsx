@@ -310,19 +310,19 @@ export default function TravailDuJour() {
 
       {/* Completion Modal */}
       <Dialog open={showCompletionModal} onOpenChange={setShowCompletionModal}>
-        <DialogContent className="bg-slate-800 border-slate-700 max-w-[95vw] sm:max-w-lg mx-4">
+        <DialogContent className="bg-slate-800 border-slate-700 w-[calc(100vw-2rem)] max-w-md sm:max-w-lg">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-orange-400 text-base sm:text-lg">
-              <CheckCircle2 className="w-5 h-5 sm:w-6 sm:h-6" />
-              Mise en place terminée !
+            <DialogTitle className="flex items-center gap-2 text-orange-400 text-sm sm:text-base break-words">
+              <CheckCircle2 className="w-5 h-5 sm:w-6 sm:h-6 flex-shrink-0" />
+              <span>Mise en place terminée !</span>
             </DialogTitle>
           </DialogHeader>
-          <div className="py-4">
-            <p className="text-slate-300 mb-6 text-sm sm:text-base">
+          <div className="py-3 sm:py-4">
+            <p className="text-slate-300 mb-4 sm:mb-6 text-xs sm:text-sm break-words">
               La session a été enregistrée dans l'historique.
             </p>
             <Link to={createPageUrl('MiseEnPlace')}>
-              <Button className="w-full bg-orange-600 hover:bg-orange-700 min-h-[44px]">
+              <Button className="w-full bg-orange-600 hover:bg-orange-700 min-h-[44px] text-sm sm:text-base">
                 Créer une nouvelle mise en place
               </Button>
             </Link>
