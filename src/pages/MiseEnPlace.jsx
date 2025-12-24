@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { ClipboardList, Plus, GripVertical, Clock, Hash, ToggleLeft, Pencil, Trash2, Play, Bell } from 'lucide-react';
+import SuccessOverlay from '@/components/cuisine/SuccessOverlay';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
@@ -31,6 +32,7 @@ export default function MiseEnPlace() {
   const [showAdHocModal, setShowAdHocModal] = useState(false);
   const [adHocTasks, setAdHocTasks] = useState([]);
   const [showNoteModal, setShowNoteModal] = useState(false);
+  const [showSuccessOverlay, setShowSuccessOverlay] = useState(false);
   const today = format(new Date(), 'yyyy-MM-dd');
   const dayOfWeek = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'][new Date().getDay()];
 
@@ -182,6 +184,7 @@ export default function MiseEnPlace() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['workSessions'] });
       setSelectedTasks(new Set());
+      setShowSuccessOverlay(true);
     }
   });
 
@@ -190,6 +193,7 @@ export default function MiseEnPlace() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['workSessions'] });
       setSelectedTasks(new Set());
+      setShowSuccessOverlay(true);
     }
   });
 
@@ -674,6 +678,12 @@ export default function MiseEnPlace() {
         description={confirmDialog.description}
         onConfirm={confirmDialog.onConfirm}
         variant="warning"
+      />
+
+      {/* Success Overlay */}
+      <SuccessOverlay
+        show={showSuccessOverlay}
+        onComplete={() => setShowSuccessOverlay(false)}
       />
     </div>
   );
