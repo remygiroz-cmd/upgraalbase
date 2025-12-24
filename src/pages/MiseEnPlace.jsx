@@ -784,6 +784,7 @@ function CategoryColumn({ categoryId, title, color, tasks, onEditTask, onDeleteT
                       stockValue={stockInputs?.[task.id]}
                       onStockChange={(value) => onStockInput?.(task.id, value)}
                       dayOfWeek={dayOfWeek}
+                      isAdmin={currentUser?.role === 'admin'}
                     />
                   </div>
                 )}
@@ -813,7 +814,7 @@ function CategoryColumn({ categoryId, title, color, tasks, onEditTask, onDeleteT
   );
 }
 
-function TaskCard({ task, onEdit, onDelete, onStartStopwatch, isSelected, onToggleSelection, dragHandleProps, isDragging, stockValue, onStockChange, dayOfWeek }) {
+function TaskCard({ task, onEdit, onDelete, onStartStopwatch, isSelected, onToggleSelection, dragHandleProps, isDragging, stockValue, onStockChange, dayOfWeek, isAdmin }) {
   const [confirmDelete, setConfirmDelete] = useState(false);
   
   const formatDuration = () => {
@@ -929,26 +930,30 @@ function TaskCard({ task, onEdit, onDelete, onStartStopwatch, isSelected, onTogg
           >
             <Play className="w-4 h-4" />
           </button>
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onEdit();
-            }}
-            className="p-1.5 sm:p-2 rounded-lg hover:bg-blue-100 text-gray-600 hover:text-blue-600 transition-colors active:scale-95"
-            title="Modifier"
-          >
-            <Pencil className="w-4 h-4" />
-          </button>
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              setConfirmDelete(true);
-            }}
-            className="p-1.5 sm:p-2 rounded-lg hover:bg-red-100 text-gray-600 hover:text-red-600 transition-colors active:scale-95"
-            title="Supprimer"
-          >
-            <Trash2 className="w-4 h-4" />
-          </button>
+          {isAdmin && (
+            <>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onEdit();
+                }}
+                className="p-1.5 sm:p-2 rounded-lg hover:bg-blue-100 text-gray-600 hover:text-blue-600 transition-colors active:scale-95"
+                title="Modifier"
+              >
+                <Pencil className="w-4 h-4" />
+              </button>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setConfirmDelete(true);
+                }}
+                className="p-1.5 sm:p-2 rounded-lg hover:bg-red-100 text-gray-600 hover:text-red-600 transition-colors active:scale-95"
+                title="Supprimer"
+              >
+                <Trash2 className="w-4 h-4" />
+              </button>
+            </>
+          )}
         </div>
       </div>
 
