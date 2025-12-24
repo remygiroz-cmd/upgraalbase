@@ -122,23 +122,23 @@ export default function Stocks() {
         title="Inventaires & Commandes"
         subtitle="Gestion des stocks et fournisseurs"
         actions={
-          <>
+          <div className="flex flex-wrap gap-2">
             <Button
               variant="outline"
               onClick={() => setShowSupplierForm(true)}
-              className="border-slate-600 text-slate-900 hover:text-slate-100 hover:bg-slate-700"
+              className="border-slate-600 text-slate-900 hover:text-slate-100 hover:bg-slate-700 min-h-[44px]"
             >
-              <Truck className="w-4 h-4 mr-2" />
-              Fournisseur
+              <Truck className="w-4 h-4 sm:mr-2" />
+              <span className="hidden sm:inline">Fournisseur</span>
             </Button>
             <Button
               onClick={() => setShowProductForm(true)}
-              className="bg-orange-600 hover:bg-orange-700"
+              className="bg-orange-600 hover:bg-orange-700 min-h-[44px]"
             >
-              <Plus className="w-4 h-4 mr-2" />
-              Produit
+              <Plus className="w-4 h-4 sm:mr-2" />
+              <span className="hidden sm:inline">Produit</span>
             </Button>
-          </>
+          </div>
         }
       />
 
@@ -167,7 +167,7 @@ export default function Stocks() {
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Rechercher un produit..."
-              className="pl-10 bg-slate-800 border-slate-700"
+              className="pl-10 bg-slate-800 border-slate-700 min-h-[44px]"
             />
           </div>
 
@@ -192,52 +192,54 @@ export default function Stocks() {
                 <div
                   key={product.id}
                   className={cn(
-                    "p-4 rounded-xl border-2 flex items-center gap-4 transition-all",
+                    "p-3 sm:p-4 rounded-xl border-2 flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 transition-all",
                     product.need > 0
                       ? "bg-amber-50 border-amber-400"
                       : "bg-white border-gray-300"
                   )}
                 >
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <h3 className="font-semibold text-gray-900 truncate">{product.name}</h3>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <h3 className="font-semibold text-gray-900 text-sm sm:text-base">{product.name}</h3>
                       {product.need > 0 && (
-                        <Badge className="bg-amber-600/20 text-amber-400 border-amber-600/30">
+                        <Badge className="bg-amber-600/20 text-amber-400 border-amber-600/30 text-xs">
                           <AlertTriangle className="w-3 h-3 mr-1" />
                           À commander
                         </Badge>
                       )}
                     </div>
-                    <p className="text-sm text-gray-700">
+                    <p className="text-xs sm:text-sm text-gray-700 mt-1">
                       Par-level: {product.parLevel} {product.unit} • Besoin: {product.need} {product.unit}
                     </p>
                   </div>
 
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={() => handleStockChange(product, -1)}
-                      className="w-10 h-10 rounded-lg bg-gray-300 hover:bg-gray-400 flex items-center justify-center text-lg font-bold text-gray-900"
-                    >
-                      -
-                    </button>
-                    <div className="w-16 text-center">
-                      <p className="text-xl font-bold text-gray-900">{product.current_stock || 0}</p>
-                      <p className="text-xs text-gray-700">{product.unit}</p>
+                  <div className="flex items-center justify-between sm:justify-start gap-3">
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => handleStockChange(product, -1)}
+                        className="w-11 h-11 rounded-lg bg-gray-300 hover:bg-gray-400 flex items-center justify-center text-lg font-bold text-gray-900 active:scale-95 transition-transform"
+                      >
+                        -
+                      </button>
+                      <div className="w-16 text-center">
+                        <p className="text-xl font-bold text-gray-900">{product.current_stock || 0}</p>
+                        <p className="text-xs text-gray-700">{product.unit}</p>
+                      </div>
+                      <button
+                        onClick={() => handleStockChange(product, 1)}
+                        className="w-11 h-11 rounded-lg bg-gray-300 hover:bg-gray-400 flex items-center justify-center text-lg font-bold text-gray-900 active:scale-95 transition-transform"
+                      >
+                        +
+                      </button>
                     </div>
+
                     <button
-                      onClick={() => handleStockChange(product, 1)}
-                      className="w-10 h-10 rounded-lg bg-gray-300 hover:bg-gray-400 flex items-center justify-center text-lg font-bold text-gray-900"
+                      onClick={() => handleEditProduct(product)}
+                      className="p-2.5 rounded-lg hover:bg-gray-100 text-gray-600 hover:text-gray-900 active:scale-95 transition-transform"
                     >
-                      +
+                      <Pencil className="w-5 h-5" />
                     </button>
                   </div>
-
-                  <button
-                    onClick={() => handleEditProduct(product)}
-                    className="p-2 rounded-lg hover:bg-gray-100 text-gray-600 hover:text-gray-900"
-                  >
-                    <Pencil className="w-4 h-4" />
-                  </button>
                 </div>
               ))}
             </div>

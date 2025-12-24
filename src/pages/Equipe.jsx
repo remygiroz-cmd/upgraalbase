@@ -100,24 +100,27 @@ export default function Equipe() {
       {activeTab === 'planning' ? (
         <div>
           {/* Week navigation */}
-          <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center justify-between gap-2 mb-4">
             <Button
               variant="outline"
               onClick={() => setWeekOffset(prev => prev - 1)}
-              className="border-slate-600"
+              className="border-slate-600 min-h-[44px] px-3"
             >
               <ChevronLeft className="w-4 h-4" />
+              <span className="hidden sm:inline ml-2">Précédent</span>
             </Button>
-            <div className="text-center">
-              <p className="font-medium">
-                Semaine du {format(weekStart, "d MMMM yyyy", { locale: fr })}
+            <div className="text-center flex-1">
+              <p className="font-medium text-sm sm:text-base">
+                Semaine du {format(weekStart, "d MMM", { locale: fr })}
+                <span className="hidden sm:inline"> {format(weekStart, "yyyy", { locale: fr })}</span>
               </p>
             </div>
             <Button
               variant="outline"
               onClick={() => setWeekOffset(prev => prev + 1)}
-              className="border-slate-600"
+              className="border-slate-600 min-h-[44px] px-3"
             >
+              <span className="hidden sm:inline mr-2">Suivant</span>
               <ChevronRight className="w-4 h-4" />
             </Button>
           </div>
@@ -130,19 +133,19 @@ export default function Equipe() {
       ) : (
         <div>
           {/* Filters */}
-          <div className="flex flex-wrap gap-3 mb-6">
-            <div className="relative flex-1 min-w-[200px]">
+          <div className="flex flex-col sm:flex-row gap-3 mb-6">
+            <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
               <Input
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Rechercher..."
-                className="pl-10 bg-slate-800 border-slate-700"
+                className="pl-10 bg-slate-800 border-slate-700 min-h-[44px]"
               />
             </div>
             
             <Select value={filterStatus} onValueChange={setFilterStatus}>
-              <SelectTrigger className="w-36 bg-slate-800 border-slate-600">
+              <SelectTrigger className="w-full sm:w-40 bg-slate-800 border-slate-600 min-h-[44px]">
                 <Filter className="w-4 h-4 mr-2" />
                 <SelectValue />
               </SelectTrigger>

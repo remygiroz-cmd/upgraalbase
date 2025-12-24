@@ -138,24 +138,24 @@ export default function Pertes() {
         title="Invendus & Pertes"
         subtitle="Contrôle du Food Cost"
         actions={
-          <>
+          <div className="flex flex-wrap gap-2">
             <Button
               variant="outline"
               onClick={() => setShowProductForm(true)}
-              className="border-slate-600 text-slate-900 hover:text-slate-100 hover:bg-slate-700"
+              className="border-slate-600 text-slate-900 hover:text-slate-100 hover:bg-slate-700 min-h-[44px]"
             >
-              <Plus className="w-4 h-4 mr-2" />
-              Produit
+              <Plus className="w-4 h-4 sm:mr-2" />
+              <span className="hidden sm:inline">Produit</span>
             </Button>
             <Button
               variant="outline"
               onClick={handleExport}
-              className="border-slate-600 text-slate-900 hover:text-slate-100 hover:bg-slate-700"
+              className="border-slate-600 text-slate-900 hover:text-slate-100 hover:bg-slate-700 min-h-[44px]"
             >
-              <Download className="w-4 h-4 mr-2" />
-              Export
+              <Download className="w-4 h-4 sm:mr-2" />
+              <span className="hidden sm:inline">Export</span>
             </Button>
-          </>
+          </div>
         }
       />
 
@@ -182,7 +182,7 @@ export default function Pertes() {
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Rechercher un produit..."
-                className="pl-10 bg-slate-800 border-slate-700"
+                className="pl-10 bg-slate-800 border-slate-700 min-h-[44px]"
               />
             </div>
 
@@ -209,15 +209,15 @@ export default function Pertes() {
                     whileTap={{ scale: 0.95 }}
                     onClick={() => addToCart(product)}
                     className={cn(
-                      "p-4 rounded-xl border-2 text-left transition-all min-h-[80px]",
+                      "p-3 sm:p-4 rounded-xl border-2 text-left transition-all min-h-[88px]",
                       "bg-white border-gray-300",
                       "hover:bg-gray-50 hover:border-gray-400",
                       "active:bg-gray-100"
                     )}
                   >
-                    <p className="font-semibold text-gray-900 text-sm line-clamp-2">{product.name}</p>
+                    <p className="font-semibold text-gray-900 text-xs sm:text-sm line-clamp-2">{product.name}</p>
                     {product.unit_price > 0 && (
-                      <p className="text-xs text-orange-400 mt-1">
+                      <p className="text-[10px] sm:text-xs text-orange-400 mt-1">
                         {product.unit_price.toFixed(2)} € / {product.unit}
                       </p>
                     )}
@@ -229,7 +229,7 @@ export default function Pertes() {
 
           {/* Cart */}
           <div className="lg:col-span-1">
-            <div className="bg-white rounded-2xl border-2 border-gray-300 p-4 sticky top-4 shadow-sm">
+            <div className="bg-white rounded-2xl border-2 border-gray-300 p-3 sm:p-4 lg:sticky lg:top-4 shadow-sm">
               <h3 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
                 <ShoppingCart className="w-5 h-5" />
                 Ticket de pertes
@@ -293,14 +293,14 @@ export default function Pertes() {
                     <Button
                       variant="outline"
                       onClick={() => setCart([])}
-                      className="border-slate-600 text-slate-900 hover:text-slate-100 hover:bg-slate-700"
+                      className="border-slate-600 text-slate-900 hover:text-slate-100 hover:bg-slate-700 min-h-[44px]"
                     >
                       <Trash2 className="w-4 h-4" />
                     </Button>
                     <Button
                       onClick={handleValidate}
                       disabled={saveLossMutation.isPending}
-                      className="flex-1 bg-red-600 hover:bg-red-700"
+                      className="flex-1 bg-red-600 hover:bg-red-700 min-h-[44px]"
                     >
                       Valider les pertes
                     </Button>
