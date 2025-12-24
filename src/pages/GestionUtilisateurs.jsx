@@ -387,9 +387,11 @@ export default function GestionUtilisateurs() {
         }
         description={
           confirmAction?.type === 'activate'
-            ? `Activer le compte de ${confirmAction?.user?.full_name} ?`
+            ? confirmAction?.user?.status === 'deleted' 
+              ? `Réactiver le compte de ${confirmAction?.user?.full_name} ? L'utilisateur pourra à nouveau se connecter avec un rôle attribué.`
+              : `Activer le compte de ${confirmAction?.user?.full_name} ?`
             : confirmAction?.type === 'delete'
-            ? `Supprimer définitivement ${confirmAction?.user?.full_name} ? Cette action est irréversible et l'utilisateur sera immédiatement déconnecté.`
+            ? `Archiver ${confirmAction?.user?.full_name} ? L'utilisateur sera déconnecté et déplacé dans les anciens utilisateurs.`
             : `Désactiver le compte de ${confirmAction?.user?.full_name} ? L'utilisateur ne pourra plus se connecter.`
         }
         onConfirm={confirmAction?.onConfirm}
