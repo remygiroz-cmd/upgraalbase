@@ -314,6 +314,53 @@ export default function GestionUtilisateurs() {
         ))}
       </div>
 
+      {/* Archived/Deleted Users */}
+      {deletedUsers.length > 0 && (
+        <div className="mt-8">
+          <h3 className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
+            <Archive className="w-4 h-4" />
+            Anciens utilisateurs ({deletedUsers.length})
+          </h3>
+          <div className="grid gap-4">
+            {deletedUsers.map((user) => (
+              <div
+                key={user.id}
+                className="bg-gray-50 rounded-xl border-2 border-gray-300 p-4 sm:p-6 transition-all opacity-75"
+              >
+                <div className="flex items-start justify-between gap-4">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-3 mb-2 flex-wrap">
+                      <h3 className="text-lg font-bold text-gray-700">{user.full_name}</h3>
+                      <Badge className="bg-gray-200 text-gray-700 border-gray-400">
+                        Supprimé
+                      </Badge>
+                      {user.role === 'admin' && (
+                        <Badge className="bg-purple-100 text-purple-700 border-purple-300">
+                          Admin
+                        </Badge>
+                      )}
+                    </div>
+                    <p className="text-sm text-gray-600">{user.email}</p>
+                    {user.team && (
+                      <p className="text-sm text-gray-500 mt-1">Équipe : {user.team}</p>
+                    )}
+                  </div>
+
+                  <Button
+                    variant="outline"
+                    onClick={() => handleRestoreUser(user)}
+                    className="border-green-300 hover:bg-green-50 text-green-600 min-h-[44px]"
+                  >
+                    <UserCheck className="w-4 h-4 mr-2" />
+                    Réactiver
+                  </Button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       <InviteUserModal
         open={showInviteModal}
         onClose={() => setShowInviteModal(false)}
