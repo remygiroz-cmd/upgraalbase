@@ -42,7 +42,7 @@ Deno.serve(async (req) => {
     });
 
     // Generate invitation URL
-    const appUrl = `https://${req.headers.get('host')}`;
+    const appUrl = Deno.env.get('BASE44_APP_URL') || `https://${req.headers.get('host')}`;
     const inviteUrl = `${appUrl}/invite?token=${token}`;
 
     // Try to send email via EmailJS
