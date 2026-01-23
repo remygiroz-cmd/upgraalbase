@@ -9,29 +9,46 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { to, subject, html, imageUrl } = await req.json();
+    const payload = await req.json();
+    const { to, subject, html, imageUrl } = payload;
+
+    if (!to || !subject) {
+      return Response.json({ error: 'Missing required fields: to, subject' }, { status: 400 });
+    }
 
     const serviceId = Deno.env.get('EMAILJS_SERVICE_ID');
     const templateId = Deno.env.get('EMAILJS_TEMPLATE_ID');
     const publicKey = Deno.env.get('EMAILJS_PUBLIC_KEY');
     const privateKey = Deno.env.get('EMAILJS_PRIVATE_KEY');
 
-    if (!serviceId || !templateId || !publicKey || !privateKey) {
-      return Response.json({ error: 'EmailJS not configured' }, { status: 500 });
+    if (!serviceId || !templateId || !publicKey) {
+      return Response.json({ 
+        error: 'EmailJS configuration incomplete', 
+        details: {
+          hasServiceId: !!serviceId,
+          hasTemplateId: !!templateId,
+          hasPublicKey: !!publicKey
+        }
+      }, { status: 500 });
     }
 
     const emailData = {
       service_id: serviceId,
       template_id: templateId,
       user_id: publicKey,
-      accessToken: privateKey,
       template_params: {
         to_email: to,
         subject: subject,
         message: html,
-        image_url: imageUrl || ''
+        image_url: imageUrl || '',
+        from_name: 'UpGraal'
       }
     };
+
+    // Add private key only if it exists
+    if (privateKey) {
+      emailData.accessToken = privateKey;
+    }
 
     const response = await fetch('https://api.emailjs.com/api/v1.0/email/send', {
       method: 'POST',

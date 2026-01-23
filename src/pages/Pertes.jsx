@@ -206,7 +206,7 @@ export default function Pertes() {
       setShareMode('');
     } catch (error) {
       console.error('Erreur lors du partage:', error);
-      alert('Erreur lors du partage. Veuillez réessayer.');
+      alert(`Erreur lors du partage: ${error.message || 'Veuillez réessayer.'}`);
     } finally {
       setIsSharingLoading(false);
     }
