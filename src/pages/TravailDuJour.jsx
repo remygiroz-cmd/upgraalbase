@@ -400,8 +400,17 @@ function WorkTaskCard({ task, onComplete, onUncomplete, onRemove, onUpdateQuanti
   });
   
   const taskDetails = tasks.find(t => t.id === task.task_id);
-  const hasQuantity = task.quantity_to_produce !== undefined && task.quantity_to_produce > 0;
   const isAdHoc = !task.task_id;
+  
+  // Ensure all non-ad-hoc tasks have a quantity
+  if (!isAdHoc && (task.quantity_to_produce === undefined || task.quantity_to_produce === null)) {
+    task.quantity_to_produce = 1;
+    if (!task.initial_quantity_to_produce) {
+      task.initial_quantity_to_produce = 1;
+    }
+  }
+  
+  const hasQuantity = !isAdHoc;
   
   return (
     <motion.div
