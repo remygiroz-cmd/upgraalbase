@@ -438,7 +438,7 @@ function GenerateMissingImagesSection() {
       const task = tasksWithoutImages[i];
       try {
         const result = await base44.integrations.Core.GenerateImage({
-          prompt: `Professional high-quality photograph of "${task.name}" in a professional kitchen, realistic food photography, commercial kitchen setting, professional lighting, sharp focus, clean white background or minimal kitchen background, photorealistic, 8k quality`
+          prompt: `Extreme close-up professional photograph of "${task.name}", macro shot, highly detailed, sharp focus on the dish or ingredient, clean white or minimal background, commercial food photography, studio lighting, photorealistic, 8k quality, subject clearly visible and centered`
         });
         
         if (result?.url) {

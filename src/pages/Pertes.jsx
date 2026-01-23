@@ -532,7 +532,7 @@ function ProductFormModal({ open, onClose, onSave, isSaving, product }) {
     setGeneratingImage(true);
     try {
       const result = await base44.integrations.Core.GenerateImage({
-        prompt: `Professional high-quality photograph of "${form.name}" ingredient or product in a professional kitchen, realistic food photography, commercial kitchen setting, professional lighting, sharp focus, clean white background, photorealistic, 8k quality`
+        prompt: `Extreme close-up professional photograph of "${form.name}", macro shot, highly detailed, sharp focus on product, clean white or minimal background, commercial food photography, studio lighting, photorealistic, 8k quality, product clearly visible and centered`
       });
       if (result?.url) {
         setForm(prev => ({ ...prev, image_url: result.url }));
