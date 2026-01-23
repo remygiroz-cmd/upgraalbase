@@ -333,6 +333,11 @@ export default function MiseEnPlace() {
           baseTask.initial_quantity_to_produce = quantity;
         }
       }
+      // For binary tasks, add quantity from weekly targets
+      else if (task?.tracking_mode === 'binary' && task?.weekly_targets?.[dayOfWeek]) {
+        baseTask.quantity_to_produce = task.weekly_targets[dayOfWeek];
+        baseTask.initial_quantity_to_produce = task.weekly_targets[dayOfWeek];
+      }
 
       return baseTask;
     });
@@ -423,6 +428,11 @@ export default function MiseEnPlace() {
           baseTask.quantity_to_produce = quantity;
           baseTask.initial_quantity_to_produce = quantity;
         }
+      }
+      // For binary tasks, add quantity from weekly targets
+      else if (task?.tracking_mode === 'binary' && task?.weekly_targets?.[dayOfWeek]) {
+        baseTask.quantity_to_produce = task.weekly_targets[dayOfWeek];
+        baseTask.initial_quantity_to_produce = task.weekly_targets[dayOfWeek];
       }
 
       return baseTask;
