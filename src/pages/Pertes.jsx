@@ -71,6 +71,13 @@ export default function Pertes() {
     }
   });
 
+  const deleteLossMutation = useMutation({
+    mutationFn: (id) => base44.entities.Loss.delete(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['losses'] });
+    }
+  });
+
   const filteredProducts = products.filter(p => 
     p.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
@@ -451,9 +458,20 @@ export default function Pertes() {
             losses.map(loss => (
               <div
                 key={loss.id}
-                className="p-4 bg-white rounded-xl border-2 border-gray-300"
+                className="p-4 bg-white rounded-xl border-2 border-gray-300 relative"
               >
-                <div className="flex items-center justify-between mb-3">
+                <button
+                  onClick={() => {
+                    if (confirm('Supprimer cet enregistrement de pertes ?')) {
+                      deleteLossMutation.mutate(loss.id);
+                    }
+                  }}
+                  className="absolute top-3 right-3 p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
+
+                <div className="flex items-center justify-between mb-3 pr-10">
                   <div>
                     <p className="font-semibold text-gray-900">
                       {format(parseISO(loss.date), "EEEE d MMMM yyyy", { locale: fr })}
