@@ -541,21 +541,35 @@ function AutomationSettings() {
 
   const saveSettingsMutation = useMutation({
     mutationFn: async (newSettings) => {
+      // Save settings
+      let savedSettings;
       if (automationSettings[0]?.id) {
-        return base44.entities.AppSettings.update(automationSettings[0].id, newSettings);
+        savedSettings = await base44.entities.AppSettings.update(automationSettings[0].id, newSettings);
+      } else {
+        savedSettings = await base44.entities.AppSettings.create({ 
+          setting_key: 'auto_complete_session', 
+          ...newSettings 
+        });
       }
-      return base44.entities.AppSettings.create({ 
-        setting_key: 'auto_complete_session', 
-        ...newSettings 
-      });
+      
+      // Enable/disable automation based on settings
+      if (newSettings.auto_enabled) {
+        // Call backend to enable automation
+        await base44.functions.invoke('enableAutomation', { automation_id: '6973350316b38ba38f4f6ce3' });
+      } else {
+        // Call backend to disable automation
+        await base44.functions.invoke('disableAutomation', { automation_id: '6973350316b38ba38f4f6ce3' });
+      }
+      
+      return savedSettings;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['automationSettings'] });
       toast.success('Paramètres d\'automation enregistrés');
       setSaving(false);
     },
-    onError: () => {
-      toast.error('Erreur lors de l\'enregistrement');
+    onError: (error) => {
+      toast.error('Erreur lors de l\'enregistrement: ' + error.message);
       setSaving(false);
     }
   });
