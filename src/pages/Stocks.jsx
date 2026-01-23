@@ -47,6 +47,8 @@ export default function Stocks() {
           <TabsContent key={tab.id} value={tab.id}>
             {tab.id === 'articles' ? (
               <ArticlesTab />
+            ) : tab.id === 'suppliers' ? (
+              <SuppliersTab />
             ) : (
               <EmptyState
                 icon={tab.icon}
