@@ -364,6 +364,7 @@ export default function ArticlesTab() {
         article={editingArticle}
         categories={categories}
         suppliers={suppliers}
+        articles={articles}
       />
     </div>
   );
