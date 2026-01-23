@@ -394,6 +394,7 @@ export default function TravailDuJour() {
 
 function WorkTaskCard({ task, onComplete, onUncomplete, onRemove, onUpdateQuantity }) {
   const dayOfWeek = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'][new Date().getDay()];
+  const [localQuantity, setLocalQuantity] = useState(task.quantity_to_produce || 1);
   const { data: tasks = [] } = useQuery({
     queryKey: ['tasks'],
     queryFn: () => base44.entities.Task.list()
@@ -401,6 +402,11 @@ function WorkTaskCard({ task, onComplete, onUncomplete, onRemove, onUpdateQuanti
   
   const taskDetails = tasks.find(t => t.id === task.task_id);
   const isAdHoc = !task.task_id;
+
+  // Sync local state with prop changes
+  useEffect(() => {
+    setLocalQuantity(task.quantity_to_produce || 1);
+  }, [task.quantity_to_produce]);
   
   // Ensure all non-ad-hoc tasks have a quantity
   if (!isAdHoc && (task.quantity_to_produce === undefined || task.quantity_to_produce === null)) {
@@ -458,21 +464,31 @@ function WorkTaskCard({ task, onComplete, onUncomplete, onRemove, onUpdateQuanti
             
             <div className="flex flex-wrap gap-2">
               {hasQuantity && !task.is_completed && (
-                <div className="flex items-center gap-2 px-2 py-1 rounded-lg bg-indigo-600/20">
+                <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-indigo-600/20">
                   <button
-                    onClick={() => onUpdateQuantity(task.quantity_to_produce - 1)}
-                    className="w-7 h-7 rounded-md bg-white/20 hover:bg-white/30 flex items-center justify-center transition-colors active:scale-95"
+                    onClick={() => {
+                      const newQuantity = localQuantity - 1;
+                      if (newQuantity >= 1) {
+                        setLocalQuantity(newQuantity);
+                        onUpdateQuantity(newQuantity);
+                      }
+                    }}
+                    className="w-10 h-10 rounded-md bg-white/20 hover:bg-white/30 active:bg-white/40 flex items-center justify-center transition-all active:scale-95 touch-manipulation"
                   >
-                    <Minus className="w-4 h-4 text-indigo-400" />
+                    <Minus className="w-5 h-5 text-indigo-400" />
                   </button>
-                  <span className="text-indigo-400 text-xs font-medium min-w-[3rem] text-center break-words">
-                    {task.quantity_to_produce} {taskDetails?.unit || ''}
+                  <span className="text-indigo-400 text-sm font-medium min-w-[4rem] text-center break-words px-2">
+                    {localQuantity} {taskDetails?.unit || ''}
                   </span>
                   <button
-                    onClick={() => onUpdateQuantity(task.quantity_to_produce + 1)}
-                    className="w-7 h-7 rounded-md bg-white/20 hover:bg-white/30 flex items-center justify-center transition-colors active:scale-95"
+                    onClick={() => {
+                      const newQuantity = localQuantity + 1;
+                      setLocalQuantity(newQuantity);
+                      onUpdateQuantity(newQuantity);
+                    }}
+                    className="w-10 h-10 rounded-md bg-white/20 hover:bg-white/30 active:bg-white/40 flex items-center justify-center transition-all active:scale-95 touch-manipulation"
                   >
-                    <Plus className="w-4 h-4 text-indigo-400" />
+                    <Plus className="w-5 h-5 text-indigo-400" />
                   </button>
                 </div>
               )}
