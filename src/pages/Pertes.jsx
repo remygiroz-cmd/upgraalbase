@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
-import { PackageMinus, Plus, Search, ShoppingCart, Trash2, Download, History, X, Upload, Sparkles, Loader2 } from 'lucide-react';
+import { PackageMinus, Plus, Search, ShoppingCart, Trash2, Download, History, X, Upload, Sparkles, Loader2, Share2, Mail, MessageSquare, Send } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -15,6 +15,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { format, parseISO } from 'date-fns';
 import { fr } from 'date-fns/locale';
+import html2canvas from 'html2canvas';
 
 export default function Pertes() {
   const queryClient = useQueryClient();
@@ -27,6 +28,11 @@ export default function Pertes() {
   const [customDate, setCustomDate] = useState('');
   const [startDate, setStartDate] = useState(format(new Date(new Date().getFullYear(), new Date().getMonth(), 1), 'yyyy-MM-dd'));
   const [endDate, setEndDate] = useState(today);
+  const [showShareModal, setShowShareModal] = useState(false);
+  const [shareMode, setShareMode] = useState('');
+  const [shareDestination, setShareDestination] = useState('');
+  const [isSharingLoading, setIsSharingLoading] = useState(false);
+  const recapRef = useRef(null);
 
   const { data: products = [], isLoading: loadingProducts } = useQuery({
     queryKey: ['products'],
@@ -150,6 +156,59 @@ export default function Pertes() {
     link.href = URL.createObjectURL(blob);
     link.download = `pertes_export.csv`;
     link.click();
+  };
+
+  const handleShare = async () => {
+    if (!shareDestination) return;
+    setIsSharingLoading(true);
+
+    try {
+      // Capture screenshot
+      const canvas = await html2canvas(recapRef.current, {
+        scale: 2,
+        backgroundColor: '#ffffff'
+      });
+      
+      const imageBlob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
+      const imageFile = new File([imageBlob], 'recap-pertes.png', { type: 'image/png' });
+
+      if (shareMode === 'email') {
+        // Upload image first
+        const { file_url } = await base44.integrations.Core.UploadFile({ file: imageFile });
+        
+        // Send email with image
+        await base44.integrations.Core.SendEmail({
+          to: shareDestination,
+          subject: `Récapitulatif Pertes - ${format(parseISO(startDate), "d MMM yyyy", { locale: fr })} au ${format(parseISO(endDate), "d MMM yyyy", { locale: fr })}`,
+          body: `
+            <h2>Récapitulatif des Pertes</h2>
+            <p>Période: Du ${format(parseISO(startDate), "d MMMM yyyy", { locale: fr })} au ${format(parseISO(endDate), "d MMMM yyyy", { locale: fr })}</p>
+            <p>Voir le récapitulatif en pièce jointe ci-dessous:</p>
+            <img src="${file_url}" alt="Récapitulatif" style="max-width: 100%; height: auto;" />
+          `
+        });
+        alert('Email envoyé avec succès!');
+      } else if (shareMode === 'whatsapp') {
+        // For WhatsApp, we'll open the WhatsApp web/app with a text message
+        const text = encodeURIComponent(`Récapitulatif des Pertes du ${format(parseISO(startDate), "d/MM/yyyy")} au ${format(parseISO(endDate), "d/MM/yyyy")}`);
+        window.open(`https://wa.me/${shareDestination.replace(/\D/g, '')}?text=${text}`, '_blank');
+        alert('Veuillez envoyer la capture manuellement via WhatsApp. La fenêtre WhatsApp va s\'ouvrir.');
+      } else if (shareMode === 'sms') {
+        // For SMS, open the native SMS app
+        const text = encodeURIComponent(`Récapitulatif des Pertes du ${format(parseISO(startDate), "d/MM/yyyy")} au ${format(parseISO(endDate), "d/MM/yyyy")}`);
+        window.open(`sms:${shareDestination}?body=${text}`, '_blank');
+        alert('Veuillez envoyer la capture manuellement via SMS. L\'application SMS va s\'ouvrir.');
+      }
+
+      setShowShareModal(false);
+      setShareDestination('');
+      setShareMode('');
+    } catch (error) {
+      console.error('Erreur lors du partage:', error);
+      alert('Erreur lors du partage. Veuillez réessayer.');
+    } finally {
+      setIsSharingLoading(false);
+    }
   };
 
   if (loadingProducts || loadingLosses) {
@@ -383,7 +442,17 @@ export default function Pertes() {
         <div className="space-y-6">
           {/* Date filters */}
           <div className="bg-white rounded-xl border-2 border-gray-300 p-4">
-            <h3 className="font-semibold text-gray-900 mb-4">Période</h3>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="font-semibold text-gray-900">Période</h3>
+              <Button
+                variant="outline"
+                onClick={() => setShowShareModal(true)}
+                className="border-slate-600 text-slate-900 hover:text-slate-100 hover:bg-slate-700"
+              >
+                <Share2 className="w-4 h-4 mr-2" />
+                Partager
+              </Button>
+            </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <Label htmlFor="start-date" className="text-gray-700">Du</Label>
@@ -409,6 +478,7 @@ export default function Pertes() {
           </div>
 
           {/* Summary */}
+          <div ref={recapRef}>
           {(() => {
             const filteredLosses = losses.filter(loss => 
               loss.date >= startDate && loss.date <= endDate
@@ -483,6 +553,7 @@ export default function Pertes() {
               </div>
             );
           })()}
+          </div>
         </div>
       ) : activeTab === 'products' ? (
         <div className="space-y-4">
@@ -627,6 +698,97 @@ export default function Pertes() {
         isSaving={saveProductMutation.isPending}
         product={editingProduct}
       />
+
+      {/* Share Modal */}
+      <Dialog open={showShareModal} onOpenChange={setShowShareModal}>
+        <DialogContent className="bg-slate-800 border-slate-700">
+          <DialogHeader>
+            <DialogTitle>Partager le récapitulatif</DialogTitle>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            {!shareMode ? (
+              <div className="grid grid-cols-1 gap-3">
+                <button
+                  onClick={() => setShareMode('email')}
+                  className="p-4 bg-slate-700 hover:bg-slate-600 rounded-xl flex items-center gap-3 transition-colors"
+                >
+                  <Mail className="w-6 h-6 text-orange-400" />
+                  <div className="text-left">
+                    <p className="font-medium">Email</p>
+                    <p className="text-xs text-slate-400">Envoyer par email</p>
+                  </div>
+                </button>
+                <button
+                  onClick={() => setShareMode('whatsapp')}
+                  className="p-4 bg-slate-700 hover:bg-slate-600 rounded-xl flex items-center gap-3 transition-colors"
+                >
+                  <MessageSquare className="w-6 h-6 text-green-400" />
+                  <div className="text-left">
+                    <p className="font-medium">WhatsApp</p>
+                    <p className="text-xs text-slate-400">Partager via WhatsApp</p>
+                  </div>
+                </button>
+                <button
+                  onClick={() => setShareMode('sms')}
+                  className="p-4 bg-slate-700 hover:bg-slate-600 rounded-xl flex items-center gap-3 transition-colors"
+                >
+                  <Send className="w-6 h-6 text-blue-400" />
+                  <div className="text-left">
+                    <p className="font-medium">SMS</p>
+                    <p className="text-xs text-slate-400">Envoyer par SMS</p>
+                  </div>
+                </button>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <div>
+                  <Label htmlFor="destination">
+                    {shareMode === 'email' ? 'Adresse email' : 'Numéro de téléphone'}
+                  </Label>
+                  <Input
+                    id="destination"
+                    type={shareMode === 'email' ? 'email' : 'tel'}
+                    value={shareDestination}
+                    onChange={(e) => setShareDestination(e.target.value)}
+                    placeholder={shareMode === 'email' ? 'exemple@email.com' : '+33612345678'}
+                    className="bg-slate-700 border-slate-600 mt-1"
+                  />
+                </div>
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setShareMode('');
+                      setShareDestination('');
+                    }}
+                    className="border-slate-600 text-slate-900 hover:text-slate-100 hover:bg-slate-700"
+                  >
+                    Retour
+                  </Button>
+                  <Button
+                    onClick={handleShare}
+                    disabled={!shareDestination || isSharingLoading}
+                    className="flex-1 bg-orange-600 hover:bg-orange-700"
+                  >
+                    {isSharingLoading ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        Envoi...
+                      </>
+                    ) : (
+                      <>
+                        <Share2 className="w-4 h-4 mr-2" />
+                        Partager
+                      </>
+                    )}
+                  </Button>
+                </div>
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
