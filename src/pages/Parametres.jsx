@@ -134,6 +134,7 @@ export default function Parametres() {
             {currentUser?.role === 'admin' && (
               <>
                 <LogoUploadSection />
+                <EmailSenderSettings />
                 <GenerateMissingImagesSection />
               </>
             )}
@@ -689,6 +690,101 @@ function AutomationSettings() {
             <>
               <Save className="w-4 h-4 mr-2" />
               Enregistrer les paramètres
+            </>
+          )}
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+function EmailSenderSettings() {
+  const queryClient = useQueryClient();
+  const [saving, setSaving] = useState(false);
+
+  const { data: emailSettings = [] } = useQuery({
+    queryKey: ['emailSenderSettings'],
+    queryFn: () => base44.entities.AppSettings.filter({ setting_key: 'email_sender_name' })
+  });
+
+  const currentSenderName = emailSettings[0]?.email_sender_name || 'UpGraal';
+  const [senderName, setSenderName] = useState(currentSenderName);
+
+  useEffect(() => {
+    if (emailSettings[0]?.email_sender_name) {
+      setSenderName(emailSettings[0].email_sender_name);
+    }
+  }, [emailSettings]);
+
+  const saveEmailSettingsMutation = useMutation({
+    mutationFn: async (name) => {
+      if (emailSettings[0]?.id) {
+        return base44.entities.AppSettings.update(emailSettings[0].id, { email_sender_name: name });
+      }
+      return base44.entities.AppSettings.create({ setting_key: 'email_sender_name', email_sender_name: name });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['emailSenderSettings'] });
+      toast.success('Nom d\'expéditeur mis à jour');
+      setSaving(false);
+    },
+    onError: () => {
+      toast.error('Erreur lors de la mise à jour');
+      setSaving(false);
+    }
+  });
+
+  const handleSave = () => {
+    if (!senderName.trim()) {
+      toast.error('Le nom d\'expéditeur ne peut pas être vide');
+      return;
+    }
+    setSaving(true);
+    saveEmailSettingsMutation.mutate(senderName.trim());
+  };
+
+  return (
+    <div className="bg-white rounded-2xl border-2 border-gray-300 p-6 shadow-sm">
+      <div className="mb-4">
+        <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+          <Bell className="w-5 h-5" />
+          Configuration des emails
+        </h3>
+        <p className="text-sm text-gray-700 mt-1">
+          Définissez le nom qui apparaîtra comme expéditeur dans les emails envoyés
+        </p>
+      </div>
+
+      <div className="space-y-4">
+        <div>
+          <Label htmlFor="sender-name">Nom de l'expéditeur</Label>
+          <Input
+            id="sender-name"
+            type="text"
+            value={senderName}
+            onChange={(e) => setSenderName(e.target.value)}
+            placeholder="UpGraal"
+            className="mt-2"
+          />
+          <p className="text-xs text-gray-600 mt-1">
+            Ce nom apparaîtra dans la boîte de réception des destinataires
+          </p>
+        </div>
+
+        <Button
+          onClick={handleSave}
+          disabled={saving || senderName === currentSenderName}
+          className="w-full bg-orange-600 hover:bg-orange-700"
+        >
+          {saving ? (
+            <>
+              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              Enregistrement...
+            </>
+          ) : (
+            <>
+              <Save className="w-4 h-4 mr-2" />
+              Enregistrer
             </>
           )}
         </Button>
