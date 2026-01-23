@@ -9,7 +9,7 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { to, subject, html } = await req.json();
+    const { to, subject, html, attachments } = await req.json();
 
     if (!to || !subject || !html) {
       return Response.json({ error: 'Missing required fields: to, subject, html' }, { status: 400 });
@@ -31,6 +31,19 @@ Deno.serve(async (req) => {
       console.log('Using default sender name');
     }
 
+    // Build email payload
+    const emailPayload = {
+      from: `${senderName} <noreply@upgraal.com>`,
+      to: [to],
+      subject: subject,
+      html: html
+    };
+
+    // Add attachments if provided
+    if (attachments && attachments.length > 0) {
+      emailPayload.attachments = attachments;
+    }
+
     // Send email via Resend API
     const response = await fetch('https://api.resend.com/emails', {
       method: 'POST',
@@ -38,12 +51,7 @@ Deno.serve(async (req) => {
         'Authorization': `Bearer ${apiKey}`,
         'Content-Type': 'application/json'
       },
-      body: JSON.stringify({
-        from: `${senderName} <noreply@upgraal.com>`,
-        to: [to],
-        subject: subject,
-        html: html
-      })
+      body: JSON.stringify(emailPayload)
     });
 
     const result = await response.json();
@@ -70,6 +78,15 @@ Deno.serve(async (req) => {
       message: 'Email sent successfully',
       id: result.id 
     });
+
+  } catch (error) {
+    console.error('Error:', error);
+    return Response.json({ 
+      error: 'Internal server error', 
+      details: error.message 
+    }, { status: 500 });
+  }
+});
 
   } catch (error) {
     return Response.json({ 
