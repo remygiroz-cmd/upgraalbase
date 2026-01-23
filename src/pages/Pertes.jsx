@@ -163,43 +163,111 @@ export default function Pertes() {
     setIsSharingLoading(true);
 
     try {
-      // Capture screenshot
-      const canvas = await html2canvas(recapRef.current, {
-        scale: 2,
-        backgroundColor: '#ffffff'
-      });
-      
-      const imageBlob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
-      const imageFile = new File([imageBlob], 'recap-pertes.png', { type: 'image/png' });
-
       if (shareMode === 'email') {
-        // Upload image first
-        const { file_url } = await base44.integrations.Core.UploadFile({ file: imageFile });
-        
-        // Send email via Resend
+        // Get filtered losses for the period
+        const filteredLosses = losses.filter(loss => 
+          loss.date >= startDate && loss.date <= endDate
+        );
+
+        // Calculate product summary
+        const productSummary = {};
+        filteredLosses.forEach(loss => {
+          loss.items?.forEach(item => {
+            if (!productSummary[item.product_name]) {
+              productSummary[item.product_name] = {
+                quantity: 0,
+                total: 0
+              };
+            }
+            productSummary[item.product_name].quantity += item.quantity;
+            productSummary[item.product_name].total += item.total_price;
+          });
+        });
+
+        const grandTotal = Object.values(productSummary).reduce((sum, p) => sum + p.total, 0);
+        const sortedProducts = Object.entries(productSummary).sort((a, b) => b[1].total - a[1].total);
+
+        // Generate CSV
+        const csvRows = [['Date', 'Produit', 'Quantité', 'Prix unitaire', 'Total', 'Enregistré par']];
+        filteredLosses.forEach(loss => {
+          loss.items?.forEach(item => {
+            csvRows.push([
+              format(parseISO(loss.date), 'dd/MM/yyyy'),
+              item.product_name,
+              item.quantity,
+              item.unit_price?.toFixed(2),
+              item.total_price?.toFixed(2),
+              loss.recorded_by_name || ''
+            ]);
+          });
+        });
+        const csvContent = csvRows.map(r => r.map(cell => `"${cell}"`).join(',')).join('\n');
+        const csvBase64 = btoa(csvContent);
+
+        // Generate HTML body
+        const htmlBody = `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; color: #333;">
+            <h2 style="color: #dc2626; margin-bottom: 10px;">Récapitulatif des Pertes</h2>
+            <p style="margin: 5px 0; color: #666;">
+              Période: Du <strong>${format(parseISO(startDate), "d MMMM yyyy", { locale: fr })}</strong> au <strong>${format(parseISO(endDate), "d MMMM yyyy", { locale: fr })}</strong>
+            </p>
+            
+            <div style="background-color: #fee2e2; border: 2px solid #dc2626; border-radius: 8px; padding: 20px; margin: 20px 0; text-align: center;">
+              <p style="margin: 0; color: #666; font-size: 14px;">Total des pertes</p>
+              <p style="margin: 10px 0 0 0; font-size: 32px; font-weight: bold; color: #dc2626;">${grandTotal.toFixed(2)} €</p>
+            </div>
+
+            <h3 style="color: #374151; margin-top: 20px; margin-bottom: 10px;">Détail par produit</h3>
+            <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px;">
+              <thead>
+                <tr style="background-color: #f3f4f6; border-bottom: 2px solid #e5e7eb;">
+                  <th style="padding: 10px; text-align: left; color: #374151;">Produit</th>
+                  <th style="padding: 10px; text-align: center; color: #374151;">Quantité</th>
+                  <th style="padding: 10px; text-align: right; color: #374151;">Montant</th>
+                  <th style="padding: 10px; text-align: right; color: #374151;">%</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${sortedProducts.map(([productName, data]) => `
+                  <tr style="border-bottom: 1px solid #e5e7eb;">
+                    <td style="padding: 10px; color: #374151;">${productName}</td>
+                    <td style="padding: 10px; text-align: center; color: #666;">${data.quantity}</td>
+                    <td style="padding: 10px; text-align: right; color: #dc2626; font-weight: bold;">${data.total.toFixed(2)} €</td>
+                    <td style="padding: 10px; text-align: right; color: #666;">${((data.total / grandTotal) * 100).toFixed(1)}%</td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+
+            <p style="font-size: 12px; color: #999; text-align: center; margin-top: 30px;">
+              Le fichier CSV détaillé est joint à cet email.
+            </p>
+          </div>
+        `;
+
+        // Send email via Resend with attachment
         await base44.functions.invoke('sendEmailWithResend', {
           to: shareDestination,
           subject: `Récapitulatif Pertes - ${format(parseISO(startDate), "d MMM yyyy", { locale: fr })} au ${format(parseISO(endDate), "d MMM yyyy", { locale: fr })}`,
-          html: `
-            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-              <h2 style="color: #dc2626;">Récapitulatif des Pertes</h2>
-              <p>Période: Du ${format(parseISO(startDate), "d MMMM yyyy", { locale: fr })} au ${format(parseISO(endDate), "d MMMM yyyy", { locale: fr })}</p>
-              <p>Voir le récapitulatif ci-dessous:</p>
-              <img src="${file_url}" alt="Récapitulatif" style="max-width: 100%; height: auto; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);" />
-            </div>
-          `
+          html: htmlBody,
+          attachments: [
+            {
+              filename: `pertes_${format(parseISO(startDate), 'yyyy-MM-dd')}_${format(parseISO(endDate), 'yyyy-MM-dd')}.csv`,
+              content: csvBase64
+            }
+          ]
         });
         alert('Email envoyé avec succès!');
       } else if (shareMode === 'whatsapp') {
         // For WhatsApp, we'll open the WhatsApp web/app with a text message
         const text = encodeURIComponent(`Récapitulatif des Pertes du ${format(parseISO(startDate), "d/MM/yyyy")} au ${format(parseISO(endDate), "d/MM/yyyy")}`);
         window.open(`https://wa.me/${shareDestination.replace(/\D/g, '')}?text=${text}`, '_blank');
-        alert('Veuillez envoyer la capture manuellement via WhatsApp. La fenêtre WhatsApp va s\'ouvrir.');
+        alert('Veuillez partager manuellement via WhatsApp. La fenêtre WhatsApp va s\'ouvrir.');
       } else if (shareMode === 'sms') {
         // For SMS, open the native SMS app
         const text = encodeURIComponent(`Récapitulatif des Pertes du ${format(parseISO(startDate), "d/MM/yyyy")} au ${format(parseISO(endDate), "d/MM/yyyy")}`);
         window.open(`sms:${shareDestination}?body=${text}`, '_blank');
-        alert('Veuillez envoyer la capture manuellement via SMS. L\'application SMS va s\'ouvrir.');
+        alert('Veuillez partager manuellement via SMS. L\'application SMS va s\'ouvrir.');
       }
 
       setShowShareModal(false);
