@@ -149,9 +149,9 @@ export default function TravailDuJour() {
 
   const deleteSessionMutation = useMutation({
     mutationFn: (id) => base44.entities.WorkSession.delete(id),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['workSessions', 'active', today] });
-      queryClient.invalidateQueries({ queryKey: ['workSessions'] });
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['workSessions', 'active', today] });
+      await queryClient.refetchQueries({ queryKey: ['workSessions', 'active', today] });
     }
   });
 
