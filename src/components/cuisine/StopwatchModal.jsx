@@ -159,5 +159,74 @@ export default function StopwatchModal({ task, onClose }) {
         </div>
       </DialogContent>
     </Dialog>
+
+    <Dialog open={showQuantityDialog} onOpenChange={(open) => !open && setShowQuantityDialog(false)}>
+      <DialogContent className="bg-slate-800 border-slate-700 w-[calc(100vw-2rem)] max-w-md">
+        <DialogHeader>
+          <DialogTitle className="text-slate-100">Quantité produite</DialogTitle>
+        </DialogHeader>
+        
+        <div className="space-y-4 py-4">
+          <p className="text-slate-300 text-sm">
+            Temps total : {formatTime(time)}
+          </p>
+          
+          <div className="space-y-2">
+            <label className="text-slate-300 text-sm font-medium">
+              Combien de produits avez-vous produit ?
+            </label>
+            <Input
+              type="number"
+              min="0.1"
+              step="0.1"
+              value={quantity}
+              onChange={(e) => setQuantity(e.target.value)}
+              placeholder="Ex: 2"
+              className="bg-slate-700 border-slate-600 text-slate-100"
+              autoFocus
+            />
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-slate-300 text-sm font-medium">
+              Unité de mesure
+            </label>
+            <Input
+              type="text"
+              value={unit}
+              onChange={(e) => setUnit(e.target.value)}
+              placeholder="Ex: sachets, grammes, litres..."
+              className="bg-slate-700 border-slate-600 text-slate-100"
+            />
+          </div>
+
+          {quantity && unit && parseFloat(quantity) > 0 && (
+            <div className="p-3 bg-orange-600/20 rounded-lg border border-orange-600/30">
+              <p className="text-orange-300 text-sm">
+                Temps par {unit.toLowerCase().replace(/s$/, '')} : {formatTime(Math.floor(time / parseFloat(quantity)))}
+              </p>
+            </div>
+          )}
+        </div>
+
+        <div className="flex gap-3 justify-end">
+          <Button
+            variant="outline"
+            onClick={() => setShowQuantityDialog(false)}
+            className="border-slate-600 text-slate-300 hover:bg-slate-700"
+          >
+            Retour
+          </Button>
+          <Button
+            onClick={handleConfirmQuantity}
+            disabled={!quantity || !unit || parseFloat(quantity) <= 0}
+            className="bg-orange-600 hover:bg-orange-700"
+          >
+            Valider
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+    </>
   );
 }
