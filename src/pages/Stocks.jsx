@@ -44,11 +44,15 @@ export default function Stocks() {
 
         {tabs.map(tab => (
           <TabsContent key={tab.id} value={tab.id}>
-            <EmptyState
-              icon={tab.icon}
-              title={`${tab.label} - En construction`}
-              description={`La section ${tab.label.toLowerCase()} sera bientôt disponible`}
-            />
+            {tab.id === 'articles' ? (
+              <ArticlesTab />
+            ) : (
+              <EmptyState
+                icon={tab.icon}
+                title={`${tab.label} - En construction`}
+                description={`La section ${tab.label.toLowerCase()} sera bientôt disponible`}
+              />
+            )}
           </TabsContent>
         ))}
       </Tabs>
