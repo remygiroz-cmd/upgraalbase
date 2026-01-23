@@ -297,7 +297,7 @@ export default function ArticlesTab() {
                                   <div className="flex items-center gap-2">
                                     <h3 className="font-semibold text-gray-900 truncate">{article.name}</h3>
                                     <span className="inline-block px-2 py-0.5 bg-gray-200 text-gray-800 text-xs font-bold rounded flex-shrink-0">
-                                      #{index + 1}
+                                      #{(viewMode === 'shopping' ? article.order : article.storage_order) + 1}
                                     </span>
                                   </div>
                                   <div className="flex gap-3 mt-1 text-xs text-gray-600 flex-wrap">
