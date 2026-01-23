@@ -3,6 +3,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { Play, Pause, RotateCcw, Check, Clock } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -10,6 +11,9 @@ export default function StopwatchModal({ task, onClose }) {
   const queryClient = useQueryClient();
   const [time, setTime] = useState(0);
   const [isRunning, setIsRunning] = useState(false);
+  const [showQuantityDialog, setShowQuantityDialog] = useState(false);
+  const [quantity, setQuantity] = useState('');
+  const [unit, setUnit] = useState('');
   const intervalRef = useRef(null);
 
   const theoreticalSeconds = (task.duration_minutes || 0) * 60 + (task.duration_seconds || 0);
@@ -50,13 +54,24 @@ export default function StopwatchModal({ task, onClose }) {
   };
 
   const handleValidate = () => {
+    if (time === 0) return;
+    setShowQuantityDialog(true);
+  };
+
+  const handleConfirmQuantity = () => {
+    const quantityNum = parseFloat(quantity);
+    if (!quantityNum || quantityNum <= 0 || !unit.trim()) return;
+    
+    // Calculate time per unit
     const totalSeconds = Math.floor(time / 1000);
-    const minutes = Math.floor(totalSeconds / 60);
-    const seconds = totalSeconds % 60;
+    const timePerUnit = totalSeconds / quantityNum;
+    const minutes = Math.floor(timePerUnit / 60);
+    const seconds = Math.floor(timePerUnit % 60);
     
     updateMutation.mutate({
       duration_minutes: minutes,
-      duration_seconds: seconds
+      duration_seconds: seconds,
+      unit: unit.trim()
     });
   };
 
@@ -68,7 +83,8 @@ export default function StopwatchModal({ task, onClose }) {
   const isOverTime = currentSeconds > theoreticalSeconds && theoreticalSeconds > 0;
 
   return (
-    <Dialog open={true} onOpenChange={onClose}>
+    <>
+    <Dialog open={!showQuantityDialog} onOpenChange={onClose}>
       <DialogContent className="bg-slate-800 border-slate-700 max-w-md">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
@@ -160,7 +176,13 @@ export default function StopwatchModal({ task, onClose }) {
       </DialogContent>
     </Dialog>
 
-    <Dialog open={showQuantityDialog} onOpenChange={(open) => !open && setShowQuantityDialog(false)}>
+    <Dialog open={showQuantityDialog} onOpenChange={(open) => {
+      if (!open) {
+        setShowQuantityDialog(false);
+        setQuantity('');
+        setUnit('');
+      }
+    }}>
       <DialogContent className="bg-slate-800 border-slate-700 w-[calc(100vw-2rem)] max-w-md">
         <DialogHeader>
           <DialogTitle className="text-slate-100">Quantité produite</DialogTitle>
@@ -168,7 +190,7 @@ export default function StopwatchModal({ task, onClose }) {
         
         <div className="space-y-4 py-4">
           <p className="text-slate-300 text-sm">
-            Temps total : {formatTime(time)}
+            Temps total : {formatTime(time).display}
           </p>
           
           <div className="space-y-2">
@@ -203,7 +225,7 @@ export default function StopwatchModal({ task, onClose }) {
           {quantity && unit && parseFloat(quantity) > 0 && (
             <div className="p-3 bg-orange-600/20 rounded-lg border border-orange-600/30">
               <p className="text-orange-300 text-sm">
-                Temps par {unit.toLowerCase().replace(/s$/, '')} : {formatTime(Math.floor(time / parseFloat(quantity)))}
+                Temps par {unit.toLowerCase().replace(/s$/, '')} : {formatTime(Math.floor(time / parseFloat(quantity))).display}
               </p>
             </div>
           )}
@@ -212,14 +234,18 @@ export default function StopwatchModal({ task, onClose }) {
         <div className="flex gap-3 justify-end">
           <Button
             variant="outline"
-            onClick={() => setShowQuantityDialog(false)}
+            onClick={() => {
+              setShowQuantityDialog(false);
+              setQuantity('');
+              setUnit('');
+            }}
             className="border-slate-600 text-slate-300 hover:bg-slate-700"
           >
             Retour
           </Button>
           <Button
             onClick={handleConfirmQuantity}
-            disabled={!quantity || !unit || parseFloat(quantity) <= 0}
+            disabled={!quantity || !unit || parseFloat(quantity) <= 0 || updateMutation.isPending}
             className="bg-orange-600 hover:bg-orange-700"
           >
             Valider
