@@ -176,12 +176,11 @@ export default function Pertes() {
         // Upload image first
         const { file_url } = await base44.integrations.Core.UploadFile({ file: imageFile });
         
-        // Send email
-        await base44.integrations.Core.SendEmail({
+        // Send email via Resend
+        await base44.functions.invoke('sendEmailWithResend', {
           to: shareDestination,
-          from_name: 'UpGraal',
           subject: `Récapitulatif Pertes - ${format(parseISO(startDate), "d MMM yyyy", { locale: fr })} au ${format(parseISO(endDate), "d MMM yyyy", { locale: fr })}`,
-          body: `
+          html: `
             <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
               <h2 style="color: #dc2626;">Récapitulatif des Pertes</h2>
               <p>Période: Du ${format(parseISO(startDate), "d MMMM yyyy", { locale: fr })} au ${format(parseISO(endDate), "d MMMM yyyy", { locale: fr })}</p>
