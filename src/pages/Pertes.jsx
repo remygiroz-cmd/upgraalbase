@@ -176,16 +176,17 @@ export default function Pertes() {
         // Upload image first
         const { file_url } = await base44.integrations.Core.UploadFile({ file: imageFile });
         
-        // Send email with image
-        await base44.integrations.Core.SendEmail({
+        // Send email via EmailJS
+        await base44.functions.invoke('sendEmailWithEmailJS', {
           to: shareDestination,
           subject: `Récapitulatif Pertes - ${format(parseISO(startDate), "d MMM yyyy", { locale: fr })} au ${format(parseISO(endDate), "d MMM yyyy", { locale: fr })}`,
-          body: `
+          html: `
             <h2>Récapitulatif des Pertes</h2>
             <p>Période: Du ${format(parseISO(startDate), "d MMMM yyyy", { locale: fr })} au ${format(parseISO(endDate), "d MMMM yyyy", { locale: fr })}</p>
             <p>Voir le récapitulatif en pièce jointe ci-dessous:</p>
             <img src="${file_url}" alt="Récapitulatif" style="max-width: 100%; height: auto;" />
-          `
+          `,
+          imageUrl: file_url
         });
         alert('Email envoyé avec succès!');
       } else if (shareMode === 'whatsapp') {
