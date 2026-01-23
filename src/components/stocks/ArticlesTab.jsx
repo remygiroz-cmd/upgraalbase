@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import EmptyState from '@/components/ui/EmptyState';
 import ArticleFormModal from './ArticleFormModal';
+import CategoryManager from './CategoryManager';
 
 export default function ArticlesTab() {
   const queryClient = useQueryClient();
@@ -95,7 +96,7 @@ export default function ArticlesTab() {
           </Button>
         </div>
 
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap gap-2 items-center">
           <button
             onClick={() => setSelectedCategory(null)}
             className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
@@ -124,6 +125,7 @@ export default function ArticlesTab() {
               {cat.name}
             </button>
           ))}
+          <CategoryManager categories={categories} />
         </div>
       </div>
 
