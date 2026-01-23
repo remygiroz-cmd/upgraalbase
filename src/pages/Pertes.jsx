@@ -207,7 +207,19 @@ export default function Pertes() {
       setShareMode('');
     } catch (error) {
       console.error('Erreur lors du partage:', error);
-      alert(`Erreur lors du partage: ${error.message || 'Veuillez réessayer.'}`);
+      
+      // Better error messages
+      let errorMessage = 'Erreur lors du partage: Veuillez réessayer.';
+      
+      if (error?.response?.data?.error) {
+        errorMessage = `Erreur: ${error.response.data.error}`;
+      } else if (error?.data?.error) {
+        errorMessage = `Erreur: ${error.data.error}`;
+      } else if (error?.message) {
+        errorMessage = `Erreur: ${error.message}`;
+      }
+      
+      alert(errorMessage);
     } finally {
       setIsSharingLoading(false);
     }
