@@ -16,7 +16,8 @@ export default function ArticleFormModal({ open, onClose, onSave, isSaving, arti
     brand: '',
     supplier_reference: '',
     internal_code: '',
-    image_url: ''
+    image_url: '',
+    order: 0
   });
   const [uploadingImage, setUploadingImage] = useState(false);
   const [generatingImage, setGeneratingImage] = useState(false);
@@ -32,7 +33,8 @@ export default function ArticleFormModal({ open, onClose, onSave, isSaving, arti
         brand: article.brand || '',
         supplier_reference: article.supplier_reference || '',
         internal_code: article.internal_code || '',
-        image_url: article.image_url || ''
+        image_url: article.image_url || '',
+        order: article.order || 0
       });
     } else {
       setForm({
@@ -44,7 +46,8 @@ export default function ArticleFormModal({ open, onClose, onSave, isSaving, arti
         brand: '',
         supplier_reference: '',
         internal_code: '',
-        image_url: ''
+        image_url: '',
+        order: 0
       });
     }
   }, [article, open]);
@@ -255,15 +258,28 @@ export default function ArticleFormModal({ open, onClose, onSave, isSaving, arti
             </div>
           </div>
 
-          {/* Code interne */}
-          <div>
-            <Label htmlFor="internal_code">Code de référence interne</Label>
-            <Input
-              id="internal_code"
-              value={form.internal_code}
-              onChange={(e) => setForm(prev => ({ ...prev, internal_code: e.target.value }))}
-              className="bg-slate-700 border-slate-600 mt-1"
-            />
+          {/* Code interne et Ordre */}
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="internal_code">Code de référence interne</Label>
+              <Input
+                id="internal_code"
+                value={form.internal_code}
+                onChange={(e) => setForm(prev => ({ ...prev, internal_code: e.target.value }))}
+                className="bg-slate-700 border-slate-600 mt-1"
+              />
+            </div>
+            <div>
+              <Label htmlFor="order">Rang (ordre d'affichage)</Label>
+              <Input
+                id="order"
+                type="number"
+                min="0"
+                value={form.order}
+                onChange={(e) => setForm(prev => ({ ...prev, order: parseInt(e.target.value) || 0 }))}
+                className="bg-slate-700 border-slate-600 mt-1"
+              />
+            </div>
           </div>
 
           <div className="flex justify-end gap-3 pt-4">

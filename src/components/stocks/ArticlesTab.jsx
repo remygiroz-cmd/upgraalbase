@@ -92,11 +92,31 @@ export default function ArticlesTab() {
     const article = articles.find(a => a.id === draggableId);
     if (!article) return;
 
-    const supplierKey = source.droppableId;
+    const supplierKey = destination.droppableId;
     const articlesInSupplier = groupedBySupplier[supplierKey] || [];
 
-    const newOrder = destination.index;
-    updateOrderMutation.mutate({ id: article.id, order: newOrder });
+    // Réassigner les ordres pour tous les articles du fournisseur
+    const newOrders = articlesInSupplier.map((a, index) => {
+      if (a.id === draggableId) {
+        return { id: a.id, order: destination.index };
+      }
+      // Décaler les autres articles
+      if (source.droppableId === supplierKey) {
+        // Même fournisseur: décalage simple
+        const oldIndex = articlesInSupplier.findIndex(x => x.id === draggableId);
+        if (oldIndex < destination.index && index <= destination.index && index > oldIndex) {
+          return { id: a.id, order: (a.order || 0) - 1 };
+        } else if (oldIndex > destination.index && index >= destination.index && index < oldIndex) {
+          return { id: a.id, order: (a.order || 0) + 1 };
+        }
+      }
+      return { id: a.id, order: index };
+    });
+
+    // Appliquer les mutations
+    newOrders.forEach(({ id, order }) => {
+      updateOrderMutation.mutate({ id, order });
+    });
   };
 
   const handleSave = (data) => {
@@ -262,7 +282,14 @@ export default function ArticlesTab() {
                                 <div className="flex items-start justify-between mb-2 gap-2">
                                   <div className="flex items-start gap-2 flex-1" {...provided.dragHandleProps}>
                                     <GripVertical className="w-4 h-4 text-gray-400 flex-shrink-0 mt-0.5" />
-                                    <h3 className="font-semibold text-gray-900">{article.name}</h3>
+                                    <div>
+                                      <div className="flex items-center gap-2">
+                                        <h3 className="font-semibold text-gray-900">{article.name}</h3>
+                                        <span className="inline-block px-2 py-0.5 bg-gray-200 text-gray-800 text-xs font-medium rounded">
+                                          #{article.order || 0}
+                                        </span>
+                                      </div>
+                                    </div>
                                   </div>
                                   <div className="flex gap-1 flex-shrink-0">
                                     <button
