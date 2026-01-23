@@ -20,6 +20,17 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'RESEND_API_KEY not configured' }, { status: 500 });
     }
 
+    // Get sender name from settings
+    let senderName = 'UpGraal';
+    try {
+      const settings = await base44.asServiceRole.entities.AppSettings.filter({ setting_key: 'email_sender_name' });
+      if (settings.length > 0 && settings[0].email_sender_name) {
+        senderName = settings[0].email_sender_name;
+      }
+    } catch (err) {
+      console.log('Using default sender name');
+    }
+
     // Send email via Resend API
     const response = await fetch('https://api.resend.com/emails', {
       method: 'POST',
@@ -28,7 +39,7 @@ Deno.serve(async (req) => {
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        from: 'UpGraal <onboarding@resend.dev>',
+        from: `${senderName} <onboarding@resend.dev>`,
         to: [to],
         subject: subject,
         html: html
