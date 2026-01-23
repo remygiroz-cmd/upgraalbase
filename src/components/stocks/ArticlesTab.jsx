@@ -1,119 +1,98 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
-import { Plus, Search, Edit2, Trash2, Filter, X } from 'lucide-react';
+import { Plus, Search, Edit2, Trash2, Filter } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import EmptyState from '@/components/ui/EmptyState';
-
-const CATEGORY_COLORS = {
-  'viandes': '#dc2626',
-  'poisson': '#0891b2',
-  'fruits': '#f97316',
-  'légumes': '#22c55e',
-  'laitages': '#f59e0b',
-  'surgelés': '#3b82f6',
-  'condiments': '#8b5cf6',
-  'boissons': '#ec4899',
-};
+import ArticleFormModal from './ArticleFormModal';
 
 export default function ArticlesTab() {
   const queryClient = useQueryClient();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState(null);
-  const [newCategoryName, setNewCategoryName] = useState('');
-  const [newCategoryColor, setNewCategoryColor] = useState('#2563eb');
-  const [showNewCategoryInput, setShowNewCategoryInput] = useState(false);
+  const [showForm, setShowForm] = useState(false);
+  const [editingArticle, setEditingArticle] = useState(null);
 
-  const { data: products = [], isLoading: loadingProducts } = useQuery({
-    queryKey: ['products'],
-    queryFn: () => base44.entities.Product.filter({ is_active: true }, 'name')
+  const { data: articles = [], isLoading: loadingArticles } = useQuery({
+    queryKey: ['articles'],
+    queryFn: () => base44.entities.Article.filter({ is_active: true }, 'name')
   });
 
-  const { data: categories = [], isLoading: loadingCategories } = useQuery({
+  const { data: categories = [] } = useQuery({
     queryKey: ['categories'],
     queryFn: () => base44.entities.Category.filter({ is_active: true }, 'name')
   });
 
-  const createCategoryMutation = useMutation({
-    mutationFn: (data) => base44.entities.Category.create(data),
+  const { data: suppliers = [] } = useQuery({
+    queryKey: ['suppliers'],
+    queryFn: () => base44.entities.Supplier.filter({ is_active: true }, 'name')
+  });
+
+  const saveArticleMutation = useMutation({
+    mutationFn: ({ id, data }) => {
+      if (id) {
+        return base44.entities.Article.update(id, data);
+      }
+      return base44.entities.Article.create(data);
+    },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['categories'] });
-      setNewCategoryName('');
-      setShowNewCategoryInput(false);
+      queryClient.invalidateQueries({ queryKey: ['articles'] });
+      setShowForm(false);
+      setEditingArticle(null);
     }
   });
 
-  const deleteProductMutation = useMutation({
-    mutationFn: (id) => base44.entities.Product.delete(id),
+  const deleteArticleMutation = useMutation({
+    mutationFn: (id) => base44.entities.Article.delete(id),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['products'] });
+      queryClient.invalidateQueries({ queryKey: ['articles'] });
     }
   });
 
-  const filteredProducts = products.filter(p => {
-    const matchesSearch = p.name.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesCategory = !selectedCategory || p.category === selectedCategory;
+  const filteredArticles = articles.filter(a => {
+    const matchesSearch = a.name.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesCategory = !selectedCategory || a.category === selectedCategory;
     return matchesSearch && matchesCategory;
   });
 
-  const handleCreateCategory = () => {
-    if (newCategoryName.trim()) {
-      createCategoryMutation.mutate({
-        name: newCategoryName,
-        color: newCategoryColor
-      });
-    }
+  const handleSave = (data) => {
+    saveArticleMutation.mutate({ 
+      id: editingArticle?.id, 
+      data 
+    });
   };
 
-  if (loadingProducts || loadingCategories) {
+  if (loadingArticles) {
     return <LoadingSpinner />;
   }
 
   return (
     <div className="space-y-6">
-      {/* New Category Section */}
-      <div className="bg-white rounded-lg border-2 border-gray-300 p-4">
-        <h3 className="font-semibold text-gray-900 mb-3">Nouvelle catégorie</h3>
-        <div className="flex items-center gap-2 mb-3">
-          <Input
-            value={newCategoryName}
-            onChange={(e) => setNewCategoryName(e.target.value)}
-            placeholder="Ex: Poisson..."
-            className="bg-gray-50 border-gray-300 text-gray-900 flex-1"
-          />
-          <div className="flex gap-1">
-            {['#dc2626', '#0891b2', '#f97316', '#22c55e', '#f59e0b', '#3b82f6', '#8b5cf6', '#ec4899', '#6366f1', '#14b8a6', '#f43f5e', '#06b6d4'].map(color => (
-              <button
-                key={color}
-                onClick={() => setNewCategoryColor(color)}
-                className={`w-6 h-6 rounded-full border-2 ${newCategoryColor === color ? 'border-gray-900' : 'border-gray-300'}`}
-                style={{ backgroundColor: color }}
-              />
-            ))}
+      {/* Search and Filters */}
+      <div className="space-y-4">
+        <div className="flex gap-2">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <Input
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Ex: Poisson..."
+              className="pl-10 bg-white border-gray-300 text-gray-900"
+            />
           </div>
           <Button
-            onClick={handleCreateCategory}
-            disabled={!newCategoryName.trim() || createCategoryMutation.isPending}
+            onClick={() => {
+              setEditingArticle(null);
+              setShowForm(true);
+            }}
             className="bg-orange-600 hover:bg-orange-700"
           >
-            + Créer
+            <Plus className="w-4 h-4 mr-2" />
+            Nouvel article
           </Button>
-        </div>
-      </div>
-
-      {/* Search and Category Filters */}
-      <div className="space-y-4">
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-          <Input
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Ex: Poisson..."
-            className="pl-10 bg-white border-gray-300 text-gray-900"
-          />
         </div>
 
         <div className="flex flex-wrap gap-2">
@@ -133,7 +112,7 @@ export default function ArticlesTab() {
               onClick={() => setSelectedCategory(cat.name)}
               className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all flex items-center gap-2 ${
                 selectedCategory === cat.name
-                  ? 'bg-blue-600 text-white'
+                  ? 'text-white'
                   : 'bg-gray-100 text-gray-900 hover:bg-gray-200'
               }`}
               style={selectedCategory === cat.name ? { backgroundColor: cat.color || '#2563eb' } : {}}
@@ -148,25 +127,37 @@ export default function ArticlesTab() {
         </div>
       </div>
 
-      {/* Products Grid */}
-      {filteredProducts.length === 0 ? (
+      {/* Articles Grid */}
+      {filteredArticles.length === 0 ? (
         <EmptyState
           icon={Filter}
           title="Aucun article trouvé"
-          description="Essayez une autre recherche ou catégorie"
+          description="Créez votre premier article ou essayez une autre recherche"
+          action={
+            <Button
+              onClick={() => {
+                setEditingArticle(null);
+                setShowForm(true);
+              }}
+              className="bg-orange-600 hover:bg-orange-700"
+            >
+              <Plus className="w-4 h-4 mr-2" />
+              Nouvel article
+            </Button>
+          }
         />
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {filteredProducts.map(product => (
+          {filteredArticles.map(article => (
             <div
-              key={product.id}
+              key={article.id}
               className="bg-white rounded-lg border-2 border-gray-300 overflow-hidden hover:border-gray-400 transition-all"
             >
-              {product.image_url ? (
+              {article.image_url ? (
                 <div className="w-full h-32 overflow-hidden bg-gray-100">
                   <img
-                    src={product.image_url}
-                    alt={product.name}
+                    src={article.image_url}
+                    alt={article.name}
                     className="w-full h-full object-cover"
                   />
                 </div>
@@ -178,15 +169,21 @@ export default function ArticlesTab() {
 
               <div className="p-4">
                 <div className="flex items-start justify-between mb-2">
-                  <h3 className="font-semibold text-gray-900 flex-1">{product.name}</h3>
+                  <h3 className="font-semibold text-gray-900 flex-1">{article.name}</h3>
                   <div className="flex gap-1 ml-2">
-                    <button className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors">
+                    <button
+                      onClick={() => {
+                        setEditingArticle(article);
+                        setShowForm(true);
+                      }}
+                      className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
+                    >
                       <Edit2 className="w-4 h-4" />
                     </button>
                     <button
                       onClick={() => {
                         if (confirm('Supprimer cet article?')) {
-                          deleteProductMutation.mutate(product.id);
+                          deleteArticleMutation.mutate(article.id);
                         }
                       }}
                       className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
@@ -196,23 +193,38 @@ export default function ArticlesTab() {
                   </div>
                 </div>
 
-                {product.category && (
+                {article.category && (
                   <Badge
                     className="mb-3"
                     style={{
-                      backgroundColor: categories.find(c => c.name === product.category)?.color || '#2563eb',
+                      backgroundColor: categories.find(c => c.name === article.category)?.color || '#2563eb',
                       color: 'white',
                       border: 'none'
                     }}
                   >
-                    {product.category}
+                    {article.category}
                   </Badge>
                 )}
 
                 <div className="space-y-1 text-sm text-gray-700">
-                  {product.unit_price > 0 && (
+                  {article.supplier_name && (
+                    <p className="font-medium text-gray-900">
+                      {article.supplier_name}
+                    </p>
+                  )}
+                  {article.unit_price > 0 && (
                     <p className="font-semibold text-orange-600">
-                      {product.unit_price.toFixed(2)} € / {product.unit || 'unité'}
+                      {article.unit_price.toFixed(2)} € / {article.unit || 'unité'}
+                    </p>
+                  )}
+                  {article.brand && (
+                    <p className="text-xs text-gray-600">
+                      Marque: {article.brand}
+                    </p>
+                  )}
+                  {article.supplier_reference && (
+                    <p className="text-xs text-gray-600">
+                      Réf: {article.supplier_reference}
                     </p>
                   )}
                 </div>
@@ -221,6 +233,20 @@ export default function ArticlesTab() {
           ))}
         </div>
       )}
+
+      {/* Form Modal */}
+      <ArticleFormModal
+        open={showForm}
+        onClose={() => {
+          setShowForm(false);
+          setEditingArticle(null);
+        }}
+        onSave={handleSave}
+        isSaving={saveArticleMutation.isPending}
+        article={editingArticle}
+        categories={categories}
+        suppliers={suppliers}
+      />
     </div>
   );
 }
