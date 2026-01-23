@@ -55,6 +55,7 @@ export default function StopwatchModal({ task, onClose }) {
 
   const handleValidate = () => {
     if (time === 0) return;
+    setIsRunning(false);
     setShowQuantityDialog(true);
   };
 
