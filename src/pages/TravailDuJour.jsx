@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
-import { ChefHat, Check, CheckCircle2, X, Clock, Trash2 } from 'lucide-react';
+import { ChefHat, Check, CheckCircle2, X, Clock, Trash2, Plus, Minus } from 'lucide-react';
 import ConfirmDialog from '@/components/ui/ConfirmDialog';
 import DailyNoteCard from '@/components/cuisine/DailyNoteCard';
 import { Button } from '@/components/ui/button';
@@ -137,6 +137,21 @@ export default function TravailDuJour() {
     });
   };
 
+  const handleUpdateQuantity = (taskIndex, newQuantity) => {
+    if (!activeSession || newQuantity < 1) return;
+    
+    const updatedTasks = [...activeSession.tasks];
+    updatedTasks[taskIndex] = {
+      ...updatedTasks[taskIndex],
+      quantity_to_produce: newQuantity
+    };
+    
+    updateSessionMutation.mutate({
+      id: activeSession.id,
+      data: { tasks: updatedTasks }
+    });
+  };
+
   const handleCompleteSession = () => {
     if (!activeSession) return;
     setConfirmDialog({
@@ -207,6 +222,14 @@ export default function TravailDuJour() {
     const task = tasks.find(t => t.id === sessionTask.task_id);
     if (!task) return 0;
     const baseTime = (task.duration_minutes || 0) * 60 + (task.duration_seconds || 0);
+    
+    // If we have both initial and current quantity, calculate proportional time
+    if (sessionTask.initial_quantity_to_produce && sessionTask.initial_quantity_to_produce > 0) {
+      const timePerUnit = baseTime / sessionTask.initial_quantity_to_produce;
+      return timePerUnit * (sessionTask.quantity_to_produce || 1);
+    }
+    
+    // Otherwise use the base time * current quantity
     const multiplier = sessionTask.quantity_to_produce || 1;
     return baseTime * multiplier;
   };
@@ -321,6 +344,7 @@ export default function TravailDuJour() {
                       onComplete={() => handleCompleteTask(task.originalIndex)}
                       onUncomplete={() => handleUncompleteTask(task.originalIndex)}
                       onRemove={() => handleRemoveTask(task.originalIndex)}
+                      onUpdateQuantity={(newQuantity) => handleUpdateQuantity(task.originalIndex, newQuantity)}
                       allTasks={tasks}
                       taskEntities={tasks}
                       dayOfWeek={dayOfWeek}
@@ -368,7 +392,7 @@ export default function TravailDuJour() {
   );
 }
 
-function WorkTaskCard({ task, onComplete, onUncomplete, onRemove }) {
+function WorkTaskCard({ task, onComplete, onUncomplete, onRemove, onUpdateQuantity }) {
   const dayOfWeek = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'][new Date().getDay()];
   const { data: tasks = [] } = useQuery({
     queryKey: ['tasks'],
@@ -430,7 +454,26 @@ function WorkTaskCard({ task, onComplete, onUncomplete, onRemove }) {
             </div>
             
             <div className="flex flex-wrap gap-2">
-              {hasQuantity && (
+              {hasQuantity && !task.is_completed && (
+                <div className="flex items-center gap-2 px-2 py-1 rounded-lg bg-indigo-600/20">
+                  <button
+                    onClick={() => onUpdateQuantity(task.quantity_to_produce - 1)}
+                    className="w-7 h-7 rounded-md bg-white/20 hover:bg-white/30 flex items-center justify-center transition-colors active:scale-95"
+                  >
+                    <Minus className="w-4 h-4 text-indigo-400" />
+                  </button>
+                  <span className="text-indigo-400 text-xs font-medium min-w-[3rem] text-center break-words">
+                    {task.quantity_to_produce} {taskDetails?.unit || ''}
+                  </span>
+                  <button
+                    onClick={() => onUpdateQuantity(task.quantity_to_produce + 1)}
+                    className="w-7 h-7 rounded-md bg-white/20 hover:bg-white/30 flex items-center justify-center transition-colors active:scale-95"
+                  >
+                    <Plus className="w-4 h-4 text-indigo-400" />
+                  </button>
+                </div>
+              )}
+              {hasQuantity && task.is_completed && (
                 <span className="px-2 py-1 rounded-lg bg-indigo-600/20 text-indigo-400 text-xs font-medium break-words">
                   Quantité : {task.quantity_to_produce} {taskDetails?.unit || ''}
                 </span>
