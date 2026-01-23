@@ -251,33 +251,35 @@ export default function TravailDuJour() {
   };
 
   return (
-    <div>
-      <PageHeader
-        icon={ChefHat}
-        title="Travail du Jour"
-        subtitle={format(new Date(), "EEEE d MMMM yyyy", { locale: fr })}
-        actions={
-          <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
-            <Button
-              onClick={handleDeleteSession}
-              variant="outline"
-              className="border-red-600 text-red-600 hover:text-white hover:bg-red-600 w-full sm:w-auto"
-            >
-              <Trash2 className="w-4 h-4 mr-2" />
-              <span className="hidden sm:inline">Supprimer la liste</span>
-              <span className="sm:hidden">Supprimer</span>
-            </Button>
-            <Button
-              onClick={handleCompleteSession}
-              className="bg-orange-600 hover:bg-orange-700 w-full sm:w-auto"
-            >
-              <CheckCircle2 className="w-4 h-4 mr-2" />
-              <span className="hidden sm:inline">Mise en place terminée</span>
-              <span className="sm:hidden">Terminée</span>
-            </Button>
+    <div className="max-w-4xl mx-auto">
+      <div className="mb-4 sm:mb-6">
+        <div className="flex items-center gap-3 mb-2">
+          <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-orange-600/20 text-orange-400 flex items-center justify-center flex-shrink-0">
+            <ChefHat className="w-5 h-5 sm:w-6 sm:h-6" />
           </div>
-        }
-      />
+          <div className="flex-1 min-w-0">
+            <h1 className="text-xl sm:text-2xl font-bold text-gray-900 break-words">Travail du Jour</h1>
+            <p className="text-xs sm:text-sm text-gray-700 break-words">{format(new Date(), "EEEE d MMMM yyyy", { locale: fr })}</p>
+          </div>
+        </div>
+        <div className="flex flex-col gap-2 mt-3">
+          <Button
+            onClick={handleDeleteSession}
+            variant="outline"
+            className="border-red-600 text-red-600 hover:text-white hover:bg-red-600 w-full min-h-[44px]"
+          >
+            <Trash2 className="w-4 h-4 mr-2" />
+            Supprimer
+          </Button>
+          <Button
+            onClick={handleCompleteSession}
+            className="bg-orange-600 hover:bg-orange-700 w-full min-h-[48px] font-semibold"
+          >
+            <CheckCircle2 className="w-5 h-5 mr-2" />
+            Terminée
+          </Button>
+        </div>
+      </div>
 
       {/* Active Daily Notes */}
       <AnimatePresence>
@@ -289,35 +291,31 @@ export default function TravailDuJour() {
       </AnimatePresence>
 
       {/* Progress Section */}
-      <div className="mb-6 p-4 bg-white rounded-2xl border-2 border-gray-300">
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-3">
-          <div className="flex items-center gap-3 sm:gap-4">
-            <span className="text-2xl font-bold text-orange-600">{completedCount}/{totalCount}</span>
-            <span className="text-gray-900 font-medium text-sm sm:text-base">tâches complétées</span>
+      <div className="mb-4 sm:mb-6 p-4 bg-white rounded-2xl border-2 border-gray-300 shadow-sm">
+        <div className="flex items-center gap-3 mb-3">
+          <span className="text-3xl sm:text-4xl font-bold text-orange-600">{completedCount}/{totalCount}</span>
+          <span className="text-gray-900 font-semibold text-base sm:text-lg">tâches complétées</span>
+        </div>
+        {activeSession.started_at && (
+          <div className="text-gray-700 text-xs font-medium mb-2">
+            Créée le {format(new Date(activeSession.started_at), "d MMM 'à' HH:mm", { locale: fr })}
           </div>
-          <div className="flex flex-col items-start sm:items-end gap-2 text-sm w-full sm:w-auto">
-            {activeSession.started_at && (
-              <div className="text-gray-700 text-xs font-medium">
-                Créée le {format(new Date(activeSession.started_at), "d MMM 'à' HH:mm", { locale: fr })}
-              </div>
-            )}
-            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4">
-              <div className="flex items-center gap-2 text-gray-700 font-medium text-xs sm:text-sm">
-                <Clock className="w-4 h-4" />
-                <span>Total: {formatTime(totalTimeSeconds)}</span>
-              </div>
-              <div className="flex items-center gap-2 text-orange-600 font-semibold text-xs sm:text-sm">
-                <Clock className="w-4 h-4" />
-                <span>Restant: {formatTime(remainingTimeSeconds)}</span>
-              </div>
-            </div>
+        )}
+        <div className="flex flex-col gap-2 mb-3">
+          <div className="flex items-center gap-2 text-gray-700 font-medium text-sm">
+            <Clock className="w-4 h-4 flex-shrink-0" />
+            <span>Total: {formatTime(totalTimeSeconds)}</span>
+          </div>
+          <div className="flex items-center gap-2 text-orange-600 font-semibold text-sm">
+            <Clock className="w-4 h-4 flex-shrink-0" />
+            <span>Restant: {formatTime(remainingTimeSeconds)}</span>
           </div>
         </div>
         <Progress value={progressPercent} className="h-3 bg-gray-200" />
       </div>
 
       {/* Tasks by Category */}
-      <div className="space-y-6">
+      <div className="space-y-4 sm:space-y-6">
         {Object.entries(tasksByCategory).map(([categoryId, tasks]) => {
           const category = categories.find(c => c.id === categoryId);
           const categoryName = category?.name || 'Sans catégorie';
@@ -326,16 +324,16 @@ export default function TravailDuJour() {
           return (
             <div key={categoryId} className="bg-white rounded-2xl border-2 border-gray-300 overflow-hidden shadow-sm">
               <div 
-                className="px-3 sm:px-4 py-3 border-b-2 border-gray-200"
+                className="px-4 py-3 border-b-2 border-gray-200"
                 style={{ borderLeftWidth: 4, borderLeftColor: categoryColor }}
               >
-                <h3 className="font-semibold text-gray-900 text-sm sm:text-base break-words">{categoryName}</h3>
-                <p className="text-xs text-gray-700 font-medium">
+                <h3 className="font-bold text-gray-900 text-base break-words">{categoryName}</h3>
+                <p className="text-xs text-gray-700 font-medium mt-1">
                   {tasks.filter(t => t.is_completed).length}/{tasks.length} complété{tasks.length > 1 ? 's' : ''}
                 </p>
               </div>
               
-              <div className="p-3 space-y-2">
+              <div className="p-3 space-y-3">
                 <AnimatePresence>
                   {tasks.map((task) => (
                     <WorkTaskCard
@@ -425,32 +423,32 @@ function WorkTaskCard({ task, onComplete, onUncomplete, onRemove, onUpdateQuanti
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, scale: 0.95 }}
       className={cn(
-        "p-3 sm:p-4 rounded-xl border-2 transition-all",
+        "p-4 rounded-xl border-2 transition-all",
         task.is_completed
           ? "bg-orange-50 border-orange-400"
           : "bg-white border-gray-300"
       )}
     >
-      <div className="flex flex-col sm:flex-row gap-3">
+      <div className="flex flex-col gap-3">
         {/* Task Image */}
         {taskDetails?.image_url && (
-          <div className="flex-shrink-0">
+          <div className="w-full">
             <img 
               src={taskDetails.image_url} 
               alt={task.task_name}
               className={cn(
-                "w-full sm:w-20 sm:h-20 h-32 rounded-lg object-cover border-2",
-                task.is_completed ? "border-orange-600/30 opacity-60" : "border-slate-600"
+                "w-full h-48 rounded-lg object-cover border-2",
+                task.is_completed ? "border-orange-600/30 opacity-60" : "border-gray-300"
               )}
             />
           </div>
         )}
 
-        <div className="flex-1 flex flex-col gap-3 min-w-0">
+        <div className="flex flex-col gap-3">
           <div className="flex-1">
             <div className="flex items-start gap-2 flex-wrap mb-2">
               <h4 className={cn(
-                  "font-semibold text-gray-900 text-sm sm:text-base break-words",
+                  "font-bold text-gray-900 text-base break-words",
                   task.is_completed && "line-through text-gray-500"
                 )}>
                   {task.task_name}
@@ -518,22 +516,22 @@ function WorkTaskCard({ task, onComplete, onUncomplete, onRemove, onUpdateQuanti
             )}
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 mt-2">
             {!task.is_completed && (
               <>
                 <Button
                   size="sm"
                   variant="ghost"
                   onClick={onRemove}
-                  className="text-gray-600 hover:text-red-600 hover:bg-red-50 min-h-[44px] min-w-[44px] px-2 sm:px-3"
+                  className="text-gray-600 hover:text-red-600 hover:bg-red-50 min-h-[48px] min-w-[48px] px-3"
                 >
-                  <X className="w-4 h-4" />
+                  <X className="w-5 h-5" />
                 </Button>
                 <Button
                   onClick={onComplete}
-                  className="bg-orange-600 hover:bg-orange-700 min-h-[44px] flex-1 text-sm"
+                  className="bg-orange-600 hover:bg-orange-700 min-h-[52px] flex-1 text-base font-semibold"
                 >
-                  <Check className="w-4 h-4 mr-2" />
+                  <Check className="w-5 h-5 mr-2" />
                   Terminé
                 </Button>
               </>
@@ -543,9 +541,9 @@ function WorkTaskCard({ task, onComplete, onUncomplete, onRemove, onUpdateQuanti
                 size="sm"
                 onClick={onUncomplete}
                 variant="outline"
-                className="border-orange-600 text-orange-600 hover:bg-orange-50 min-h-[44px] w-full sm:w-auto text-sm"
+                className="border-orange-600 text-orange-600 hover:bg-orange-50 min-h-[48px] w-full text-base font-semibold"
               >
-                <RotateCcw className="w-4 h-4 mr-2" />
+                <RotateCcw className="w-5 h-5 mr-2" />
                 Annuler
               </Button>
             )}
