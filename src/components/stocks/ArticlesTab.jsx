@@ -18,6 +18,7 @@ export default function ArticlesTab() {
   const [selectedSupplier, setSelectedSupplier] = useState(null);
   const [showForm, setShowForm] = useState(false);
   const [editingArticle, setEditingArticle] = useState(null);
+  const [viewMode, setViewMode] = useState('shopping'); // 'shopping' ou 'storage'
 
   const { data: articles = [], isLoading: loadingArticles } = useQuery({
     queryKey: ['articles'],
@@ -79,9 +80,10 @@ export default function ArticlesTab() {
     return acc;
   }, {});
 
-  // Sort articles within each supplier by order
+  // Sort articles within each supplier by the appropriate order field
+  const orderField = viewMode === 'shopping' ? 'order' : 'storage_order';
   Object.keys(groupedBySupplier).forEach(supplier => {
-    groupedBySupplier[supplier].sort((a, b) => (a.order || 0) - (b.order || 0));
+    groupedBySupplier[supplier].sort((a, b) => (a[orderField] || 0) - (b[orderField] || 0));
   });
 
   const handleDragEnd = (result) => {
@@ -98,9 +100,10 @@ export default function ArticlesTab() {
     updatedList.splice(destination.index, 0, draggedArticle);
 
     // Réassigner les ordres séquentiellement (0, 1, 2, 3...)
+    const orderField = viewMode === 'shopping' ? 'order' : 'storage_order';
     updatedList.forEach((article, index) => {
-      if (article.order !== index) {
-        updateOrderMutation.mutate({ id: article.id, order: index });
+      if (article[orderField] !== index) {
+        updateOrderMutation.mutate({ id: article.id, [orderField]: index });
       }
     });
   };
@@ -199,6 +202,30 @@ export default function ArticlesTab() {
               {sup.name}
             </button>
           ))}
+        </div>
+
+        {/* View Mode Toggle */}
+        <div className="flex gap-2">
+          <button
+            onClick={() => setViewMode('shopping')}
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+              viewMode === 'shopping'
+                ? 'bg-blue-600 text-white'
+                : 'bg-gray-100 text-gray-900 hover:bg-gray-200'
+            }`}
+          >
+            Parcours Magasin
+          </button>
+          <button
+            onClick={() => setViewMode('storage')}
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+              viewMode === 'storage'
+                ? 'bg-purple-600 text-white'
+                : 'bg-gray-100 text-gray-900 hover:bg-gray-200'
+            }`}
+          >
+            Stockage Boutique
+          </button>
         </div>
       </div>
 
