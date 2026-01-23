@@ -9,7 +9,7 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { to, subject, html } = await req.json();
+    const { to, subject, html, csvData, csvFilename } = await req.json();
 
     if (!to || !subject || !html) {
       return Response.json({ error: 'Missing required fields: to, subject, html' }, { status: 400 });
@@ -31,6 +31,24 @@ Deno.serve(async (req) => {
       console.log('Using default sender name');
     }
 
+    // Prepare email payload
+    const emailPayload = {
+      from: `${senderName} <onboarding@resend.dev>`,
+      to: [to],
+      subject: subject,
+      html: html
+    };
+
+    // Add CSV attachment if provided
+    if (csvData && csvFilename) {
+      emailPayload.attachments = [
+        {
+          filename: csvFilename,
+          content: btoa(csvData) // Base64 encode the CSV
+        }
+      ];
+    }
+
     // Send email via Resend API
     const response = await fetch('https://api.resend.com/emails', {
       method: 'POST',
@@ -38,12 +56,7 @@ Deno.serve(async (req) => {
         'Authorization': `Bearer ${apiKey}`,
         'Content-Type': 'application/json'
       },
-      body: JSON.stringify({
-        from: `${senderName} <onboarding@resend.dev>`,
-        to: [to],
-        subject: subject,
-        html: html
-      })
+      body: JSON.stringify(emailPayload)
     });
 
     const result = await response.json();
