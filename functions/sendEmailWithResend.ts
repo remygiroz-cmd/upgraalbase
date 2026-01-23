@@ -78,19 +78,12 @@ Deno.serve(async (req) => {
     return Response.json({ 
       success: true, 
       message: 'Email sent successfully',
-      id: result.id 
+      id: result.id,
+      attachmentsSent: emailPayload.attachments?.length || 0
     });
 
   } catch (error) {
     console.error('Error:', error);
-    return Response.json({ 
-      error: 'Internal server error', 
-      details: error.message 
-    }, { status: 500 });
-  }
-});
-
-  } catch (error) {
     return Response.json({ 
       error: 'Internal server error', 
       details: error.message 
