@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Upload, X, Sparkles, Loader2 } from 'lucide-react';
 
-export default function ArticleFormModal({ open, onClose, onSave, isSaving, article, categories, suppliers }) {
+export default function ArticleFormModal({ open, onClose, onSave, isSaving, article, categories, suppliers, articles = [] }) {
   const [form, setForm] = useState({
     name: '',
     category: '',
@@ -198,10 +198,22 @@ export default function ArticleFormModal({ open, onClose, onSave, isSaving, arti
                 value={form.supplier_id}
                 onChange={(e) => {
                   const supplier = suppliers.find(s => s.id === e.target.value);
+                  let nextOrder = 0;
+                  let nextStorageOrder = 0;
+                  
+                  // Si création d'un nouvel article, calculer le prochain rang
+                  if (!article && e.target.value) {
+                    const supplierArticles = articles.filter(a => a.supplier_id === e.target.value);
+                    nextOrder = supplierArticles.length;
+                    nextStorageOrder = supplierArticles.length;
+                  }
+                  
                   setForm(prev => ({ 
                     ...prev, 
                     supplier_id: e.target.value,
-                    supplier_name: supplier?.name || ''
+                    supplier_name: supplier?.name || '',
+                    order: !article ? nextOrder : prev.order,
+                    storage_order: !article ? nextStorageOrder : prev.storage_order
                   }));
                 }}
                 className="w-full bg-slate-700 border-slate-600 border rounded px-3 py-2 mt-1 text-slate-100"
