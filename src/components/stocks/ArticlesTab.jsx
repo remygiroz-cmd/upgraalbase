@@ -14,6 +14,7 @@ export default function ArticlesTab() {
   const queryClient = useQueryClient();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState(null);
+  const [selectedSupplier, setSelectedSupplier] = useState(null);
   const [showForm, setShowForm] = useState(false);
   const [editingArticle, setEditingArticle] = useState(null);
 
@@ -56,7 +57,8 @@ export default function ArticlesTab() {
   const filteredArticles = articles.filter(a => {
     const matchesSearch = a.name.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesCategory = !selectedCategory || a.category === selectedCategory;
-    return matchesSearch && matchesCategory;
+    const matchesSupplier = !selectedSupplier || a.supplier_name === selectedSupplier;
+    return matchesSearch && matchesCategory && matchesSupplier;
   });
 
   const handleSave = (data) => {
@@ -126,6 +128,33 @@ export default function ArticlesTab() {
             </button>
           ))}
           <CategoryManager categories={categories} />
+        </div>
+
+        {/* Supplier Filter */}
+        <div className="flex flex-wrap gap-2 items-center">
+          <button
+            onClick={() => setSelectedSupplier(null)}
+            className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
+              selectedSupplier === null
+                ? 'bg-green-600 text-white'
+                : 'bg-gray-100 text-gray-900 hover:bg-gray-200'
+            }`}
+          >
+            Tous les fournisseurs
+          </button>
+          {suppliers.map(sup => (
+            <button
+              key={sup.id}
+              onClick={() => setSelectedSupplier(sup.name)}
+              className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
+                selectedSupplier === sup.name
+                  ? 'bg-green-600 text-white'
+                  : 'bg-gray-100 text-gray-900 hover:bg-gray-200'
+              }`}
+            >
+              {sup.name}
+            </button>
+          ))}
         </div>
       </div>
 
