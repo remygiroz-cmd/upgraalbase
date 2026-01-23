@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
-import { Settings, User, Bell, Palette, Clock, Save, Check, Upload, Image, Sparkles, Loader2, Shield, Users as UsersIcon, Calendar } from 'lucide-react';
+import { Settings, User, Bell, Palette, Clock, Save, Check, Upload, Image, Sparkles, Loader2, Shield, Users as UsersIcon, Calendar, Plus, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -517,27 +517,24 @@ function AutomationSettings() {
 
   const { data: automationSettings = [] } = useQuery({
     queryKey: ['automationSettings'],
-    queryFn: () => base44.entities.AppSettings.filter({ setting_key: 'auto_work_session' })
+    queryFn: () => base44.entities.AppSettings.filter({ setting_key: 'auto_complete_session' })
   });
 
   const currentSettings = automationSettings[0] || {
     auto_enabled: false,
-    auto_time: '09:00',
-    auto_time_end: '10:00'
+    completion_times: ['14:00', '22:00']
   };
 
   const [settings, setSettings] = useState({
     auto_enabled: currentSettings.auto_enabled || false,
-    auto_time: currentSettings.auto_time || '09:00',
-    auto_time_end: currentSettings.auto_time_end || '10:00'
+    completion_times: currentSettings.completion_times || ['14:00', '22:00']
   });
 
   useEffect(() => {
     if (automationSettings[0]) {
       setSettings({
         auto_enabled: automationSettings[0].auto_enabled || false,
-        auto_time: automationSettings[0].auto_time || '09:00',
-        auto_time_end: automationSettings[0].auto_time_end || '10:00'
+        completion_times: automationSettings[0].completion_times || ['14:00', '22:00']
       });
     }
   }, [automationSettings]);
@@ -548,7 +545,7 @@ function AutomationSettings() {
         return base44.entities.AppSettings.update(automationSettings[0].id, newSettings);
       }
       return base44.entities.AppSettings.create({ 
-        setting_key: 'auto_work_session', 
+        setting_key: 'auto_complete_session', 
         ...newSettings 
       });
     },
@@ -568,15 +565,39 @@ function AutomationSettings() {
     saveSettingsMutation.mutate(settings);
   };
 
+  const handleAddTime = () => {
+    setSettings({
+      ...settings,
+      completion_times: [...settings.completion_times, '18:00']
+    });
+  };
+
+  const handleRemoveTime = (index) => {
+    const newTimes = settings.completion_times.filter((_, i) => i !== index);
+    setSettings({
+      ...settings,
+      completion_times: newTimes.length > 0 ? newTimes : ['14:00']
+    });
+  };
+
+  const handleTimeChange = (index, newTime) => {
+    const newTimes = [...settings.completion_times];
+    newTimes[index] = newTime;
+    setSettings({
+      ...settings,
+      completion_times: newTimes
+    });
+  };
+
   return (
     <div className="bg-white rounded-2xl border-2 border-gray-300 p-6 shadow-sm">
       <div className="mb-6">
         <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
           <Calendar className="w-5 h-5" />
-          Création automatique du Travail du Jour
+          Clôture automatique du Travail du Jour
         </h3>
         <p className="text-sm text-gray-700 mt-1">
-          Configurez la création automatique quotidienne des listes de travail basée sur les tâches planifiées
+          La session active sera automatiquement terminée et enregistrée dans l'historique aux heures définies
         </p>
       </div>
 
@@ -585,7 +606,7 @@ function AutomationSettings() {
           <div>
             <p className="font-medium text-gray-900">Activer l'automation</p>
             <p className="text-sm text-gray-700 mt-1">
-              Créer automatiquement une liste chaque jour dans la fenêtre horaire définie
+              Terminer automatiquement la session du jour aux heures définies
             </p>
           </div>
           <Switch
@@ -597,36 +618,44 @@ function AutomationSettings() {
         {settings.auto_enabled && (
           <div className="space-y-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
             <div>
-              <Label htmlFor="auto_time">Heure de début de la fenêtre</Label>
-              <Input
-                id="auto_time"
-                type="time"
-                value={settings.auto_time}
-                onChange={(e) => setSettings({ ...settings, auto_time: e.target.value })}
-                className="mt-2 bg-white"
-              />
-              <p className="text-xs text-gray-600 mt-1">
-                L'automation vérifie les tâches planifiées à partir de cette heure
-              </p>
-            </div>
-
-            <div>
-              <Label htmlFor="auto_time_end">Heure de fin de la fenêtre</Label>
-              <Input
-                id="auto_time_end"
-                type="time"
-                value={settings.auto_time_end}
-                onChange={(e) => setSettings({ ...settings, auto_time_end: e.target.value })}
-                className="mt-2 bg-white"
-              />
-              <p className="text-xs text-gray-600 mt-1">
-                Les tâches planifiées jusqu'à cette heure seront incluses
+              <Label className="text-base font-semibold mb-3 block">Heures de clôture automatique</Label>
+              <div className="space-y-3">
+                {settings.completion_times.map((time, index) => (
+                  <div key={index} className="flex items-center gap-2">
+                    <Input
+                      type="time"
+                      value={time}
+                      onChange={(e) => handleTimeChange(index, e.target.value)}
+                      className="bg-white"
+                    />
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => handleRemoveTime(index)}
+                      className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                      disabled={settings.completion_times.length === 1}
+                    >
+                      <X className="w-4 h-4" />
+                    </Button>
+                  </div>
+                ))}
+              </div>
+              <Button
+                variant="outline"
+                onClick={handleAddTime}
+                className="mt-3 w-full border-orange-600 text-orange-600 hover:bg-orange-50"
+              >
+                <Plus className="w-4 h-4 mr-2" />
+                Ajouter une heure
+              </Button>
+              <p className="text-xs text-gray-600 mt-2">
+                L'automation vérifie toutes les 15 minutes si une clôture doit être effectuée
               </p>
             </div>
 
             <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
               <p className="text-sm text-blue-900">
-                <strong>Important :</strong> Seules les tâches ayant la planification automatique activée et correspondant à la fenêtre horaire seront ajoutées à la liste.
+                <strong>Important :</strong> La session active sera automatiquement marquée comme "Terminée" et archivée dans l'historique. Cette action est équivalente au bouton "Terminée".
               </p>
             </div>
           </div>
