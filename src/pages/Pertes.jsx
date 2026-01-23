@@ -176,17 +176,19 @@ export default function Pertes() {
         // Upload image first
         const { file_url } = await base44.integrations.Core.UploadFile({ file: imageFile });
         
-        // Send email via EmailJS
-        await base44.functions.invoke('sendEmailWithEmailJS', {
+        // Send email
+        await base44.integrations.Core.SendEmail({
           to: shareDestination,
+          from_name: 'UpGraal',
           subject: `Récapitulatif Pertes - ${format(parseISO(startDate), "d MMM yyyy", { locale: fr })} au ${format(parseISO(endDate), "d MMM yyyy", { locale: fr })}`,
-          html: `
-            <h2>Récapitulatif des Pertes</h2>
-            <p>Période: Du ${format(parseISO(startDate), "d MMMM yyyy", { locale: fr })} au ${format(parseISO(endDate), "d MMMM yyyy", { locale: fr })}</p>
-            <p>Voir le récapitulatif en pièce jointe ci-dessous:</p>
-            <img src="${file_url}" alt="Récapitulatif" style="max-width: 100%; height: auto;" />
-          `,
-          imageUrl: file_url
+          body: `
+            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+              <h2 style="color: #dc2626;">Récapitulatif des Pertes</h2>
+              <p>Période: Du ${format(parseISO(startDate), "d MMMM yyyy", { locale: fr })} au ${format(parseISO(endDate), "d MMMM yyyy", { locale: fr })}</p>
+              <p>Voir le récapitulatif ci-dessous:</p>
+              <img src="${file_url}" alt="Récapitulatif" style="max-width: 100%; height: auto; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);" />
+            </div>
+          `
         });
         alert('Email envoyé avec succès!');
       } else if (shareMode === 'whatsapp') {
