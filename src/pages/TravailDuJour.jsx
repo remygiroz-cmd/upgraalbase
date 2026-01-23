@@ -403,12 +403,6 @@ function WorkTaskCard({ task, onComplete, onUncomplete, onRemove, onUpdateQuanti
   const hasQuantity = task.quantity_to_produce !== undefined && task.quantity_to_produce > 0;
   const isAdHoc = !task.task_id;
   
-  // For binary tasks, get the multiplier from weekly_targets
-  const isBinaryTask = taskDetails?.tracking_mode === 'binary';
-  const binaryMultiplier = isBinaryTask && taskDetails?.weekly_targets?.[dayOfWeek] 
-    ? taskDetails.weekly_targets[dayOfWeek] 
-    : null;
-  
   return (
     <motion.div
       layout
@@ -476,11 +470,6 @@ function WorkTaskCard({ task, onComplete, onUncomplete, onRemove, onUpdateQuanti
               {hasQuantity && task.is_completed && (
                 <span className="px-2 py-1 rounded-lg bg-indigo-600/20 text-indigo-400 text-xs font-medium break-words">
                   Quantité : {task.quantity_to_produce} {taskDetails?.unit || ''}
-                </span>
-              )}
-              {binaryMultiplier && binaryMultiplier > 0 && (
-                <span className="px-2 py-1 rounded-lg bg-amber-600/20 text-amber-400 text-xs font-medium">
-                  Quantité : {binaryMultiplier}
                 </span>
               )}
             </div>

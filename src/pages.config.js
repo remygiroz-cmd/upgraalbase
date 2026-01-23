@@ -4,13 +4,13 @@ import GestionUtilisateurs from './pages/GestionUtilisateurs';
 import Historique from './pages/Historique';
 import Home from './pages/Home';
 import Invite from './pages/Invite';
+import MiseEnPlace from './pages/MiseEnPlace';
 import Parametres from './pages/Parametres';
 import Pertes from './pages/Pertes';
 import Recettes from './pages/Recettes';
 import Stocks from './pages/Stocks';
 import Temperatures from './pages/Temperatures';
 import TravailDuJour from './pages/TravailDuJour';
-import MiseEnPlace from './pages/MiseEnPlace';
 import __Layout from './Layout.jsx';
 
 
@@ -21,13 +21,13 @@ export const PAGES = {
     "Historique": Historique,
     "Home": Home,
     "Invite": Invite,
+    "MiseEnPlace": MiseEnPlace,
     "Parametres": Parametres,
     "Pertes": Pertes,
     "Recettes": Recettes,
     "Stocks": Stocks,
     "Temperatures": Temperatures,
     "TravailDuJour": TravailDuJour,
-    "MiseEnPlace": MiseEnPlace,
 }
 
 export const pagesConfig = {
