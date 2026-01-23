@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
-import { PackageMinus, Plus, Search, ShoppingCart, Trash2, Download, History, X } from 'lucide-react';
+import { PackageMinus, Plus, Search, ShoppingCart, Trash2, Download, History, X, Upload, Sparkles, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -209,18 +209,29 @@ export default function Pertes() {
                     whileTap={{ scale: 0.95 }}
                     onClick={() => addToCart(product)}
                     className={cn(
-                      "p-3 sm:p-4 rounded-xl border-2 text-left transition-all min-h-[88px]",
+                      "rounded-xl border-2 text-left transition-all overflow-hidden",
                       "bg-white border-gray-300",
                       "hover:bg-gray-50 hover:border-gray-400",
                       "active:bg-gray-100"
                     )}
                   >
-                    <p className="font-semibold text-gray-900 text-xs sm:text-sm line-clamp-2">{product.name}</p>
-                    {product.unit_price > 0 && (
-                      <p className="text-[10px] sm:text-xs text-orange-400 mt-1">
-                        {product.unit_price.toFixed(2)} € / {product.unit}
-                      </p>
+                    {product.image_url && (
+                      <div className="w-full h-24 sm:h-28 overflow-hidden bg-gray-100">
+                        <img 
+                          src={product.image_url} 
+                          alt={product.name}
+                          className="w-full h-full object-cover"
+                        />
+                      </div>
                     )}
+                    <div className="p-3 sm:p-4">
+                      <p className="font-semibold text-gray-900 text-xs sm:text-sm line-clamp-2">{product.name}</p>
+                      {product.unit_price > 0 && (
+                        <p className="text-[10px] sm:text-xs text-orange-400 mt-1">
+                          {product.unit_price.toFixed(2)} € / {product.unit}
+                        </p>
+                      )}
+                    </div>
                   </motion.button>
                 ))}
               </div>
@@ -370,12 +381,48 @@ function ProductFormModal({ open, onClose, onSave, isSaving }) {
     name: '',
     category: '',
     unit: 'unité',
-    unit_price: 0
+    unit_price: 0,
+    image_url: ''
   });
+  const [uploadingImage, setUploadingImage] = useState(false);
+  const [generatingImage, setGeneratingImage] = useState(false);
 
   const handleSubmit = (e) => {
     e.preventDefault();
     onSave(form);
+  };
+
+  const handleImageUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploadingImage(true);
+    try {
+      const { file_url } = await base44.integrations.Core.UploadFile({ file });
+      setForm(prev => ({ ...prev, image_url: file_url }));
+    } catch (error) {
+      console.error('Error uploading image:', error);
+    } finally {
+      setUploadingImage(false);
+    }
+  };
+
+  const handleGenerateImage = async () => {
+    if (!form.name) return;
+    
+    setGeneratingImage(true);
+    try {
+      const result = await base44.integrations.Core.GenerateImage({
+        prompt: `Professional high-quality photograph of "${form.name}" ingredient or product in a professional kitchen, realistic food photography, commercial kitchen setting, professional lighting, sharp focus, clean white background, photorealistic, 8k quality`
+      });
+      if (result?.url) {
+        setForm(prev => ({ ...prev, image_url: result.url }));
+      }
+    } catch (error) {
+      console.error('Error generating image:', error);
+    } finally {
+      setGeneratingImage(false);
+    }
   };
 
   return (
@@ -428,6 +475,67 @@ function ProductFormModal({ open, onClose, onSave, isSaving }) {
               onChange={(e) => setForm(prev => ({ ...prev, category: e.target.value }))}
               className="bg-slate-700 border-slate-600 mt-1"
             />
+          </div>
+
+          <div>
+            <Label>Image du produit</Label>
+            {form.image_url ? (
+              <div className="mt-2 relative">
+                <img 
+                  src={form.image_url} 
+                  alt="Aperçu" 
+                  className="w-full h-40 object-cover rounded-lg border-2 border-slate-600"
+                />
+                <button
+                  type="button"
+                  onClick={() => setForm(prev => ({ ...prev, image_url: '' }))}
+                  className="absolute top-2 right-2 p-1 bg-red-600 rounded-full hover:bg-red-700"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            ) : (
+              <div className="mt-2 space-y-2">
+                <label className="block">
+                  <div className="border-2 border-dashed border-slate-600 rounded-lg p-4 text-center hover:border-orange-500 hover:bg-slate-700/30 cursor-pointer transition-colors">
+                    {uploadingImage ? (
+                      <Loader2 className="w-8 h-8 mx-auto mb-2 animate-spin text-slate-400" />
+                    ) : (
+                      <Upload className="w-8 h-8 mx-auto mb-2 text-slate-400" />
+                    )}
+                    <p className="text-sm text-slate-300">
+                      {uploadingImage ? 'Upload en cours...' : 'Cliquez pour uploader une image'}
+                    </p>
+                  </div>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleImageUpload}
+                    disabled={uploadingImage}
+                    className="hidden"
+                  />
+                </label>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={handleGenerateImage}
+                  disabled={!form.name || generatingImage}
+                  className="w-full border-slate-600 text-slate-300 hover:bg-slate-700"
+                >
+                  {generatingImage ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Génération...
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="w-4 h-4 mr-2" />
+                      Générer avec IA
+                    </>
+                  )}
+                </Button>
+              </div>
+            )}
           </div>
 
           <div className="flex justify-end gap-3 pt-4">
