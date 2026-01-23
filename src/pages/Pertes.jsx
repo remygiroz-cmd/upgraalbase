@@ -25,6 +25,8 @@ export default function Pertes() {
   const [showProductForm, setShowProductForm] = useState(false);
   const [editingProduct, setEditingProduct] = useState(null);
   const [customDate, setCustomDate] = useState('');
+  const [startDate, setStartDate] = useState(format(new Date(new Date().getFullYear(), new Date().getMonth(), 1), 'yyyy-MM-dd'));
+  const [endDate, setEndDate] = useState(today);
 
   const { data: products = [], isLoading: loadingProducts } = useQuery({
     queryKey: ['products'],
@@ -183,18 +185,26 @@ export default function Pertes() {
       />
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="mb-6">
-        <TabsList className="bg-slate-800 p-1">
+        <TabsList className="bg-slate-800 p-1 grid grid-cols-4">
           <TabsTrigger value="pos" className="data-[state=active]:bg-slate-700">
             <ShoppingCart className="w-4 h-4 mr-2" />
-            Saisie POS
+            <span className="hidden sm:inline">Saisie POS</span>
+            <span className="sm:hidden">POS</span>
+          </TabsTrigger>
+          <TabsTrigger value="recap" className="data-[state=active]:bg-slate-700">
+            <Download className="w-4 h-4 mr-2" />
+            <span className="hidden sm:inline">Récapitulatif</span>
+            <span className="sm:hidden">Récap</span>
           </TabsTrigger>
           <TabsTrigger value="history" className="data-[state=active]:bg-slate-700">
             <History className="w-4 h-4 mr-2" />
-            Historique
+            <span className="hidden sm:inline">Historique</span>
+            <span className="sm:hidden">Histo</span>
           </TabsTrigger>
           <TabsTrigger value="products" className="data-[state=active]:bg-slate-700">
             <PackageMinus className="w-4 h-4 mr-2" />
-            Produits
+            <span className="hidden sm:inline">Produits</span>
+            <span className="sm:hidden">Prods</span>
           </TabsTrigger>
         </TabsList>
       </Tabs>
@@ -368,6 +378,111 @@ export default function Pertes() {
               )}
             </div>
           </div>
+        </div>
+      ) : activeTab === 'recap' ? (
+        <div className="space-y-6">
+          {/* Date filters */}
+          <div className="bg-white rounded-xl border-2 border-gray-300 p-4">
+            <h3 className="font-semibold text-gray-900 mb-4">Période</h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="start-date" className="text-gray-700">Du</Label>
+                <Input
+                  id="start-date"
+                  type="date"
+                  value={startDate}
+                  onChange={(e) => setStartDate(e.target.value)}
+                  className="bg-white border-gray-300 text-gray-900 mt-1"
+                />
+              </div>
+              <div>
+                <Label htmlFor="end-date" className="text-gray-700">Au</Label>
+                <Input
+                  id="end-date"
+                  type="date"
+                  value={endDate}
+                  onChange={(e) => setEndDate(e.target.value)}
+                  className="bg-white border-gray-300 text-gray-900 mt-1"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Summary */}
+          {(() => {
+            const filteredLosses = losses.filter(loss => 
+              loss.date >= startDate && loss.date <= endDate
+            );
+
+            if (filteredLosses.length === 0) {
+              return (
+                <EmptyState
+                  icon={PackageMinus}
+                  title="Aucune perte sur cette période"
+                  description="Essayez une autre période"
+                />
+              );
+            }
+
+            const productSummary = {};
+            filteredLosses.forEach(loss => {
+              loss.items?.forEach(item => {
+                if (!productSummary[item.product_name]) {
+                  productSummary[item.product_name] = {
+                    quantity: 0,
+                    total: 0
+                  };
+                }
+                productSummary[item.product_name].quantity += item.quantity;
+                productSummary[item.product_name].total += item.total_price;
+              });
+            });
+
+            const grandTotal = Object.values(productSummary).reduce((sum, p) => sum + p.total, 0);
+            const sortedProducts = Object.entries(productSummary).sort((a, b) => b[1].total - a[1].total);
+
+            return (
+              <div className="space-y-4">
+                {/* Total card */}
+                <div className="bg-gradient-to-r from-red-600 to-red-700 rounded-xl p-6 text-white">
+                  <p className="text-sm opacity-90 mb-1">Total des pertes</p>
+                  <p className="text-4xl font-bold">{grandTotal.toFixed(2)} €</p>
+                  <p className="text-sm opacity-75 mt-2">
+                    Du {format(parseISO(startDate), "d MMM yyyy", { locale: fr })} au {format(parseISO(endDate), "d MMM yyyy", { locale: fr })}
+                  </p>
+                </div>
+
+                {/* Products breakdown */}
+                <div className="bg-white rounded-xl border-2 border-gray-300 overflow-hidden">
+                  <div className="p-4 border-b-2 border-gray-300">
+                    <h3 className="font-semibold text-gray-900">Détail par produit</h3>
+                  </div>
+                  <div className="divide-y divide-gray-200">
+                    {sortedProducts.map(([productName, data]) => (
+                      <div key={productName} className="p-4 hover:bg-gray-50 transition-colors">
+                        <div className="flex items-center justify-between">
+                          <div className="flex-1">
+                            <p className="font-medium text-gray-900">{productName}</p>
+                            <p className="text-sm text-gray-600">
+                              {data.quantity} {data.quantity > 1 ? 'unités' : 'unité'}
+                            </p>
+                          </div>
+                          <div className="text-right">
+                            <p className="font-semibold text-red-600 text-lg">
+                              {data.total.toFixed(2)} €
+                            </p>
+                            <p className="text-xs text-gray-500">
+                              {((data.total / grandTotal) * 100).toFixed(1)}% du total
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            );
+          })()}
         </div>
       ) : activeTab === 'products' ? (
         <div className="space-y-4">
