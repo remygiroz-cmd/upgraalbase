@@ -23,6 +23,7 @@ export default function Pertes() {
   const [searchQuery, setSearchQuery] = useState('');
   const [cart, setCart] = useState([]);
   const [showProductForm, setShowProductForm] = useState(false);
+  const [editingProduct, setEditingProduct] = useState(null);
 
   const { data: products = [], isLoading: loadingProducts } = useQuery({
     queryKey: ['products'],
@@ -48,10 +49,23 @@ export default function Pertes() {
   });
 
   const saveProductMutation = useMutation({
-    mutationFn: (data) => base44.entities.Product.create(data),
+    mutationFn: ({ id, data }) => {
+      if (id) {
+        return base44.entities.Product.update(id, data);
+      }
+      return base44.entities.Product.create(data);
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['products'] });
       setShowProductForm(false);
+      setEditingProduct(null);
+    }
+  });
+
+  const deleteProductMutation = useMutation({
+    mutationFn: (id) => base44.entities.Product.delete(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['products'] });
     }
   });
 
@@ -168,6 +182,10 @@ export default function Pertes() {
           <TabsTrigger value="history" className="data-[state=active]:bg-slate-700">
             <History className="w-4 h-4 mr-2" />
             Historique
+          </TabsTrigger>
+          <TabsTrigger value="products" className="data-[state=active]:bg-slate-700">
+            <PackageMinus className="w-4 h-4 mr-2" />
+            Produits
           </TabsTrigger>
         </TabsList>
       </Tabs>
@@ -321,6 +339,83 @@ export default function Pertes() {
             </div>
           </div>
         </div>
+      ) : activeTab === 'products' ? (
+        <div className="space-y-4">
+          {products.length === 0 ? (
+            <EmptyState
+              icon={PackageMinus}
+              title="Aucun produit"
+              description="Ajoutez des produits pour commencer"
+              action={
+                <Button
+                  onClick={() => setShowProductForm(true)}
+                  className="bg-orange-600 hover:bg-orange-700"
+                >
+                  <Plus className="w-4 h-4 mr-2" />
+                  Ajouter un produit
+                </Button>
+              }
+            />
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {products.map(product => (
+                <div
+                  key={product.id}
+                  className="bg-white rounded-xl border-2 border-gray-300 overflow-hidden hover:border-gray-400 transition-all"
+                >
+                  {product.image_url && (
+                    <div className="w-full h-40 overflow-hidden bg-gray-100">
+                      <img 
+                        src={product.image_url} 
+                        alt={product.name}
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                  )}
+                  <div className="p-4">
+                    <h3 className="font-semibold text-gray-900 mb-2">{product.name}</h3>
+                    {product.category && (
+                      <Badge className="mb-2 bg-blue-100 text-blue-900 border-blue-200">
+                        {product.category}
+                      </Badge>
+                    )}
+                    <div className="space-y-1 text-sm text-gray-700">
+                      <p>Unité: {product.unit}</p>
+                      <p className="text-orange-600 font-semibold">
+                        Prix: {product.unit_price?.toFixed(2)} €
+                      </p>
+                    </div>
+                    <div className="flex gap-2 mt-4">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          setEditingProduct(product);
+                          setShowProductForm(true);
+                        }}
+                        className="flex-1 border-gray-300 text-gray-900 hover:bg-gray-50"
+                      >
+                        Modifier
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          if (confirm('Supprimer ce produit ?')) {
+                            deleteProductMutation.mutate(product.id);
+                          }
+                        }}
+                        className="border-red-300 text-red-600 hover:bg-red-50"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
       ) : (
         <div className="space-y-4">
           {losses.length === 0 ? (
@@ -368,15 +463,19 @@ export default function Pertes() {
       {/* Product Form Modal */}
       <ProductFormModal
         open={showProductForm}
-        onClose={() => setShowProductForm(false)}
-        onSave={(data) => saveProductMutation.mutate(data)}
+        onClose={() => {
+          setShowProductForm(false);
+          setEditingProduct(null);
+        }}
+        onSave={(data) => saveProductMutation.mutate({ id: editingProduct?.id, data })}
         isSaving={saveProductMutation.isPending}
+        product={editingProduct}
       />
     </div>
   );
 }
 
-function ProductFormModal({ open, onClose, onSave, isSaving }) {
+function ProductFormModal({ open, onClose, onSave, isSaving, product }) {
   const [form, setForm] = useState({
     name: '',
     category: '',
@@ -386,6 +485,26 @@ function ProductFormModal({ open, onClose, onSave, isSaving }) {
   });
   const [uploadingImage, setUploadingImage] = useState(false);
   const [generatingImage, setGeneratingImage] = useState(false);
+
+  React.useEffect(() => {
+    if (product) {
+      setForm({
+        name: product.name || '',
+        category: product.category || '',
+        unit: product.unit || 'unité',
+        unit_price: product.unit_price || 0,
+        image_url: product.image_url || ''
+      });
+    } else {
+      setForm({
+        name: '',
+        category: '',
+        unit: 'unité',
+        unit_price: 0,
+        image_url: ''
+      });
+    }
+  }, [product, open]);
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -427,9 +546,9 @@ function ProductFormModal({ open, onClose, onSave, isSaving }) {
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="bg-slate-800 border-slate-700">
+      <DialogContent className="bg-slate-800 border-slate-700 max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Nouveau produit</DialogTitle>
+          <DialogTitle>{product ? 'Modifier le produit' : 'Nouveau produit'}</DialogTitle>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
