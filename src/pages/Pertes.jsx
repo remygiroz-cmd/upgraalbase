@@ -24,6 +24,7 @@ export default function Pertes() {
   const [cart, setCart] = useState([]);
   const [showProductForm, setShowProductForm] = useState(false);
   const [editingProduct, setEditingProduct] = useState(null);
+  const [customDate, setCustomDate] = useState('');
 
   const { data: products = [], isLoading: loadingProducts } = useQuery({
     queryKey: ['products'],
@@ -45,6 +46,7 @@ export default function Pertes() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['losses'] });
       setCart([]);
+      setCustomDate('');
     }
   });
 
@@ -109,7 +111,7 @@ export default function Pertes() {
   const handleValidate = () => {
     if (cart.length === 0) return;
     saveLossMutation.mutate({
-      date: today,
+      date: customDate || today,
       items: cart,
       total_amount: getTotalAmount(),
       recorded_by: currentUser?.email,
@@ -318,10 +320,31 @@ export default function Pertes() {
                     </div>
                   </div>
 
+                  <div className="mb-4">
+                    <Label htmlFor="custom-date" className="text-gray-700 text-sm mb-2 block">
+                      Date d'enregistrement
+                    </Label>
+                    <Input
+                      id="custom-date"
+                      type="date"
+                      value={customDate || today}
+                      onChange={(e) => setCustomDate(e.target.value)}
+                      className="bg-white border-gray-300 text-gray-900"
+                    />
+                    {customDate && customDate !== today && (
+                      <p className="text-xs text-orange-600 mt-1">
+                        Sera enregistré à la date : {format(parseISO(customDate), "d MMMM yyyy", { locale: fr })}
+                      </p>
+                    )}
+                  </div>
+
                   <div className="flex gap-2">
                     <Button
                       variant="outline"
-                      onClick={() => setCart([])}
+                      onClick={() => {
+                        setCart([]);
+                        setCustomDate('');
+                      }}
                       className="border-slate-600 text-slate-900 hover:text-slate-100 hover:bg-slate-700 min-h-[44px]"
                     >
                       <Trash2 className="w-4 h-4" />
