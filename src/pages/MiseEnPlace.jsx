@@ -276,8 +276,16 @@ export default function MiseEnPlace() {
       
       // Stock check tasks
       if (task.requires_stock_check && (task.weekly_targets?.[dayOfWeek] || 0) > 0) {
-        const currentStock = stockInputs[task.id] || 0;
         const targetQuantity = task.weekly_targets[dayOfWeek] || 0;
+        // Si une session existe déjà, pré-remplir avec la quantité cible (stock complet)
+        const currentStock = hasActiveSession ? targetQuantity : (stockInputs[task.id] || 0);
+        
+        if (!hasActiveSession) {
+          newStockInputs[task.id] = currentStock;
+        } else {
+          newStockInputs[task.id] = targetQuantity;
+        }
+        
         if (currentStock < targetQuantity) {
           newSelected.add(task.id);
         }
@@ -288,7 +296,7 @@ export default function MiseEnPlace() {
     if (Object.keys(newStockInputs).length > 0) {
       setStockInputs(prev => ({ ...prev, ...newStockInputs }));
     }
-  }, [tasks]);
+  }, [tasks, hasActiveSession]);
 
   const handleCreateNewSession = async () => {
     const selectedTasksArray = Array.from(selectedTasks).map(taskId => {
