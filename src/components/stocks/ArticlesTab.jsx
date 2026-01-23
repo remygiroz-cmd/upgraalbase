@@ -234,7 +234,7 @@ export default function ArticlesTab() {
                     <div
                       ref={provided.innerRef}
                       {...provided.droppableProps}
-                      className={`grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 p-4 rounded-lg transition-all duration-200 ${
+                      className={`space-y-2 p-4 rounded-lg transition-all duration-200 ${
                         snapshot.isDraggingOver 
                           ? 'bg-blue-100 border-2 border-blue-400 shadow-lg' 
                           : 'bg-transparent border-2 border-dashed border-transparent'
@@ -246,94 +246,67 @@ export default function ArticlesTab() {
                             <div
                               ref={provided.innerRef}
                               {...provided.draggableProps}
-                              className={`bg-white rounded-lg border-2 overflow-hidden transition-all duration-200 ${
+                              className={`bg-white rounded-lg border-2 overflow-hidden transition-all duration-200 flex items-center gap-3 p-4 ${
                                 snapshot.isDragging
-                                  ? 'border-blue-600 shadow-2xl bg-blue-50 scale-105 z-50'
-                                  : snapshot.isDraggingOver
-                                  ? 'border-blue-400 bg-blue-50'
+                                  ? 'border-blue-600 shadow-2xl bg-blue-50 scale-102 z-50'
                                   : 'border-gray-300 hover:border-blue-400'
                               }`}
                             >
-                              {article.image_url ? (
-                                <div className="w-full h-32 overflow-hidden bg-gray-100">
-                                  <img
-                                    src={article.image_url}
-                                    alt={article.name}
-                                    className="w-full h-full object-cover"
-                                  />
-                                </div>
-                              ) : (
-                                <div className="w-full h-32 bg-gray-200 flex items-center justify-center">
-                                  <span className="text-gray-400 text-sm">Pas d'image</span>
-                                </div>
-                              )}
-
-                              <div className="p-4">
-                                <div className="flex items-start justify-between mb-2 gap-2">
-                                  <div className="flex items-start gap-2 flex-1 cursor-grab active:cursor-grabbing" {...provided.dragHandleProps}>
-                                    <GripVertical className={`w-4 h-4 flex-shrink-0 mt-1 transition-colors ${snapshot.isDragging ? 'text-blue-600' : 'text-gray-400'}`} />
-                                    <div className="flex-1">
-                                      <div className="flex items-center gap-2">
-                                        <h3 className="font-semibold text-gray-900">{article.name}</h3>
-                                        <span className="inline-block px-2 py-0.5 bg-gray-200 text-gray-800 text-xs font-bold rounded">
-                                          #{index + 1}
-                                        </span>
-                                      </div>
+                              <div className="flex items-start gap-2 cursor-grab active:cursor-grabbing flex-1 min-w-0" {...provided.dragHandleProps}>
+                                <GripVertical className={`w-5 h-5 flex-shrink-0 transition-colors ${snapshot.isDragging ? 'text-blue-600' : 'text-gray-400'}`} />
+                                <div className="flex-1 min-w-0">
+                                  {article.image_url && (
+                                    <div className="w-12 h-12 rounded mb-2 overflow-hidden bg-gray-100 flex-shrink-0">
+                                      <img
+                                        src={article.image_url}
+                                        alt={article.name}
+                                        className="w-full h-full object-cover"
+                                      />
                                     </div>
+                                  )}
+                                  <div className="flex items-center gap-2">
+                                    <h3 className="font-semibold text-gray-900 truncate">{article.name}</h3>
+                                    <span className="inline-block px-2 py-0.5 bg-gray-200 text-gray-800 text-xs font-bold rounded flex-shrink-0">
+                                      #{index + 1}
+                                    </span>
                                   </div>
-                                  <div className="flex gap-1 flex-shrink-0">
-                                    <button
-                                      onClick={() => {
-                                        setEditingArticle(article);
-                                        setShowForm(true);
-                                      }}
-                                      className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
-                                    >
-                                      <Edit2 className="w-4 h-4" />
-                                    </button>
-                                    <button
-                                      onClick={() => {
-                                        if (confirm('Supprimer cet article?')) {
-                                          deleteArticleMutation.mutate(article.id);
-                                        }
-                                      }}
-                                      className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
-                                    >
-                                      <Trash2 className="w-4 h-4" />
-                                    </button>
+                                  <div className="flex gap-3 mt-1 text-xs text-gray-600 flex-wrap">
+                                    {article.category && (
+                                      <span style={{ color: categories.find(c => c.name === article.category)?.color || '#2563eb' }}>
+                                        {article.category}
+                                      </span>
+                                    )}
+                                    {article.unit_price > 0 && (
+                                      <span className="text-orange-600 font-semibold">
+                                        {article.unit_price.toFixed(2)} € / {article.unit || 'unité'}
+                                      </span>
+                                    )}
+                                    {article.supplier_reference && (
+                                      <span>Réf: {article.supplier_reference}</span>
+                                    )}
                                   </div>
                                 </div>
-
-                                {article.category && (
-                                  <Badge
-                                    className="mb-3"
-                                    style={{
-                                      backgroundColor: categories.find(c => c.name === article.category)?.color || '#2563eb',
-                                      color: 'white',
-                                      border: 'none'
-                                    }}
-                                  >
-                                    {article.category}
-                                  </Badge>
-                                )}
-
-                                <div className="space-y-1 text-sm text-gray-700">
-                                  {article.unit_price > 0 && (
-                                    <p className="font-semibold text-orange-600">
-                                      {article.unit_price.toFixed(2)} € / {article.unit || 'unité'}
-                                    </p>
-                                  )}
-                                  {article.brand && (
-                                    <p className="text-xs text-gray-600">
-                                      Marque: {article.brand}
-                                    </p>
-                                  )}
-                                  {article.supplier_reference && (
-                                    <p className="text-xs text-gray-600">
-                                      Réf: {article.supplier_reference}
-                                    </p>
-                                  )}
-                                </div>
+                              </div>
+                              <div className="flex gap-1 flex-shrink-0">
+                                <button
+                                  onClick={() => {
+                                    setEditingArticle(article);
+                                    setShowForm(true);
+                                  }}
+                                  className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
+                                >
+                                  <Edit2 className="w-4 h-4" />
+                                </button>
+                                <button
+                                  onClick={() => {
+                                    if (confirm('Supprimer cet article?')) {
+                                      deleteArticleMutation.mutate(article.id);
+                                    }
+                                  }}
+                                  className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </button>
                               </div>
                             </div>
                           )}
