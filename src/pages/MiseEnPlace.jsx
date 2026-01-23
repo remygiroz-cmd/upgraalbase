@@ -259,8 +259,11 @@ export default function MiseEnPlace() {
     return matchingSchedule?.quantity || null;
   };
 
-  // Auto-select tasks on mount
+  // Auto-select tasks on mount (but not when session already exists)
   React.useEffect(() => {
+    // Don't auto-select if there's already an active session
+    if (hasActiveSession) return;
+    
     const newSelected = new Set();
     const newStockInputs = {};
     
@@ -273,22 +276,13 @@ export default function MiseEnPlace() {
           newStockInputs[task.id] = quantity;
         }
       }
-      
-      // Stock check tasks
-      if (task.requires_stock_check && (task.weekly_targets?.[dayOfWeek] || 0) > 0) {
-        const currentStock = stockInputs[task.id] || 0;
-        const targetQuantity = task.weekly_targets[dayOfWeek] || 0;
-        if (currentStock < targetQuantity) {
-          newSelected.add(task.id);
-        }
-      }
     });
     
     setSelectedTasks(newSelected);
     if (Object.keys(newStockInputs).length > 0) {
       setStockInputs(prev => ({ ...prev, ...newStockInputs }));
     }
-  }, [tasks]);
+  }, [tasks, hasActiveSession]);
 
   const handleCreateNewSession = async () => {
     const selectedTasksArray = Array.from(selectedTasks).map(taskId => {
