@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
-import { ChefHat, Check, CheckCircle2, X, Clock, RotateCcw } from 'lucide-react';
+import { ChefHat, Check, CheckCircle2, X, Clock, Trash2 } from 'lucide-react';
 import ConfirmDialog from '@/components/ui/ConfirmDialog';
 import DailyNoteCard from '@/components/cuisine/DailyNoteCard';
 import { Button } from '@/components/ui/button';
@@ -147,16 +147,20 @@ export default function TravailDuJour() {
     });
   };
 
-  const handleResetSession = () => {
+  const deleteSessionMutation = useMutation({
+    mutationFn: (id) => base44.entities.WorkSession.delete(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['workSessions'] });
+    }
+  });
+
+  const handleDeleteSession = () => {
     if (!activeSession) return;
     setConfirmDialog({
       open: true,
-      title: 'Réinitialiser la liste',
-      description: 'Êtes-vous sûr de vouloir supprimer toutes les tâches de la liste ?',
-      onConfirm: () => updateSessionMutation.mutate({
-        id: activeSession.id,
-        data: { tasks: [] }
-      })
+      title: 'Supprimer la liste',
+      description: 'Êtes-vous sûr de vouloir supprimer complètement cette liste de travail du jour ? Cette action est irréversible.',
+      onConfirm: () => deleteSessionMutation.mutate(activeSession.id)
     });
   };
 
@@ -230,13 +234,13 @@ export default function TravailDuJour() {
         actions={
           <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
             <Button
-              onClick={handleResetSession}
+              onClick={handleDeleteSession}
               variant="outline"
-              className="border-slate-600 text-slate-900 hover:text-slate-100 hover:bg-slate-700 w-full sm:w-auto"
+              className="border-red-600 text-red-600 hover:text-white hover:bg-red-600 w-full sm:w-auto"
             >
-              <RotateCcw className="w-4 h-4 mr-2" />
-              <span className="hidden sm:inline">Réinitialiser</span>
-              <span className="sm:hidden">Reset</span>
+              <Trash2 className="w-4 h-4 mr-2" />
+              <span className="hidden sm:inline">Supprimer la liste</span>
+              <span className="sm:hidden">Supprimer</span>
             </Button>
             <Button
               onClick={handleCompleteSession}
@@ -356,13 +360,14 @@ export default function TravailDuJour() {
         title={confirmDialog.title}
         description={confirmDialog.description}
         onConfirm={confirmDialog.onConfirm}
-        variant="warning"
+        variant={confirmDialog.title.includes('Supprimer') ? 'danger' : 'warning'}
       />
     </div>
   );
 }
 
-function WorkTaskCard({ task, onComplete, onUncomplete, onRemove, allTasks, taskEntities, dayOfWeek }) {
+function WorkTaskCard({ task, onComplete, onUncomplete, onRemove }) {
+  const dayOfWeek = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'][new Date().getDay()];
   const { data: tasks = [] } = useQuery({
     queryKey: ['tasks'],
     queryFn: () => base44.entities.Task.list()
