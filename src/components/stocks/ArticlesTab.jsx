@@ -89,33 +89,19 @@ export default function ArticlesTab() {
     if (!destination) return;
     if (source.droppableId === destination.droppableId && source.index === destination.index) return;
 
-    const article = articles.find(a => a.id === draggableId);
-    if (!article) return;
-
     const supplierKey = destination.droppableId;
     const articlesInSupplier = groupedBySupplier[supplierKey] || [];
 
-    // Réassigner les ordres pour tous les articles du fournisseur
-    const newOrders = articlesInSupplier.map((a, index) => {
-      if (a.id === draggableId) {
-        return { id: a.id, order: destination.index };
-      }
-      // Décaler les autres articles
-      if (source.droppableId === supplierKey) {
-        // Même fournisseur: décalage simple
-        const oldIndex = articlesInSupplier.findIndex(x => x.id === draggableId);
-        if (oldIndex < destination.index && index <= destination.index && index > oldIndex) {
-          return { id: a.id, order: (a.order || 0) - 1 };
-        } else if (oldIndex > destination.index && index >= destination.index && index < oldIndex) {
-          return { id: a.id, order: (a.order || 0) + 1 };
-        }
-      }
-      return { id: a.id, order: index };
-    });
+    // Créer une nouvelle liste avec l'article déplacé
+    const updatedList = Array.from(articlesInSupplier);
+    const [draggedArticle] = updatedList.splice(source.index, 1);
+    updatedList.splice(destination.index, 0, draggedArticle);
 
-    // Appliquer les mutations
-    newOrders.forEach(({ id, order }) => {
-      updateOrderMutation.mutate({ id, order });
+    // Réassigner les ordres séquentiellement (0, 1, 2, 3...)
+    updatedList.forEach((article, index) => {
+      if (article.order !== index) {
+        updateOrderMutation.mutate({ id: article.id, order: index });
+      }
     });
   };
 
@@ -248,8 +234,10 @@ export default function ArticlesTab() {
                     <div
                       ref={provided.innerRef}
                       {...provided.droppableProps}
-                      className={`grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 p-2 rounded-lg transition-colors ${
-                        snapshot.isDraggingOver ? 'bg-blue-50' : ''
+                      className={`grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 p-4 rounded-lg transition-all duration-200 ${
+                        snapshot.isDraggingOver 
+                          ? 'bg-blue-100 border-2 border-blue-400 shadow-lg' 
+                          : 'bg-transparent border-2 border-dashed border-transparent'
                       }`}
                     >
                       {supplierArticles.map((article, index) => (
@@ -258,10 +246,12 @@ export default function ArticlesTab() {
                             <div
                               ref={provided.innerRef}
                               {...provided.draggableProps}
-                              className={`bg-white rounded-lg border-2 overflow-hidden transition-all ${
+                              className={`bg-white rounded-lg border-2 overflow-hidden transition-all duration-200 ${
                                 snapshot.isDragging
-                                  ? 'border-blue-500 shadow-lg'
-                                  : 'border-gray-300 hover:border-gray-400'
+                                  ? 'border-blue-600 shadow-2xl bg-blue-50 scale-105 z-50'
+                                  : snapshot.isDraggingOver
+                                  ? 'border-blue-400 bg-blue-50'
+                                  : 'border-gray-300 hover:border-blue-400'
                               }`}
                             >
                               {article.image_url ? (
@@ -280,13 +270,13 @@ export default function ArticlesTab() {
 
                               <div className="p-4">
                                 <div className="flex items-start justify-between mb-2 gap-2">
-                                  <div className="flex items-start gap-2 flex-1" {...provided.dragHandleProps}>
-                                    <GripVertical className="w-4 h-4 text-gray-400 flex-shrink-0 mt-0.5" />
-                                    <div>
+                                  <div className="flex items-start gap-2 flex-1 cursor-grab active:cursor-grabbing" {...provided.dragHandleProps}>
+                                    <GripVertical className={`w-4 h-4 flex-shrink-0 mt-1 transition-colors ${snapshot.isDragging ? 'text-blue-600' : 'text-gray-400'}`} />
+                                    <div className="flex-1">
                                       <div className="flex items-center gap-2">
                                         <h3 className="font-semibold text-gray-900">{article.name}</h3>
-                                        <span className="inline-block px-2 py-0.5 bg-gray-200 text-gray-800 text-xs font-medium rounded">
-                                          #{article.order || 0}
+                                        <span className="inline-block px-2 py-0.5 bg-gray-200 text-gray-800 text-xs font-bold rounded">
+                                          #{index + 1}
                                         </span>
                                       </div>
                                     </div>
