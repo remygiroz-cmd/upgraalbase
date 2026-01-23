@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
-import { Settings, User, Bell, Palette, Clock, Save, Check, Upload, Image, Sparkles, Loader2, Shield, Users as UsersIcon } from 'lucide-react';
+import { Settings, User, Bell, Palette, Clock, Save, Check, Upload, Image, Sparkles, Loader2, Shield, Users as UsersIcon, Calendar } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -116,6 +116,15 @@ export default function Parametres() {
               >
                 <UsersIcon className="w-4 h-4 mr-2" />
                 <span>Utilisateurs</span>
+              </TabsTrigger>
+            )}
+            {isAdmin && (
+              <TabsTrigger 
+                value="automation" 
+                className="data-[state=active]:bg-orange-100 data-[state=active]:text-orange-900 data-[state=active]:border-orange-500 bg-white border-2 border-gray-300 text-gray-900 px-4 py-3 rounded-lg hover:bg-gray-50 transition-colors"
+              >
+                <Calendar className="w-4 h-4 mr-2" />
+                <span>Automation</span>
               </TabsTrigger>
             )}
           </TabsList>
@@ -369,6 +378,13 @@ export default function Parametres() {
               <GestionUtilisateurs />
             </TabsContent>
           )}
+
+          {/* Automation Tab */}
+          {isAdmin && (
+            <TabsContent value="automation">
+              <AutomationSettings />
+            </TabsContent>
+          )}
         </Tabs>
 
         {/* Save Button */}
@@ -491,6 +507,149 @@ function GenerateMissingImagesSection() {
           </>
         )}
       </Button>
+    </div>
+  );
+}
+
+function AutomationSettings() {
+  const queryClient = useQueryClient();
+  const [saving, setSaving] = useState(false);
+
+  const { data: automationSettings = [] } = useQuery({
+    queryKey: ['automationSettings'],
+    queryFn: () => base44.entities.AppSettings.filter({ setting_key: 'auto_work_session' })
+  });
+
+  const currentSettings = automationSettings[0] || {
+    auto_enabled: false,
+    auto_time: '09:00',
+    auto_time_end: '10:00'
+  };
+
+  const [settings, setSettings] = useState({
+    auto_enabled: currentSettings.auto_enabled || false,
+    auto_time: currentSettings.auto_time || '09:00',
+    auto_time_end: currentSettings.auto_time_end || '10:00'
+  });
+
+  useEffect(() => {
+    if (automationSettings[0]) {
+      setSettings({
+        auto_enabled: automationSettings[0].auto_enabled || false,
+        auto_time: automationSettings[0].auto_time || '09:00',
+        auto_time_end: automationSettings[0].auto_time_end || '10:00'
+      });
+    }
+  }, [automationSettings]);
+
+  const saveSettingsMutation = useMutation({
+    mutationFn: async (newSettings) => {
+      if (automationSettings[0]?.id) {
+        return base44.entities.AppSettings.update(automationSettings[0].id, newSettings);
+      }
+      return base44.entities.AppSettings.create({ 
+        setting_key: 'auto_work_session', 
+        ...newSettings 
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['automationSettings'] });
+      toast.success('Paramètres d\'automation enregistrés');
+      setSaving(false);
+    },
+    onError: () => {
+      toast.error('Erreur lors de l\'enregistrement');
+      setSaving(false);
+    }
+  });
+
+  const handleSave = () => {
+    setSaving(true);
+    saveSettingsMutation.mutate(settings);
+  };
+
+  return (
+    <div className="bg-white rounded-2xl border-2 border-gray-300 p-6 shadow-sm">
+      <div className="mb-6">
+        <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+          <Calendar className="w-5 h-5" />
+          Création automatique du Travail du Jour
+        </h3>
+        <p className="text-sm text-gray-700 mt-1">
+          Configurez la création automatique quotidienne des listes de travail basée sur les tâches planifiées
+        </p>
+      </div>
+
+      <div className="space-y-6">
+        <div className="flex items-center justify-between p-4 bg-orange-50 rounded-lg border border-orange-200">
+          <div>
+            <p className="font-medium text-gray-900">Activer l'automation</p>
+            <p className="text-sm text-gray-700 mt-1">
+              Créer automatiquement une liste chaque jour dans la fenêtre horaire définie
+            </p>
+          </div>
+          <Switch
+            checked={settings.auto_enabled}
+            onCheckedChange={(checked) => setSettings({ ...settings, auto_enabled: checked })}
+          />
+        </div>
+
+        {settings.auto_enabled && (
+          <div className="space-y-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
+            <div>
+              <Label htmlFor="auto_time">Heure de début de la fenêtre</Label>
+              <Input
+                id="auto_time"
+                type="time"
+                value={settings.auto_time}
+                onChange={(e) => setSettings({ ...settings, auto_time: e.target.value })}
+                className="mt-2 bg-white"
+              />
+              <p className="text-xs text-gray-600 mt-1">
+                L'automation vérifie les tâches planifiées à partir de cette heure
+              </p>
+            </div>
+
+            <div>
+              <Label htmlFor="auto_time_end">Heure de fin de la fenêtre</Label>
+              <Input
+                id="auto_time_end"
+                type="time"
+                value={settings.auto_time_end}
+                onChange={(e) => setSettings({ ...settings, auto_time_end: e.target.value })}
+                className="mt-2 bg-white"
+              />
+              <p className="text-xs text-gray-600 mt-1">
+                Les tâches planifiées jusqu'à cette heure seront incluses
+              </p>
+            </div>
+
+            <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+              <p className="text-sm text-blue-900">
+                <strong>Important :</strong> Seules les tâches ayant la planification automatique activée et correspondant à la fenêtre horaire seront ajoutées à la liste.
+              </p>
+            </div>
+          </div>
+        )}
+
+        <Button
+          onClick={handleSave}
+          disabled={saving}
+          className="w-full bg-orange-600 hover:bg-orange-700"
+        >
+          {saving ? (
+            <>
+              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              Enregistrement...
+            </>
+          ) : (
+            <>
+              <Save className="w-4 h-4 mr-2" />
+              Enregistrer les paramètres
+            </>
+          )}
+        </Button>
+      </div>
     </div>
   );
 }
