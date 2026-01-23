@@ -1,7 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
-import { History, Download, Check, ClipboardList, Clock, Trash2 } from 'lucide-react';
+import { History, Download, Check, ClipboardList, Clock, Trash2, Search, User } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import ConfirmDialog from '@/components/ui/ConfirmDialog';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -263,15 +265,40 @@ export default function Historique() {
 
 function DayDetailModal({ day, onClose }) {
   if (!day) return null;
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedUser, setSelectedUser] = useState('all');
 
   const { data: tasks = [] } = useQuery({
     queryKey: ['tasks'],
     queryFn: () => base44.entities.Task.list()
   });
 
-  // Group tasks by category
+  // Get unique users from completed tasks
+  const uniqueUsers = useMemo(() => {
+    const users = new Set();
+    day.tasks?.forEach(task => {
+      if (task.completed_by_name) {
+        users.add(task.completed_by_name);
+      }
+    });
+    return Array.from(users).sort();
+  }, [day.tasks]);
+
+  // Filter tasks by search and user
+  const filteredTasks = useMemo(() => {
+    return day.tasks?.filter(task => {
+      const matchesSearch = searchQuery === '' || 
+        task.task_name?.toLowerCase().includes(searchQuery.toLowerCase());
+      const matchesUser = selectedUser === 'all' || 
+        task.completed_by_name === selectedUser ||
+        (!task.completed_by_name && selectedUser === 'not_completed');
+      return matchesSearch && matchesUser;
+    }) || [];
+  }, [day.tasks, searchQuery, selectedUser]);
+
+  // Group filtered tasks by category
   const tasksByCategory = {};
-  day.tasks?.forEach((task) => {
+  filteredTasks.forEach((task) => {
     const catId = task.category_id || 'uncategorized';
     const catName = task.category_name || 'Sans catégorie';
     if (!tasksByCategory[catId]) {
@@ -352,12 +379,46 @@ function DayDetailModal({ day, onClose }) {
             </div>
           </div>
 
+          {/* Filters */}
+          <div className="space-y-3">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+              <Input
+                placeholder="Rechercher une tâche..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-10 bg-slate-700/30 border-slate-600 text-slate-200"
+              />
+            </div>
+            
+            <div className="flex items-center gap-2">
+              <User className="w-4 h-4 text-slate-400 flex-shrink-0" />
+              <Select value={selectedUser} onValueChange={setSelectedUser}>
+                <SelectTrigger className="bg-slate-700/30 border-slate-600 text-slate-200">
+                  <SelectValue placeholder="Tous les utilisateurs" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Tous les utilisateurs</SelectItem>
+                  <SelectItem value="not_completed">Tâches non complétées</SelectItem>
+                  {uniqueUsers.map(user => (
+                    <SelectItem key={user} value={user}>{user}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
           {/* Tasks by Category */}
           <div>
             <h3 className="font-semibold mb-3 flex items-center gap-2">
               <ClipboardList className="w-5 h-5 text-orange-400" />
-              Tâches ({day.tasks?.length || 0})
+              Tâches ({filteredTasks.length} / {day.tasks?.length || 0})
             </h3>
+            {filteredTasks.length === 0 ? (
+              <div className="text-center py-8 text-slate-400">
+                Aucune tâche trouvée
+              </div>
+            ) : (
             <div className="space-y-4">
               {Object.entries(tasksByCategory).map(([catId, categoryData]) =>
               <div key={catId}>
@@ -407,6 +468,7 @@ function DayDetailModal({ day, onClose }) {
                 </div>
               )}
             </div>
+            )}
           </div>
         </div>
 
