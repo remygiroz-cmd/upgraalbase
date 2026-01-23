@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
-import { ChefHat, Check, CheckCircle2, X, Clock, Trash2, Plus, Minus } from 'lucide-react';
+import { ChefHat, Check, CheckCircle2, X, Clock, Trash2, Plus, Minus, RotateCcw } from 'lucide-react';
 import ConfirmDialog from '@/components/ui/ConfirmDialog';
 import DailyNoteCard from '@/components/cuisine/DailyNoteCard';
 import { Button } from '@/components/ui/button';
