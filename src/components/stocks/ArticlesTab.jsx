@@ -57,7 +57,7 @@ export default function ArticlesTab() {
   });
 
   const updateOrderMutation = useMutation({
-    mutationFn: ({ id, order }) => base44.entities.Article.update(id, { order }),
+    mutationFn: ({ id, data }) => base44.entities.Article.update(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['articles'] });
     }
@@ -103,7 +103,10 @@ export default function ArticlesTab() {
     const orderField = viewMode === 'shopping' ? 'order' : 'storage_order';
     updatedList.forEach((article, index) => {
       if (article[orderField] !== index) {
-        updateOrderMutation.mutate({ id: article.id, [orderField]: index });
+        updateOrderMutation.mutate({ 
+          id: article.id, 
+          data: { [orderField]: index }
+        });
       }
     });
   };
@@ -261,10 +264,10 @@ export default function ArticlesTab() {
                     <div
                       ref={provided.innerRef}
                       {...provided.droppableProps}
-                      className={`space-y-2 p-4 rounded-lg transition-all duration-200 ${
+                      className={`space-y-2 p-4 rounded-lg transition-all duration-150 ease-out ${
                         snapshot.isDraggingOver 
-                          ? 'bg-blue-100 border-2 border-blue-400 shadow-lg' 
-                          : 'bg-transparent border-2 border-dashed border-transparent'
+                          ? 'bg-blue-100 border-2 border-blue-400 shadow-md' 
+                          : 'bg-transparent border-2 border-dashed border-gray-300'
                       }`}
                     >
                       {supplierArticles.map((article, index) => (
@@ -273,10 +276,10 @@ export default function ArticlesTab() {
                             <div
                               ref={provided.innerRef}
                               {...provided.draggableProps}
-                              className={`bg-white rounded-lg border-2 overflow-hidden transition-all duration-200 flex items-center gap-3 p-4 ${
+                              className={`bg-white rounded-lg border-2 overflow-hidden flex items-center gap-3 p-4 transition-all duration-150 ease-out ${
                                 snapshot.isDragging
-                                  ? 'border-blue-600 shadow-2xl bg-blue-50 scale-102 z-50'
-                                  : 'border-gray-300 hover:border-blue-400'
+                                  ? 'border-blue-600 shadow-2xl bg-blue-50 z-50 scale-105'
+                                  : 'border-gray-300 hover:border-blue-400 hover:shadow-md'
                               }`}
                             >
                               <div className="flex items-start gap-2 cursor-grab active:cursor-grabbing flex-1 min-w-0" {...provided.dragHandleProps}>
