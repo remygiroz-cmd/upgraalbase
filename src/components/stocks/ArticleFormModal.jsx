@@ -279,9 +279,9 @@ export default function ArticleFormModal({ open, onClose, onSave, isSaving, arti
               <Input
                 id="order"
                 type="number"
-                min="0"
-                value={form.order}
-                onChange={(e) => setForm(prev => ({ ...prev, order: parseInt(e.target.value) || 0 }))}
+                min="1"
+                value={form.order + 1}
+                onChange={(e) => setForm(prev => ({ ...prev, order: Math.max(0, parseInt(e.target.value) - 1) || 0 }))}
                 className="bg-slate-700 border-slate-600 mt-1"
               />
             </div>
@@ -290,9 +290,9 @@ export default function ArticleFormModal({ open, onClose, onSave, isSaving, arti
               <Input
                 id="storage_order"
                 type="number"
-                min="0"
-                value={form.storage_order}
-                onChange={(e) => setForm(prev => ({ ...prev, storage_order: parseInt(e.target.value) || 0 }))}
+                min="1"
+                value={form.storage_order + 1}
+                onChange={(e) => setForm(prev => ({ ...prev, storage_order: Math.max(0, parseInt(e.target.value) - 1) || 0 }))}
                 className="bg-slate-700 border-slate-600 mt-1"
               />
             </div>
