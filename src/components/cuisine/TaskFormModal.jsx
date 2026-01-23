@@ -264,6 +264,17 @@ export default function TaskFormModal({ open, onClose, task, categories }) {
                   </div>
                 </div>
               </div>
+
+              <div>
+                <Label htmlFor="unit-general">Unité de mesure</Label>
+                <Input
+                  id="unit-general"
+                  value={form.unit}
+                  onChange={(e) => setForm(prev => ({ ...prev, unit: e.target.value }))}
+                  placeholder="Ex: sachets, portions, kg..."
+                  className="bg-slate-700 border-slate-600 mt-1"
+                />
+              </div>
             </TabsContent>
 
             {/* Production Tab */}
