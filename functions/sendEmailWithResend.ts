@@ -42,9 +42,11 @@ Deno.serve(async (req) => {
     // Add attachments if provided
     if (attachments && attachments.length > 0) {
       emailPayload.attachments = attachments;
+      console.log('Attachments:', attachments.map(a => ({ filename: a.filename, contentLength: a.content?.length })));
     }
 
     // Send email via Resend API
+    console.log('Sending email with payload:', { to, subject, hasAttachments: !!emailPayload.attachments });
     const response = await fetch('https://api.resend.com/emails', {
       method: 'POST',
       headers: {
