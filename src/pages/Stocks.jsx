@@ -4,6 +4,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import PageHeader from '@/components/ui/PageHeader';
 import EmptyState from '@/components/ui/EmptyState';
 import ArticlesTab from '@/components/stocks/ArticlesTab';
+import SuppliersTab from '@/components/stocks/SuppliersTab';
 
 export default function Stocks() {
   const [activeTab, setActiveTab] = useState('inventory');
