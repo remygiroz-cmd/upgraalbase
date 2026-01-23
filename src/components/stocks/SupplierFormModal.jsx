@@ -7,8 +7,8 @@ import { Textarea } from '@/components/ui/textarea';
 
 const DAYS = [
   { key: 'L', label: 'Lundi' },
-  { key: 'M', label: 'Mardi' },
-  { key: 'M', label: 'Mercredi' },
+  { key: 'MA', label: 'Mardi' },
+  { key: 'ME', label: 'Mercredi' },
   { key: 'J', label: 'Jeudi' },
   { key: 'V', label: 'Vendredi' },
   { key: 'S', label: 'Samedi' },
