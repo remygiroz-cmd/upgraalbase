@@ -265,12 +265,14 @@ export default function MiseEnPlace() {
     const newStockInputs = {};
     
     tasks.forEach(task => {
-      // Auto-schedule tasks
+      // Auto-schedule tasks - skip if session already exists
       if (shouldAutoSchedule(task)) {
-        newSelected.add(task.id);
-        const quantity = getAutoScheduleQuantity(task);
-        if (quantity) {
-          newStockInputs[task.id] = quantity;
+        if (!hasActiveSession) {
+          newSelected.add(task.id);
+          const quantity = getAutoScheduleQuantity(task);
+          if (quantity) {
+            newStockInputs[task.id] = quantity;
+          }
         }
       }
       
