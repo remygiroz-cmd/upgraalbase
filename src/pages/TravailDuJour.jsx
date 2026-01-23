@@ -152,6 +152,7 @@ export default function TravailDuJour() {
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ['workSessions', 'active', today] });
       await queryClient.refetchQueries({ queryKey: ['workSessions', 'active', today] });
+      window.location.href = createPageUrl('Home');
     }
   });
 
