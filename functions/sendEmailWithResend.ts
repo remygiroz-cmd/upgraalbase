@@ -49,9 +49,19 @@ Deno.serve(async (req) => {
     const result = await response.json();
 
     if (!response.ok) {
+      // Better error handling for common issues
+      let errorMessage = 'Erreur lors de l\'envoi de l\'email';
+      
+      if (response.status === 403) {
+        errorMessage = 'Le domaine d\'envoi n\'est pas vérifié. Veuillez vérifier votre domaine dans Resend.';
+      } else if (response.status === 422) {
+        errorMessage = 'Adresse email invalide ou domaine non configuré correctement.';
+      }
+      
       return Response.json({ 
-        error: 'Failed to send email', 
-        details: result 
+        error: errorMessage,
+        details: result,
+        status: response.status
       }, { status: response.status });
     }
 
