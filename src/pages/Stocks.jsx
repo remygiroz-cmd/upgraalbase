@@ -9,10 +9,10 @@ export default function Stocks() {
 
   const tabs = [
     { id: 'inventory', label: 'Inventaire', icon: Package },
-    { id: 'articles', label: 'Articles', icon: BoxOpen },
+    { id: 'articles', label: 'Articles', icon: Box },
     { id: 'suppliers', label: 'Fournisseurs', icon: Truck },
     { id: 'orders', label: 'Commandes', icon: ShoppingCart },
-    { id: 'shopping', label: 'Courses', icon: Bag },
+    { id: 'shopping', label: 'Courses', icon: List },
     { id: 'stockouts', label: 'Ruptures', icon: AlertTriangle },
   ];
 
