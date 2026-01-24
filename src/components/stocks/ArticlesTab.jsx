@@ -283,7 +283,7 @@ export default function ArticlesTab() {
                           : 'bg-transparent border-2 border-dashed border-gray-300'
                       }`}
                     >
-                      {supplierArticles.map((article, index) => (
+                      {groupArticles.map((article, index) => (
                         <Draggable key={article.id} draggableId={article.id} index={index}>
                           {(provided, snapshot) => (
                             <div
@@ -360,7 +360,8 @@ export default function ArticlesTab() {
                   )}
                 </Droppable>
               </div>
-            ))}
+              );
+            })}
           </div>
         </DragDropContext>
       )}
