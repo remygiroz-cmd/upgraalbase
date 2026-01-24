@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { Plus, ShoppingCart, RotateCcw, Check } from 'lucide-react';
@@ -7,11 +7,52 @@ import { Input } from '@/components/ui/input';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 
 export default function InventoryTab() {
-  const [inventorySubTab, setInventorySubTab] = useState('stock-status');
-  const [stockValues, setStockValues] = useState({});
-  const [cart, setCart] = useState({});
-  const [showAll, setShowAll] = useState(false);
-  const [completedArticles, setCompletedArticles] = useState(new Set());
+  // Charger l'état depuis localStorage
+  const [inventorySubTab, setInventorySubTab] = useState(() => {
+    const saved = localStorage.getItem('inventorySubTab');
+    return saved || 'stock-status';
+  });
+  
+  const [stockValues, setStockValues] = useState(() => {
+    const saved = localStorage.getItem('inventoryStockValues');
+    return saved ? JSON.parse(saved) : {};
+  });
+  
+  const [cart, setCart] = useState(() => {
+    const saved = localStorage.getItem('inventoryCart');
+    return saved ? JSON.parse(saved) : {};
+  });
+  
+  const [showAll, setShowAll] = useState(() => {
+    const saved = localStorage.getItem('inventoryShowAll');
+    return saved === 'true';
+  });
+  
+  const [completedArticles, setCompletedArticles] = useState(() => {
+    const saved = localStorage.getItem('inventoryCompletedArticles');
+    return saved ? new Set(JSON.parse(saved)) : new Set();
+  });
+
+  // Sauvegarder dans localStorage à chaque changement
+  useEffect(() => {
+    localStorage.setItem('inventorySubTab', inventorySubTab);
+  }, [inventorySubTab]);
+
+  useEffect(() => {
+    localStorage.setItem('inventoryStockValues', JSON.stringify(stockValues));
+  }, [stockValues]);
+
+  useEffect(() => {
+    localStorage.setItem('inventoryCart', JSON.stringify(cart));
+  }, [cart]);
+
+  useEffect(() => {
+    localStorage.setItem('inventoryShowAll', showAll.toString());
+  }, [showAll]);
+
+  useEffect(() => {
+    localStorage.setItem('inventoryCompletedArticles', JSON.stringify(Array.from(completedArticles)));
+  }, [completedArticles]);
 
   const { data: articles = [] } = useQuery({
     queryKey: ['articles'],
