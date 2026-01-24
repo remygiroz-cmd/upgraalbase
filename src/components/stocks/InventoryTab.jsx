@@ -232,13 +232,10 @@ export default function InventoryTab() {
               })}
 
               {/* Bottom Actions */}
-              <div className="flex justify-center gap-4 pt-6">
+              <div className="flex justify-center pt-6">
                 <Button className="bg-emerald-600 hover:bg-emerald-700 px-8">
                   <ShoppingCart className="w-4 h-4 mr-2" />
-                  VALIDER & COMMANDER
-                </Button>
-                <Button variant="outline" className="border-gray-300 text-gray-900 hover:bg-gray-50">
-                  COMMANDER
+                  Mettre dans le panier
                 </Button>
               </div>
             </div>
