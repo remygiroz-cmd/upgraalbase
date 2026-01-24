@@ -62,7 +62,8 @@ export default function InventoryTab() {
           ...prev,
           [articleId]: {
             article,
-            quantity: toOrder
+            quantity: toOrder,
+            initialQuantity: toOrder
           }
         }));
       } else {
@@ -80,7 +81,8 @@ export default function InventoryTab() {
           ...prev,
           [articleId]: {
             article,
-            quantity: orderQty
+            quantity: orderQty,
+            initialQuantity: orderQty
           }
         }));
       } else {
@@ -296,7 +298,7 @@ export default function InventoryTab() {
             </div>
           ) : (
             <div className="space-y-4">
-              {Object.values(cart).map(({ article, quantity }) => (
+              {Object.values(cart).map(({ article, quantity, initialQuantity }) => (
                 <div 
                   key={article.id}
                   className="bg-white rounded-lg border-2 border-gray-300 p-4 flex items-center justify-between"
@@ -326,7 +328,7 @@ export default function InventoryTab() {
                           if (quantity > 1) {
                             setCart(prev => ({
                               ...prev,
-                              [article.id]: { article, quantity: quantity - 1 }
+                              [article.id]: { article, quantity: quantity - 1, initialQuantity }
                             }));
                           } else {
                             setCart(prev => {
@@ -347,12 +349,24 @@ export default function InventoryTab() {
                         onClick={() => {
                           setCart(prev => ({
                             ...prev,
-                            [article.id]: { article, quantity: quantity + 1 }
+                            [article.id]: { article, quantity: quantity + 1, initialQuantity }
                           }));
                         }}
                         className="w-8 h-8 rounded bg-gray-200 hover:bg-gray-300 text-gray-900 font-bold text-lg active:scale-95 transition-transform"
                       >
                         +
+                      </button>
+                      <button
+                        onClick={() => {
+                          setCart(prev => ({
+                            ...prev,
+                            [article.id]: { article, quantity: initialQuantity, initialQuantity }
+                          }));
+                        }}
+                        className="p-1.5 rounded hover:bg-gray-200 text-gray-400 hover:text-gray-900 transition-colors ml-1"
+                        title="Réinitialiser"
+                      >
+                        <RotateCcw className="w-4 h-4" />
                       </button>
                     </div>
                     <div className="text-xs text-gray-500">
