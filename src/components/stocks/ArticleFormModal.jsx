@@ -95,21 +95,21 @@ export default function ArticleFormModal({ open, onClose, onSave, isSaving, arti
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="bg-slate-800 border-slate-700 max-h-[90vh] overflow-y-auto max-w-2xl">
+      <DialogContent className="bg-white border-gray-300 max-h-[90vh] overflow-y-auto max-w-2xl">
         <DialogHeader>
-          <DialogTitle>{article ? 'Modifier l\'article' : 'Nouvel article'}</DialogTitle>
+          <DialogTitle className="text-gray-900">{article ? 'Modifier l\'article' : 'Nouvel article'}</DialogTitle>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           {/* Image */}
           <div>
-            <Label>Image</Label>
+            <Label className="text-gray-900">Image</Label>
             {form.image_url ? (
               <div className="mt-2 relative">
                 <img 
                   src={form.image_url} 
                   alt="Aperçu" 
-                  className="w-full h-40 object-cover rounded-lg border-2 border-slate-600"
+                  className="w-full h-40 object-cover rounded-lg border-2 border-gray-300"
                 />
                 <button
                   type="button"
@@ -122,13 +122,13 @@ export default function ArticleFormModal({ open, onClose, onSave, isSaving, arti
             ) : (
               <div className="mt-2 space-y-2">
                 <label className="block">
-                  <div className="border-2 border-dashed border-slate-600 rounded-lg p-4 text-center hover:border-orange-500 hover:bg-slate-700/30 cursor-pointer transition-colors">
+                  <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center hover:border-orange-500 hover:bg-orange-50 cursor-pointer transition-colors">
                     {uploadingImage ? (
-                      <Loader2 className="w-8 h-8 mx-auto mb-2 animate-spin text-slate-400" />
+                      <Loader2 className="w-8 h-8 mx-auto mb-2 animate-spin text-gray-500" />
                     ) : (
-                      <Upload className="w-8 h-8 mx-auto mb-2 text-slate-400" />
+                      <Upload className="w-8 h-8 mx-auto mb-2 text-gray-500" />
                     )}
-                    <p className="text-sm text-slate-300">
+                    <p className="text-sm text-gray-700">
                       {uploadingImage ? 'Upload en cours...' : 'Cliquez pour uploader une image'}
                     </p>
                   </div>
@@ -145,7 +145,7 @@ export default function ArticleFormModal({ open, onClose, onSave, isSaving, arti
                   variant="outline"
                   onClick={handleGenerateImage}
                   disabled={!form.name || generatingImage}
-                  className="w-full border-slate-600 text-slate-300 hover:bg-slate-700"
+                  className="w-full border-gray-300 text-gray-900 hover:bg-gray-50"
                 >
                   {generatingImage ? (
                     <>
@@ -165,12 +165,12 @@ export default function ArticleFormModal({ open, onClose, onSave, isSaving, arti
 
           {/* Nom de l'article */}
           <div>
-            <Label htmlFor="name">Nom de l'article *</Label>
+            <Label htmlFor="name" className="text-gray-900">Nom de l'article *</Label>
             <Input
               id="name"
               value={form.name}
               onChange={(e) => setForm(prev => ({ ...prev, name: e.target.value }))}
-              className="bg-slate-700 border-slate-600 mt-1"
+              className="bg-white border-gray-300 text-gray-900 mt-1"
               required
             />
           </div>
@@ -178,12 +178,12 @@ export default function ArticleFormModal({ open, onClose, onSave, isSaving, arti
           {/* Catégorie et Fournisseur */}
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <Label htmlFor="category">Catégorie</Label>
+              <Label htmlFor="category" className="text-gray-900">Catégorie</Label>
               <select
                 id="category"
                 value={form.category}
                 onChange={(e) => setForm(prev => ({ ...prev, category: e.target.value }))}
-                className="w-full bg-slate-700 border-slate-600 border rounded px-3 py-2 mt-1 text-slate-100"
+                className="w-full bg-white border-gray-300 border rounded px-3 py-2 mt-1 text-gray-900"
               >
                 <option value="">Sélectionner...</option>
                 {categories.map(cat => (
@@ -192,7 +192,7 @@ export default function ArticleFormModal({ open, onClose, onSave, isSaving, arti
               </select>
             </div>
             <div>
-              <Label htmlFor="supplier">Fournisseur</Label>
+              <Label htmlFor="supplier" className="text-gray-900">Fournisseur</Label>
               <select
                 id="supplier"
                 value={form.supplier_id}
@@ -216,7 +216,7 @@ export default function ArticleFormModal({ open, onClose, onSave, isSaving, arti
                     storage_order: !article ? nextStorageOrder : prev.storage_order
                   }));
                 }}
-                className="w-full bg-slate-700 border-slate-600 border rounded px-3 py-2 mt-1 text-slate-100"
+                className="w-full bg-white border-gray-300 border rounded px-3 py-2 mt-1 text-gray-900"
               >
                 <option value="">Sélectionner...</option>
                 {suppliers.map(sup => (
@@ -229,24 +229,24 @@ export default function ArticleFormModal({ open, onClose, onSave, isSaving, arti
           {/* Unité et Prix */}
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <Label htmlFor="unit">Unité</Label>
+              <Label htmlFor="unit" className="text-gray-900">Unité</Label>
               <Input
                 id="unit"
                 value={form.unit}
                 onChange={(e) => setForm(prev => ({ ...prev, unit: e.target.value }))}
                 placeholder="kg, L, pièce..."
-                className="bg-slate-700 border-slate-600 mt-1"
+                className="bg-white border-gray-300 text-gray-900 mt-1"
               />
             </div>
             <div>
-              <Label htmlFor="unit_price">Prix unitaire (€)</Label>
+              <Label htmlFor="unit_price" className="text-gray-900">Prix unitaire (€)</Label>
               <Input
                 id="unit_price"
                 type="number"
                 step="0.01"
                 value={form.unit_price}
                 onChange={(e) => setForm(prev => ({ ...prev, unit_price: parseFloat(e.target.value) || 0 }))}
-                className="bg-slate-700 border-slate-600 mt-1"
+                className="bg-white border-gray-300 text-gray-900 mt-1"
               />
             </div>
           </div>
@@ -254,64 +254,64 @@ export default function ArticleFormModal({ open, onClose, onSave, isSaving, arti
           {/* Marque et Référence */}
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <Label htmlFor="brand">Marque</Label>
+              <Label htmlFor="brand" className="text-gray-900">Marque</Label>
               <Input
                 id="brand"
                 value={form.brand}
                 onChange={(e) => setForm(prev => ({ ...prev, brand: e.target.value }))}
-                className="bg-slate-700 border-slate-600 mt-1"
+                className="bg-white border-gray-300 text-gray-900 mt-1"
               />
             </div>
             <div>
-              <Label htmlFor="supplier_reference">Référence fournisseur</Label>
+              <Label htmlFor="supplier_reference" className="text-gray-900">Référence fournisseur</Label>
               <Input
                 id="supplier_reference"
                 value={form.supplier_reference}
                 onChange={(e) => setForm(prev => ({ ...prev, supplier_reference: e.target.value }))}
-                className="bg-slate-700 border-slate-600 mt-1"
+                className="bg-white border-gray-300 text-gray-900 mt-1"
               />
             </div>
           </div>
 
           {/* Code interne */}
           <div>
-            <Label htmlFor="internal_code">Code de référence interne</Label>
+            <Label htmlFor="internal_code" className="text-gray-900">Code de référence interne</Label>
             <Input
               id="internal_code"
               value={form.internal_code}
               onChange={(e) => setForm(prev => ({ ...prev, internal_code: e.target.value }))}
-              className="bg-slate-700 border-slate-600 mt-1"
+              className="bg-white border-gray-300 text-gray-900 mt-1"
             />
           </div>
 
           {/* Ordres */}
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <Label htmlFor="order">Rang Parcours Magasin</Label>
+              <Label htmlFor="order" className="text-gray-900">Rang Parcours Magasin</Label>
               <Input
                 id="order"
                 type="number"
                 min="1"
                 value={form.order + 1}
                 onChange={(e) => setForm(prev => ({ ...prev, order: Math.max(0, parseInt(e.target.value) - 1) || 0 }))}
-                className="bg-slate-700 border-slate-600 mt-1"
+                className="bg-white border-gray-300 text-gray-900 mt-1"
               />
             </div>
             <div>
-              <Label htmlFor="storage_order">Rang Stockage Boutique</Label>
+              <Label htmlFor="storage_order" className="text-gray-900">Rang Stockage Boutique</Label>
               <Input
                 id="storage_order"
                 type="number"
                 min="1"
                 value={form.storage_order + 1}
                 onChange={(e) => setForm(prev => ({ ...prev, storage_order: Math.max(0, parseInt(e.target.value) - 1) || 0 }))}
-                className="bg-slate-700 border-slate-600 mt-1"
+                className="bg-white border-gray-300 text-gray-900 mt-1"
               />
             </div>
           </div>
 
           <div className="flex justify-end gap-3 pt-4">
-            <Button type="button" variant="outline" onClick={onClose} className="border-slate-600 text-slate-900 hover:text-slate-100 hover:bg-slate-700">
+            <Button type="button" variant="outline" onClick={onClose} className="border-gray-300 text-gray-900 hover:bg-gray-50">
               Annuler
             </Button>
             <Button type="submit" disabled={isSaving} className="bg-orange-600 hover:bg-orange-700">
