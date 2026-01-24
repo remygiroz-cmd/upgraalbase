@@ -5,6 +5,7 @@ import { Plus, ShoppingCart, RotateCcw, Check, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+import { cn } from '@/lib/utils';
 
 export default function InventoryTab() {
   // Charger l'état depuis localStorage
