@@ -417,26 +417,39 @@ export default function InventoryTab() {
                     </div>
                   </div>
                   <div className="flex items-center gap-3">
-                    <div className="flex items-center gap-1">
-                      <button
-                        onClick={() => {
-                          if (quantity > 1) {
-                            setCart(prev => ({
-                              ...prev,
-                              [article.id]: { article, quantity: quantity - 1, initialQuantity }
-                            }));
-                          } else {
-                            setCart(prev => {
-                              const newCart = { ...prev };
-                              delete newCart[article.id];
-                              return newCart;
-                            });
-                          }
-                        }}
-                        className="w-8 h-8 rounded bg-gray-200 hover:bg-gray-300 text-gray-900 font-bold text-lg active:scale-95 transition-transform"
-                      >
-                        -
-                      </button>
+                  <div className="flex items-center gap-1">
+                    <button
+                      onClick={() => {
+                        if (quantity > 1) {
+                          setCart(prev => ({
+                            ...prev,
+                            [article.id]: { article, quantity: quantity - 1, initialQuantity }
+                          }));
+                        } else {
+                          // Retirer du panier
+                          setCart(prev => {
+                            const newCart = { ...prev };
+                            delete newCart[article.id];
+                            return newCart;
+                          });
+                          // Réinitialiser l'état dans les stocks
+                          setStockValues(prev => {
+                            const newValues = { ...prev };
+                            delete newValues[article.id];
+                            return newValues;
+                          });
+                          // Retirer des articles complétés
+                          setCompletedArticles(prev => {
+                            const newCompleted = new Set(prev);
+                            newCompleted.delete(article.id);
+                            return newCompleted;
+                          });
+                        }
+                      }}
+                      className="w-8 h-8 rounded bg-gray-200 hover:bg-gray-300 text-gray-900 font-bold text-lg active:scale-95 transition-transform"
+                    >
+                      -
+                    </button>
                       <div className="w-16 h-8 flex items-center justify-center bg-white border-2 border-orange-600 text-gray-900 font-bold rounded">
                         {quantity}
                       </div>
