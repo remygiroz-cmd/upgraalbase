@@ -21,8 +21,8 @@ export default function ArticleFormModal({ open, onClose, onSave, isSaving, arti
     storage_order: 0,
     inventory_mode: 'stock_reel',
     counting_days: [],
-    safety_stock: { M: 0, J: 0, V: 0, S: 0, D: 0 },
-    order_quantity: { M: 0, J: 0, V: 0, S: 0, D: 0 }
+    safety_stock: { L: 0, MA: 0, ME: 0, J: 0, V: 0, S: 0, D: 0 },
+    order_quantity: { L: 0, MA: 0, ME: 0, J: 0, V: 0, S: 0, D: 0 }
   });
   const [uploadingImage, setUploadingImage] = useState(false);
   const [generatingImage, setGeneratingImage] = useState(false);
@@ -43,8 +43,8 @@ export default function ArticleFormModal({ open, onClose, onSave, isSaving, arti
         storage_order: article.storage_order || 0,
         inventory_mode: article.inventory_mode || 'stock_reel',
         counting_days: article.counting_days || [],
-        safety_stock: article.safety_stock || { M: 0, J: 0, V: 0, S: 0, D: 0 },
-        order_quantity: article.order_quantity || { M: 0, J: 0, V: 0, S: 0, D: 0 }
+        safety_stock: article.safety_stock || { L: 0, MA: 0, ME: 0, J: 0, V: 0, S: 0, D: 0 },
+        order_quantity: article.order_quantity || { L: 0, MA: 0, ME: 0, J: 0, V: 0, S: 0, D: 0 }
       });
     } else {
       setForm({
@@ -388,8 +388,8 @@ export default function ArticleFormModal({ open, onClose, onSave, isSaving, arti
               <Label className="text-gray-900 mb-2 block">
                 {form.inventory_mode === 'stock_reel' ? 'Stock de sécurité (par level)' : 'Quantité de commande (si coché)'}
               </Label>
-              <div className="grid grid-cols-5 gap-2">
-                {['M', 'J', 'V', 'S', 'D'].map((day) => (
+              <div className="grid grid-cols-7 gap-2">
+                {['L', 'MA', 'ME', 'J', 'V', 'S', 'D'].map((day) => (
                   <div key={day}>
                     <Label className="text-gray-700 text-xs mb-1 block text-center">{day}</Label>
                     <Input
