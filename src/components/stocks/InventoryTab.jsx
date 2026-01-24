@@ -39,16 +39,7 @@ export default function InventoryTab() {
   // Filtrer les articles non remplis (sauf si showAll est activé)
   const filteredArticles = showAll 
     ? todayArticles 
-    : todayArticles.filter(article => {
-        // Un article est considéré comme "non rempli" s'il n'est pas dans stockValues
-        // ou si sa valeur n'a pas changé par rapport à l'initial
-        if (article.inventory_mode === 'stock_reel') {
-          return stockValues[article.id] === undefined;
-        } else {
-          // juste_a_cocher: non rempli si pas coché
-          return !stockValues[article.id];
-        }
-      });
+    : todayArticles;
 
   // Grouper par catégorie
   const groupedByCategory = filteredArticles.reduce((acc, article) => {
