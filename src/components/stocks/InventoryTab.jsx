@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
-import { Plus, ShoppingCart, RotateCcw } from 'lucide-react';
+import { Plus, ShoppingCart, RotateCcw, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
@@ -177,20 +177,14 @@ export default function InventoryTab() {
                                     variant={stockValues[article.id] ? "default" : "outline"}
                                     size="sm"
                                     className={stockValues[article.id] 
-                                      ? "bg-emerald-600 hover:bg-emerald-700" 
-                                      : "border-gray-600 text-gray-400 hover:bg-gray-700"
+                                      ? "bg-emerald-600 hover:bg-emerald-700 gap-2" 
+                                      : "border-gray-600 text-gray-400 hover:bg-gray-700 hover:border-gray-500"
                                     }
                                     onClick={() => handleStockChange(article.id, !stockValues[article.id])}
                                   >
+                                    {stockValues[article.id] && <Check className="w-4 h-4" />}
                                     COMMANDER
                                   </Button>
-                                  <button
-                                    onClick={() => handleStockChange(article.id, false)}
-                                    className="p-1.5 rounded hover:bg-gray-700 text-gray-400 hover:text-white transition-colors"
-                                    title="Réinitialiser"
-                                  >
-                                    <RotateCcw className="w-4 h-4" />
-                                  </button>
                                 </div>
                               ) : (
                                 <div className="flex items-center gap-1">
