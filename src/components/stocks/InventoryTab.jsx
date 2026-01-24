@@ -10,6 +10,7 @@ export default function InventoryTab() {
   const [inventorySubTab, setInventorySubTab] = useState('stock-status');
   const [stockValues, setStockValues] = useState({});
   const [cart, setCart] = useState({});
+  const [showAll, setShowAll] = useState(false);
 
   const { data: articles = [] } = useQuery({
     queryKey: ['articles'],
@@ -35,8 +36,22 @@ export default function InventoryTab() {
     article.counting_days?.includes(currentDay)
   );
 
+  // Filtrer les articles non remplis (sauf si showAll est activé)
+  const filteredArticles = showAll 
+    ? todayArticles 
+    : todayArticles.filter(article => {
+        // Un article est considéré comme "non rempli" s'il n'est pas dans stockValues
+        // ou si sa valeur n'a pas changé par rapport à l'initial
+        if (article.inventory_mode === 'stock_reel') {
+          return stockValues[article.id] === undefined;
+        } else {
+          // juste_a_cocher: non rempli si pas coché
+          return !stockValues[article.id];
+        }
+      });
+
   // Grouper par catégorie
-  const groupedByCategory = todayArticles.reduce((acc, article) => {
+  const groupedByCategory = filteredArticles.reduce((acc, article) => {
     const category = article.category || 'Sans catégorie';
     if (!acc[category]) {
       acc[category] = [];
@@ -158,8 +173,11 @@ export default function InventoryTab() {
             </TabsTrigger>
           </TabsList>
 
-          <Button className="ml-auto bg-orange-600 hover:bg-orange-700 px-8">
-            Tout
+          <Button 
+            className="ml-auto bg-orange-600 hover:bg-orange-700 px-8"
+            onClick={() => setShowAll(!showAll)}
+          >
+            {showAll ? 'Masquer remplis' : 'Voir tout'}
           </Button>
         </div>
 
@@ -167,6 +185,16 @@ export default function InventoryTab() {
           {todayArticles.length === 0 ? (
             <div className="text-center py-16 text-gray-500">
               <p>Aucun article à compter aujourd'hui ({getDayLabel(currentDay)})</p>
+            </div>
+          ) : filteredArticles.length === 0 && !showAll ? (
+            <div className="text-center py-16 text-gray-500">
+              <p>✓ Tous les articles ont été remplis</p>
+              <Button 
+                className="mt-4 bg-orange-600 hover:bg-orange-700"
+                onClick={() => setShowAll(true)}
+              >
+                Voir tout
+              </Button>
             </div>
           ) : (
             <div className="space-y-4">
