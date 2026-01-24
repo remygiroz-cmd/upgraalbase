@@ -315,13 +315,6 @@ export default function InventoryTab() {
                 );
               })}
 
-              {/* Bottom Actions */}
-              <div className="flex justify-center pt-6">
-                <Button className="bg-emerald-600 hover:bg-emerald-700 px-8">
-                  <ShoppingCart className="w-4 h-4 mr-2" />
-                  Mettre dans le panier
-                </Button>
-              </div>
             </div>
           )}
         </TabsContent>
@@ -414,6 +407,14 @@ export default function InventoryTab() {
           )}
         </TabsContent>
       </Tabs>
+
+      {/* Bouton Valider Commande - visible sur tous les onglets */}
+      <div className="flex justify-center pt-6">
+        <Button className="bg-emerald-600 hover:bg-emerald-700 px-8">
+          <ShoppingCart className="w-4 h-4 mr-2" />
+          Valider Commande
+        </Button>
+      </div>
     </div>
   );
 }
