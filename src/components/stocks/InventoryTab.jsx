@@ -9,6 +9,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 export default function InventoryTab() {
   const [inventorySubTab, setInventorySubTab] = useState('stock-status');
   const [stockValues, setStockValues] = useState({});
+  const [cart, setCart] = useState({});
 
   const { data: articles = [] } = useQuery({
     queryKey: ['articles'],
@@ -44,11 +45,52 @@ export default function InventoryTab() {
     return acc;
   }, {});
 
-  const handleStockChange = (articleId, value) => {
+  const handleStockChange = (articleId, value, article) => {
     setStockValues(prev => ({
       ...prev,
       [articleId]: value
     }));
+
+    // Mettre à jour le panier automatiquement
+    if (article.inventory_mode === 'stock_reel') {
+      const safetyStock = article.safety_stock?.[currentDay] || 0;
+      const currentStock = value;
+      const toOrder = Math.max(0, safetyStock - currentStock);
+      
+      if (toOrder > 0) {
+        setCart(prev => ({
+          ...prev,
+          [articleId]: {
+            article,
+            quantity: toOrder
+          }
+        }));
+      } else {
+        setCart(prev => {
+          const newCart = { ...prev };
+          delete newCart[articleId];
+          return newCart;
+        });
+      }
+    } else {
+      // juste_a_cocher
+      if (value === true) {
+        const orderQty = article.order_quantity?.[currentDay] || 0;
+        setCart(prev => ({
+          ...prev,
+          [articleId]: {
+            article,
+            quantity: orderQty
+          }
+        }));
+      } else {
+        setCart(prev => {
+          const newCart = { ...prev };
+          delete newCart[articleId];
+          return newCart;
+        });
+      }
+    }
   };
 
   const getDayLabel = (day) => {
@@ -106,6 +148,11 @@ export default function InventoryTab() {
               className="px-4 py-2 rounded-lg border-2 border-gray-300 data-[state=active]:border-orange-600 data-[state=active]:bg-transparent data-[state=active]:text-gray-900"
             >
               Panier
+              {Object.keys(cart).length > 0 && (
+                <span className="ml-2 px-2 py-0.5 bg-orange-600 text-white text-xs rounded-full">
+                  {Object.keys(cart).length}
+                </span>
+              )}
             </TabsTrigger>
           </TabsList>
 
@@ -180,7 +227,7 @@ export default function InventoryTab() {
                                       ? "bg-emerald-600 hover:bg-emerald-700 gap-2" 
                                       : "border-gray-600 text-gray-400 hover:bg-gray-700 hover:border-gray-500"
                                     }
-                                    onClick={() => handleStockChange(article.id, !stockValues[article.id])}
+                                    onClick={() => handleStockChange(article.id, !stockValues[article.id], article)}
                                   >
                                     {stockValues[article.id] && <Check className="w-4 h-4" />}
                                     COMMANDER
@@ -191,7 +238,7 @@ export default function InventoryTab() {
                                   <button
                                     onClick={() => {
                                       const currentValue = stockValues[article.id] ?? article.safety_stock?.[currentDay] ?? 0;
-                                      handleStockChange(article.id, Math.max(0, currentValue - 1));
+                                      handleStockChange(article.id, Math.max(0, currentValue - 1), article);
                                     }}
                                     className="w-8 h-8 rounded bg-gray-700 hover:bg-gray-600 text-white font-bold text-lg active:scale-95 transition-transform"
                                   >
@@ -203,7 +250,7 @@ export default function InventoryTab() {
                                   <button
                                     onClick={() => {
                                       const currentValue = stockValues[article.id] ?? article.safety_stock?.[currentDay] ?? 0;
-                                      handleStockChange(article.id, currentValue + 1);
+                                      handleStockChange(article.id, currentValue + 1, article);
                                     }}
                                     className="w-8 h-8 rounded bg-gray-700 hover:bg-gray-600 text-white font-bold text-lg active:scale-95 transition-transform"
                                   >
@@ -243,9 +290,47 @@ export default function InventoryTab() {
         </TabsContent>
 
         <TabsContent value="cart" className="mt-6">
-          <div className="text-center py-16 text-gray-500">
-            <p>Panier vide</p>
-          </div>
+          {Object.keys(cart).length === 0 ? (
+            <div className="text-center py-16 text-gray-500">
+              <p>Panier vide</p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {Object.values(cart).map(({ article, quantity }) => (
+                <div 
+                  key={article.id}
+                  className="bg-white rounded-lg border-2 border-gray-300 p-4 flex items-center justify-between"
+                >
+                  <div className="flex items-center gap-3">
+                    {article.image_url && (
+                      <img 
+                        src={article.image_url} 
+                        alt={article.name}
+                        className="w-12 h-12 rounded object-cover"
+                      />
+                    )}
+                    <div>
+                      <h4 className="font-semibold text-gray-900">{article.name}</h4>
+                      <div className="flex gap-2 text-xs mt-1">
+                        <span className="text-gray-600">{article.supplier_name}</span>
+                        {article.category && (
+                          <span className="text-gray-600">• {article.category}</span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-2xl font-bold text-orange-600">
+                      {quantity}
+                    </div>
+                    <div className="text-xs text-gray-500">
+                      {article.unit || 'unités'}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </TabsContent>
       </Tabs>
     </div>
