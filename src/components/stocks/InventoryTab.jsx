@@ -319,9 +319,41 @@ export default function InventoryTab() {
                       </div>
                     </div>
                   </div>
-                  <div className="text-right">
-                    <div className="text-2xl font-bold text-orange-600">
-                      {quantity}
+                  <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-1">
+                      <button
+                        onClick={() => {
+                          if (quantity > 1) {
+                            setCart(prev => ({
+                              ...prev,
+                              [article.id]: { article, quantity: quantity - 1 }
+                            }));
+                          } else {
+                            setCart(prev => {
+                              const newCart = { ...prev };
+                              delete newCart[article.id];
+                              return newCart;
+                            });
+                          }
+                        }}
+                        className="w-8 h-8 rounded bg-gray-200 hover:bg-gray-300 text-gray-900 font-bold text-lg active:scale-95 transition-transform"
+                      >
+                        -
+                      </button>
+                      <div className="w-16 h-8 flex items-center justify-center bg-white border-2 border-orange-600 text-gray-900 font-bold rounded">
+                        {quantity}
+                      </div>
+                      <button
+                        onClick={() => {
+                          setCart(prev => ({
+                            ...prev,
+                            [article.id]: { article, quantity: quantity + 1 }
+                          }));
+                        }}
+                        className="w-8 h-8 rounded bg-gray-200 hover:bg-gray-300 text-gray-900 font-bold text-lg active:scale-95 transition-transform"
+                      >
+                        +
+                      </button>
                     </div>
                     <div className="text-xs text-gray-500">
                       {article.unit || 'unités'}
