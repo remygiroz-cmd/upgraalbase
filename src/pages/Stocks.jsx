@@ -5,6 +5,7 @@ import PageHeader from '@/components/ui/PageHeader';
 import EmptyState from '@/components/ui/EmptyState';
 import ArticlesTab from '@/components/stocks/ArticlesTab';
 import SuppliersTab from '@/components/stocks/SuppliersTab';
+import InventoryTab from '@/components/stocks/InventoryTab';
 
 export default function Stocks() {
   const [activeTab, setActiveTab] = useState('inventory');
@@ -45,7 +46,9 @@ export default function Stocks() {
 
         {tabs.map(tab => (
           <TabsContent key={tab.id} value={tab.id}>
-            {tab.id === 'articles' ? (
+            {tab.id === 'inventory' ? (
+              <InventoryTab />
+            ) : tab.id === 'articles' ? (
               <ArticlesTab />
             ) : tab.id === 'suppliers' ? (
               <SuppliersTab />
