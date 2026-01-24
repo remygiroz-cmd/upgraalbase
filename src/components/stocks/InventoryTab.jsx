@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
-import { Plus, ShoppingCart } from 'lucide-react';
+import { Plus, ShoppingCart, RotateCcw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
@@ -169,17 +169,29 @@ export default function InventoryTab() {
                             <div className="text-right">
                               <div className="text-xs text-gray-400 uppercase">En réserve</div>
                               {article.inventory_mode === 'juste_a_cocher' ? (
-                                <Button
-                                  variant={stockValues[article.id] ? "default" : "outline"}
-                                  size="sm"
-                                  className={stockValues[article.id] 
-                                    ? "bg-emerald-600 hover:bg-emerald-700" 
-                                    : "border-gray-600 text-gray-400 hover:bg-gray-700"
-                                  }
-                                  onClick={() => handleStockChange(article.id, !stockValues[article.id])}
-                                >
-                                  COMMANDER
-                                </Button>
+                                <div className="flex items-center gap-2">
+                                  <div className="text-sm text-gray-300">
+                                    {article.order_quantity?.[currentDay] || 0}
+                                  </div>
+                                  <Button
+                                    variant={stockValues[article.id] ? "default" : "outline"}
+                                    size="sm"
+                                    className={stockValues[article.id] 
+                                      ? "bg-emerald-600 hover:bg-emerald-700" 
+                                      : "border-gray-600 text-gray-400 hover:bg-gray-700"
+                                    }
+                                    onClick={() => handleStockChange(article.id, !stockValues[article.id])}
+                                  >
+                                    COMMANDER
+                                  </Button>
+                                  <button
+                                    onClick={() => handleStockChange(article.id, false)}
+                                    className="p-1.5 rounded hover:bg-gray-700 text-gray-400 hover:text-white transition-colors"
+                                    title="Réinitialiser"
+                                  >
+                                    <RotateCcw className="w-4 h-4" />
+                                  </button>
+                                </div>
                               ) : (
                                 <div className="flex items-center gap-1">
                                   <button
@@ -202,6 +214,17 @@ export default function InventoryTab() {
                                     className="w-8 h-8 rounded bg-gray-700 hover:bg-gray-600 text-white font-bold text-lg active:scale-95 transition-transform"
                                   >
                                     +
+                                  </button>
+                                  <button
+                                    onClick={() => {
+                                      const resetValue = { ...stockValues };
+                                      delete resetValue[article.id];
+                                      setStockValues(resetValue);
+                                    }}
+                                    className="p-1.5 rounded hover:bg-gray-700 text-gray-400 hover:text-white transition-colors ml-1"
+                                    title="Réinitialiser"
+                                  >
+                                    <RotateCcw className="w-4 h-4" />
                                   </button>
                                 </div>
                               )}
