@@ -76,28 +76,29 @@ export default function Equipe() {
         actions={
           <Button
             onClick={() => setShowEmployeeForm(true)}
-            className="bg-orange-600 hover:bg-orange-700"
+            className="bg-orange-600 hover:bg-orange-700 min-h-[44px]"
           >
             <Plus className="w-4 h-4 mr-2" />
-            Nouvel employé
+            <span className="hidden sm:inline">Nouvel employé</span>
+            <span className="sm:hidden">Employé</span>
           </Button>
         }
       />
 
       {/* Tabs */}
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="mb-6">
-        <TabsList className="bg-white border-2 border-gray-300 p-1">
-          <TabsTrigger value="equipes" className="data-[state=active]:bg-gray-100 text-gray-900">
-            <Users className="w-4 h-4 mr-2" />
-            Équipes
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="mb-4 sm:mb-6">
+        <TabsList className="bg-white border-2 border-gray-300 p-1 w-full sm:w-auto grid grid-cols-3 sm:inline-flex">
+          <TabsTrigger value="equipes" className="data-[state=active]:bg-gray-100 text-gray-900 text-xs sm:text-sm min-h-[44px]">
+            <Users className="w-4 h-4 sm:mr-2" />
+            <span className="hidden sm:inline">Équipes</span>
           </TabsTrigger>
-          <TabsTrigger value="planning" className="data-[state=active]:bg-gray-100 text-gray-900">
-            <Calendar className="w-4 h-4 mr-2" />
-            Planning
+          <TabsTrigger value="planning" className="data-[state=active]:bg-gray-100 text-gray-900 text-xs sm:text-sm min-h-[44px]">
+            <Calendar className="w-4 h-4 sm:mr-2" />
+            <span className="hidden sm:inline">Planning</span>
           </TabsTrigger>
-          <TabsTrigger value="annuaire" className="data-[state=active]:bg-gray-100 text-gray-900">
-            <User className="w-4 h-4 mr-2" />
-            Annuaire
+          <TabsTrigger value="annuaire" className="data-[state=active]:bg-gray-100 text-gray-900 text-xs sm:text-sm min-h-[44px]">
+            <User className="w-4 h-4 sm:mr-2" />
+            <span className="hidden sm:inline">Annuaire</span>
           </TabsTrigger>
         </TabsList>
       </Tabs>
@@ -183,7 +184,7 @@ export default function Equipe() {
               }
             />
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
               {filteredEmployees.map(emp => (
                 <EmployeeCard
                   key={emp.id}
@@ -223,42 +224,42 @@ function EmployeeCard({ employee, onClick }) {
     <button
       onClick={onClick}
       className={cn(
-        "w-full p-4 rounded-2xl border-2 text-left transition-all",
+        "w-full p-3 sm:p-4 rounded-xl sm:rounded-2xl border-2 text-left transition-all active:scale-[0.98] touch-manipulation",
         "bg-white border-gray-300",
         "hover:bg-gray-50 hover:border-gray-400",
         !employee.is_active && "opacity-60"
       )}
     >
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-3 sm:gap-4">
         {employee.photo_url ? (
           <img
             src={employee.photo_url}
             alt={`${employee.first_name} ${employee.last_name}`}
-            className="w-14 h-14 rounded-full object-cover"
+            className="w-12 h-12 sm:w-14 sm:h-14 rounded-full object-cover flex-shrink-0"
           />
         ) : (
-          <div className="w-14 h-14 rounded-full bg-gray-200 flex items-center justify-center">
+          <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-gray-200 flex items-center justify-center flex-shrink-0">
             <User className="w-6 h-6 text-gray-500" />
           </div>
         )}
         
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2">
-            <h3 className="font-semibold text-gray-900 truncate">
+          <div className="flex items-center gap-2 flex-wrap">
+            <h3 className="font-semibold text-gray-900 text-sm sm:text-base truncate">
               {employee.first_name} {employee.last_name}
             </h3>
             {!employee.is_active && (
-              <Badge variant="outline" className="border-slate-600 text-slate-400">
+              <Badge variant="outline" className="border-slate-600 text-slate-400 text-xs flex-shrink-0">
                 Inactif
               </Badge>
             )}
           </div>
           
-          <p className="text-sm text-gray-600 truncate">{employee.position || 'Non défini'}</p>
+          <p className="text-xs sm:text-sm text-gray-600 truncate">{employee.position || 'Non défini'}</p>
           
-          <div className="flex items-center gap-3 mt-2">
+          <div className="flex items-center gap-2 mt-2 flex-wrap">
             {employee.contract_type && (
-              <Badge variant="outline" className="border-indigo-600/50 text-indigo-400">
+              <Badge variant="outline" className="border-indigo-600/50 text-indigo-400 text-[10px] sm:text-xs">
                 {CONTRACT_LABELS[employee.contract_type] || employee.contract_type}
               </Badge>
             )}
@@ -266,17 +267,17 @@ function EmployeeCard({ employee, onClick }) {
         </div>
       </div>
 
-      <div className="mt-3 pt-3 border-t border-gray-200 flex gap-4 text-xs text-gray-600">
+      <div className="mt-2 sm:mt-3 pt-2 sm:pt-3 border-t border-gray-200 flex flex-col sm:flex-row gap-2 sm:gap-4 text-[11px] sm:text-xs text-gray-600">
         {employee.phone && (
-          <span className="flex items-center gap-1">
-            <Phone className="w-3 h-3" />
-            {employee.phone}
+          <span className="flex items-center gap-1 truncate">
+            <Phone className="w-3 h-3 flex-shrink-0" />
+            <span className="truncate">{employee.phone}</span>
           </span>
         )}
         {employee.email && (
           <span className="flex items-center gap-1 truncate">
-            <Mail className="w-3 h-3" />
-            {employee.email}
+            <Mail className="w-3 h-3 flex-shrink-0" />
+            <span className="truncate">{employee.email}</span>
           </span>
         )}
       </div>

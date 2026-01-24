@@ -186,16 +186,16 @@ export default function Historique() {
             <motion.div
               key={session.id}
               initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }} className="bg-slate-50 p-4 rounded-2xl border border-slate-700/50 hover:border-slate-600 transition-all cursor-pointer group"
+              animate={{ opacity: 1, y: 0 }} className="bg-slate-50 p-3 sm:p-4 rounded-xl sm:rounded-2xl border border-slate-700/50 hover:border-slate-600 transition-all cursor-pointer group active:scale-[0.98]"
 
               onClick={() => setSelectedDay(session)}>
 
-              <div className="flex items-center justify-between gap-4">
+              <div className="flex items-center justify-between gap-3 sm:gap-4">
                 <div className="flex-1 min-w-0">
-                  <h3 className="font-semibold text-lg">
+                  <h3 className="font-semibold text-base sm:text-lg truncate">
                     {format(new Date(session.date), 'EEEE d MMMM yyyy', { locale: fr })}
                   </h3>
-                  <div className="flex items-center gap-4 mt-2 text-sm text-slate-400 flex-wrap">
+                  <div className="flex items-center gap-2 sm:gap-4 mt-2 text-xs sm:text-sm text-slate-400 flex-wrap">
                     <span>{completed}/{total} tâches complétées</span>
                     {totalSeconds > 0 &&
                     <>
@@ -217,17 +217,17 @@ export default function Historique() {
                     }
                   </div>
                 </div>
-                <div className="flex items-center gap-3 flex-shrink-0">
+                <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
                   <Button
                     size="sm"
                     variant="ghost"
                     onClick={(e) => handleDeleteSession(session.id, e)}
-                    className="opacity-0 group-hover:opacity-100 transition-opacity text-red-400 hover:text-red-300 hover:bg-red-600/20">
+                    className="opacity-0 sm:group-hover:opacity-100 transition-opacity text-red-400 hover:text-red-300 hover:bg-red-600/20 min-h-[44px] min-w-[44px]">
 
                     <Trash2 className="w-4 h-4" />
                   </Button>
                   <div className={cn(
-                    "w-16 h-16 rounded-xl flex items-center justify-center font-bold text-2xl",
+                    "w-14 h-14 sm:w-16 sm:h-16 rounded-lg sm:rounded-xl flex items-center justify-center font-bold text-xl sm:text-2xl flex-shrink-0",
                     completed === total && total > 0 ?
                     "bg-orange-600/20 text-orange-400" :
                     "bg-slate-700 text-slate-400"

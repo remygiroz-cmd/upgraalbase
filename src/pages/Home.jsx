@@ -126,22 +126,22 @@ export default function Home() {
   }
 
   return (
-    <div className="max-w-6xl mx-auto">
+    <div className="max-w-6xl mx-auto px-2 sm:px-0">
       {/* Hero */}
       <motion.div 
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="text-center mb-12"
+        className="text-center mb-8 sm:mb-12"
       >
-        <div className="inline-flex items-center justify-center mb-6">
+        <div className="inline-flex items-center justify-center mb-4 sm:mb-6">
           <img 
             src={logoUrl} 
             alt="UpGraal Logo" 
-            className="w-32 h-32 object-contain"
+            className="w-24 h-24 sm:w-32 sm:h-32 object-contain"
           />
         </div>
-        <h1 className="text-4xl font-bold mb-3 text-gray-900">UpGraal</h1>
-        <p className="text-gray-700 text-lg">Votre système de gestion cuisine temps réel</p>
+        <h1 className="text-3xl sm:text-4xl font-bold mb-2 sm:mb-3 text-gray-900">UpGraal</h1>
+        <p className="text-gray-700 text-base sm:text-lg px-4">Votre système de gestion cuisine temps réel</p>
       </motion.div>
 
       {/* Modules */}
@@ -151,34 +151,34 @@ export default function Home() {
           variants={containerVariants}
           initial="hidden"
           animate="visible"
-          className="mb-10"
+          className="mb-6 sm:mb-10"
         >
-          <h2 className="text-sm font-semibold text-gray-600 uppercase tracking-wider mb-4 px-1">
+          <h2 className="text-xs sm:text-sm font-semibold text-gray-600 uppercase tracking-wider mb-3 sm:mb-4 px-1">
             {module.title}
           </h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
             {module.items.map((item, index) => (
               <motion.div key={item.name} variants={itemVariants}>
                 <Link
                   to={createPageUrl(item.name)}
                   className={`
-                    group block p-5 rounded-2xl border-2 transition-all duration-200
+                    group block p-4 sm:p-5 rounded-xl sm:rounded-2xl border-2 transition-all duration-200
                     bg-white border-gray-300
                     hover:bg-gray-50 hover:border-gray-400 hover:shadow-md
-                    active:scale-[0.98]
+                    active:scale-[0.98] touch-manipulation
                   `}
                 >
                   <div className="flex items-start justify-between">
                     <div className={`
-                      w-12 h-12 rounded-xl flex items-center justify-center mb-4
+                      w-10 h-10 sm:w-12 sm:h-12 rounded-lg sm:rounded-xl flex items-center justify-center mb-3 sm:mb-4 flex-shrink-0
                       bg-${module.color}-600/20 text-${module.color}-400
                     `}>
-                      <item.icon className="w-6 h-6" />
+                      <item.icon className="w-5 h-5 sm:w-6 sm:h-6" />
                     </div>
-                    <ArrowRight className="w-5 h-5 text-gray-400 group-hover:text-gray-600 transition-colors" />
+                    <ArrowRight className="w-4 h-4 sm:w-5 sm:h-5 text-gray-400 group-hover:text-gray-600 transition-colors flex-shrink-0" />
                   </div>
-                  <h3 className="font-semibold text-lg mb-1 text-gray-900">{item.label}</h3>
-                  <p className="text-sm text-gray-600">{item.desc}</p>
+                  <h3 className="font-semibold text-base sm:text-lg mb-1 text-gray-900 line-clamp-2">{item.label}</h3>
+                  <p className="text-xs sm:text-sm text-gray-600 line-clamp-2">{item.desc}</p>
                 </Link>
               </motion.div>
             ))}
@@ -191,9 +191,9 @@ export default function Home() {
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ delay: 0.5 }}
-        className="mt-12 p-6 rounded-2xl bg-gray-100 border-2 border-gray-300 text-center"
+        className="mt-8 sm:mt-12 p-4 sm:p-6 rounded-xl sm:rounded-2xl bg-gray-100 border-2 border-gray-300 text-center"
       >
-        <p className="text-gray-700 text-sm">
+        <p className="text-gray-700 text-xs sm:text-sm px-2">
           Application optimisée pour tablettes tactiles • Mode hors-ligne partiel disponible
         </p>
       </motion.div>

@@ -211,36 +211,36 @@ export default function Temperatures() {
             <Button
               variant="outline"
               onClick={() => setShowHistoryModal(true)}
-              className="border-slate-600 text-slate-900 hover:text-slate-100 hover:bg-slate-700"
+              className="border-slate-600 text-slate-900 hover:text-slate-100 hover:bg-slate-700 min-h-[44px]"
             >
-              <History className="w-4 h-4 mr-2" />
-              Historique
+              <History className="w-4 h-4 sm:mr-2" />
+              <span className="hidden sm:inline">Historique</span>
             </Button>
             {currentUser?.role === 'admin' && (
               <Button
                 variant="outline"
                 onClick={() => setShowEquipmentModal(true)}
-                className="border-slate-600 text-slate-900 hover:text-slate-100 hover:bg-slate-700"
+                className="border-slate-600 text-slate-900 hover:text-slate-100 hover:bg-slate-700 min-h-[44px]"
               >
-                <Settings className="w-4 h-4 mr-2" />
-                Équipements
+                <Settings className="w-4 h-4 sm:mr-2" />
+                <span className="hidden sm:inline">Équipements</span>
               </Button>
             )}
             <Button
               variant="outline"
               onClick={handleExportCSV}
-              className="border-slate-600 text-slate-900 hover:text-slate-100 hover:bg-slate-700"
+              className="border-slate-600 text-slate-900 hover:text-slate-100 hover:bg-slate-700 min-h-[44px]"
             >
-              <Download className="w-4 h-4 mr-2" />
-              Export CSV
+              <Download className="w-4 h-4 sm:mr-2" />
+              <span className="hidden sm:inline">Export</span>
             </Button>
             <Button
               onClick={() => saveSnapshotMutation.mutate()}
               disabled={saveSnapshotMutation.isPending || temperatures.length === 0}
-              className="bg-orange-600 hover:bg-orange-700"
+              className="bg-orange-600 hover:bg-orange-700 min-h-[44px]"
             >
-              <Save className="w-4 h-4 mr-2" />
-              Enregistrer températures
+              <Save className="w-4 h-4 sm:mr-2" />
+              <span className="hidden sm:inline">Enregistrer</span>
             </Button>
           </>
         }
@@ -262,7 +262,7 @@ export default function Temperatures() {
           }
         />
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
           {equipment.map(eq => (
             <TemperatureCard
               key={eq.id}
@@ -351,14 +351,14 @@ function TemperatureCard({ equipment, temperature, onSave, isSaving }) {
   const hasEvening = temperature?.evening_temp !== undefined;
 
   return (
-    <div className="p-4 rounded-2xl border-2 bg-white border-gray-300 transition-all">
-      <div className="flex items-start justify-between mb-4">
-        <div>
-          <h3 className="font-semibold text-gray-900">{equipment.name}</h3>
+    <div className="p-3 sm:p-4 rounded-xl sm:rounded-2xl border-2 bg-white border-gray-300 transition-all">
+      <div className="flex items-start justify-between mb-3 sm:mb-4">
+        <div className="min-w-0 flex-1">
+          <h3 className="font-semibold text-gray-900 text-sm sm:text-base truncate">{equipment.name}</h3>
           <Badge
             variant="outline"
             className={cn(
-              "mt-1",
+              "mt-1 text-xs",
               isPositive
                 ? "border-cyan-600/50 text-cyan-400"
                 : "border-indigo-600/50 text-indigo-400"
@@ -369,19 +369,19 @@ function TemperatureCard({ equipment, temperature, onSave, isSaving }) {
         </div>
       </div>
 
-      <p className="text-xs text-gray-700 font-medium mb-3">
+      <p className="text-[11px] sm:text-xs text-gray-700 font-medium mb-3">
         Cible: {equipment.target_min}°C à {equipment.target_max}°C
       </p>
 
       {/* Morning Temperature */}
-      <div className="mb-4 p-3 rounded-lg bg-gray-50 border border-gray-200">
+      <div className="mb-3 sm:mb-4 p-2.5 sm:p-3 rounded-lg bg-gray-50 border border-gray-200">
         <div className="flex items-center justify-between mb-2">
-          <Label className="text-xs font-semibold text-gray-700">Début de service</Label>
+          <Label className="text-[11px] sm:text-xs font-semibold text-gray-700">Début de service</Label>
           {hasMorning && (
             morningCompliant ? (
-              <CheckCircle2 className="w-4 h-4 text-green-600" />
+              <CheckCircle2 className="w-4 h-4 text-green-600 flex-shrink-0" />
             ) : (
-              <AlertTriangle className="w-4 h-4 text-red-600" />
+              <AlertTriangle className="w-4 h-4 text-red-600 flex-shrink-0" />
             )
           )}
         </div>
@@ -391,12 +391,12 @@ function TemperatureCard({ equipment, temperature, onSave, isSaving }) {
             step="0.1"
             value={morningValue}
             onChange={(e) => setMorningValue(e.target.value)}
-            className="bg-white border-gray-300 text-center text-lg font-bold h-10"
+            className="bg-white border-gray-300 text-center text-base sm:text-lg font-bold h-10 sm:h-10 min-h-[44px] touch-manipulation"
           />
-          <span className="text-lg text-gray-700">°C</span>
+          <span className="text-base sm:text-lg text-gray-700 whitespace-nowrap">°C</span>
         </div>
         {hasMorning && temperature.morning_signed_by_name && (
-          <p className="text-[10px] text-gray-500">
+          <p className="text-[10px] text-gray-500 truncate">
             {temperature.morning_signed_by_name}
           </p>
         )}
@@ -404,21 +404,21 @@ function TemperatureCard({ equipment, temperature, onSave, isSaving }) {
           onClick={() => handleSave('morning')}
           disabled={!morningValue || isSaving}
           size="sm"
-          className="w-full mt-2 h-8 text-xs bg-blue-600 hover:bg-blue-700"
+          className="w-full mt-2 min-h-[44px] text-xs sm:text-sm bg-blue-600 hover:bg-blue-700 touch-manipulation"
         >
           {hasMorning ? 'Modifier' : 'Enregistrer'}
         </Button>
       </div>
 
       {/* Evening Temperature */}
-      <div className="p-3 rounded-lg bg-gray-50 border border-gray-200">
+      <div className="p-2.5 sm:p-3 rounded-lg bg-gray-50 border border-gray-200">
         <div className="flex items-center justify-between mb-2">
-          <Label className="text-xs font-semibold text-gray-700">Fin de service</Label>
+          <Label className="text-[11px] sm:text-xs font-semibold text-gray-700">Fin de service</Label>
           {hasEvening && (
             eveningCompliant ? (
-              <CheckCircle2 className="w-4 h-4 text-green-600" />
+              <CheckCircle2 className="w-4 h-4 text-green-600 flex-shrink-0" />
             ) : (
-              <AlertTriangle className="w-4 h-4 text-red-600" />
+              <AlertTriangle className="w-4 h-4 text-red-600 flex-shrink-0" />
             )
           )}
         </div>
@@ -428,12 +428,12 @@ function TemperatureCard({ equipment, temperature, onSave, isSaving }) {
             step="0.1"
             value={eveningValue}
             onChange={(e) => setEveningValue(e.target.value)}
-            className="bg-white border-gray-300 text-center text-lg font-bold h-10"
+            className="bg-white border-gray-300 text-center text-base sm:text-lg font-bold h-10 sm:h-10 min-h-[44px] touch-manipulation"
           />
-          <span className="text-lg text-gray-700">°C</span>
+          <span className="text-base sm:text-lg text-gray-700 whitespace-nowrap">°C</span>
         </div>
         {hasEvening && temperature.evening_signed_by_name && (
-          <p className="text-[10px] text-gray-500">
+          <p className="text-[10px] text-gray-500 truncate">
             {temperature.evening_signed_by_name}
           </p>
         )}
@@ -441,7 +441,7 @@ function TemperatureCard({ equipment, temperature, onSave, isSaving }) {
           onClick={() => handleSave('evening')}
           disabled={!eveningValue || isSaving}
           size="sm"
-          className="w-full mt-2 h-8 text-xs bg-orange-600 hover:bg-orange-700"
+          className="w-full mt-2 min-h-[44px] text-xs sm:text-sm bg-orange-600 hover:bg-orange-700 touch-manipulation"
         >
           {hasEvening ? 'Modifier' : 'Enregistrer'}
         </Button>

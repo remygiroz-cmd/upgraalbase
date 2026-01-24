@@ -97,10 +97,11 @@ export default function Recettes() {
         actions={
         <Button
           onClick={() => setShowFormModal(true)}
-          className="bg-orange-600 hover:bg-orange-700">
+          className="bg-orange-600 hover:bg-orange-700 min-h-[44px]">
 
             <Plus className="w-4 h-4 mr-2" />
-            Nouvelle recette
+            <span className="hidden sm:inline">Nouvelle recette</span>
+            <span className="sm:hidden">Nouvelle</span>
           </Button>
         } />
 
@@ -156,7 +157,7 @@ export default function Recettes() {
         } /> :
 
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
           <AnimatePresence>
             {filteredRecipes.map((recipe) =>
           <motion.div
