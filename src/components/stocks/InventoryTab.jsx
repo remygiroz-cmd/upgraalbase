@@ -11,7 +11,6 @@ export default function InventoryTab() {
   const [stockValues, setStockValues] = useState({});
   const [cart, setCart] = useState({});
   const [showAll, setShowAll] = useState(false);
-  const [activeArticleId, setActiveArticleId] = useState(null);
   const [completedArticles, setCompletedArticles] = useState(new Set());
 
   const { data: articles = [] } = useQuery({
@@ -54,14 +53,6 @@ export default function InventoryTab() {
   }, {});
 
   const handleStockChange = (articleId, value, article) => {
-    // Si on change d'article, marquer l'ancien comme complété
-    if (activeArticleId && activeArticleId !== articleId) {
-      setCompletedArticles(prev => new Set(prev).add(activeArticleId));
-    }
-    
-    // Définir le nouvel article actif
-    setActiveArticleId(articleId);
-    
     setStockValues(prev => ({
       ...prev,
       [articleId]: value
@@ -301,6 +292,14 @@ export default function InventoryTab() {
                                 </div>
                               )}
                             </div>
+                            <button
+                              onClick={() => {
+                                setCompletedArticles(prev => new Set(prev).add(article.id));
+                              }}
+                              className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-medium transition-colors"
+                            >
+                              <Check className="w-4 h-4" />
+                            </button>
                           </div>
                         </div>
                       ))}
