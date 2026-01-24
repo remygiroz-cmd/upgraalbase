@@ -70,20 +70,22 @@ export default function ArticlesTab() {
     return matchesSearch && matchesCategory && matchesSupplier;
   });
 
-  // Group articles by supplier
-  const groupedBySupplier = filteredArticles.reduce((acc, article) => {
-    const supplier = article.supplier_name || 'Sans fournisseur';
-    if (!acc[supplier]) {
-      acc[supplier] = [];
+  // Group articles by supplier or category depending on view mode
+  const groupedArticles = filteredArticles.reduce((acc, article) => {
+    const groupKey = viewMode === 'shopping' 
+      ? (article.supplier_name || 'Sans fournisseur')
+      : (article.category || 'Sans catégorie');
+    if (!acc[groupKey]) {
+      acc[groupKey] = [];
     }
-    acc[supplier].push(article);
+    acc[groupKey].push(article);
     return acc;
   }, {});
 
-  // Sort articles within each supplier by the appropriate order field
+  // Sort articles within each group by the appropriate order field
   const orderField = viewMode === 'shopping' ? 'order' : 'storage_order';
-  Object.keys(groupedBySupplier).forEach(supplier => {
-    groupedBySupplier[supplier].sort((a, b) => (a[orderField] || 0) - (b[orderField] || 0));
+  Object.keys(groupedArticles).forEach(groupKey => {
+    groupedArticles[groupKey].sort((a, b) => (a[orderField] || 0) - (b[orderField] || 0));
   });
 
   const handleDragEnd = (result) => {
@@ -91,11 +93,11 @@ export default function ArticlesTab() {
     if (!destination) return;
     if (source.droppableId === destination.droppableId && source.index === destination.index) return;
 
-    const supplierKey = destination.droppableId;
-    const articlesInSupplier = groupedBySupplier[supplierKey] || [];
+    const groupKey = destination.droppableId;
+    const articlesInGroup = groupedArticles[groupKey] || [];
 
     // Créer une nouvelle liste avec l'article déplacé
-    const updatedList = Array.from(articlesInSupplier);
+    const updatedList = Array.from(articlesInGroup);
     const [draggedArticle] = updatedList.splice(source.index, 1);
     updatedList.splice(destination.index, 0, draggedArticle);
 
@@ -254,12 +256,23 @@ export default function ArticlesTab() {
       ) : (
         <DragDropContext onDragEnd={handleDragEnd}>
           <div className="space-y-8">
-            {Object.entries(groupedBySupplier).map(([supplier, supplierArticles]) => (
-              <div key={supplier}>
-                <h3 className="text-lg font-semibold text-gray-900 mb-4 pb-2 border-b-2 border-gray-300">
-                  {supplier}
+            {Object.entries(groupedArticles).map(([groupKey, groupArticles]) => {
+              const groupColor = viewMode === 'storage' && categories.find(c => c.name === groupKey)?.color;
+              return (
+              <div key={groupKey}>
+                <h3 
+                  className="text-lg font-semibold mb-4 pb-2 border-b-2"
+                  style={groupColor ? { 
+                    color: groupColor, 
+                    borderColor: groupColor 
+                  } : { 
+                    color: '#1f2937', 
+                    borderColor: '#d1d5db' 
+                  }}
+                >
+                  {groupKey}
                 </h3>
-                <Droppable droppableId={supplier} type="ARTICLE">
+                <Droppable droppableId={groupKey} type="ARTICLE">
                   {(provided, snapshot) => (
                     <div
                       ref={provided.innerRef}
