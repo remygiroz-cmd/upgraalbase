@@ -125,17 +125,17 @@ export default function ArticlesTab() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       {/* Search and Filters */}
-      <div className="space-y-4">
-        <div className="flex gap-2">
+      <div className="space-y-3 sm:space-y-4">
+        <div className="flex flex-col sm:flex-row gap-2">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
             <Input
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Ex: Poisson..."
-              className="pl-10 bg-white border-gray-300 text-gray-900"
+              className="pl-10 bg-white border-gray-300 text-gray-900 min-h-[44px]"
             />
           </div>
           <Button
@@ -143,10 +143,11 @@ export default function ArticlesTab() {
               setEditingArticle(null);
               setShowForm(true);
             }}
-            className="bg-orange-600 hover:bg-orange-700"
+            className="bg-orange-600 hover:bg-orange-700 min-h-[44px] w-full sm:w-auto whitespace-nowrap"
           >
             <Plus className="w-4 h-4 mr-2" />
-            Nouvel article
+            <span className="hidden sm:inline">Nouvel article</span>
+            <span className="sm:hidden">Nouveau</span>
           </Button>
         </div>
 
@@ -210,26 +211,28 @@ export default function ArticlesTab() {
         </div>
 
         {/* View Mode Toggle */}
-        <div className="flex gap-2">
+        <div className="flex gap-2 w-full sm:w-auto">
           <button
             onClick={() => setViewMode('shopping')}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+            className={`flex-1 sm:flex-none px-3 sm:px-4 py-2 rounded-lg text-xs sm:text-sm font-medium transition-all min-h-[44px] touch-manipulation ${
               viewMode === 'shopping'
                 ? 'bg-blue-600 text-white'
                 : 'bg-gray-100 text-gray-900 hover:bg-gray-200'
             }`}
           >
-            Parcours Magasin
+            <span className="hidden sm:inline">Parcours Magasin</span>
+            <span className="sm:hidden">Magasin</span>
           </button>
           <button
             onClick={() => setViewMode('storage')}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+            className={`flex-1 sm:flex-none px-3 sm:px-4 py-2 rounded-lg text-xs sm:text-sm font-medium transition-all min-h-[44px] touch-manipulation ${
               viewMode === 'storage'
                 ? 'bg-purple-600 text-white'
                 : 'bg-gray-100 text-gray-900 hover:bg-gray-200'
             }`}
           >
-            Stockage Boutique
+            <span className="hidden sm:inline">Stockage Boutique</span>
+            <span className="sm:hidden">Stockage</span>
           </button>
         </div>
       </div>
@@ -255,13 +258,13 @@ export default function ArticlesTab() {
         />
       ) : (
         <DragDropContext onDragEnd={handleDragEnd}>
-          <div className="space-y-8">
+          <div className="space-y-6 sm:space-y-8">
             {Object.entries(groupedArticles).map(([groupKey, groupArticles]) => {
               const groupColor = viewMode === 'storage' && categories.find(c => c.name === groupKey)?.color;
               return (
                 <div key={groupKey}>
                 <h3 
-                  className="text-lg font-semibold mb-4 pb-2 border-b-2"
+                  className="text-base sm:text-lg font-semibold mb-3 sm:mb-4 pb-2 border-b-2 truncate"
                   style={groupColor ? { 
                     color: groupColor, 
                     borderColor: groupColor 
@@ -277,7 +280,7 @@ export default function ArticlesTab() {
                     <div
                       ref={provided.innerRef}
                       {...provided.droppableProps}
-                      className={`space-y-2 p-4 rounded-lg transition-all duration-150 ease-out ${
+                      className={`space-y-2 p-2 sm:p-4 rounded-lg transition-all duration-150 ease-out ${
                         snapshot.isDraggingOver 
                           ? 'bg-blue-100 border-2 border-blue-400 shadow-md' 
                           : 'bg-transparent border-2 border-dashed border-gray-300'
@@ -289,17 +292,17 @@ export default function ArticlesTab() {
                             <div
                               ref={provided.innerRef}
                               {...provided.draggableProps}
-                              className={`bg-white rounded-lg border-2 overflow-hidden flex items-center gap-3 p-4 transition-all duration-150 ease-out ${
+                              className={`bg-white rounded-lg border-2 overflow-hidden flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-3 p-3 sm:p-4 transition-all duration-150 ease-out ${
                                 snapshot.isDragging
                                   ? 'border-blue-600 shadow-2xl bg-blue-50 z-50 scale-105'
                                   : 'border-gray-300 hover:border-blue-400 hover:shadow-md'
                               }`}
                             >
-                              <div className="flex items-start gap-2 cursor-grab active:cursor-grabbing flex-1 min-w-0" {...provided.dragHandleProps}>
-                                <GripVertical className={`w-5 h-5 flex-shrink-0 transition-colors ${snapshot.isDragging ? 'text-blue-600' : 'text-gray-400'}`} />
+                              <div className="flex items-start gap-2 cursor-grab active:cursor-grabbing flex-1 min-w-0 w-full sm:w-auto touch-none" {...provided.dragHandleProps}>
+                                <GripVertical className={`w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0 transition-colors ${snapshot.isDragging ? 'text-blue-600' : 'text-gray-400'}`} />
                                 <div className="flex-1 min-w-0">
                                   {article.image_url && (
-                                    <div className="w-12 h-12 rounded mb-2 overflow-hidden bg-gray-100 flex-shrink-0">
+                                    <div className="w-10 h-10 sm:w-12 sm:h-12 rounded mb-2 overflow-hidden bg-gray-100 flex-shrink-0">
                                       <img
                                         src={article.image_url}
                                         alt={article.name}
@@ -307,13 +310,13 @@ export default function ArticlesTab() {
                                       />
                                     </div>
                                   )}
-                                  <div className="flex items-center gap-2">
-                                    <h3 className="font-semibold text-gray-900 truncate">{article.name}</h3>
-                                    <span className="inline-block px-2 py-0.5 bg-gray-200 text-gray-800 text-xs font-bold rounded flex-shrink-0">
+                                  <div className="flex items-center gap-2 flex-wrap">
+                                    <h3 className="font-semibold text-gray-900 text-sm sm:text-base truncate">{article.name}</h3>
+                                    <span className="inline-block px-1.5 sm:px-2 py-0.5 bg-gray-200 text-gray-800 text-[10px] sm:text-xs font-bold rounded flex-shrink-0">
                                       #{(viewMode === 'shopping' ? article.order : article.storage_order) + 1}
                                     </span>
                                   </div>
-                                  <div className="flex gap-3 mt-1 text-xs text-gray-600 flex-wrap">
+                                  <div className="flex gap-2 sm:gap-3 mt-1 text-[11px] sm:text-xs text-gray-600 flex-wrap">
                                     {article.category && (
                                       <span style={{ color: categories.find(c => c.name === article.category)?.color || '#2563eb' }}>
                                         {article.category}
@@ -330,13 +333,13 @@ export default function ArticlesTab() {
                                   </div>
                                 </div>
                               </div>
-                              <div className="flex gap-1 flex-shrink-0">
+                              <div className="flex gap-1 flex-shrink-0 w-full sm:w-auto justify-end">
                                 <button
                                   onClick={() => {
                                     setEditingArticle(article);
                                     setShowForm(true);
                                   }}
-                                  className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
+                                  className="p-2 sm:p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors touch-manipulation min-h-[44px] min-w-[44px] flex items-center justify-center"
                                 >
                                   <Edit2 className="w-4 h-4" />
                                 </button>
@@ -346,7 +349,7 @@ export default function ArticlesTab() {
                                       deleteArticleMutation.mutate(article.id);
                                     }
                                   }}
-                                  className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
+                                  className="p-2 sm:p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors touch-manipulation min-h-[44px] min-w-[44px] flex items-center justify-center"
                                 >
                                   <Trash2 className="w-4 h-4" />
                                 </button>

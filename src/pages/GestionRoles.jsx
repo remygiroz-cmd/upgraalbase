@@ -77,20 +77,20 @@ export default function GestionRoles() {
         }
       />
 
-      <div className="grid gap-4">
+      <div className="grid gap-3 sm:gap-4">
         {roles.map((role) => (
           <div
             key={role.id}
-            className="bg-white rounded-xl border-2 border-gray-200 p-4 sm:p-6"
+            className="bg-white rounded-lg sm:rounded-xl border-2 border-gray-200 p-3 sm:p-6"
           >
-            <div className="flex items-start justify-between gap-4 mb-4">
-              <div className="flex-1 min-w-0">
-                <h3 className="text-lg font-bold text-gray-900">{role.name}</h3>
+            <div className="flex flex-col sm:flex-row items-start justify-between gap-3 sm:gap-4 mb-3 sm:mb-4">
+              <div className="flex-1 min-w-0 w-full sm:w-auto">
+                <h3 className="text-base sm:text-lg font-bold text-gray-900 break-words">{role.name}</h3>
                 {role.description && (
-                  <p className="text-sm text-gray-600 mt-1">{role.description}</p>
+                  <p className="text-xs sm:text-sm text-gray-600 mt-1 break-words">{role.description}</p>
                 )}
               </div>
-              <div className="flex items-center gap-1">
+              <div className="flex items-center gap-1 w-full sm:w-auto justify-end">
                 <Button
                   variant="outline"
                   size="icon"
@@ -121,12 +121,12 @@ export default function GestionRoles() {
               </div>
             </div>
 
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2">
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-1.5 sm:gap-2">
               {MODULES.map((module) => (
                 <div
                   key={module.key}
                   className={cn(
-                    "text-xs px-2 py-1.5 rounded-lg font-medium text-center",
+                    "text-[10px] sm:text-xs px-2 py-1.5 rounded-lg font-medium text-center break-words",
                     role.permissions?.[module.key]
                       ? "bg-green-100 text-green-700"
                       : "bg-gray-100 text-gray-500"

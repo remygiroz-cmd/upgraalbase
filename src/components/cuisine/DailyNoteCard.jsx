@@ -79,29 +79,29 @@ export default function DailyNoteCard({ note }) {
         animate={{ opacity: 1, y: 0, scale: 1 }}
         exit={{ opacity: 0, scale: 0.95 }}
         className={cn(
-          "relative p-5 rounded-2xl border-2 shadow-xl",
+          "relative p-4 sm:p-5 rounded-xl sm:rounded-2xl border-2 shadow-xl",
           "bg-gradient-to-br from-orange-600/20 to-orange-700/20",
           "border-orange-500/50"
         )}>
 
-        <div className="bg-slate-200 rounded-2xl absolute inset-0 from-orange-600/10 to-transparent" />
+        <div className="bg-slate-200 rounded-xl sm:rounded-2xl absolute inset-0 from-orange-600/10 to-transparent" />
         
         <div className="text-slate-900 relative">
-          <div className="flex items-start justify-between gap-4 mb-3">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-orange-600 flex items-center justify-center">
-                <Bell className="w-5 h-5 text-white" />
+          <div className="flex items-start justify-between gap-3 sm:gap-4 mb-3">
+            <div className="flex items-start gap-2 sm:gap-3 flex-1 min-w-0">
+              <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl bg-orange-600 flex items-center justify-center flex-shrink-0">
+                <Bell className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
               </div>
-              <div>
-                <p className="text-slate-950 text-sm font-semibold sm:text-base">Note d'équipe</p>
-                <div className="flex items-center gap-2 text-xs text-orange-200 mt-1">
-                  <span className="text-slate-400 truncate max-w-[120px] sm:max-w-none">{note.author_name}</span>
-                  <span>•</span>
+              <div className="min-w-0 flex-1">
+                <p className="text-slate-950 text-xs sm:text-sm font-semibold sm:text-base">Note d'équipe</p>
+                <div className="flex items-center gap-1.5 sm:gap-2 text-[10px] sm:text-xs text-orange-200 mt-1 flex-wrap">
+                  <span className="text-slate-400 truncate max-w-[100px] sm:max-w-none">{note.author_name}</span>
+                  <span className="hidden sm:inline">•</span>
                   <span className="text-slate-400 whitespace-nowrap">{format(new Date(note.created_date), 'HH:mm', { locale: fr })}</span>
-                  <span>•</span>
+                  <span className="hidden sm:inline">•</span>
                   <div className="text-slate-500 flex items-center gap-1 whitespace-nowrap">
-                    <Clock className="w-3 h-3" />
-                    {timeLeft()}
+                    <Clock className="w-3 h-3 flex-shrink-0" />
+                    <span className="truncate">{timeLeft()}</span>
                   </div>
                 </div>
               </div>
@@ -112,35 +112,35 @@ export default function DailyNoteCard({ note }) {
               size="sm"
               variant="ghost"
               onClick={handleClose}
-              className="text-orange-200 hover:text-white hover:bg-orange-600/30 -mt-1 -mr-1">
+              className="text-orange-200 hover:text-white hover:bg-orange-600/30 -mt-1 -mr-1 min-h-[44px] min-w-[44px] flex-shrink-0 touch-manipulation">
 
                 <X className="w-5 h-5" />
               </Button>
             }
           </div>
 
-          <p className="text-slate-950 text-sm leading-relaxed sm:text-base break-words whitespace-pre-wrap overflow-wrap-anywhere">
+          <p className="text-slate-950 text-xs sm:text-sm leading-relaxed sm:text-base break-words whitespace-pre-wrap">
             {note.content}
           </p>
 
           {isAuthor &&
-          <div className="mt-4 pt-4 border-t border-orange-500/30 flex items-center justify-between gap-2">
+          <div className="mt-3 sm:mt-4 pt-3 sm:pt-4 border-t border-orange-500/30 flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
               <Button
               size="sm"
               variant="ghost"
-              onClick={() => setShowReaders(true)} className="bg-slate-400 text-orange-200 px-3 text-xs font-medium rounded-md inline-flex items-center gap-2 whitespace-nowrap transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 h-8 hover:text-white hover:bg-orange-600/30 min-h-[44px] justify-start sm:justify-center">
+              onClick={() => setShowReaders(true)} className="bg-slate-400 text-orange-200 px-3 text-xs font-medium rounded-md inline-flex items-center gap-2 transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover:text-white hover:bg-orange-600/30 min-h-[44px] justify-center w-full sm:w-auto touch-manipulation">
 
 
-                <Eye className="w-4 h-4 mr-2" />
-                {note.read_by?.length || 0} personne{(note.read_by?.length || 0) > 1 ? 's ont' : ' a'} lu
+                <Eye className="w-4 h-4 mr-2 flex-shrink-0" />
+                <span className="truncate">{note.read_by?.length || 0} personne{(note.read_by?.length || 0) > 1 ? 's ont' : ' a'} lu</span>
               </Button>
               <Button
               size="sm"
               variant="ghost"
-              onClick={() => setConfirmDelete(true)} className="text-slate-900 px-3 text-xs font-medium rounded-md inline-flex items-center gap-2 whitespace-nowrap transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 h-8 hover:text-red-100 hover:bg-red-600/30 min-h-[44px] justify-start sm:justify-center">
+              onClick={() => setConfirmDelete(true)} className="text-slate-900 px-3 text-xs font-medium rounded-md inline-flex items-center gap-2 transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover:text-red-100 hover:bg-red-600/30 min-h-[44px] justify-center w-full sm:w-auto touch-manipulation">
 
 
-                <Trash2 className="w-4 h-4 mr-2" />
+                <Trash2 className="w-4 h-4 mr-2 flex-shrink-0" />
                 Supprimer
               </Button>
             </div>

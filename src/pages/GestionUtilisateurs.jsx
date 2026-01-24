@@ -160,42 +160,42 @@ export default function GestionUtilisateurs() {
       />
 
       {/* Search */}
-      <div className="mb-6">
+      <div className="mb-4 sm:mb-6">
         <Input
           type="search"
           placeholder="Rechercher un utilisateur..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          className="bg-white border-gray-300 max-w-md"
+          className="bg-white border-gray-300 max-w-full sm:max-w-md min-h-[44px]"
         />
       </div>
 
       {/* Pending Invitations */}
       {invitations.length > 0 && (
-        <div className="mb-6">
-          <h3 className="text-sm font-semibold text-gray-700 mb-3">Invitations en attente</h3>
+        <div className="mb-4 sm:mb-6">
+          <h3 className="text-xs sm:text-sm font-semibold text-gray-700 mb-3">Invitations en attente</h3>
           <div className="grid gap-3">
             {invitations.map((inv) => (
               <div
                 key={inv.id}
-                className="bg-amber-50 border-2 border-amber-300 rounded-xl p-4 flex items-center justify-between gap-4"
+                className="bg-amber-50 border-2 border-amber-300 rounded-lg sm:rounded-xl p-3 sm:p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4"
               >
-                <div className="flex-1 min-w-0">
-                  <p className="font-semibold text-gray-900">
+                <div className="flex-1 min-w-0 w-full sm:w-auto">
+                  <p className="font-semibold text-gray-900 text-sm sm:text-base truncate">
                     {inv.first_name} {inv.last_name}
                   </p>
-                  <p className="text-sm text-gray-600">{inv.email}</p>
-                  <p className="text-xs text-gray-500 mt-1">
+                  <p className="text-xs sm:text-sm text-gray-600 truncate">{inv.email}</p>
+                  <p className="text-[11px] sm:text-xs text-gray-500 mt-1 truncate">
                     Invité par {inv.invited_by_name}
                   </p>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 w-full sm:w-auto">
                   <Button
                     variant="outline"
                     size="sm"
                     onClick={() => resendInviteMutation.mutate(inv.id)}
                     disabled={resendInviteMutation.isPending}
-                    className="border-amber-600 text-amber-700 hover:bg-amber-100"
+                    className="border-amber-600 text-amber-700 hover:bg-amber-100 min-h-[44px] flex-1 sm:flex-none text-xs sm:text-sm"
                   >
                     {copiedInviteUrl === inv.id ? (
                       <>
@@ -205,7 +205,8 @@ export default function GestionUtilisateurs() {
                     ) : (
                       <>
                         <Copy className="w-4 h-4 mr-2" />
-                        Copier lien
+                        <span className="hidden sm:inline">Copier lien</span>
+                        <span className="sm:hidden">Copier</span>
                       </>
                     )}
                   </Button>
@@ -214,7 +215,7 @@ export default function GestionUtilisateurs() {
                     size="icon"
                     onClick={() => deleteInvitationMutation.mutate(inv.id)}
                     disabled={deleteInvitationMutation.isPending}
-                    className="border-red-300 text-red-600 hover:bg-red-50 min-h-[40px] min-w-[40px]"
+                    className="border-red-300 text-red-600 hover:bg-red-50 min-h-[44px] min-w-[44px]"
                     title="Supprimer l'invitation"
                   >
                     <Trash2 className="w-4 h-4" />
@@ -227,23 +228,24 @@ export default function GestionUtilisateurs() {
       )}
 
       {/* Active Users List */}
-      <h3 className="text-sm font-semibold text-gray-700 mb-3">Utilisateurs actifs</h3>
-      <div className="grid gap-4 mb-8">
+      <h3 className="text-xs sm:text-sm font-semibold text-gray-700 mb-3">Utilisateurs actifs</h3>
+      <div className="grid gap-3 sm:gap-4 mb-6 sm:mb-8">
         {filteredUsers.map((user) => (
           <div
             key={user.id}
             className={cn(
-              "bg-white rounded-xl border-2 p-4 sm:p-6 transition-all",
+              "bg-white rounded-lg sm:rounded-xl border-2 p-3 sm:p-6 transition-all",
               user.status === 'active' ? "border-gray-200" : "border-gray-300 opacity-60"
             )}
           >
-            <div className="flex items-start justify-between gap-4">
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-3 mb-2 flex-wrap">
-                  <h3 className="text-lg font-bold text-gray-900">{user.full_name}</h3>
+            <div className="flex flex-col sm:flex-row items-start justify-between gap-3 sm:gap-4">
+              <div className="flex-1 min-w-0 w-full sm:w-auto">
+                <div className="flex items-center gap-2 sm:gap-3 mb-2 flex-wrap">
+                  <h3 className="text-base sm:text-lg font-bold text-gray-900 truncate">{user.full_name}</h3>
                   <Badge
                     variant={user.status === 'active' ? 'default' : 'secondary'}
                     className={cn(
+                      "text-[10px] sm:text-xs flex-shrink-0",
                       user.status === 'active' && "bg-green-100 text-green-700 border-green-300",
                       user.status === 'invited' && "bg-amber-100 text-amber-700 border-amber-300",
                       user.status === 'disabled' && "bg-red-100 text-red-700 border-red-300"
@@ -254,21 +256,21 @@ export default function GestionUtilisateurs() {
                     {user.status === 'disabled' && 'Désactivé'}
                   </Badge>
                   {user.role === 'admin' && (
-                    <Badge className="bg-purple-100 text-purple-700 border-purple-300">
+                    <Badge className="bg-purple-100 text-purple-700 border-purple-300 text-[10px] sm:text-xs flex-shrink-0">
                       Admin
                     </Badge>
                   )}
                 </div>
-                <p className="text-sm text-gray-600">{user.email}</p>
+                <p className="text-xs sm:text-sm text-gray-600 truncate">{user.email}</p>
                 {user.team && (
-                  <p className="text-sm text-gray-500 mt-1">Équipe : {user.team}</p>
+                  <p className="text-xs sm:text-sm text-gray-500 mt-1 truncate">Équipe : {user.team}</p>
                 )}
-                <p className="text-xs text-gray-500 mt-2">
+                <p className="text-[11px] sm:text-xs text-gray-500 mt-2 truncate">
                   Rôle : <span className="font-medium">{getRoleName(user.role_id)}</span>
                 </p>
               </div>
 
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 w-full sm:w-auto">
                 <Button
                   variant="outline"
                   size="icon"

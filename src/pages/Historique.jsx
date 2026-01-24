@@ -158,19 +158,20 @@ export default function Historique() {
             <Button
             onClick={handleDeleteAll}
             variant="outline"
-            className="border-red-600 text-red-400 hover:text-red-300 hover:bg-red-600/20"
+            className="border-red-600 text-red-400 hover:text-red-300 hover:bg-red-600/20 min-h-[44px]"
             disabled={deleteAllSessionsMutation.isPending}>
 
-              <Trash2 className="w-4 h-4 mr-2" />
-              Tout supprimer
+              <Trash2 className="w-4 h-4 sm:mr-2" />
+              <span className="hidden sm:inline">Tout supprimer</span>
             </Button>
             <Button
             onClick={exportToCSV}
             variant="outline"
-            className="border-slate-600 text-slate-900 hover:text-slate-100 hover:bg-slate-700">
+            className="border-slate-600 text-slate-900 hover:text-slate-100 hover:bg-slate-700 min-h-[44px]">
 
-              <Download className="w-4 h-4 mr-2" />
-              Exporter CSV
+              <Download className="w-4 h-4 sm:mr-2" />
+              <span className="hidden sm:inline">Exporter CSV</span>
+              <span className="sm:hidden">CSV</span>
             </Button>
           </>
         } />
