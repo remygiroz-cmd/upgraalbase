@@ -18,7 +18,11 @@ export default function ArticleFormModal({ open, onClose, onSave, isSaving, arti
     internal_code: '',
     image_url: '',
     order: 0,
-    storage_order: 0
+    storage_order: 0,
+    inventory_mode: 'stock_reel',
+    counting_days: [],
+    safety_stock: { M: 0, J: 0, V: 0, S: 0, D: 0 },
+    order_quantity: { M: 0, J: 0, V: 0, S: 0, D: 0 }
   });
   const [uploadingImage, setUploadingImage] = useState(false);
   const [generatingImage, setGeneratingImage] = useState(false);
@@ -36,7 +40,11 @@ export default function ArticleFormModal({ open, onClose, onSave, isSaving, arti
         internal_code: article.internal_code || '',
         image_url: article.image_url || '',
         order: article.order || 0,
-        storage_order: article.storage_order || 0
+        storage_order: article.storage_order || 0,
+        inventory_mode: article.inventory_mode || 'stock_reel',
+        counting_days: article.counting_days || [],
+        safety_stock: article.safety_stock || { M: 0, J: 0, V: 0, S: 0, D: 0 },
+        order_quantity: article.order_quantity || { M: 0, J: 0, V: 0, S: 0, D: 0 }
       });
     } else {
       setForm({
@@ -50,7 +58,11 @@ export default function ArticleFormModal({ open, onClose, onSave, isSaving, arti
         internal_code: '',
         image_url: '',
         order: 0,
-        storage_order: 0
+        storage_order: 0,
+        inventory_mode: 'stock_reel',
+        counting_days: [],
+        safety_stock: { M: 0, J: 0, V: 0, S: 0, D: 0 },
+        order_quantity: { M: 0, J: 0, V: 0, S: 0, D: 0 }
       });
     }
   }, [article, open]);
@@ -307,6 +319,102 @@ export default function ArticleFormModal({ open, onClose, onSave, isSaving, arti
                 onChange={(e) => setForm(prev => ({ ...prev, storage_order: Math.max(0, parseInt(e.target.value) - 1) || 0 }))}
                 className="bg-white border-gray-300 text-gray-900 mt-1"
               />
+            </div>
+          </div>
+
+          {/* Gestion Inventaire */}
+          <div className="border-t border-gray-300 pt-4 mt-4 space-y-4">
+            <h3 className="font-semibold text-gray-900">Gestion Inventaire</h3>
+
+            {/* Mode de contrôle */}
+            <div>
+              <Label className="text-gray-900 mb-2 block">Mode de contrôle en réserve</Label>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => setForm(prev => ({ ...prev, inventory_mode: 'stock_reel' }))}
+                  className={`flex-1 px-4 py-2 rounded-lg font-medium transition-all ${
+                    form.inventory_mode === 'stock_reel'
+                      ? 'bg-orange-600 text-white'
+                      : 'bg-gray-100 text-gray-900 hover:bg-gray-200'
+                  }`}
+                >
+                  # Stock Réel
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setForm(prev => ({ ...prev, inventory_mode: 'juste_a_cocher' }))}
+                  className={`flex-1 px-4 py-2 rounded-lg font-medium transition-all ${
+                    form.inventory_mode === 'juste_a_cocher'
+                      ? 'bg-orange-600 text-white'
+                      : 'bg-gray-100 text-gray-900 hover:bg-gray-200'
+                  }`}
+                >
+                  ☑ Juste à cocher
+                </button>
+              </div>
+            </div>
+
+            {/* Jours de comptage */}
+            <div>
+              <Label className="text-gray-900 mb-2 block">Jours de comptage</Label>
+              <div className="flex gap-2">
+                {['L', 'MA', 'ME', 'J', 'V', 'S', 'D'].map((day) => (
+                  <button
+                    key={day}
+                    type="button"
+                    onClick={() => {
+                      setForm(prev => ({
+                        ...prev,
+                        counting_days: prev.counting_days.includes(day)
+                          ? prev.counting_days.filter(d => d !== day)
+                          : [...prev.counting_days, day]
+                      }));
+                    }}
+                    className={`w-10 h-10 rounded-lg font-bold transition-all ${
+                      form.counting_days.includes(day)
+                        ? 'bg-emerald-500 text-white'
+                        : 'bg-gray-200 text-gray-600 hover:bg-gray-300'
+                    }`}
+                  >
+                    {day}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Stock de sécurité ou Quantité de commande */}
+            <div>
+              <Label className="text-gray-900 mb-2 block">
+                {form.inventory_mode === 'stock_reel' ? 'Stock de sécurité (par level)' : 'Quantité de commande (si coché)'}
+              </Label>
+              <div className="grid grid-cols-5 gap-2">
+                {['M', 'J', 'V', 'S', 'D'].map((day) => (
+                  <div key={day}>
+                    <Label className="text-gray-700 text-xs mb-1 block text-center">{day}</Label>
+                    <Input
+                      type="number"
+                      min="0"
+                      value={form.inventory_mode === 'stock_reel' ? form.safety_stock[day] : form.order_quantity[day]}
+                      onChange={(e) => {
+                        const value = parseFloat(e.target.value) || 0;
+                        if (form.inventory_mode === 'stock_reel') {
+                          setForm(prev => ({
+                            ...prev,
+                            safety_stock: { ...prev.safety_stock, [day]: value }
+                          }));
+                        } else {
+                          setForm(prev => ({
+                            ...prev,
+                            order_quantity: { ...prev.order_quantity, [day]: value }
+                          }));
+                        }
+                      }}
+                      className="bg-white border-gray-300 text-gray-900 text-center"
+                    />
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
 
