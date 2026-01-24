@@ -93,6 +93,11 @@ export default function InventoryTab() {
     return acc;
   }, {});
 
+  // Trier par storage_order dans chaque catégorie
+  Object.keys(groupedByCategory).forEach(category => {
+    groupedByCategory[category].sort((a, b) => (a.storage_order || 0) - (b.storage_order || 0));
+  });
+
   const handleStockChange = (articleId, value, article) => {
     setStockValues(prev => ({
       ...prev,
