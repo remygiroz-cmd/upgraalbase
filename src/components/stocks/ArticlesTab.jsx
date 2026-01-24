@@ -259,7 +259,7 @@ export default function ArticlesTab() {
             {Object.entries(groupedArticles).map(([groupKey, groupArticles]) => {
               const groupColor = viewMode === 'storage' && categories.find(c => c.name === groupKey)?.color;
               return (
-              <div key={groupKey}>
+                <div key={groupKey}>
                 <h3 
                   className="text-lg font-semibold mb-4 pb-2 border-b-2"
                   style={groupColor ? { 
@@ -359,7 +359,7 @@ export default function ArticlesTab() {
                     </div>
                   )}
                 </Droppable>
-              </div>
+                </div>
               );
             })}
           </div>
