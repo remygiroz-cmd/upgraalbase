@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
-import { Plus, ShoppingCart, RotateCcw, Check } from 'lucide-react';
+import { Plus, ShoppingCart, RotateCcw, Check, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
@@ -164,9 +164,22 @@ export default function InventoryTab() {
       'D': 'Dimanche'
     };
     return labels[day] || day;
-  };
+    };
 
-  return (
+    const handleReset = () => {
+    if (confirm('Voulez-vous vraiment réinitialiser tout l\'inventaire ? Cette action est irréversible.')) {
+      setStockValues({});
+      setCart({});
+      setCompletedArticles(new Set());
+      setShowAll(false);
+      localStorage.removeItem('inventoryStockValues');
+      localStorage.removeItem('inventoryCart');
+      localStorage.removeItem('inventoryCompletedArticles');
+      localStorage.removeItem('inventoryShowAll');
+    }
+    };
+
+    return (
     <div className="space-y-6">
       {/* Header */}
       <div className="flex justify-between items-start">
@@ -177,6 +190,14 @@ export default function InventoryTab() {
           </p>
         </div>
         <div className="flex gap-2">
+          <Button 
+            variant="outline" 
+            className="border-red-600 text-red-600 hover:bg-red-50"
+            onClick={handleReset}
+          >
+            <RefreshCw className="w-4 h-4 mr-2" />
+            Réinitialiser
+          </Button>
           <Button variant="outline" className="border-purple-600 text-purple-600 hover:bg-purple-50">
             <Plus className="w-4 h-4 mr-2" />
             Ajout Libre
