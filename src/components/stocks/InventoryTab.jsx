@@ -181,14 +181,29 @@ export default function InventoryTab() {
                                   COMMANDER
                                 </Button>
                               ) : (
-                                <Input
-                                  type="number"
-                                  min="0"
-                                  value={stockValues[article.id] || ''}
-                                  onChange={(e) => handleStockChange(article.id, e.target.value)}
-                                  placeholder="-"
-                                  className="w-20 bg-gray-800 border-gray-600 text-white text-center"
-                                />
+                                <div className="flex items-center gap-1">
+                                  <button
+                                    onClick={() => {
+                                      const currentValue = stockValues[article.id] ?? article.safety_stock?.[currentDay] ?? 0;
+                                      handleStockChange(article.id, Math.max(0, currentValue - 1));
+                                    }}
+                                    className="w-8 h-8 rounded bg-gray-700 hover:bg-gray-600 text-white font-bold text-lg active:scale-95 transition-transform"
+                                  >
+                                    -
+                                  </button>
+                                  <div className="w-12 h-8 flex items-center justify-center bg-gray-800 border border-gray-600 text-white font-semibold rounded">
+                                    {stockValues[article.id] ?? article.safety_stock?.[currentDay] ?? 0}
+                                  </div>
+                                  <button
+                                    onClick={() => {
+                                      const currentValue = stockValues[article.id] ?? article.safety_stock?.[currentDay] ?? 0;
+                                      handleStockChange(article.id, currentValue + 1);
+                                    }}
+                                    className="w-8 h-8 rounded bg-gray-700 hover:bg-gray-600 text-white font-bold text-lg active:scale-95 transition-transform"
+                                  >
+                                    +
+                                  </button>
+                                </div>
                               )}
                             </div>
                           </div>
