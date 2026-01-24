@@ -58,6 +58,11 @@ export default function InventoryTab() {
       [articleId]: value
     }));
 
+    // Pour juste_a_cocher, marquer comme complété immédiatement si coché
+    if (article.inventory_mode === 'juste_a_cocher' && value === true) {
+      setCompletedArticles(prev => new Set(prev).add(articleId));
+    }
+
     // Mettre à jour le panier automatiquement
     if (article.inventory_mode === 'stock_reel') {
       const safetyStock = article.safety_stock?.[currentDay] || 0;
@@ -292,14 +297,16 @@ export default function InventoryTab() {
                                 </div>
                               )}
                             </div>
-                            <button
-                              onClick={() => {
-                                setCompletedArticles(prev => new Set(prev).add(article.id));
-                              }}
-                              className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-medium transition-colors"
-                            >
-                              <Check className="w-4 h-4" />
-                            </button>
+                            {article.inventory_mode === 'stock_reel' && (
+                              <button
+                                onClick={() => {
+                                  setCompletedArticles(prev => new Set(prev).add(article.id));
+                                }}
+                                className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-medium transition-colors"
+                              >
+                                <Check className="w-4 h-4" />
+                              </button>
+                            )}
                           </div>
                         </div>
                       ))}
