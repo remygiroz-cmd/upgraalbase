@@ -11,6 +11,8 @@ export default function InventoryTab() {
   const [stockValues, setStockValues] = useState({});
   const [cart, setCart] = useState({});
   const [showAll, setShowAll] = useState(false);
+  const [activeArticleId, setActiveArticleId] = useState(null);
+  const [completedArticles, setCompletedArticles] = useState(new Set());
 
   const { data: articles = [] } = useQuery({
     queryKey: ['articles'],
@@ -39,7 +41,7 @@ export default function InventoryTab() {
   // Filtrer les articles non remplis (sauf si showAll est activé)
   const filteredArticles = showAll 
     ? todayArticles 
-    : todayArticles;
+    : todayArticles.filter(article => !completedArticles.has(article.id));
 
   // Grouper par catégorie
   const groupedByCategory = filteredArticles.reduce((acc, article) => {
@@ -52,6 +54,14 @@ export default function InventoryTab() {
   }, {});
 
   const handleStockChange = (articleId, value, article) => {
+    // Si on change d'article, marquer l'ancien comme complété
+    if (activeArticleId && activeArticleId !== articleId) {
+      setCompletedArticles(prev => new Set(prev).add(activeArticleId));
+    }
+    
+    // Définir le nouvel article actif
+    setActiveArticleId(articleId);
+    
     setStockValues(prev => ({
       ...prev,
       [articleId]: value
