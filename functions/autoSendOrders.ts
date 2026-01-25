@@ -10,10 +10,13 @@ Deno.serve(async (req) => {
     }
 
     const now = new Date();
-    const currentDay = ['D', 'L', 'MA', 'ME', 'J', 'V', 'S'][now.getDay()];
-    const currentTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
     
-    console.log(`Vérification automatique - Jour: ${currentDay}, Heure: ${currentTime}`);
+    // Convertir en heure de Paris (Europe/Paris gère automatiquement l'heure d'été/hiver)
+    const parisTime = new Date(now.toLocaleString('en-US', { timeZone: 'Europe/Paris' }));
+    const currentDay = ['D', 'L', 'MA', 'ME', 'J', 'V', 'S'][parisTime.getDay()];
+    const currentTime = `${String(parisTime.getHours()).padStart(2, '0')}:${String(parisTime.getMinutes()).padStart(2, '0')}`;
+    
+    console.log(`Vérification automatique - Jour: ${currentDay}, Heure Paris: ${currentTime}`);
 
     // Récupérer tous les fournisseurs actifs avec automatisation
     const suppliers = await base44.asServiceRole.entities.Supplier.filter({ is_active: true });
