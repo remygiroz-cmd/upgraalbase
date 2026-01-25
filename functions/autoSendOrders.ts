@@ -15,13 +15,16 @@ Deno.serve(async (req) => {
 
     const now = new Date();
     
-    // Convertir en heure de Paris (Europe/Paris gère automatiquement l'heure d'été/hiver)
-    const parisTime = new Date(now.toLocaleString('en-US', { timeZone: 'Europe/Paris' }));
-    const currentDay = ['D', 'L', 'MA', 'ME', 'J', 'V', 'S'][parisTime.getDay()];
-    const currentTime = `${String(parisTime.getHours()).padStart(2, '0')}:${String(parisTime.getMinutes()).padStart(2, '0')}`;
+    // Convertir en heure de Paris en utilisant Intl
+    const parisHour = parseInt(now.toLocaleString('en-US', { timeZone: 'Europe/Paris', hour: '2-digit', hour12: false }));
+    const parisMinute = parseInt(now.toLocaleString('en-US', { timeZone: 'Europe/Paris', minute: '2-digit' }));
+    const parisDay = parseInt(now.toLocaleString('en-US', { timeZone: 'Europe/Paris', weekday: 'narrow', day: 'numeric' }).match(/\d+/)?.[0] || '0');
+    const parisDayOfWeek = new Date(now.toLocaleString('en-US', { timeZone: 'Europe/Paris' })).getDay();
+    
+    const currentDay = ['D', 'L', 'MA', 'ME', 'J', 'V', 'S'][parisDayOfWeek];
+    const currentTime = `${String(parisHour).padStart(2, '0')}:${String(parisMinute).padStart(2, '0')}`;
     
     console.log(`Vérification automatique - Jour: ${currentDay}, Heure Paris: ${currentTime}`);
-    console.log(`Debug timezone - UTC:`, now.toISOString(), `Paris:`, parisTime.toString());
 
     // Récupérer tous les fournisseurs actifs avec automatisation
     const suppliers = await base44.asServiceRole.entities.Supplier.filter({ is_active: true });
