@@ -132,10 +132,12 @@ export default function OrderDetailModal({ order, isOpen, onClose }) {
                     {item.unit === 'pièce' ? `${item.quantity} pièce` : 
                      item.unit === 'sac' ? `${item.quantity} sac ${item.weight || ''}` : 
                      item.unit === 'bidon' ? `${item.quantity} bidon ${item.volume || ''}` :
+                     item.unit === 'SACHET' ? `${item.quantity} SACHET` :
+                     item.unit === 'Sacs' ? `${item.quantity} Sacs ${item.weight || ''}` :
                      `${item.quantity} ${item.unit || ''}`}
                   </div>
                   <div className="text-right text-gray-900 font-semibold">
-                    {item.unit_price ? `${(item.quantity * item.unit_price).toFixed(2)} €` : '-'}
+                    {(item.unit_price && item.unit_price > 0) ? `${(item.quantity * item.unit_price).toFixed(2)} €` : '-'}
                   </div>
                 </div>
               ))}
