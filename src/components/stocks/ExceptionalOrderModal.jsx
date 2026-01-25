@@ -55,20 +55,9 @@ export default function ExceptionalOrderModal({ isOpen, onClose, articles = [], 
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="bg-gradient-to-br from-slate-900 to-slate-800 border-2 border-orange-500 text-white max-w-lg max-h-[90vh] overflow-hidden flex flex-col">
+      <DialogContent className="bg-white border-gray-300 max-w-lg max-h-[90vh] overflow-hidden flex flex-col">
         <DialogHeader className="flex-shrink-0">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <span className="text-xl">⚡</span>
-              <DialogTitle className="text-lg font-bold text-white">Commande Exceptionnelle</DialogTitle>
-            </div>
-            <button 
-              onClick={handleCancel}
-              className="p-1 hover:bg-slate-700 rounded transition-colors"
-            >
-              <X className="w-5 h-5" />
-            </button>
-          </div>
+          <DialogTitle className="text-gray-900">Commande Exceptionnelle</DialogTitle>
         </DialogHeader>
 
         <div className="flex-1 overflow-hidden flex flex-col gap-4">
@@ -79,21 +68,21 @@ export default function ExceptionalOrderModal({ isOpen, onClose, articles = [], 
               placeholder="Rechercher un produit hors planning..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="bg-slate-800 border-slate-600 text-white placeholder:text-gray-400 pl-10 h-12"
+              className="bg-white border-gray-300 text-gray-900 placeholder:text-gray-500 pl-10"
             />
           </div>
 
           {/* Liste des articles */}
           <div className="flex-1 overflow-y-auto space-y-2 pr-2">
             {filteredArticles.length === 0 ? (
-              <div className="text-center py-8 text-gray-400">
+              <div className="text-center py-8 text-gray-500">
                 {search ? 'Aucun article trouvé' : 'Tous les articles sont déjà planifiés aujourd\'hui'}
               </div>
             ) : (
               filteredArticles.map((article) => (
                 <div
                   key={article.id}
-                  className="bg-slate-700/50 hover:bg-slate-700 rounded-lg p-3 border-2 border-transparent hover:border-orange-500 transition-all"
+                  className="bg-gray-50 hover:bg-gray-100 rounded-lg p-3 border-2 border-gray-200 hover:border-orange-500 transition-all"
                 >
                   <div className="flex items-center gap-3">
                     {article.image_url && (
@@ -104,8 +93,8 @@ export default function ExceptionalOrderModal({ isOpen, onClose, articles = [], 
                       />
                     )}
                     <div className="flex-1 min-w-0">
-                      <h4 className="font-semibold text-white truncate">{article.name}</h4>
-                      <p className="text-xs text-gray-400 truncate">
+                      <h4 className="font-semibold text-gray-900 truncate">{article.name}</h4>
+                      <p className="text-xs text-gray-600 truncate">
                         {article.category && `${article.category} • `}
                         {article.supplier_name}
                       </p>
@@ -113,7 +102,7 @@ export default function ExceptionalOrderModal({ isOpen, onClose, articles = [], 
                     <div className="flex items-center gap-2 flex-shrink-0">
                       <button
                         onClick={() => handleQuantityChange(article.id, (selectedItems[article.id] || 0) - 1)}
-                        className="w-8 h-8 rounded bg-slate-600 hover:bg-slate-500 text-white font-bold transition-colors"
+                        className="w-8 h-8 rounded bg-gray-200 hover:bg-gray-300 text-gray-900 font-bold transition-colors disabled:opacity-50"
                         disabled={!selectedItems[article.id]}
                       >
                         -
@@ -123,7 +112,7 @@ export default function ExceptionalOrderModal({ isOpen, onClose, articles = [], 
                       </div>
                       <button
                         onClick={() => handleQuantityChange(article.id, (selectedItems[article.id] || 0) + 1)}
-                        className="w-8 h-8 rounded bg-slate-600 hover:bg-slate-500 text-white font-bold transition-colors"
+                        className="w-8 h-8 rounded bg-gray-200 hover:bg-gray-300 text-gray-900 font-bold transition-colors"
                       >
                         +
                       </button>
@@ -135,13 +124,13 @@ export default function ExceptionalOrderModal({ isOpen, onClose, articles = [], 
           </div>
 
           {/* Actions */}
-          <div className="flex-shrink-0 pt-4 border-t border-slate-700">
+          <div className="flex-shrink-0 pt-4 border-t border-gray-300">
             <Button
               onClick={handleValidate}
               disabled={Object.keys(selectedItems).length === 0}
-              className="w-full bg-orange-600 hover:bg-orange-700 text-white font-semibold h-12 text-base"
+              className="w-full bg-orange-600 hover:bg-orange-700 text-white font-semibold"
             >
-              VALIDER LES AJOUTS
+              Valider les ajouts
             </Button>
           </div>
         </div>
