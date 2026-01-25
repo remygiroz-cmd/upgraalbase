@@ -144,7 +144,15 @@ Deno.serve(async (req) => {
       emailData.cc = ccEmails;
     }
 
-    await resend.emails.send(emailData);
+    console.log('Envoi email avec les données suivantes:', {
+      to: emailData.to,
+      cc: emailData.cc,
+      subject: emailData.subject,
+      hasAttachment: !!emailData.attachments
+    });
+
+    const result = await resend.emails.send(emailData);
+    console.log('Résultat Resend:', result);
 
     // Mettre à jour le statut de la commande à "envoyée"
     await base44.asServiceRole.entities.Order.update(orderId, {
