@@ -24,25 +24,70 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'Email du fournisseur non configuré' }, { status: 400 });
     }
 
+    // Récupérer les informations de l'établissement
+    const establishments = await base44.entities.Establishment.list();
+    const establishment = establishments[0] || {};
+
     // Générer le PDF
     const doc = new jsPDF();
     
-    // En-tête
+    let yPos = 20;
+    
+    // Informations de l'établissement
+    if (establishment.name) {
+      doc.setFontSize(16);
+      doc.setFont(undefined, 'bold');
+      doc.text(establishment.name.toUpperCase(), 20, yPos);
+      doc.setFont(undefined, 'normal');
+      yPos += 7;
+      
+      doc.setFontSize(9);
+      if (establishment.postal_address) {
+        const addressLines = establishment.postal_address.split('\n');
+        addressLines.forEach(line => {
+          doc.text(line, 20, yPos);
+          yPos += 4;
+        });
+      }
+      if (establishment.siret) {
+        doc.text(`SIRET: ${establishment.siret}`, 20, yPos);
+        yPos += 4;
+      }
+      if (establishment.contact_email) {
+        doc.text(`Email: ${establishment.contact_email}`, 20, yPos);
+        yPos += 4;
+      }
+      yPos += 5;
+    }
+    
+    // Référence client interne
+    if (supplier.internal_reference) {
+      doc.setFontSize(10);
+      doc.setFont(undefined, 'bold');
+      doc.text(`Réf. Client: ${supplier.internal_reference}`, 20, yPos);
+      doc.setFont(undefined, 'normal');
+      yPos += 7;
+    }
+    
+    // En-tête de commande
     doc.setFontSize(20);
-    doc.text(`COMMANDE ${order.supplier_name.toUpperCase()}`, 20, 20);
+    doc.text(`COMMANDE ${order.supplier_name.toUpperCase()}`, 20, yPos);
+    yPos += 10;
     
     doc.setFontSize(10);
     const orderDate = new Date(order.date);
-    doc.text(`Date: ${orderDate.toLocaleDateString('fr-FR')}`, 20, 30);
-    doc.text(`Statut: ${order.status.toUpperCase()}`, 20, 35);
+    doc.text(`Date: ${orderDate.toLocaleDateString('fr-FR')}`, 20, yPos);
+    yPos += 5;
+    doc.text(`Statut: ${order.status.toUpperCase()}`, 20, yPos);
+    yPos += 10;
     
     // Tableau des articles
     doc.setFontSize(12);
-    doc.text('DÉSIGNATION', 20, 50);
-    doc.text('QUANTITÉ', 120, 50);
-    doc.text('TOTAL HT', 170, 50);
+    doc.text('DÉSIGNATION', 20, yPos);
+    doc.text('QUANTITÉ', 120, yPos);
+    doc.text('TOTAL HT', 170, yPos);
     
-    let y = 60;
+    let y = yPos + 10;
     let totalAmount = 0;
     
     doc.setFontSize(10);
@@ -87,6 +132,36 @@ Deno.serve(async (req) => {
 
     // Construire le corps du message
     let emailBody = '';
+    
+    // Informations de l'établissement
+    if (establishment.name) {
+      emailBody += `🏢 ${establishment.name.toUpperCase()}\n\n`;
+      
+      if (establishment.postal_address) {
+        emailBody += `📍 Adresse:\n${establishment.postal_address}\n\n`;
+      }
+      if (establishment.delivery_address && establishment.delivery_address !== establishment.postal_address) {
+        emailBody += `🚚 Adresse de livraison:\n${establishment.delivery_address}\n\n`;
+      }
+      if (establishment.siret) {
+        emailBody += `SIRET: ${establishment.siret}\n`;
+      }
+      if (establishment.contact_email) {
+        emailBody += `Email: ${establishment.contact_email}\n`;
+      }
+      if (establishment.managers?.length > 0) {
+        emailBody += `Responsables:\n`;
+        establishment.managers.forEach(manager => {
+          emailBody += `  • ${manager.name}${manager.phone ? ' - ' + manager.phone : ''}\n`;
+        });
+      }
+      emailBody += '\n';
+    }
+    
+    // Référence client
+    if (supplier.internal_reference) {
+      emailBody += `📋 Référence Client: ${supplier.internal_reference}\n\n`;
+    }
     
     if (supplier.custom_message) {
       emailBody += supplier.custom_message + '\n\n';
