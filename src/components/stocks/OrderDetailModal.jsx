@@ -79,8 +79,23 @@ export default function OrderDetailModal({ order, isOpen, onClose }) {
   };
 
   const handleSendEmail = async () => {
-    toast.info('Envoi par email en cours...');
-    // TODO: Implémenter l'envoi d'email
+    try {
+      toast.info('Envoi par email en cours...');
+      
+      const response = await base44.functions.invoke('sendOrderEmail', {
+        orderId: order.id
+      });
+      
+      if (response.data.success) {
+        toast.success('Email envoyé avec succès');
+        setStatus('envoyee');
+      } else {
+        toast.error(response.data.error || 'Erreur lors de l\'envoi de l\'email');
+      }
+    } catch (error) {
+      console.error('Erreur:', error);
+      toast.error('Erreur lors de l\'envoi de l\'email');
+    }
   };
 
   const getStatusBadge = (status) => {
