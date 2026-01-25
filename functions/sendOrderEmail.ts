@@ -259,10 +259,7 @@ Deno.serve(async (req) => {
       }, { status: response.status });
     }
 
-    // Mettre à jour le statut de la commande à "envoyée"
-    await base44.asServiceRole.entities.Order.update(orderId, {
-      status: 'envoyee'
-    });
+    // Ne pas mettre à jour le statut ici, cela sera fait par autoSendOrders si nécessaire
 
     return Response.json({ 
       success: true,

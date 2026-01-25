@@ -154,7 +154,7 @@ export default function SupplierFormModal({ open, onClose, onSave, isSaving, sup
             
             <div className="space-y-4">
               <div>
-                <Label className="mb-3 block">Jours de passage automatique</Label>
+                <Label className="mb-3 block">Jours d'envoi</Label>
                 <div className="flex flex-wrap gap-2">
                   {DAYS.map((day, idx) => (
                     <button
@@ -174,7 +174,7 @@ export default function SupplierFormModal({ open, onClose, onSave, isSaving, sup
               </div>
 
               <div>
-                <Label htmlFor="closing_time">Heure de clôture</Label>
+                <Label htmlFor="closing_time">Heure d'envoi</Label>
                 <Input
                   id="closing_time"
                   type="time"
