@@ -561,73 +561,96 @@ export default function InventoryTab() {
                         </div>
                       </div>
                       <div className="flex items-center gap-2 sm:gap-3 w-full justify-between">
-                  <div className="flex items-center gap-1">
-                    <button
-                      onClick={() => {
-                        if (quantity > 1) {
-                          setCart(prev => ({
-                            ...prev,
-                            [article.id]: { article, quantity: quantity - 1, initialQuantity }
-                          }));
-                        } else {
-                          // Retirer du panier
-                          setCart(prev => {
-                            const newCart = { ...prev };
-                            delete newCart[article.id];
-                            return newCart;
-                          });
-                          // Réinitialiser l'état dans les stocks
-                          setStockValues(prev => {
-                            const newValues = { ...prev };
-                            delete newValues[article.id];
-                            return newValues;
-                          });
-                          // Retirer des articles complétés
-                          setCompletedArticles(prev => {
-                            const newCompleted = new Set(prev);
-                            newCompleted.delete(article.id);
-                            return newCompleted;
-                          });
-                        }
-                      }}
-                      className="w-10 h-10 sm:w-8 sm:h-8 rounded bg-gray-200 hover:bg-gray-300 text-gray-900 font-bold text-lg active:scale-95 transition-transform touch-manipulation"
-                    >
-                      -
-                    </button>
-                      <div className="w-16 h-10 sm:w-16 sm:h-8 flex items-center justify-center bg-white border-2 border-orange-600 text-gray-900 font-bold rounded text-sm sm:text-base">
-                        {quantity}
+                        <div className="flex items-center gap-1">
+                          <button
+                            onClick={() => {
+                              if (quantity > 1) {
+                                setCart(prev => ({
+                                  ...prev,
+                                  [article.id]: { article, quantity: quantity - 1, initialQuantity }
+                                }));
+                              } else {
+                                // Retirer du panier
+                                setCart(prev => {
+                                  const newCart = { ...prev };
+                                  delete newCart[article.id];
+                                  return newCart;
+                                });
+                                // Réinitialiser l'état dans les stocks
+                                setStockValues(prev => {
+                                  const newValues = { ...prev };
+                                  delete newValues[article.id];
+                                  return newValues;
+                                });
+                                // Retirer des articles complétés
+                                setCompletedArticles(prev => {
+                                  const newCompleted = new Set(prev);
+                                  newCompleted.delete(article.id);
+                                  return newCompleted;
+                                });
+                              }
+                            }}
+                            className="w-10 h-10 sm:w-8 sm:h-8 rounded bg-gray-200 hover:bg-gray-300 text-gray-900 font-bold text-lg active:scale-95 transition-transform touch-manipulation"
+                          >
+                            -
+                          </button>
+                          <div className="w-16 h-10 sm:w-16 sm:h-8 flex items-center justify-center bg-white border-2 border-orange-600 text-gray-900 font-bold rounded text-sm sm:text-base">
+                            {quantity}
+                          </div>
+                          <button
+                            onClick={() => {
+                              setCart(prev => ({
+                                ...prev,
+                                [article.id]: { article, quantity: quantity + 1, initialQuantity }
+                              }));
+                            }}
+                            className="w-10 h-10 sm:w-8 sm:h-8 rounded bg-gray-200 hover:bg-gray-300 text-gray-900 font-bold text-lg active:scale-95 transition-transform touch-manipulation"
+                          >
+                            +
+                          </button>
+                          <button
+                            onClick={() => {
+                              setCart(prev => ({
+                                ...prev,
+                                [article.id]: { article, quantity: initialQuantity, initialQuantity }
+                              }));
+                            }}
+                            className="p-2 sm:p-1.5 rounded hover:bg-gray-200 text-gray-400 hover:text-gray-900 transition-colors ml-1 touch-manipulation"
+                            title="Réinitialiser"
+                          >
+                            <RotateCcw className="w-4 h-4" />
+                          </button>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <div className="text-[11px] sm:text-xs text-gray-500 whitespace-nowrap">
+                            {article.unit || 'unités'}
+                          </div>
+                          {article.unit_price > 0 && (
+                            <div className="font-bold text-gray-900 text-sm sm:text-base whitespace-nowrap">
+                              {totalPrice.toFixed(2)} €
+                            </div>
+                          )}
+                        </div>
                       </div>
-                      <button
-                        onClick={() => {
-                          setCart(prev => ({
-                            ...prev,
-                            [article.id]: { article, quantity: quantity + 1, initialQuantity }
-                          }));
-                        }}
-                        className="w-10 h-10 sm:w-8 sm:h-8 rounded bg-gray-200 hover:bg-gray-300 text-gray-900 font-bold text-lg active:scale-95 transition-transform touch-manipulation"
-                      >
-                        +
-                      </button>
-                      <button
-                        onClick={() => {
-                          setCart(prev => ({
-                            ...prev,
-                            [article.id]: { article, quantity: initialQuantity, initialQuantity }
-                          }));
-                        }}
-                        className="p-2 sm:p-1.5 rounded hover:bg-gray-200 text-gray-400 hover:text-gray-900 transition-colors ml-1 touch-manipulation"
-                        title="Réinitialiser"
-                      >
-                        <RotateCcw className="w-4 h-4" />
-                      </button>
                     </div>
-                    <div className="text-[11px] sm:text-xs text-gray-500 whitespace-nowrap">
-                      {article.unit || 'unités'}
-                    </div>
+                  );
+                })}
+              </div>
+              
+              {/* Total du panier */}
+              <div className="mt-6 bg-orange-50 border-2 border-orange-600 rounded-lg p-4">
+                <div className="flex items-center justify-between">
+                  <div className="text-base sm:text-lg font-semibold text-gray-900 uppercase">
+                    Total Estimé HT
+                  </div>
+                  <div className="text-2xl sm:text-3xl font-bold text-orange-600">
+                    {Object.values(cart).reduce((sum, { article, quantity }) => {
+                      return sum + (quantity * (article.unit_price || 0));
+                    }, 0).toFixed(2)} €
                   </div>
                 </div>
-              ))}
-            </div>
+              </div>
+            </>
           )}
         </TabsContent>
       </Tabs>
