@@ -21,9 +21,22 @@ Deno.serve(async (req) => {
     // Récupérer tous les fournisseurs actifs avec automatisation
     const suppliers = await base44.asServiceRole.entities.Supplier.filter({ is_active: true });
     
+    // Fonction pour vérifier si l'heure est dans la fenêtre de 5 minutes
+    const isWithinTimeWindow = (closingTime) => {
+      if (!closingTime) return false;
+      
+      const [targetHour, targetMinute] = closingTime.split(':').map(Number);
+      const targetTimeInMinutes = targetHour * 60 + targetMinute;
+      const currentTimeInMinutes = parisTime.getHours() * 60 + parisTime.getMinutes();
+      
+      // Vérifier si on est dans une fenêtre de 5 minutes (ex: si closing_time=19:20, accepter 19:19, 19:20, 19:21, 19:22, 19:23, 19:24)
+      const diff = currentTimeInMinutes - targetTimeInMinutes;
+      return diff >= 0 && diff < 5;
+    };
+    
     const suppliersToProcess = suppliers.filter(s => 
       s.delivery_days?.includes(currentDay) && 
-      s.closing_time === currentTime
+      isWithinTimeWindow(s.closing_time)
     );
 
     console.log(`${suppliersToProcess.length} fournisseur(s) à traiter`);
