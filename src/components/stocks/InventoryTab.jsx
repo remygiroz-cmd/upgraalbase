@@ -238,6 +238,16 @@ export default function InventoryTab() {
       return;
     }
 
+    // Récupérer les articles complets depuis la DB pour avoir les prix à jour
+    const articleIds = Object.values(cart)
+      .map(({ article }) => article.id)
+      .filter(id => !id.startsWith('free-')); // Exclure les articles libres
+    
+    let fullArticles = [];
+    if (articleIds.length > 0) {
+      fullArticles = await base44.entities.Article.list();
+    }
+
     // Grouper les articles par fournisseur
     const ordersBySupplier = {};
     
@@ -253,12 +263,16 @@ export default function InventoryTab() {
         };
       }
       
+      // Récupérer le prix à jour depuis la DB
+      const fullArticle = fullArticles.find(a => a.id === article.id);
+      const unitPrice = fullArticle?.unit_price || article.unit_price || 0;
+      
       ordersBySupplier[supplierId].items.push({
         product_id: article.isFree ? null : article.id,
         product_name: article.name,
         quantity: quantity,
         unit: article.unit,
-        unit_price: article.unit_price || 0,
+        unit_price: unitPrice,
         supplier_reference: article.supplier_reference || ''
       });
     });
