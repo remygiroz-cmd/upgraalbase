@@ -9,7 +9,6 @@ import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import FreeAddModal from './FreeAddModal';
 import ExceptionalOrderModal from './ExceptionalOrderModal';
-import OrderConflictModal from './OrderConflictModal';
 
 export default function InventoryTab() {
   // Charger l'état depuis localStorage
@@ -40,8 +39,6 @@ export default function InventoryTab() {
 
   const [showFreeAddModal, setShowFreeAddModal] = useState(false);
   const [showExceptionalOrderModal, setShowExceptionalOrderModal] = useState(false);
-  const [conflictOrder, setConflictOrder] = useState(null);
-  const [pendingOrders, setPendingOrders] = useState([]);
 
   const queryClient = useQueryClient();
 
@@ -51,26 +48,6 @@ export default function InventoryTab() {
       queryClient.invalidateQueries({ queryKey: ['orders'] });
       toast.success('Commande créée avec succès');
     }
-  });
-
-  const updateOrderMutation = useMutation({
-    mutationFn: ({ id, data }) => base44.entities.Order.update(id, data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['orders'] });
-      toast.success('Commande mise à jour');
-    }
-  });
-
-  const deleteOrderMutation = useMutation({
-    mutationFn: (id) => base44.entities.Order.delete(id),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['orders'] });
-    }
-  });
-
-  const { data: existingOrders = [] } = useQuery({
-    queryKey: ['orders'],
-    queryFn: () => base44.entities.Order.filter({ status: 'en_cours' })
   });
 
   // Sauvegarder dans localStorage à chaque changement
@@ -289,6 +266,7 @@ export default function InventoryTab() {
         };
       }
       
+      // Utiliser le prix qui est déjà dans l'article du panier
       ordersBySupplier[supplierId].items.push({
         product_id: article.isFree ? null : article.id,
         product_name: article.name,
@@ -299,12 +277,19 @@ export default function InventoryTab() {
       });
     });
 
-    setPendingOrders(Object.values(ordersBySupplier));
-    await processNextOrder();
-  };
-
-  const processNextOrder = async () => {
-    if (pendingOrders.length === 0) {
+    // Créer une commande pour chaque fournisseur
+    const today = new Date().toISOString().split('T')[0];
+    
+    try {
+      for (const order of Object.values(ordersBySupplier)) {
+        await createOrderMutation.mutateAsync({
+          ...order,
+          date: today,
+          delivery_date: today,
+          status: 'en_cours'
+        });
+      }
+      
       // Vider le panier après validation
       setCart({});
       setStockValues({});
@@ -312,72 +297,11 @@ export default function InventoryTab() {
       localStorage.removeItem('inventoryCart');
       localStorage.removeItem('inventoryStockValues');
       localStorage.removeItem('inventoryCompletedArticles');
-      toast.success('Commande(s) validée(s) avec succès');
-      return;
-    }
-
-    const order = pendingOrders[0];
-    const existingOrder = existingOrders.find(o => o.supplier_id === order.supplier_id);
-
-    if (existingOrder) {
-      setConflictOrder({ existing: existingOrder, new: order });
-    } else {
-      await createNewOrder(order);
-      setPendingOrders(prev => prev.slice(1));
-      await processNextOrder();
-    }
-  };
-
-  const createNewOrder = async (order) => {
-    const today = new Date().toISOString().split('T')[0];
-    await createOrderMutation.mutateAsync({
-      ...order,
-      date: today,
-      delivery_date: today,
-      status: 'en_cours'
-    });
-  };
-
-  const handleMergeOrder = async () => {
-    const { existing, new: newOrder } = conflictOrder;
-    const mergedItems = [...existing.items];
-    
-    newOrder.items.forEach(newItem => {
-      const existingItemIndex = mergedItems.findIndex(
-        item => item.product_id === newItem.product_id && item.product_name === newItem.product_name
-      );
       
-      if (existingItemIndex >= 0) {
-        mergedItems[existingItemIndex].quantity += newItem.quantity;
-      } else {
-        mergedItems.push(newItem);
-      }
-    });
-    
-    await updateOrderMutation.mutateAsync({
-      id: existing.id,
-      data: { items: mergedItems }
-    });
-
-    setConflictOrder(null);
-    setPendingOrders(prev => prev.slice(1));
-    await processNextOrder();
-  };
-
-  const handleReplaceOrder = async () => {
-    const { existing, new: newOrder } = conflictOrder;
-    await deleteOrderMutation.mutateAsync(existing.id);
-    await createNewOrder(newOrder);
-
-    setConflictOrder(null);
-    setPendingOrders(prev => prev.slice(1));
-    await processNextOrder();
-  };
-
-  const handleCancelConflict = () => {
-    setConflictOrder(null);
-    setPendingOrders([]);
-    toast.info('Validation annulée');
+      toast.success(`${Object.keys(ordersBySupplier).length} commande(s) créée(s)`);
+    } catch (error) {
+      toast.error('Erreur lors de la création des commandes');
+    }
   };
 
     return (
@@ -759,15 +683,6 @@ export default function InventoryTab() {
         articles={articles}
         todayArticles={todayArticles}
         onAddToCart={handleExceptionalAdd}
-      />
-
-      {/* Order Conflict Modal */}
-      <OrderConflictModal
-        isOpen={!!conflictOrder}
-        onClose={handleCancelConflict}
-        existingOrder={conflictOrder?.existing}
-        onMerge={handleMergeOrder}
-        onReplace={handleReplaceOrder}
       />
     </div>
   );
