@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { cn } from '@/lib/utils';
+import FreeAddModal from './FreeAddModal';
 
 export default function InventoryTab() {
   // Charger l'état depuis localStorage
@@ -33,6 +34,8 @@ export default function InventoryTab() {
     const saved = localStorage.getItem('inventoryCompletedArticles');
     return saved ? new Set(JSON.parse(saved)) : new Set();
   });
+
+  const [showFreeAddModal, setShowFreeAddModal] = useState(false);
 
   // Sauvegarder dans localStorage à chaque changement
   useEffect(() => {
@@ -63,6 +66,11 @@ export default function InventoryTab() {
   const { data: categories = [] } = useQuery({
     queryKey: ['categories'],
     queryFn: () => base44.entities.Category.filter({ is_active: true }, 'order')
+  });
+
+  const { data: suppliers = [] } = useQuery({
+    queryKey: ['suppliers'],
+    queryFn: () => base44.entities.Supplier.filter({ is_active: true })
   });
 
   // Obtenir le jour actuel (L, MA, ME, J, V, S, D)
@@ -167,7 +175,7 @@ export default function InventoryTab() {
     return labels[day] || day;
     };
 
-    const handleReset = () => {
+  const handleReset = () => {
     if (confirm('Voulez-vous vraiment réinitialiser tout l\'inventaire ? Cette action est irréversible.')) {
       setStockValues({});
       setCart({});
@@ -178,7 +186,27 @@ export default function InventoryTab() {
       localStorage.removeItem('inventoryCompletedArticles');
       localStorage.removeItem('inventoryShowAll');
     }
+  };
+
+  const handleFreeAdd = (formData) => {
+    const freeArticle = {
+      id: `free-${Date.now()}`,
+      name: formData.name,
+      unit: formData.unit,
+      supplier_id: formData.supplier_id,
+      supplier_name: suppliers.find(s => s.id === formData.supplier_id)?.name,
+      isFree: true
     };
+    
+    setCart(prev => ({
+      ...prev,
+      [freeArticle.id]: {
+        article: freeArticle,
+        quantity: formData.quantity,
+        initialQuantity: formData.quantity
+      }
+    }));
+  };
 
     return (
       <div className="space-y-4 sm:space-y-6">
@@ -200,7 +228,11 @@ export default function InventoryTab() {
               <span className="hidden sm:inline">Réinitialiser</span>
               <span className="sm:hidden">Réinit.</span>
             </Button>
-            <Button variant="outline" className="border-purple-600 text-purple-600 hover:bg-purple-50 min-h-[44px] w-full sm:w-auto">
+            <Button 
+              variant="outline" 
+              className="border-purple-600 text-purple-600 hover:bg-purple-50 min-h-[44px] w-full sm:w-auto"
+              onClick={() => setShowFreeAddModal(true)}
+            >
               <Plus className="w-4 h-4 mr-2" />
               <span className="hidden sm:inline">Ajout Libre</span>
               <span className="sm:hidden">Ajout</span>
@@ -502,6 +534,14 @@ export default function InventoryTab() {
           Valider Commande
         </Button>
       </div>
+
+      {/* Free Add Modal */}
+      <FreeAddModal
+        isOpen={showFreeAddModal}
+        onClose={() => setShowFreeAddModal(false)}
+        onAdd={handleFreeAdd}
+        suppliers={suppliers}
+      />
     </div>
   );
 }
