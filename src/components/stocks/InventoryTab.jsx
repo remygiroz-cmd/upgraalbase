@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { cn } from '@/lib/utils';
 import FreeAddModal from './FreeAddModal';
+import ExceptionalOrderModal from './ExceptionalOrderModal';
 
 export default function InventoryTab() {
   // Charger l'état depuis localStorage
@@ -36,6 +37,7 @@ export default function InventoryTab() {
   });
 
   const [showFreeAddModal, setShowFreeAddModal] = useState(false);
+  const [showExceptionalOrderModal, setShowExceptionalOrderModal] = useState(false);
 
   // Sauvegarder dans localStorage à chaque changement
   useEffect(() => {
@@ -208,6 +210,17 @@ export default function InventoryTab() {
     }));
   };
 
+  const handleExceptionalAdd = (article, quantity) => {
+    setCart(prev => ({
+      ...prev,
+      [article.id]: {
+        article,
+        quantity: quantity,
+        initialQuantity: quantity
+      }
+    }));
+  };
+
     return (
       <div className="space-y-4 sm:space-y-6">
         {/* Header */}
@@ -237,7 +250,10 @@ export default function InventoryTab() {
               <span className="hidden sm:inline">Ajout Libre</span>
               <span className="sm:hidden">Ajout</span>
             </Button>
-            <Button className="bg-orange-600 hover:bg-orange-700 min-h-[44px] w-full sm:w-auto">
+            <Button 
+              className="bg-orange-600 hover:bg-orange-700 min-h-[44px] w-full sm:w-auto"
+              onClick={() => setShowExceptionalOrderModal(true)}
+            >
               <ShoppingCart className="w-4 h-4 mr-2" />
               <span className="hidden sm:inline">Commande Exceptionnelle</span>
               <span className="sm:hidden">Commande</span>
@@ -541,6 +557,15 @@ export default function InventoryTab() {
         onClose={() => setShowFreeAddModal(false)}
         onAdd={handleFreeAdd}
         suppliers={suppliers}
+      />
+
+      {/* Exceptional Order Modal */}
+      <ExceptionalOrderModal
+        isOpen={showExceptionalOrderModal}
+        onClose={() => setShowExceptionalOrderModal(false)}
+        articles={articles}
+        todayArticles={todayArticles}
+        onAddToCart={handleExceptionalAdd}
       />
     </div>
   );
