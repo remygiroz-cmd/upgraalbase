@@ -9,8 +9,10 @@ import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import FreeAddModal from './FreeAddModal';
 import ExceptionalOrderModal from './ExceptionalOrderModal';
+import OrderConflictModal from './OrderConflictModal';
 
 export default function InventoryTab() {
+  const [conflictInfo, setConflictInfo] = useState(null);
   // Charger l'état depuis localStorage
   const [inventorySubTab, setInventorySubTab] = useState(() => {
     const saved = localStorage.getItem('inventorySubTab');
@@ -50,6 +52,21 @@ export default function InventoryTab() {
     }
   });
 
+  const updateOrderMutation = useMutation({
+    mutationFn: ({ id, data }) => base44.entities.Order.update(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['orders'] });
+      toast.success('Commande mise à jour');
+    }
+  });
+
+  const deleteOrderMutation = useMutation({
+    mutationFn: (id) => base44.entities.Order.delete(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['orders'] });
+    }
+  });
+
   // Sauvegarder dans localStorage à chaque changement
   useEffect(() => {
     localStorage.setItem('inventorySubTab', inventorySubTab);
@@ -84,6 +101,11 @@ export default function InventoryTab() {
   const { data: suppliers = [] } = useQuery({
     queryKey: ['suppliers'],
     queryFn: () => base44.entities.Supplier.filter({ is_active: true })
+  });
+
+  const { data: existingOrders = [] } = useQuery({
+    queryKey: ['orders'],
+    queryFn: () => base44.entities.Order.list()
   });
 
   // Obtenir le jour actuel (L, MA, ME, J, V, S, D)
@@ -266,7 +288,6 @@ export default function InventoryTab() {
         };
       }
       
-      // Utiliser le prix qui est déjà dans l'article du panier
       ordersBySupplier[supplierId].items.push({
         product_id: article.isFree ? null : article.id,
         product_name: article.name,
@@ -277,9 +298,29 @@ export default function InventoryTab() {
       });
     });
 
-    // Créer une commande pour chaque fournisseur
+    // Vérifier les conflits avec les commandes existantes en cours
     const today = new Date().toISOString().split('T')[0];
+    const ordersInProgress = existingOrders.filter(order => order.status === 'en_cours');
     
+    for (const order of Object.values(ordersBySupplier)) {
+      const existingOrder = ordersInProgress.find(o => o.supplier_id === order.supplier_id);
+      
+      if (existingOrder) {
+        // Conflit détecté
+        setConflictInfo({
+          supplierName: order.supplier_name,
+          newOrder: order,
+          existingOrder: existingOrder
+        });
+        return; // Arrêter et attendre la décision de l'utilisateur
+      }
+    }
+
+    // Aucun conflit, créer les commandes
+    await createOrders(ordersBySupplier, today);
+  };
+
+  const createOrders = async (ordersBySupplier, today) => {
     try {
       for (const order of Object.values(ordersBySupplier)) {
         await createOrderMutation.mutateAsync({
@@ -302,6 +343,91 @@ export default function InventoryTab() {
     } catch (error) {
       toast.error('Erreur lors de la création des commandes');
     }
+  };
+
+  const handleConflictReplace = async () => {
+    if (!conflictInfo) return;
+    
+    const today = new Date().toISOString().split('T')[0];
+    
+    try {
+      // Supprimer l'ancienne commande
+      await deleteOrderMutation.mutateAsync(conflictInfo.existingOrder.id);
+      
+      // Créer la nouvelle
+      await createOrderMutation.mutateAsync({
+        ...conflictInfo.newOrder,
+        date: today,
+        delivery_date: today,
+        status: 'en_cours'
+      });
+      
+      // Vider le panier
+      setCart({});
+      setStockValues({});
+      setCompletedArticles(new Set());
+      localStorage.removeItem('inventoryCart');
+      localStorage.removeItem('inventoryStockValues');
+      localStorage.removeItem('inventoryCompletedArticles');
+      
+      setConflictInfo(null);
+      toast.success('Commande remplacée avec succès');
+    } catch (error) {
+      toast.error('Erreur lors du remplacement de la commande');
+    }
+  };
+
+  const handleConflictMerge = async () => {
+    if (!conflictInfo) return;
+    
+    try {
+      // Fusionner les articles
+      const existingItems = conflictInfo.existingOrder.items || [];
+      const newItems = conflictInfo.newOrder.items;
+      
+      // Créer une map pour fusionner les quantités des articles identiques
+      const itemsMap = new Map();
+      
+      existingItems.forEach(item => {
+        const key = item.product_id || item.product_name;
+        itemsMap.set(key, { ...item });
+      });
+      
+      newItems.forEach(item => {
+        const key = item.product_id || item.product_name;
+        if (itemsMap.has(key)) {
+          const existing = itemsMap.get(key);
+          existing.quantity += item.quantity;
+        } else {
+          itemsMap.set(key, { ...item });
+        }
+      });
+      
+      const mergedItems = Array.from(itemsMap.values());
+      
+      // Mettre à jour la commande existante
+      await updateOrderMutation.mutateAsync({
+        id: conflictInfo.existingOrder.id,
+        data: { items: mergedItems }
+      });
+      
+      // Vider le panier
+      setCart({});
+      setStockValues({});
+      setCompletedArticles(new Set());
+      localStorage.removeItem('inventoryCart');
+      localStorage.removeItem('inventoryStockValues');
+      localStorage.removeItem('inventoryCompletedArticles');
+      
+      setConflictInfo(null);
+      toast.success('Articles ajoutés au bon de commande existant');
+    } catch (error) {
+      toast.error('Erreur lors de la fusion des commandes');
+    }
+  };
+
+  const handleConflictCancel = () => {
+    setConflictInfo(null);
   };
 
     return (
@@ -684,6 +810,17 @@ export default function InventoryTab() {
         todayArticles={todayArticles}
         onAddToCart={handleExceptionalAdd}
       />
+
+      {/* Order Conflict Modal */}
+      {conflictInfo && (
+        <OrderConflictModal
+          isOpen={true}
+          supplierName={conflictInfo.supplierName}
+          onReplace={handleConflictReplace}
+          onMerge={handleConflictMerge}
+          onCancel={handleConflictCancel}
+        />
+      )}
     </div>
   );
 }
