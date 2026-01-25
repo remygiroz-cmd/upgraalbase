@@ -26,6 +26,7 @@ export default function SupplierFormModal({ open, onClose, onSave, isSaving, sup
     delivery_days: [],
     closing_time: '02:00',
     cc_emails: '',
+    email_subject: '',
     custom_message: ''
   });
 
@@ -41,6 +42,7 @@ export default function SupplierFormModal({ open, onClose, onSave, isSaving, sup
         delivery_days: supplier.delivery_days || [],
         closing_time: supplier.closing_time || '02:00',
         cc_emails: supplier.cc_emails || '',
+        email_subject: supplier.email_subject || '',
         custom_message: supplier.custom_message || ''
       });
     } else {
@@ -54,6 +56,7 @@ export default function SupplierFormModal({ open, onClose, onSave, isSaving, sup
         delivery_days: [],
         closing_time: '02:00',
         cc_emails: '',
+        email_subject: '',
         custom_message: ''
       });
     }
@@ -191,6 +194,18 @@ export default function SupplierFormModal({ open, onClose, onSave, isSaving, sup
               placeholder="email1@test.com, email2@test.com"
               value={form.cc_emails}
               onChange={(e) => setForm(prev => ({ ...prev, cc_emails: e.target.value }))}
+              className="bg-slate-700 border-slate-600 mt-1"
+            />
+          </div>
+
+          {/* Objet de l'email */}
+          <div>
+            <Label htmlFor="email_subject">Objet pour l'email</Label>
+            <Input
+              id="email_subject"
+              placeholder="Commande du jour"
+              value={form.email_subject}
+              onChange={(e) => setForm(prev => ({ ...prev, email_subject: e.target.value }))}
               className="bg-slate-700 border-slate-600 mt-1"
             />
           </div>
