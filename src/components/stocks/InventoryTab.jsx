@@ -534,6 +534,7 @@ export default function InventoryTab() {
               <div className="space-y-3 sm:space-y-4">
                 {Object.values(cart).map(({ article, quantity, initialQuantity }) => {
                   const totalPrice = quantity * (article.unit_price || 0);
+                  
                   return (
                     <div 
                       key={article.id}
