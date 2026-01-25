@@ -131,6 +131,12 @@ export default function InventoryTab() {
       setCompletedArticles(prev => new Set(prev).add(articleId));
     }
 
+    // S'assurer que l'article a toutes les propriétés nécessaires, notamment unit_price
+    const articleWithPrice = {
+      ...article,
+      unit_price: article.unit_price || 0
+    };
+
     // Mettre à jour le panier automatiquement
     if (article.inventory_mode === 'stock_reel') {
       const safetyStock = article.safety_stock?.[currentDay] || 0;
@@ -141,7 +147,7 @@ export default function InventoryTab() {
         setCart(prev => ({
           ...prev,
           [articleId]: {
-            article,
+            article: articleWithPrice,
             quantity: toOrder,
             initialQuantity: toOrder
           }
@@ -160,7 +166,7 @@ export default function InventoryTab() {
         setCart(prev => ({
           ...prev,
           [articleId]: {
-            article,
+            article: articleWithPrice,
             quantity: orderQty,
             initialQuantity: orderQty
           }
@@ -208,6 +214,7 @@ export default function InventoryTab() {
       unit: formData.unit,
       supplier_id: formData.supplier_id,
       supplier_name: suppliers.find(s => s.id === formData.supplier_id)?.name,
+      unit_price: 0,
       isFree: true
     };
     
@@ -222,10 +229,16 @@ export default function InventoryTab() {
   };
 
   const handleExceptionalAdd = (article, quantity) => {
+    // S'assurer que l'article a le unit_price
+    const articleWithPrice = {
+      ...article,
+      unit_price: article.unit_price || 0
+    };
+    
     setCart(prev => ({
       ...prev,
       [article.id]: {
-        article,
+        article: articleWithPrice,
         quantity: quantity,
         initialQuantity: quantity
       }
@@ -236,16 +249,6 @@ export default function InventoryTab() {
     if (Object.keys(cart).length === 0) {
       toast.error('Le panier est vide');
       return;
-    }
-
-    // Récupérer les articles complets depuis la DB pour avoir les prix à jour
-    const articleIds = Object.values(cart)
-      .map(({ article }) => article.id)
-      .filter(id => !id.startsWith('free-')); // Exclure les articles libres
-    
-    let fullArticles = [];
-    if (articleIds.length > 0) {
-      fullArticles = await base44.entities.Article.list();
     }
 
     // Grouper les articles par fournisseur
@@ -263,16 +266,13 @@ export default function InventoryTab() {
         };
       }
       
-      // Récupérer le prix à jour depuis la DB
-      const fullArticle = fullArticles.find(a => a.id === article.id);
-      const unitPrice = fullArticle?.unit_price || article.unit_price || 0;
-      
+      // Utiliser le prix qui est déjà dans l'article du panier
       ordersBySupplier[supplierId].items.push({
         product_id: article.isFree ? null : article.id,
         product_name: article.name,
         quantity: quantity,
         unit: article.unit,
-        unit_price: unitPrice,
+        unit_price: article.unit_price || 0,
         supplier_reference: article.supplier_reference || ''
       });
     });
