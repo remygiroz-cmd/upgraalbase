@@ -530,31 +530,37 @@ export default function InventoryTab() {
               <p>Panier vide</p>
             </div>
           ) : (
-            <div className="space-y-3 sm:space-y-4">
-              {Object.values(cart).map(({ article, quantity, initialQuantity }) => (
-                <div 
-                  key={article.id}
-                  className="bg-white rounded-lg border-2 border-gray-300 p-3 sm:p-4 flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:justify-between"
-                >
-                  <div className="flex items-center gap-2 sm:gap-3 flex-1 min-w-0 w-full sm:w-auto">
-                    {article.image_url && (
-                      <img 
-                        src={article.image_url} 
-                        alt={article.name}
-                        className="w-10 h-10 sm:w-12 sm:h-12 rounded object-cover flex-shrink-0"
-                      />
-                    )}
-                    <div className="min-w-0 flex-1">
-                      <h4 className="font-semibold text-gray-900 text-sm sm:text-base truncate">{article.name}</h4>
-                      <div className="flex gap-2 text-[11px] sm:text-xs mt-1 flex-wrap">
-                        <span className="text-gray-600 truncate">{article.supplier_name}</span>
-                        {article.category && (
-                          <span className="text-gray-600 truncate">• {article.category}</span>
+            <>
+              <div className="space-y-3 sm:space-y-4">
+                {Object.values(cart).map(({ article, quantity, initialQuantity }) => {
+                  const totalPrice = quantity * (article.unit_price || 0);
+                  return (
+                    <div 
+                      key={article.id}
+                      className="bg-white rounded-lg border-2 border-gray-300 p-3 sm:p-4 flex flex-col gap-3"
+                    >
+                      <div className="flex items-center gap-2 sm:gap-3">
+                        {article.image_url && (
+                          <img 
+                            src={article.image_url} 
+                            alt={article.name}
+                            className="w-10 h-10 sm:w-12 sm:h-12 rounded object-cover flex-shrink-0"
+                          />
                         )}
+                        <div className="min-w-0 flex-1">
+                          <h4 className="font-semibold text-gray-900 text-sm sm:text-base truncate">{article.name}</h4>
+                          <div className="flex gap-2 text-[11px] sm:text-xs mt-1 flex-wrap">
+                            <span className="text-gray-600 truncate">{article.supplier_name}</span>
+                            {article.category && (
+                              <span className="text-gray-600 truncate">• {article.category}</span>
+                            )}
+                            {article.unit_price > 0 && (
+                              <span className="text-gray-600 truncate">• {article.unit_price.toFixed(2)} €/{article.unit}</span>
+                            )}
+                          </div>
+                        </div>
                       </div>
-                    </div>
-                    </div>
-                    <div className="flex items-center gap-2 sm:gap-3 w-full sm:w-auto justify-between sm:justify-end">
+                      <div className="flex items-center gap-2 sm:gap-3 w-full justify-between">
                   <div className="flex items-center gap-1">
                     <button
                       onClick={() => {
