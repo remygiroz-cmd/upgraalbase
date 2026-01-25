@@ -1,18 +1,30 @@
 import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { Mail, Printer, Edit, Trash2, Calendar } from 'lucide-react';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
+import EmailConfirmModal from './EmailConfirmModal';
 
 export default function OrderDetailModal({ order, isOpen, onClose }) {
   const [status, setStatus] = useState(order?.status || 'en_cours');
   const [items, setItems] = useState([]);
+  const [showEmailConfirm, setShowEmailConfirm] = useState(false);
+  const [emailRecipient, setEmailRecipient] = useState('');
   const queryClient = useQueryClient();
+
+  const { data: supplier } = useQuery({
+    queryKey: ['supplier', order?.supplier_id],
+    queryFn: async () => {
+      if (!order?.supplier_id) return null;
+      return await base44.entities.Supplier.get(order.supplier_id);
+    },
+    enabled: !!order?.supplier_id
+  });
 
   useEffect(() => {
     setItems(order?.items || []);
@@ -87,8 +99,10 @@ export default function OrderDetailModal({ order, isOpen, onClose }) {
       });
       
       if (response.data.success) {
-        toast.success('Email envoyé avec succès');
-        setStatus('envoyee');
+        handleStatusChange('envoyee');
+        queryClient.invalidateQueries({ queryKey: ['orders'] });
+        setEmailRecipient(supplier?.email || '');
+        setShowEmailConfirm(true);
       } else {
         toast.error(response.data.error || 'Erreur lors de l\'envoi de l\'email');
       }
@@ -117,8 +131,16 @@ export default function OrderDetailModal({ order, isOpen, onClose }) {
   const badge = getStatusBadge(status);
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="bg-white border-gray-200 max-w-3xl max-h-[95vh] sm:max-h-[90vh] overflow-hidden flex flex-col p-0">
+    <>
+      <EmailConfirmModal 
+        isOpen={showEmailConfirm}
+        onClose={() => setShowEmailConfirm(false)}
+        supplierName={order?.supplier_name}
+        recipientEmail={emailRecipient}
+      />
+      
+      <Dialog open={isOpen} onOpenChange={onClose}>
+        <DialogContent className="bg-white border-gray-200 max-w-3xl max-h-[95vh] sm:max-h-[90vh] overflow-hidden flex flex-col p-0">
         {/* Header */}
         <DialogHeader className="flex-shrink-0 px-4 sm:px-6 pt-5 pb-4 border-b border-gray-200 bg-gradient-to-r from-orange-50 to-white">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
@@ -304,5 +326,6 @@ export default function OrderDetailModal({ order, isOpen, onClose }) {
         </div>
       </DialogContent>
     </Dialog>
+    </>
   );
 }
