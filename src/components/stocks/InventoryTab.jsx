@@ -9,6 +9,7 @@ import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import FreeAddModal from './FreeAddModal';
 import ExceptionalOrderModal from './ExceptionalOrderModal';
+import OrderConflictModal from './OrderConflictModal';
 
 export default function InventoryTab() {
   // Charger l'état depuis localStorage
@@ -39,6 +40,8 @@ export default function InventoryTab() {
 
   const [showFreeAddModal, setShowFreeAddModal] = useState(false);
   const [showExceptionalOrderModal, setShowExceptionalOrderModal] = useState(false);
+  const [conflictOrder, setConflictOrder] = useState(null);
+  const [pendingOrders, setPendingOrders] = useState([]);
 
   const queryClient = useQueryClient();
 
@@ -296,64 +299,12 @@ export default function InventoryTab() {
       });
     });
 
-    const today = new Date().toISOString().split('T')[0];
-    
-    try {
-      for (const order of Object.values(ordersBySupplier)) {
-        // Vérifier s'il existe déjà une commande en cours pour ce fournisseur
-        const existingOrder = existingOrders.find(o => o.supplier_id === order.supplier_id);
-        
-        if (existingOrder) {
-          // Demander à l'utilisateur ce qu'il veut faire
-          const choice = window.confirm(
-            `Une commande en cours existe déjà pour ${order.supplier_name}.\n\n` +
-            `Cliquez sur OK pour ajouter les articles à la commande existante.\n` +
-            `Cliquez sur Annuler pour supprimer l'ancienne commande et en créer une nouvelle.`
-          );
-          
-          if (choice) {
-            // Ajouter les articles à la commande existante
-            const mergedItems = [...existingOrder.items];
-            
-            order.items.forEach(newItem => {
-              const existingItemIndex = mergedItems.findIndex(
-                item => item.product_id === newItem.product_id && item.product_name === newItem.product_name
-              );
-              
-              if (existingItemIndex >= 0) {
-                // Article existe déjà, augmenter la quantité
-                mergedItems[existingItemIndex].quantity += newItem.quantity;
-              } else {
-                // Nouvel article, l'ajouter
-                mergedItems.push(newItem);
-              }
-            });
-            
-            await updateOrderMutation.mutateAsync({
-              id: existingOrder.id,
-              data: { items: mergedItems }
-            });
-          } else {
-            // Supprimer l'ancienne commande et en créer une nouvelle
-            await deleteOrderMutation.mutateAsync(existingOrder.id);
-            await createOrderMutation.mutateAsync({
-              ...order,
-              date: today,
-              delivery_date: today,
-              status: 'en_cours'
-            });
-          }
-        } else {
-          // Pas de commande existante, créer une nouvelle
-          await createOrderMutation.mutateAsync({
-            ...order,
-            date: today,
-            delivery_date: today,
-            status: 'en_cours'
-          });
-        }
-      }
-      
+    setPendingOrders(Object.values(ordersBySupplier));
+    await processNextOrder();
+  };
+
+  const processNextOrder = async () => {
+    if (pendingOrders.length === 0) {
       // Vider le panier après validation
       setCart({});
       setStockValues({});
@@ -361,11 +312,72 @@ export default function InventoryTab() {
       localStorage.removeItem('inventoryCart');
       localStorage.removeItem('inventoryStockValues');
       localStorage.removeItem('inventoryCompletedArticles');
-      
       toast.success('Commande(s) validée(s) avec succès');
-    } catch (error) {
-      toast.error('Erreur lors de la validation des commandes');
+      return;
     }
+
+    const order = pendingOrders[0];
+    const existingOrder = existingOrders.find(o => o.supplier_id === order.supplier_id);
+
+    if (existingOrder) {
+      setConflictOrder({ existing: existingOrder, new: order });
+    } else {
+      await createNewOrder(order);
+      setPendingOrders(prev => prev.slice(1));
+      await processNextOrder();
+    }
+  };
+
+  const createNewOrder = async (order) => {
+    const today = new Date().toISOString().split('T')[0];
+    await createOrderMutation.mutateAsync({
+      ...order,
+      date: today,
+      delivery_date: today,
+      status: 'en_cours'
+    });
+  };
+
+  const handleMergeOrder = async () => {
+    const { existing, new: newOrder } = conflictOrder;
+    const mergedItems = [...existing.items];
+    
+    newOrder.items.forEach(newItem => {
+      const existingItemIndex = mergedItems.findIndex(
+        item => item.product_id === newItem.product_id && item.product_name === newItem.product_name
+      );
+      
+      if (existingItemIndex >= 0) {
+        mergedItems[existingItemIndex].quantity += newItem.quantity;
+      } else {
+        mergedItems.push(newItem);
+      }
+    });
+    
+    await updateOrderMutation.mutateAsync({
+      id: existing.id,
+      data: { items: mergedItems }
+    });
+
+    setConflictOrder(null);
+    setPendingOrders(prev => prev.slice(1));
+    await processNextOrder();
+  };
+
+  const handleReplaceOrder = async () => {
+    const { existing, new: newOrder } = conflictOrder;
+    await deleteOrderMutation.mutateAsync(existing.id);
+    await createNewOrder(newOrder);
+
+    setConflictOrder(null);
+    setPendingOrders(prev => prev.slice(1));
+    await processNextOrder();
+  };
+
+  const handleCancelConflict = () => {
+    setConflictOrder(null);
+    setPendingOrders([]);
+    toast.info('Validation annulée');
   };
 
     return (
@@ -747,6 +759,15 @@ export default function InventoryTab() {
         articles={articles}
         todayArticles={todayArticles}
         onAddToCart={handleExceptionalAdd}
+      />
+
+      {/* Order Conflict Modal */}
+      <OrderConflictModal
+        isOpen={!!conflictOrder}
+        onClose={handleCancelConflict}
+        existingOrder={conflictOrder?.existing}
+        onMerge={handleMergeOrder}
+        onReplace={handleReplaceOrder}
       />
     </div>
   );
