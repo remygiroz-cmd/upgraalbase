@@ -34,19 +34,20 @@ Deno.serve(async (req) => {
       return diff >= 0 && diff < 5;
     };
     
-    console.log(`Fournisseurs actifs:`, suppliers.map(s => ({
-      name: s.name,
-      delivery_days: s.delivery_days,
-      closing_time: s.closing_time,
-      hasDay: s.delivery_days?.includes(currentDay),
-      timeMatch: isWithinTimeWindow(s.closing_time)
-    })));
-    
     const suppliersToProcess = suppliers.filter(s => 
       s.delivery_days?.includes(currentDay) && 
       isWithinTimeWindow(s.closing_time)
     );
 
+    console.log(`Debug - Suppliers:`, suppliers.map(s => ({
+      name: s.name,
+      day: currentDay,
+      hasDay: s.delivery_days?.includes(currentDay),
+      closing: s.closing_time,
+      currentTime,
+      match: isWithinTimeWindow(s.closing_time)
+    })));
+    
     console.log(`${suppliersToProcess.length} fournisseur(s) à traiter`);
 
     const results = [];
