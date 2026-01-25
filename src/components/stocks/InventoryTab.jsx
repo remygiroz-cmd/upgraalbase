@@ -50,6 +50,26 @@ export default function InventoryTab() {
     }
   });
 
+  const updateOrderMutation = useMutation({
+    mutationFn: ({ id, data }) => base44.entities.Order.update(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['orders'] });
+      toast.success('Commande mise à jour');
+    }
+  });
+
+  const deleteOrderMutation = useMutation({
+    mutationFn: (id) => base44.entities.Order.delete(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['orders'] });
+    }
+  });
+
+  const { data: existingOrders = [] } = useQuery({
+    queryKey: ['orders'],
+    queryFn: () => base44.entities.Order.filter({ status: 'en_cours' })
+  });
+
   // Sauvegarder dans localStorage à chaque changement
   useEffect(() => {
     localStorage.setItem('inventorySubTab', inventorySubTab);
@@ -266,7 +286,6 @@ export default function InventoryTab() {
         };
       }
       
-      // Utiliser le prix qui est déjà dans l'article du panier
       ordersBySupplier[supplierId].items.push({
         product_id: article.isFree ? null : article.id,
         product_name: article.name,
@@ -277,17 +296,62 @@ export default function InventoryTab() {
       });
     });
 
-    // Créer une commande pour chaque fournisseur
     const today = new Date().toISOString().split('T')[0];
     
     try {
       for (const order of Object.values(ordersBySupplier)) {
-        await createOrderMutation.mutateAsync({
-          ...order,
-          date: today,
-          delivery_date: today,
-          status: 'en_cours'
-        });
+        // Vérifier s'il existe déjà une commande en cours pour ce fournisseur
+        const existingOrder = existingOrders.find(o => o.supplier_id === order.supplier_id);
+        
+        if (existingOrder) {
+          // Demander à l'utilisateur ce qu'il veut faire
+          const choice = window.confirm(
+            `Une commande en cours existe déjà pour ${order.supplier_name}.\n\n` +
+            `Cliquez sur OK pour ajouter les articles à la commande existante.\n` +
+            `Cliquez sur Annuler pour supprimer l'ancienne commande et en créer une nouvelle.`
+          );
+          
+          if (choice) {
+            // Ajouter les articles à la commande existante
+            const mergedItems = [...existingOrder.items];
+            
+            order.items.forEach(newItem => {
+              const existingItemIndex = mergedItems.findIndex(
+                item => item.product_id === newItem.product_id && item.product_name === newItem.product_name
+              );
+              
+              if (existingItemIndex >= 0) {
+                // Article existe déjà, augmenter la quantité
+                mergedItems[existingItemIndex].quantity += newItem.quantity;
+              } else {
+                // Nouvel article, l'ajouter
+                mergedItems.push(newItem);
+              }
+            });
+            
+            await updateOrderMutation.mutateAsync({
+              id: existingOrder.id,
+              data: { items: mergedItems }
+            });
+          } else {
+            // Supprimer l'ancienne commande et en créer une nouvelle
+            await deleteOrderMutation.mutateAsync(existingOrder.id);
+            await createOrderMutation.mutateAsync({
+              ...order,
+              date: today,
+              delivery_date: today,
+              status: 'en_cours'
+            });
+          }
+        } else {
+          // Pas de commande existante, créer une nouvelle
+          await createOrderMutation.mutateAsync({
+            ...order,
+            date: today,
+            delivery_date: today,
+            status: 'en_cours'
+          });
+        }
       }
       
       // Vider le panier après validation
@@ -298,9 +362,9 @@ export default function InventoryTab() {
       localStorage.removeItem('inventoryStockValues');
       localStorage.removeItem('inventoryCompletedArticles');
       
-      toast.success(`${Object.keys(ordersBySupplier).length} commande(s) créée(s)`);
+      toast.success('Commande(s) validée(s) avec succès');
     } catch (error) {
-      toast.error('Erreur lors de la création des commandes');
+      toast.error('Erreur lors de la validation des commandes');
     }
   };
 
