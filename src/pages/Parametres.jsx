@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
-import { Settings, User, Bell, Palette, Clock, Save, Check, Upload, Image, Sparkles, Loader2, Shield, Users as UsersIcon, Calendar, Plus, X } from 'lucide-react';
+import { Settings, User, Bell, Palette, Clock, Save, Check, Upload, Image, Sparkles, Loader2, Shield, Users as UsersIcon, Calendar, Plus, X, Building2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -11,6 +11,7 @@ import PageHeader from '@/components/ui/PageHeader';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import GestionRoles from './GestionRoles';
 import GestionUtilisateurs from './GestionUtilisateurs';
+import EstablishmentSettings from '@/components/parametres/EstablishmentSettings';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 
@@ -72,6 +73,15 @@ export default function Parametres() {
       <div className="max-w-4xl mx-auto">
         <Tabs defaultValue="profile" className="space-y-6">
           <TabsList className="grid grid-cols-2 sm:grid-cols-3 lg:flex lg:flex-wrap gap-2 bg-transparent p-0 h-auto">
+            {isAdmin && (
+              <TabsTrigger 
+                value="establishment" 
+                className="data-[state=active]:bg-orange-100 data-[state=active]:text-orange-900 data-[state=active]:border-orange-500 bg-white border-2 border-gray-300 text-gray-900 px-4 py-3 rounded-lg hover:bg-gray-50 transition-colors"
+              >
+                <Building2 className="w-4 h-4 mr-2" />
+                <span>Établissement</span>
+              </TabsTrigger>
+            )}
             <TabsTrigger 
               value="profile" 
               className="data-[state=active]:bg-orange-100 data-[state=active]:text-orange-900 data-[state=active]:border-orange-500 bg-white border-2 border-gray-300 text-gray-900 px-4 py-3 rounded-lg hover:bg-gray-50 transition-colors"
@@ -128,6 +138,13 @@ export default function Parametres() {
               </TabsTrigger>
             )}
           </TabsList>
+
+          {/* Establishment Tab */}
+          {isAdmin && (
+            <TabsContent value="establishment">
+              <EstablishmentSettings />
+            </TabsContent>
+          )}
 
           {/* Profile Tab */}
           <TabsContent value="profile" className="space-y-6">
