@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { cn } from '@/lib/utils';
+import { toast } from 'sonner';
 import FreeAddModal from './FreeAddModal';
 import ExceptionalOrderModal from './ExceptionalOrderModal';
 
@@ -38,6 +39,16 @@ export default function InventoryTab() {
 
   const [showFreeAddModal, setShowFreeAddModal] = useState(false);
   const [showExceptionalOrderModal, setShowExceptionalOrderModal] = useState(false);
+
+  const queryClient = useQueryClient();
+
+  const createOrderMutation = useMutation({
+    mutationFn: (orderData) => base44.entities.Order.create(orderData),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['orders'] });
+      toast.success('Commande créée avec succès');
+    }
+  });
 
   // Sauvegarder dans localStorage à chaque changement
   useEffect(() => {
@@ -219,6 +230,64 @@ export default function InventoryTab() {
         initialQuantity: quantity
       }
     }));
+  };
+
+  const handleValidateOrder = async () => {
+    if (Object.keys(cart).length === 0) {
+      toast.error('Le panier est vide');
+      return;
+    }
+
+    // Grouper les articles par fournisseur
+    const ordersBySupplier = {};
+    
+    Object.values(cart).forEach(({ article, quantity }) => {
+      const supplierId = article.supplier_id;
+      const supplierName = article.supplier_name || 'Fournisseur inconnu';
+      
+      if (!ordersBySupplier[supplierId]) {
+        ordersBySupplier[supplierId] = {
+          supplier_id: supplierId,
+          supplier_name: supplierName,
+          items: []
+        };
+      }
+      
+      ordersBySupplier[supplierId].items.push({
+        product_id: article.id,
+        product_name: article.name,
+        quantity: quantity,
+        unit: article.unit,
+        unit_price: article.unit_price || 0,
+        supplier_reference: article.supplier_reference
+      });
+    });
+
+    // Créer une commande pour chaque fournisseur
+    const today = new Date().toISOString().split('T')[0];
+    
+    try {
+      for (const order of Object.values(ordersBySupplier)) {
+        await createOrderMutation.mutateAsync({
+          ...order,
+          date: today,
+          delivery_date: today,
+          status: 'sent'
+        });
+      }
+      
+      // Vider le panier après validation
+      setCart({});
+      setStockValues({});
+      setCompletedArticles(new Set());
+      localStorage.removeItem('inventoryCart');
+      localStorage.removeItem('inventoryStockValues');
+      localStorage.removeItem('inventoryCompletedArticles');
+      
+      toast.success(`${Object.keys(ordersBySupplier).length} commande(s) créée(s)`);
+    } catch (error) {
+      toast.error('Erreur lors de la création des commandes');
+    }
   };
 
     return (
@@ -545,7 +614,11 @@ export default function InventoryTab() {
 
       {/* Bouton Valider Commande - visible sur tous les onglets */}
       <div className="flex justify-center pt-4 sm:pt-6">
-        <Button className="bg-emerald-600 hover:bg-emerald-700 px-6 sm:px-8 w-full sm:w-auto min-h-[52px] text-sm sm:text-base font-semibold touch-manipulation">
+        <Button 
+          className="bg-emerald-600 hover:bg-emerald-700 px-6 sm:px-8 w-full sm:w-auto min-h-[52px] text-sm sm:text-base font-semibold touch-manipulation"
+          onClick={handleValidateOrder}
+          disabled={Object.keys(cart).length === 0}
+        >
           <ShoppingCart className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
           Valider Commande
         </Button>
