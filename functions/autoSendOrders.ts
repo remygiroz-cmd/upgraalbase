@@ -35,10 +35,13 @@ Deno.serve(async (req) => {
       
       const [targetHour, targetMinute] = closingTime.split(':').map(Number);
       const targetTimeInMinutes = targetHour * 60 + targetMinute;
-      const currentTimeInMinutes = parisTime.getHours() * 60 + parisTime.getMinutes();
+      const currentTimeInMinutes = parisHour * 60 + parisMinute;
       
       // Vérifier si on est dans une fenêtre de 5 minutes (ex: si closing_time=19:20, accepter 19:19, 19:20, 19:21, 19:22, 19:23, 19:24)
       const diff = currentTimeInMinutes - targetTimeInMinutes;
+      
+      console.log(`Check ${closingTime}: target=${targetTimeInMinutes}min, current=${currentTimeInMinutes}min, diff=${diff}`);
+      
       return diff >= 0 && diff < 5;
     };
     
