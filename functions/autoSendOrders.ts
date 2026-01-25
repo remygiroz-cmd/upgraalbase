@@ -34,6 +34,14 @@ Deno.serve(async (req) => {
       return diff >= 0 && diff < 5;
     };
     
+    console.log(`Fournisseurs actifs:`, suppliers.map(s => ({
+      name: s.name,
+      delivery_days: s.delivery_days,
+      closing_time: s.closing_time,
+      hasDay: s.delivery_days?.includes(currentDay),
+      timeMatch: isWithinTimeWindow(s.closing_time)
+    })));
+    
     const suppliersToProcess = suppliers.filter(s => 
       s.delivery_days?.includes(currentDay) && 
       isWithinTimeWindow(s.closing_time)
