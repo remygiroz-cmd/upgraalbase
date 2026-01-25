@@ -47,11 +47,7 @@ export default function OrderDetailModal({ order, isOpen, onClose }) {
     const newQuantity = Math.max(0, newItems[idx].quantity + delta);
     
     if (newQuantity === 0) {
-      if (confirm('Retirer cet article de la commande ?')) {
-        newItems.splice(idx, 1);
-      } else {
-        return;
-      }
+      newItems.splice(idx, 1);
     } else {
       newItems[idx] = { ...newItems[idx], quantity: newQuantity };
     }
@@ -107,26 +103,25 @@ export default function OrderDetailModal({ order, isOpen, onClose }) {
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="bg-white border-gray-300 max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
-        <DialogHeader className="flex-shrink-0">
-          <DialogTitle className="text-gray-900 text-xl">
-            COMMANDE {order.supplier_name?.toUpperCase()}
-          </DialogTitle>
-        </DialogHeader>
-
-        <div className="flex-1 overflow-y-auto space-y-4">
-          {/* Informations de commande */}
-          <div className="flex flex-wrap items-center gap-4 pb-4 border-b border-gray-300">
-            <div className="flex items-center gap-2">
-              <Calendar className="w-4 h-4 text-gray-500" />
-              <span className="text-sm text-gray-900">
-                Date: {format(new Date(order.date), 'dd-MM-yy', { locale: fr })}
-              </span>
+      <DialogContent className="bg-white border-gray-200 max-w-3xl max-h-[95vh] sm:max-h-[90vh] overflow-hidden flex flex-col p-0">
+        {/* Header */}
+        <DialogHeader className="flex-shrink-0 px-4 sm:px-6 pt-5 pb-4 border-b border-gray-200 bg-gradient-to-r from-orange-50 to-white">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <div>
+              <DialogTitle className="text-lg sm:text-xl font-bold text-gray-900">
+                {order.supplier_name?.toUpperCase()}
+              </DialogTitle>
+              <div className="flex items-center gap-2 mt-1">
+                <Calendar className="w-3.5 h-3.5 text-gray-500" />
+                <span className="text-xs sm:text-sm text-gray-600">
+                  {format(new Date(order.date), 'dd-MM-yy', { locale: fr })}
+                </span>
+              </div>
             </div>
             <Select value={status} onValueChange={handleStatusChange}>
-              <SelectTrigger className="w-[160px]">
+              <SelectTrigger className="w-full sm:w-[160px] border-gray-300">
                 <SelectValue>
-                  <span className={`px-3 py-1 rounded-full text-xs font-bold ${badge.style}`}>
+                  <span className={`px-3 py-1.5 rounded-full text-xs font-bold ${badge.style}`}>
                     {badge.label}
                   </span>
                 </SelectValue>
@@ -139,100 +134,158 @@ export default function OrderDetailModal({ order, isOpen, onClose }) {
               </SelectContent>
             </Select>
           </div>
+        </DialogHeader>
+
+        {/* Content */}
+        <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-4">
+          {/* Header colonnes - Desktop only */}
+          <div className="hidden sm:grid grid-cols-[2fr,1.5fr,1fr] gap-4 pb-3 mb-3 text-xs font-semibold text-gray-500 uppercase border-b border-gray-200">
+            <div>Désignation</div>
+            <div className="text-center">Quantité</div>
+            <div className="text-right">Total HT</div>
+          </div>
 
           {/* Liste des articles */}
-          <div>
-            <div className="grid grid-cols-[1fr,auto,auto] gap-4 pb-2 text-xs font-semibold text-gray-600 uppercase border-b border-gray-300">
-              <div>Désignation</div>
-              <div className="text-center">Quantité</div>
-              <div className="text-right">Total HT</div>
-            </div>
-            <div className="divide-y divide-gray-200">
-              {items.map((item, idx) => (
-                <div key={idx} className="grid grid-cols-[1fr,auto,auto] gap-4 py-3 text-sm">
+          <div className="space-y-3">
+            {items.map((item, idx) => (
+              <div 
+                key={idx} 
+                className="bg-white border border-gray-200 rounded-lg p-3 sm:p-4 hover:border-orange-300 hover:shadow-sm transition-all"
+              >
+                {/* Mobile Layout */}
+                <div className="sm:hidden space-y-3">
+                  <div>
+                    <div className="font-semibold text-gray-900 text-sm">{item.product_name}</div>
+                    {item.supplier_reference && (
+                      <div className="text-xs text-gray-500 mt-0.5">Réf: {item.supplier_reference}</div>
+                    )}
+                  </div>
+                  
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => handleQuantityChange(idx, -1)}
+                        className="w-9 h-9 rounded-lg bg-gray-100 hover:bg-gray-200 active:bg-gray-300 text-gray-900 font-bold text-base active:scale-95 transition-all touch-manipulation"
+                      >
+                        -
+                      </button>
+                      <div className="min-w-[90px] text-center text-sm font-medium text-gray-900">
+                        {item.unit === 'pièce' ? `${item.quantity} pièce` : 
+                         item.unit === 'sac' ? `${item.quantity} sac` : 
+                         item.unit === 'bidon' ? `${item.quantity} bidon` :
+                         item.unit === 'SACHET' ? `${item.quantity} SACHET` :
+                         item.unit === 'Sacs' ? `${item.quantity} Sacs` :
+                         `${item.quantity} ${item.unit || ''}`}
+                      </div>
+                      <button
+                        onClick={() => handleQuantityChange(idx, 1)}
+                        className="w-9 h-9 rounded-lg bg-gray-100 hover:bg-gray-200 active:bg-gray-300 text-gray-900 font-bold text-base active:scale-95 transition-all touch-manipulation"
+                      >
+                        +
+                      </button>
+                    </div>
+                    
+                    {item.unit_price && item.unit_price > 0 && (
+                      <div className="text-base font-bold text-orange-600">
+                        {(item.quantity * item.unit_price).toFixed(2)} €
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Desktop Layout */}
+                <div className="hidden sm:grid grid-cols-[2fr,1.5fr,1fr] gap-4 items-center">
                   <div>
                     <div className="font-semibold text-gray-900">{item.product_name}</div>
                     {item.supplier_reference && (
-                      <div className="text-xs text-gray-500">Réf: {item.supplier_reference}</div>
+                      <div className="text-xs text-gray-500 mt-0.5">Réf: {item.supplier_reference}</div>
                     )}
                   </div>
-                  <div className="text-center text-gray-900 whitespace-nowrap flex items-center gap-2 justify-center">
+                  
+                  <div className="flex items-center gap-2 justify-center">
                     <button
                       onClick={() => handleQuantityChange(idx, -1)}
-                      className="w-7 h-7 rounded bg-gray-200 hover:bg-gray-300 text-gray-900 font-bold text-sm active:scale-95 transition-transform"
+                      className="w-8 h-8 rounded-lg bg-gray-100 hover:bg-gray-200 active:bg-gray-300 text-gray-900 font-bold text-sm active:scale-95 transition-all"
                     >
                       -
                     </button>
-                    <div className="min-w-[80px] text-center">
+                    <div className="min-w-[100px] text-center text-sm font-medium text-gray-900">
                       {item.unit === 'pièce' ? `${item.quantity} pièce` : 
-                       item.unit === 'sac' ? `${item.quantity} sac ${item.weight || ''}` : 
-                       item.unit === 'bidon' ? `${item.quantity} bidon ${item.volume || ''}` :
+                       item.unit === 'sac' ? `${item.quantity} sac` : 
+                       item.unit === 'bidon' ? `${item.quantity} bidon` :
                        item.unit === 'SACHET' ? `${item.quantity} SACHET` :
-                       item.unit === 'Sacs' ? `${item.quantity} Sacs ${item.weight || ''}` :
+                       item.unit === 'Sacs' ? `${item.quantity} Sacs` :
                        `${item.quantity} ${item.unit || ''}`}
                     </div>
                     <button
                       onClick={() => handleQuantityChange(idx, 1)}
-                      className="w-7 h-7 rounded bg-gray-200 hover:bg-gray-300 text-gray-900 font-bold text-sm active:scale-95 transition-transform"
+                      className="w-8 h-8 rounded-lg bg-gray-100 hover:bg-gray-200 active:bg-gray-300 text-gray-900 font-bold text-sm active:scale-95 transition-all"
                     >
                       +
                     </button>
                   </div>
-                  <div className="text-right text-gray-900 font-semibold">
+                  
+                  <div className="text-right text-base font-bold text-gray-900">
                     {(item.unit_price && item.unit_price > 0) ? `${(item.quantity * item.unit_price).toFixed(2)} €` : '-'}
                   </div>
                 </div>
-              ))}
-              {items.length === 0 && (
-                <div className="py-8 text-center text-gray-500">
-                  Aucun article dans cette commande
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Total */}
-          <div className="border-t-2 border-gray-300 pt-4">
-            <div className="flex items-center justify-between">
-              <div className="text-sm font-semibold text-gray-900 uppercase">
-                Total Estimé HT
               </div>
-              <div className="text-3xl font-bold text-gray-900">
-                {totalAmount.toFixed(2)} €
+            ))}
+            
+            {items.length === 0 && (
+              <div className="py-12 text-center text-gray-400">
+                <p className="text-sm">Aucun article dans cette commande</p>
               </div>
-            </div>
+            )}
           </div>
         </div>
 
-        {/* Actions */}
-        <div className="flex-shrink-0 flex flex-wrap gap-2 pt-4 border-t border-gray-300">
-          <Button
-            onClick={handleSendEmail}
-            className="bg-orange-600 hover:bg-orange-700 text-white gap-2"
-          >
-            <Mail className="w-4 h-4" />
-            ENVOYER
-          </Button>
-          <Button
-            onClick={handlePrint}
-            variant="outline"
-            className="border-gray-300 gap-2"
-          >
-            <Printer className="w-4 h-4" />
-          </Button>
-          <Button
-            variant="outline"
-            className="border-blue-600 text-blue-600 hover:bg-blue-50 gap-2"
-          >
-            <Edit className="w-4 h-4" />
-          </Button>
-          <Button
-            onClick={handleDelete}
-            variant="outline"
-            className="border-red-600 text-red-600 hover:bg-red-50 gap-2 ml-auto"
-          >
-            <Trash2 className="w-4 h-4" />
-          </Button>
+        {/* Footer */}
+        <div className="flex-shrink-0 px-4 sm:px-6 py-4 border-t-2 border-gray-200 bg-gradient-to-r from-orange-50 to-white space-y-4">
+          {/* Total */}
+          <div className="flex items-center justify-between">
+            <div className="text-sm sm:text-base font-semibold text-gray-700 uppercase">
+              Total Estimé HT
+            </div>
+            <div className="text-2xl sm:text-3xl font-bold text-orange-600">
+              {totalAmount.toFixed(2)} €
+            </div>
+          </div>
+
+          {/* Actions */}
+          <div className="grid grid-cols-2 sm:flex sm:flex-wrap gap-2">
+            <Button
+              onClick={handleSendEmail}
+              className="bg-orange-600 hover:bg-orange-700 text-white gap-2 h-11 sm:h-10 touch-manipulation"
+            >
+              <Mail className="w-4 h-4" />
+              <span className="hidden sm:inline">ENVOYER</span>
+              <span className="sm:hidden">Envoyer</span>
+            </Button>
+            <Button
+              onClick={handlePrint}
+              variant="outline"
+              className="border-gray-300 hover:bg-gray-50 gap-2 h-11 sm:h-10 touch-manipulation"
+            >
+              <Printer className="w-4 h-4" />
+              <span className="hidden sm:inline">Imprimer</span>
+            </Button>
+            <Button
+              variant="outline"
+              className="border-blue-600 text-blue-600 hover:bg-blue-50 gap-2 h-11 sm:h-10 touch-manipulation"
+            >
+              <Edit className="w-4 h-4" />
+              <span className="hidden sm:inline">Modifier</span>
+            </Button>
+            <Button
+              onClick={handleDelete}
+              variant="outline"
+              className="border-red-600 text-red-600 hover:bg-red-50 gap-2 h-11 sm:h-10 sm:ml-auto touch-manipulation"
+            >
+              <Trash2 className="w-4 h-4" />
+              <span className="hidden sm:inline">Supprimer</span>
+            </Button>
+          </div>
         </div>
       </DialogContent>
     </Dialog>
