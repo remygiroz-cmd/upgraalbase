@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
@@ -11,7 +11,13 @@ import { toast } from 'sonner';
 
 export default function OrderDetailModal({ order, isOpen, onClose }) {
   const [status, setStatus] = useState(order?.status || 'en_cours');
+  const [items, setItems] = useState([]);
   const queryClient = useQueryClient();
+
+  useEffect(() => {
+    setItems(order?.items || []);
+    setStatus(order?.status || 'en_cours');
+  }, [order]);
 
   const updateOrderMutation = useMutation({
     mutationFn: ({ id, data }) => base44.entities.Order.update(id, data),
@@ -32,9 +38,31 @@ export default function OrderDetailModal({ order, isOpen, onClose }) {
 
   if (!order) return null;
 
-  const totalAmount = order.items?.reduce((sum, item) => {
+  const totalAmount = items.reduce((sum, item) => {
     return sum + (item.quantity * (item.unit_price || 0));
-  }, 0) || 0;
+  }, 0);
+
+  const handleQuantityChange = (idx, delta) => {
+    const newItems = [...items];
+    const newQuantity = Math.max(0, newItems[idx].quantity + delta);
+    
+    if (newQuantity === 0) {
+      if (confirm('Retirer cet article de la commande ?')) {
+        newItems.splice(idx, 1);
+      } else {
+        return;
+      }
+    } else {
+      newItems[idx] = { ...newItems[idx], quantity: newQuantity };
+    }
+    
+    setItems(newItems);
+    
+    updateOrderMutation.mutate({
+      id: order.id,
+      data: { items: newItems }
+    });
+  };
 
   const handleStatusChange = (newStatus) => {
     setStatus(newStatus);
@@ -120,7 +148,7 @@ export default function OrderDetailModal({ order, isOpen, onClose }) {
               <div className="text-right">Total HT</div>
             </div>
             <div className="divide-y divide-gray-200">
-              {order.items?.map((item, idx) => (
+              {items.map((item, idx) => (
                 <div key={idx} className="grid grid-cols-[1fr,auto,auto] gap-4 py-3 text-sm">
                   <div>
                     <div className="font-semibold text-gray-900">{item.product_name}</div>
@@ -128,20 +156,34 @@ export default function OrderDetailModal({ order, isOpen, onClose }) {
                       <div className="text-xs text-gray-500">Réf: {item.supplier_reference}</div>
                     )}
                   </div>
-                  <div className="text-center text-gray-900 whitespace-nowrap">
-                    {item.unit === 'pièce' ? `${item.quantity} pièce` : 
-                     item.unit === 'sac' ? `${item.quantity} sac ${item.weight || ''}` : 
-                     item.unit === 'bidon' ? `${item.quantity} bidon ${item.volume || ''}` :
-                     item.unit === 'SACHET' ? `${item.quantity} SACHET` :
-                     item.unit === 'Sacs' ? `${item.quantity} Sacs ${item.weight || ''}` :
-                     `${item.quantity} ${item.unit || ''}`}
+                  <div className="text-center text-gray-900 whitespace-nowrap flex items-center gap-2 justify-center">
+                    <button
+                      onClick={() => handleQuantityChange(idx, -1)}
+                      className="w-7 h-7 rounded bg-gray-200 hover:bg-gray-300 text-gray-900 font-bold text-sm active:scale-95 transition-transform"
+                    >
+                      -
+                    </button>
+                    <div className="min-w-[80px] text-center">
+                      {item.unit === 'pièce' ? `${item.quantity} pièce` : 
+                       item.unit === 'sac' ? `${item.quantity} sac ${item.weight || ''}` : 
+                       item.unit === 'bidon' ? `${item.quantity} bidon ${item.volume || ''}` :
+                       item.unit === 'SACHET' ? `${item.quantity} SACHET` :
+                       item.unit === 'Sacs' ? `${item.quantity} Sacs ${item.weight || ''}` :
+                       `${item.quantity} ${item.unit || ''}`}
+                    </div>
+                    <button
+                      onClick={() => handleQuantityChange(idx, 1)}
+                      className="w-7 h-7 rounded bg-gray-200 hover:bg-gray-300 text-gray-900 font-bold text-sm active:scale-95 transition-transform"
+                    >
+                      +
+                    </button>
                   </div>
                   <div className="text-right text-gray-900 font-semibold">
                     {(item.unit_price && item.unit_price > 0) ? `${(item.quantity * item.unit_price).toFixed(2)} €` : '-'}
                   </div>
                 </div>
               ))}
-              {(!order.items || order.items.length === 0) && (
+              {items.length === 0 && (
                 <div className="py-8 text-center text-gray-500">
                   Aucun article dans cette commande
                 </div>
