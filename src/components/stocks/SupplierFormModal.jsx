@@ -78,15 +78,15 @@ export default function SupplierFormModal({ open, onClose, onSave, isSaving, sup
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="bg-slate-800 border-slate-700 max-h-[90vh] overflow-y-auto max-w-2xl">
+      <DialogContent className="bg-white border-gray-200 max-h-[90vh] overflow-y-auto max-w-2xl">
         <DialogHeader>
-          <DialogTitle>{supplier ? 'Modifier Fournisseur' : 'Ajouter un Fournisseur'}</DialogTitle>
+          <DialogTitle className="text-gray-900">{supplier ? 'Modifier Fournisseur' : 'Ajouter un Fournisseur'}</DialogTitle>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-6">
           {/* Fiche signalétique */}
           <div>
-            <h3 className="text-sm font-semibold text-orange-400 mb-4 flex items-center gap-2">
+            <h3 className="text-sm font-semibold text-gray-700 mb-4 flex items-center gap-2">
               <span>📋</span> FICHE SIGNALÉTIQUE
             </h3>
             <div className="space-y-3">
@@ -96,7 +96,7 @@ export default function SupplierFormModal({ open, onClose, onSave, isSaving, sup
                   id="name"
                   value={form.name}
                   onChange={(e) => setForm(prev => ({ ...prev, name: e.target.value }))}
-                  className="bg-slate-700 border-slate-600 mt-1"
+                  className="bg-gray-50 border-gray-300 mt-1"
                   required
                 />
               </div>
@@ -107,7 +107,7 @@ export default function SupplierFormModal({ open, onClose, onSave, isSaving, sup
                   id="contact_name"
                   value={form.contact_name}
                   onChange={(e) => setForm(prev => ({ ...prev, contact_name: e.target.value }))}
-                  className="bg-slate-700 border-slate-600 mt-1"
+                  className="bg-gray-50 border-gray-300 mt-1"
                 />
               </div>
 
@@ -118,7 +118,7 @@ export default function SupplierFormModal({ open, onClose, onSave, isSaving, sup
                   type="tel"
                   value={form.phone}
                   onChange={(e) => setForm(prev => ({ ...prev, phone: e.target.value }))}
-                  className="bg-slate-700 border-slate-600 mt-1"
+                  className="bg-gray-50 border-gray-300 mt-1"
                 />
               </div>
 
@@ -129,7 +129,7 @@ export default function SupplierFormModal({ open, onClose, onSave, isSaving, sup
                   type="email"
                   value={form.email}
                   onChange={(e) => setForm(prev => ({ ...prev, email: e.target.value }))}
-                  className="bg-slate-700 border-slate-600 mt-1"
+                  className="bg-gray-50 border-gray-300 mt-1"
                 />
               </div>
 
@@ -140,7 +140,7 @@ export default function SupplierFormModal({ open, onClose, onSave, isSaving, sup
                   placeholder="Ex: FR-12345"
                   value={form.internal_reference}
                   onChange={(e) => setForm(prev => ({ ...prev, internal_reference: e.target.value }))}
-                  className="bg-slate-700 border-slate-600 mt-1"
+                  className="bg-gray-50 border-gray-300 mt-1"
                 />
               </div>
             </div>
@@ -148,7 +148,7 @@ export default function SupplierFormModal({ open, onClose, onSave, isSaving, sup
 
           {/* Automatisation */}
           <div>
-            <h3 className="text-sm font-semibold text-blue-400 mb-4 flex items-center gap-2">
+            <h3 className="text-sm font-semibold text-gray-700 mb-4 flex items-center gap-2">
               <span>⚙️</span> AUTOMATISATION
             </h3>
             
@@ -163,8 +163,8 @@ export default function SupplierFormModal({ open, onClose, onSave, isSaving, sup
                       onClick={() => toggleDay(day.key)}
                       className={`w-10 h-10 rounded font-semibold transition-all ${
                         form.delivery_days.includes(day.key)
-                          ? 'bg-blue-600 text-white'
-                          : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+                          ? 'bg-orange-600 text-white'
+                          : 'bg-gray-100 text-gray-700 hover:bg-gray-200 border border-gray-300'
                       }`}
                     >
                       {day.key}
@@ -180,7 +180,7 @@ export default function SupplierFormModal({ open, onClose, onSave, isSaving, sup
                   type="time"
                   value={form.closing_time}
                   onChange={(e) => setForm(prev => ({ ...prev, closing_time: e.target.value }))}
-                  className="bg-slate-700 border-slate-600 mt-1"
+                  className="bg-gray-50 border-gray-300 mt-1"
                 />
               </div>
             </div>
@@ -223,7 +223,7 @@ export default function SupplierFormModal({ open, onClose, onSave, isSaving, sup
           </div>
 
           <div className="flex justify-end gap-3 pt-4">
-            <Button type="button" variant="outline" onClick={onClose} className="border-slate-600 text-slate-900 hover:text-slate-100 hover:bg-slate-700">
+            <Button type="button" variant="outline" onClick={onClose}>
               Annuler
             </Button>
             <Button type="submit" disabled={isSaving} className="bg-orange-600 hover:bg-orange-700">
