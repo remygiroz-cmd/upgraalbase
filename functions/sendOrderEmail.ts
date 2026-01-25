@@ -1,8 +1,5 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
-import { Resend } from 'npm:resend@4.0.0';
 import { jsPDF } from 'npm:jspdf@2.5.2';
-
-const resend = new Resend(Deno.env.get('RESEND_API_KEY'));
 
 Deno.serve(async (req) => {
   try {
@@ -126,9 +123,25 @@ Deno.serve(async (req) => {
       ? supplier.cc_emails.split(',').map(e => e.trim()).filter(e => e)
       : [];
 
-    // Envoyer l'email
-    const emailData = {
-      from: 'UpGraal <onboarding@resend.dev>',
+    // Récupérer le nom d'expéditeur depuis les paramètres
+    let senderName = 'UpGraal';
+    try {
+      const settings = await base44.asServiceRole.entities.AppSettings.filter({ setting_key: 'email_sender_name' });
+      if (settings.length > 0 && settings[0].email_sender_name) {
+        senderName = settings[0].email_sender_name;
+      }
+    } catch (err) {
+      console.log('Using default sender name');
+    }
+
+    // Préparer l'email avec pièce jointe
+    const apiKey = Deno.env.get('RESEND_API_KEY');
+    if (!apiKey) {
+      return Response.json({ error: 'RESEND_API_KEY not configured' }, { status: 500 });
+    }
+
+    const emailPayload = {
+      from: `${senderName} <noreply@upgraal.com>`,
       to: [supplier.email],
       subject: supplier.email_subject || `Commande ${order.supplier_name}`,
       text: emailBody,
@@ -141,18 +154,35 @@ Deno.serve(async (req) => {
     };
 
     if (ccEmails.length > 0) {
-      emailData.cc = ccEmails;
+      emailPayload.cc = ccEmails;
     }
 
     console.log('Envoi email avec les données suivantes:', {
-      to: emailData.to,
-      cc: emailData.cc,
-      subject: emailData.subject,
-      hasAttachment: !!emailData.attachments
+      to: emailPayload.to,
+      cc: emailPayload.cc,
+      subject: emailPayload.subject,
+      hasAttachment: !!emailPayload.attachments
     });
 
-    const result = await resend.emails.send(emailData);
+    // Envoyer via Resend API
+    const response = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(emailPayload)
+    });
+
+    const result = await response.json();
     console.log('Résultat Resend:', result);
+
+    if (!response.ok) {
+      return Response.json({ 
+        error: 'Erreur lors de l\'envoi de l\'email',
+        details: result
+      }, { status: response.status });
+    }
 
     // Mettre à jour le statut de la commande à "envoyée"
     await base44.asServiceRole.entities.Order.update(orderId, {
@@ -161,7 +191,8 @@ Deno.serve(async (req) => {
 
     return Response.json({ 
       success: true,
-      message: 'Email envoyé avec succès'
+      message: 'Email envoyé avec succès',
+      emailId: result.id
     });
 
   } catch (error) {
