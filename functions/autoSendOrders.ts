@@ -17,6 +17,7 @@ Deno.serve(async (req) => {
     const currentTime = `${String(parisTime.getHours()).padStart(2, '0')}:${String(parisTime.getMinutes()).padStart(2, '0')}`;
     
     console.log(`Vérification automatique - Jour: ${currentDay}, Heure Paris: ${currentTime}`);
+    console.log(`Debug timezone - UTC:`, now.toISOString(), `Paris:`, parisTime.toString());
 
     // Récupérer tous les fournisseurs actifs avec automatisation
     const suppliers = await base44.asServiceRole.entities.Supplier.filter({ is_active: true });
