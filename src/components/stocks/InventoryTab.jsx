@@ -254,12 +254,12 @@ export default function InventoryTab() {
       }
       
       ordersBySupplier[supplierId].items.push({
-        product_id: article.id,
+        product_id: article.isFree ? null : article.id,
         product_name: article.name,
         quantity: quantity,
         unit: article.unit,
         unit_price: article.unit_price || 0,
-        supplier_reference: article.supplier_reference
+        supplier_reference: article.supplier_reference || ''
       });
     });
 
@@ -272,7 +272,7 @@ export default function InventoryTab() {
           ...order,
           date: today,
           delivery_date: today,
-          status: 'sent'
+          status: 'en_cours'
         });
       }
       
