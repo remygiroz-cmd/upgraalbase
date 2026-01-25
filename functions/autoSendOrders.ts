@@ -3,6 +3,7 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
 Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
+    
     // Pour les automations, on skip l'auth car elles tournent sans utilisateur
     const isAutomated = !req.headers.get('authorization');
     
@@ -16,12 +17,34 @@ Deno.serve(async (req) => {
     const now = new Date();
     
     // Convertir en heure de Paris en utilisant Intl
-    const parisHour = parseInt(now.toLocaleString('en-US', { timeZone: 'Europe/Paris', hour: '2-digit', hour12: false }));
-    const parisMinute = parseInt(now.toLocaleString('en-US', { timeZone: 'Europe/Paris', minute: '2-digit' }));
-    const parisDay = parseInt(now.toLocaleString('en-US', { timeZone: 'Europe/Paris', weekday: 'narrow', day: 'numeric' }).match(/\d+/)?.[0] || '0');
-    const parisDayOfWeek = new Date(now.toLocaleString('en-US', { timeZone: 'Europe/Paris' })).getDay();
+    const formatter = new Intl.DateTimeFormat('fr-FR', {
+      timeZone: 'Europe/Paris',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      weekday: 'short'
+    });
     
-    const currentDay = ['D', 'L', 'MA', 'ME', 'J', 'V', 'S'][parisDayOfWeek];
+    const parts = formatter.formatToParts(now);
+    const parisHour = parseInt(parts.find(p => p.type === 'hour').value);
+    const parisMinute = parseInt(parts.find(p => p.type === 'minute').value);
+    const parisWeekday = parts.find(p => p.type === 'weekday').value;
+    
+    // Mapper le jour de la semaine français vers notre format
+    const dayMap = {
+      'dim.': 'D',
+      'lun.': 'L',
+      'mar.': 'MA',
+      'mer.': 'ME',
+      'jeu.': 'J',
+      'ven.': 'V',
+      'sam.': 'S'
+    };
+    
+    const currentDay = dayMap[parisWeekday] || 'D';
     const currentTime = `${String(parisHour).padStart(2, '0')}:${String(parisMinute).padStart(2, '0')}`;
     
     console.log(`Vérification automatique - Jour: ${currentDay}, Heure Paris: ${currentTime}`);
@@ -37,10 +60,8 @@ Deno.serve(async (req) => {
       const targetTimeInMinutes = targetHour * 60 + targetMinute;
       const currentTimeInMinutes = parisHour * 60 + parisMinute;
       
-      // Vérifier si on est dans une fenêtre de 5 minutes (ex: si closing_time=19:20, accepter 19:19, 19:20, 19:21, 19:22, 19:23, 19:24)
+      // Vérifier si on est dans une fenêtre de 5 minutes
       const diff = currentTimeInMinutes - targetTimeInMinutes;
-      
-      console.log(`Check ${closingTime}: target=${targetTimeInMinutes}min, current=${currentTimeInMinutes}min, diff=${diff}`);
       
       return diff >= 0 && diff < 5;
     };
@@ -50,16 +71,7 @@ Deno.serve(async (req) => {
       isWithinTimeWindow(s.closing_time)
     );
 
-    console.log(`Debug - Suppliers:`, suppliers.map(s => ({
-      name: s.name,
-      day: currentDay,
-      hasDay: s.delivery_days?.includes(currentDay),
-      closing: s.closing_time,
-      currentTime,
-      match: isWithinTimeWindow(s.closing_time)
-    })));
-    
-    console.log(`${suppliersToProcess.length} fournisseur(s) à traiter`);
+    console.log(`${suppliersToProcess.length} fournisseur(s) à traiter:`, suppliersToProcess.map(s => s.name));
 
     const results = [];
     
@@ -93,7 +105,7 @@ Deno.serve(async (req) => {
                 email_sent: true
               });
 
-              console.log(`Commande ${order.id} envoyée et terminée pour ${supplier.name}`);
+              console.log(`✓ Commande ${order.id} envoyée et terminée pour ${supplier.name}`);
             } else {
               results.push({
                 success: false,
@@ -101,6 +113,8 @@ Deno.serve(async (req) => {
                 order_id: order.id,
                 error: emailResult.data.error || 'Erreur inconnue'
               });
+              
+              console.error(`✗ Échec envoi pour ${supplier.name}:`, emailResult.data.error);
             }
           } catch (error) {
             console.error(`Erreur pour commande ${order.id}:`, error);
@@ -125,6 +139,8 @@ Deno.serve(async (req) => {
     return Response.json({
       success: true,
       timestamp: now.toISOString(),
+      parisTime: currentTime,
+      currentDay,
       processed: results.length,
       results
     });
