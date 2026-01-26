@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 
-export default function CourseItemCard({ item, itemNumber, currentState, onStateChange }) {
+export default function CourseItemCard({ item, itemNumber, currentState, onStateChange, isChecked, isRupture, onImageClick }) {
   const [showQuantityInput, setShowQuantityInput] = useState(false);
   const [customQuantity, setCustomQuantity] = useState(item.quantity);
 
@@ -40,11 +40,16 @@ export default function CourseItemCard({ item, itemNumber, currentState, onState
           <div className="flex gap-2 sm:gap-3">
             {/* Image */}
             {item.image_url ? (
-              <img
-                src={item.image_url}
-                alt={item.product_name}
-                className="w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 rounded object-cover flex-shrink-0"
-              />
+              <button
+                onClick={() => onImageClick(item.image_url)}
+                className="flex-shrink-0 hover:opacity-80 transition-opacity cursor-pointer"
+              >
+                <img
+                  src={item.image_url}
+                  alt={item.product_name}
+                  className="w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 rounded object-cover"
+                />
+              </button>
             ) : (
               <div className="w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 bg-gray-100 rounded flex-shrink-0" />
             )}
@@ -73,26 +78,35 @@ export default function CourseItemCard({ item, itemNumber, currentState, onState
       {/* Action Buttons */}
       {!showQuantityInput ? (
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-3">
-          <Button
-            onClick={handleTrouve}
-            className="bg-green-600 hover:bg-green-700 text-white font-bold py-2 sm:py-3 text-sm sm:text-base h-auto min-h-[44px] touch-manipulation"
-          >
-            ✓ Trouvé
-          </Button>
-          <Button
-            onClick={handlePartielle}
-            variant="outline"
-            className="border-orange-600 text-orange-600 hover:bg-orange-50 font-bold py-2 sm:py-3 text-sm sm:text-base h-auto min-h-[44px] touch-manipulation"
-          >
-            ⊘ Partielle
-          </Button>
-          <Button
-            onClick={handleTotale}
-            variant="outline"
-            className="border-red-600 text-red-600 hover:bg-red-50 font-bold py-2 sm:py-3 text-sm sm:text-base h-auto min-h-[44px] touch-manipulation"
-          >
-            ✕ Totale
-          </Button>
+          {!isChecked && !isRupture && (
+            <>
+              <Button
+                onClick={handleTrouve}
+                className="bg-green-600 hover:bg-green-700 text-white font-bold py-2 sm:py-3 text-sm sm:text-base h-auto min-h-[44px] touch-manipulation"
+              >
+                ✓ Trouvé
+              </Button>
+              <Button
+                onClick={handlePartielle}
+                variant="outline"
+                className="border-orange-600 text-orange-600 hover:bg-orange-50 font-bold py-2 sm:py-3 text-sm sm:text-base h-auto min-h-[44px] touch-manipulation"
+              >
+                ⊘ Partielle
+              </Button>
+              <Button
+                onClick={handleTotale}
+                variant="outline"
+                className="border-red-600 text-red-600 hover:bg-red-50 font-bold py-2 sm:py-3 text-sm sm:text-base h-auto min-h-[44px] touch-manipulation"
+              >
+                ✕ Totale
+              </Button>
+            </>
+          )}
+          {(isChecked || isRupture) && (
+            <p className="text-gray-500 text-sm text-center py-2 col-span-1 sm:col-span-3">
+              {isChecked ? 'Article checké' : 'Article en rupture'}
+            </p>
+          )}
         </div>
       ) : (
         <div className="space-y-2 sm:space-y-3">
