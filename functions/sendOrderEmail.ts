@@ -239,6 +239,18 @@ Deno.serve(async (req) => {
       hasAttachment: !!emailPayload.attachments
     });
 
+    // Préparer l'historique
+    const currentHistory = order.history || [];
+    const emailList = [supplier.email, ...ccEmails].join(', ');
+    
+    currentHistory.push({
+      timestamp: new Date().toISOString(),
+      action: 'email_sent',
+      details: `Email envoyé à: ${emailList}`,
+      user_email: user.email,
+      user_name: user.full_name || user.email
+    });
+
     // Envoyer via Resend API
     const response = await fetch('https://api.resend.com/emails', {
       method: 'POST',
@@ -259,7 +271,10 @@ Deno.serve(async (req) => {
       }, { status: response.status });
     }
 
-    // Ne pas mettre à jour le statut ici, cela sera fait par autoSendOrders si nécessaire
+    // Mettre à jour l'historique de la commande
+    await base44.asServiceRole.entities.Order.update(order.id, {
+      history: currentHistory
+    });
 
     return Response.json({ 
       success: true,

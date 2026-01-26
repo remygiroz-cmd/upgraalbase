@@ -3,7 +3,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Button } from '@/components/ui/button';
 import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
-import { Mail, Printer, Edit, Trash2, Calendar } from 'lucide-react';
+import { Mail, Printer, Edit, Trash2, Calendar, Clock } from 'lucide-react';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -30,6 +30,11 @@ export default function OrderDetailModal({ order, isOpen, onClose }) {
     setItems(order?.items || []);
     setStatus(order?.status || 'en_cours');
   }, [order]);
+
+  const { data: currentUser } = useQuery({
+    queryKey: ['currentUser'],
+    queryFn: () => base44.auth.me()
+  });
 
   const updateOrderMutation = useMutation({
     mutationFn: ({ id, data }) => base44.entities.Order.update(id, data),
@@ -72,11 +77,32 @@ export default function OrderDetailModal({ order, isOpen, onClose }) {
     });
   };
 
+  const getStatusLabel = (statusValue) => {
+    const labels = {
+      en_cours: 'En cours',
+      envoyee: 'Envoyée',
+      terminee: 'Terminée',
+      annulee: 'Annulée'
+    };
+    return labels[statusValue] || statusValue;
+  };
+
   const handleStatusChange = (newStatus) => {
+    const oldStatus = status;
     setStatus(newStatus);
+    
+    const currentHistory = order.history || [];
+    currentHistory.push({
+      timestamp: new Date().toISOString(),
+      action: 'status_change',
+      details: `Statut modifié: ${getStatusLabel(oldStatus)} → ${getStatusLabel(newStatus)}`,
+      user_email: currentUser?.email || 'unknown',
+      user_name: currentUser?.full_name || 'Utilisateur'
+    });
+    
     updateOrderMutation.mutate({
       id: order.id,
-      data: { status: newStatus }
+      data: { status: newStatus, history: currentHistory }
     });
   };
 
@@ -275,6 +301,36 @@ export default function OrderDetailModal({ order, isOpen, onClose }) {
               </div>
             )}
           </div>
+
+          {/* Historique */}
+          {order.history && order.history.length > 0 && (
+            <div className="mt-6 pt-6 border-t border-gray-200">
+              <h3 className="text-sm font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                <Clock className="w-4 h-4" />
+                Historique des actions
+              </h3>
+              <div className="space-y-2">
+                {[...order.history].reverse().map((entry, idx) => (
+                  <div key={idx} className="flex items-start gap-3 text-xs bg-gray-50 p-3 rounded-lg">
+                    <div className="flex-1">
+                      <div className="font-medium text-gray-900">{entry.details}</div>
+                      <div className="text-gray-500 mt-1">
+                        {entry.user_name} • {format(new Date(entry.timestamp), 'dd/MM/yyyy à HH:mm', { locale: fr })}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+                <div className="flex items-start gap-3 text-xs bg-gray-50 p-3 rounded-lg">
+                  <div className="flex-1">
+                    <div className="font-medium text-gray-900">Commande créée</div>
+                    <div className="text-gray-500 mt-1">
+                      {order.created_by} • {format(new Date(order.created_date), 'dd/MM/yyyy à HH:mm', { locale: fr })}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Footer */}
