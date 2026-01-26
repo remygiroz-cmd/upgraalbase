@@ -174,6 +174,9 @@ Deno.serve(async (req) => {
     emailBody += '─────────────────────────────────\n\n';
     emailBody += `📦 DÉTAILS DE LA COMMANDE\n\n`;
     emailBody += `Date: ${orderDate.toLocaleDateString('fr-FR')}\n`;
+    if (order.desired_delivery_day) {
+      emailBody += `🚚 Livraison souhaitée: ${order.desired_delivery_day}\n`;
+    }
     emailBody += `Fournisseur: ${order.supplier_name}\n\n`;
     
     (order.items || []).forEach((item, idx) => {
