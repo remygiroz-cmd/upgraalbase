@@ -15,6 +15,7 @@ export default function OrderDetailModal({ order, isOpen, onClose }) {
   const [items, setItems] = useState([]);
   const [showEmailConfirm, setShowEmailConfirm] = useState(false);
   const [emailRecipient, setEmailRecipient] = useState('');
+  const [desiredDeliveryDay, setDesiredDeliveryDay] = useState(order?.desired_delivery_day || '');
   const queryClient = useQueryClient();
 
   const { data: supplier } = useQuery({
@@ -29,6 +30,7 @@ export default function OrderDetailModal({ order, isOpen, onClose }) {
   useEffect(() => {
     setItems(order?.items || []);
     setStatus(order?.status || 'en_cours');
+    setDesiredDeliveryDay(order?.desired_delivery_day || '');
   }, [order]);
 
   const { data: currentUser } = useQuery({
@@ -169,33 +171,62 @@ export default function OrderDetailModal({ order, isOpen, onClose }) {
         <DialogContent className="bg-white border-gray-200 max-w-3xl max-h-[95vh] sm:max-h-[90vh] overflow-hidden flex flex-col p-0">
         {/* Header */}
         <DialogHeader className="flex-shrink-0 px-4 sm:px-6 pt-5 pb-4 border-b border-gray-200 bg-gradient-to-r from-orange-50 to-white">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-            <div>
-              <DialogTitle className="text-lg sm:text-xl font-bold text-gray-900">
-                {order.supplier_name?.toUpperCase()}
-              </DialogTitle>
-              <div className="flex items-center gap-2 mt-1">
-                <Calendar className="w-3.5 h-3.5 text-gray-500" />
-                <span className="text-xs sm:text-sm text-gray-600">
-                  {format(new Date(order.date), 'dd-MM-yy', { locale: fr })}
-                </span>
-              </div>
-            </div>
-            <Select value={status} onValueChange={handleStatusChange}>
-              <SelectTrigger className="w-full sm:w-[160px] border-gray-300">
-                <SelectValue>
-                  <span className={`px-3 py-1.5 rounded-full text-xs font-bold ${badge.style}`}>
-                    {badge.label}
+          <div className="flex flex-col gap-3">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+              <div>
+                <DialogTitle className="text-lg sm:text-xl font-bold text-gray-900">
+                  {order.supplier_name?.toUpperCase()}
+                </DialogTitle>
+                <div className="flex items-center gap-2 mt-1">
+                  <Calendar className="w-3.5 h-3.5 text-gray-500" />
+                  <span className="text-xs sm:text-sm text-gray-600">
+                    {format(new Date(order.date), 'dd-MM-yy', { locale: fr })}
                   </span>
-                </SelectValue>
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="en_cours">En cours</SelectItem>
-                <SelectItem value="envoyee">Envoyée</SelectItem>
-                <SelectItem value="terminee">Terminée</SelectItem>
-                <SelectItem value="annulee">Annulée</SelectItem>
-              </SelectContent>
-            </Select>
+                </div>
+              </div>
+              <Select value={status} onValueChange={handleStatusChange}>
+                <SelectTrigger className="w-full sm:w-[160px] border-gray-300">
+                  <SelectValue>
+                    <span className={`px-3 py-1.5 rounded-full text-xs font-bold ${badge.style}`}>
+                      {badge.label}
+                    </span>
+                  </SelectValue>
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="en_cours">En cours</SelectItem>
+                  <SelectItem value="envoyee">Envoyée</SelectItem>
+                  <SelectItem value="terminee">Terminée</SelectItem>
+                  <SelectItem value="annulee">Annulée</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <Label className="text-xs text-gray-600 mb-1 block">Jour de livraison souhaité</Label>
+              <Select 
+                value={desiredDeliveryDay} 
+                onValueChange={(value) => {
+                  setDesiredDeliveryDay(value);
+                  updateOrderMutation.mutate({
+                    id: order.id,
+                    data: { desired_delivery_day: value }
+                  });
+                }}
+              >
+                <SelectTrigger className="w-full sm:w-[200px] border-gray-300 bg-white">
+                  <SelectValue placeholder="Sélectionner un jour" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Lundi">Lundi</SelectItem>
+                  <SelectItem value="Mardi">Mardi</SelectItem>
+                  <SelectItem value="Mercredi">Mercredi</SelectItem>
+                  <SelectItem value="Jeudi">Jeudi</SelectItem>
+                  <SelectItem value="Vendredi">Vendredi</SelectItem>
+                  <SelectItem value="Samedi">Samedi</SelectItem>
+                  <SelectItem value="Dimanche">Dimanche</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
         </DialogHeader>
 
