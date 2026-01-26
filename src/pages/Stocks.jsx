@@ -28,17 +28,17 @@ export default function Stocks() {
       />
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-2 mb-6 h-auto bg-transparent p-0">
+        <TabsList className="grid w-full grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 sm:gap-3 mb-6 h-auto bg-transparent p-0">
           {tabs.map(tab => {
             const Icon = tab.icon;
             return (
               <TabsTrigger 
                 key={tab.id} 
                 value={tab.id} 
-                className="flex flex-col items-center gap-2 p-3 rounded-lg border-2 border-gray-300 data-[state=active]:border-blue-600 data-[state=active]:bg-blue-50"
+                className="flex flex-col items-center gap-1 sm:gap-2 p-2 sm:p-3 rounded-lg border-2 border-gray-300 data-[state=active]:border-blue-600 data-[state=active]:bg-blue-50 transition-all"
               >
-                <Icon className="w-5 h-5" />
-                <span className="text-xs font-medium text-center">{tab.label}</span>
+                <Icon className="w-5 h-5 sm:w-6 sm:h-6" />
+                <span className="text-[10px] sm:text-xs font-medium text-center leading-tight">{tab.label}</span>
               </TabsTrigger>
             );
           })}
