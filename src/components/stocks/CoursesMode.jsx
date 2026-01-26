@@ -303,19 +303,10 @@ export default function CoursesMode() {
                 transition={{ duration: 0.2 }}
                 className={cn(
                   "bg-white rounded-xl border-2 p-4 transition-all",
-                  statusFilter === 'todo' && "border-slate-700 hover:border-orange-500 hover:shadow-lg cursor-pointer",
+                  statusFilter === 'todo' && "border-slate-700",
                   statusFilter === 'checked' && "border-green-300 bg-green-50",
                   statusFilter === 'rupture' && "border-red-300 bg-red-50"
                 )}
-                onClick={() => {
-                  if (statusFilter === 'todo') {
-                    handleToggleItem(item, 'checked');
-                  } else if (statusFilter === 'checked') {
-                    handleToggleItem(item, 'todo');
-                  } else if (statusFilter === 'rupture') {
-                    handleToggleItem(item, 'todo');
-                  }
-                }}
               >
                 <div className="flex items-center gap-4">
                   {/* Product Image */}
@@ -355,34 +346,35 @@ export default function CoursesMode() {
 
                   {/* Action Buttons (only in TODO mode) */}
                   {statusFilter === 'todo' && (
-                    <div className="flex gap-2 flex-shrink-0">
+                    <div className="flex flex-col gap-2 w-full mt-3">
                       <Button
-                        variant="outline"
-                        size="icon"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setPartialRuptureItem(item);
-                        }}
-                        className="border-orange-500 text-orange-500 hover:bg-orange-50 h-12 w-12"
-                        title="Rupture partielle"
+                        onClick={() => handleToggleItem(item, 'checked')}
+                        className="bg-green-600 hover:bg-green-700 text-white w-full h-14 text-base font-semibold"
                       >
-                        <div className="flex flex-col items-center">
-                          <CheckCircle className="w-4 h-4" />
-                          <Ban className="w-4 h-4 -mt-1" />
-                        </div>
+                        <CheckCircle className="w-5 h-5 mr-2" />
+                        Trouvé
                       </Button>
-                      <Button
-                        variant="outline"
-                        size="icon"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleToggleItem(item, 'rupture');
-                        }}
-                        className="border-red-500 text-red-500 hover:bg-red-50 h-12 w-12"
-                        title="Rupture totale"
-                      >
-                        <Ban className="w-6 h-6" />
-                      </Button>
+                      <div className="grid grid-cols-2 gap-2">
+                        <Button
+                          variant="outline"
+                          onClick={() => setPartialRuptureItem(item)}
+                          className="border-orange-500 text-orange-500 hover:bg-orange-50 h-12 text-sm font-semibold"
+                        >
+                          <div className="flex items-center gap-1">
+                            <CheckCircle className="w-4 h-4" />
+                            <Ban className="w-4 h-4" />
+                          </div>
+                          Partielle
+                        </Button>
+                        <Button
+                          variant="outline"
+                          onClick={() => handleToggleItem(item, 'rupture')}
+                          className="border-red-500 text-red-500 hover:bg-red-50 h-12 text-sm font-semibold"
+                        >
+                          <Ban className="w-5 h-5 mr-1" />
+                          Totale
+                        </Button>
+                      </div>
                     </div>
                   )}
                 </div>
