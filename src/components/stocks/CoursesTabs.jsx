@@ -13,26 +13,52 @@ export default function CoursesTabs({ order }) {
   const [activeTab, setActiveTab] = useState('a_prendre');
   const [zoomImage, setZoomImage] = useState(null);
 
-  // Initialize items with state tracking
-  const [itemStates, setItemStates] = useState(() => {
-    return order.items?.reduce((acc, item) => {
-      acc[item.product_id] = { state: 'a_prendre', quantity: item.quantity };
-      return acc;
-    }, {}) || {};
+  // Initialize items with state tracking - use array to allow splitting items
+  const [itemInstances, setItemInstances] = useState(() => {
+    return (order.items || []).map((item, index) => ({
+      instanceId: `${item.product_id}-${index}`,
+      ...item,
+      state: 'a_prendre'
+    }));
   });
 
   const getItemsByState = (state) => {
-    return (order.items || []).filter(item => itemStates[item.product_id]?.state === state);
+    return itemInstances.filter(item => item.state === state);
   };
 
-  const updateItemState = (productId, newState, quantity = null) => {
-    setItemStates(prev => ({
-      ...prev,
-      [productId]: {
-        state: newState,
-        quantity: quantity !== null ? quantity : prev[productId]?.quantity || 0
+  const updateItemState = (instanceId, newState, partialQuantity = null) => {
+    setItemInstances(prev => {
+      const itemIndex = prev.findIndex(item => item.instanceId === instanceId);
+      if (itemIndex === -1) return prev;
+
+      const item = prev[itemIndex];
+      const result = [...prev];
+
+      // Si c'est une rupture partielle (partialQuantity est fourni)
+      if (partialQuantity !== null && partialQuantity > 0 && partialQuantity < item.quantity) {
+        // Créer une instance en check avec la quantité trouvée
+        result[itemIndex] = {
+          ...item,
+          instanceId: `${item.product_id}-check-${Date.now()}`,
+          quantity: partialQuantity,
+          state: 'check'
+        };
+        // Ajouter une instance en rupture avec le reste
+        result.push({
+          ...item,
+          instanceId: `${item.product_id}-rupture-${Date.now()}`,
+          quantity: item.quantity - partialQuantity,
+          state: 'rupture'
+        });
+      } else {
+        // Cas normal : tout l'article change d'état
+        result[itemIndex] = {
+          ...item,
+          state: newState
+        };
       }
-    }));
+      return result;
+    });
   };
 
   const aPrendreItems = getItemsByState('a_prendre');
