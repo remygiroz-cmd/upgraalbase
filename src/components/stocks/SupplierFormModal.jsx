@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { Switch } from '@/components/ui/switch';
 
 const DAYS = [
   { key: 'L', label: 'Lundi' },
@@ -28,7 +29,8 @@ export default function SupplierFormModal({ open, onClose, onSave, isSaving, sup
     closing_time: '02:00',
     cc_emails: '',
     email_subject: '',
-    custom_message: ''
+    custom_message: '',
+    hide_prices: true
   });
 
   useEffect(() => {
@@ -45,7 +47,8 @@ export default function SupplierFormModal({ open, onClose, onSave, isSaving, sup
         closing_time: supplier.closing_time || '02:00',
         cc_emails: supplier.cc_emails || '',
         email_subject: supplier.email_subject || '',
-        custom_message: supplier.custom_message || ''
+        custom_message: supplier.custom_message || '',
+        hide_prices: supplier.hide_prices !== undefined ? supplier.hide_prices : true
       });
     } else {
       setForm({
@@ -60,7 +63,8 @@ export default function SupplierFormModal({ open, onClose, onSave, isSaving, sup
         closing_time: '02:00',
         cc_emails: '',
         email_subject: '',
-        custom_message: ''
+        custom_message: '',
+        hide_prices: true
       });
     }
   }, [supplier, open]);
