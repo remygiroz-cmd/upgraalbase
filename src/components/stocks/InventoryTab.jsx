@@ -127,8 +127,11 @@ export default function InventoryTab() {
     ? todayArticles 
     : todayArticles.filter(article => !completedArticles.has(article.id));
 
+  // Trier par storage_order avant de grouper
+  const sortedArticles = [...filteredArticles].sort((a, b) => (a.storage_order || 0) - (b.storage_order || 0));
+
   // Grouper par catégorie
-  const groupedByCategory = filteredArticles.reduce((acc, article) => {
+  const groupedByCategory = sortedArticles.reduce((acc, article) => {
     const category = article.category || 'Sans catégorie';
     if (!acc[category]) {
       acc[category] = [];
@@ -136,11 +139,6 @@ export default function InventoryTab() {
     acc[category].push(article);
     return acc;
   }, {});
-
-  // Trier par storage_order dans chaque catégorie
-  Object.keys(groupedByCategory).forEach(category => {
-    groupedByCategory[category].sort((a, b) => (a.storage_order || 0) - (b.storage_order || 0));
-  });
 
   const handleStockChange = (articleId, value, article) => {
     setStockValues(prev => ({
