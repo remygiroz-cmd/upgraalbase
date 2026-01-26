@@ -386,7 +386,10 @@ export default function CoursesMode() {
                     {statusFilter === 'todo' && (
                       <div className="space-y-2">
                         <Button
-                          onClick={() => handleToggleItem(item, 'checked')}
+                          onClick={() => {
+                            console.log('🟢 BOUTON TROUVÉ CLIQUÉ', item);
+                            handleToggleItem(item, 'checked');
+                          }}
                           className="bg-green-600 hover:bg-green-700 text-white w-full h-11 text-sm font-semibold rounded-lg shadow-md active:scale-95 transition-transform"
                         >
                           <CheckCircle className="w-4 h-4 mr-2" />
@@ -459,7 +462,10 @@ export default function CoursesMode() {
                       {statusFilter === 'todo' && (
                         <div className="space-y-2">
                           <Button
-                            onClick={() => handleToggleItem(item, 'checked')}
+                            onClick={() => {
+                              console.log('🟢 BOUTON TROUVÉ CLIQUÉ (desktop)', item);
+                              handleToggleItem(item, 'checked');
+                            }}
                             className="bg-green-600 hover:bg-green-700 text-white w-full h-12 lg:h-14 text-sm lg:text-base font-semibold rounded-lg shadow-md active:scale-95 transition-transform"
                           >
                             <CheckCircle className="w-4 h-4 lg:w-5 lg:h-5 mr-2" />
