@@ -113,11 +113,19 @@ export default function CoursesMode() {
     ruptureItems;
 
   const handleToggleItem = async (item, newStatus) => {
+    console.log('🔄 handleToggleItem called', { item, newStatus });
     const order = currentSupplierData.orders.find(o => o.id === item.orderId);
-    if (!order) return;
+    if (!order) {
+      console.error('❌ Order not found');
+      return;
+    }
+
+    console.log('📦 Order found', order);
+    console.log('📋 Current items', order.items);
 
     const updatedItems = order.items.map((i, idx) => {
       if (idx === item.itemIndex) {
+        console.log('✅ Updating item at index', idx);
         return {
           ...i,
           isChecked: newStatus === 'checked',
@@ -127,11 +135,14 @@ export default function CoursesMode() {
       return i;
     });
 
+    console.log('📝 Updated items', updatedItems);
+
     try {
-      await updateOrderMutation.mutateAsync({
+      const result = await updateOrderMutation.mutateAsync({
         id: order.id,
         data: { items: updatedItems }
       });
+      console.log('✅ Update successful', result);
       
       if (newStatus === 'checked') {
         toast.success(`${item.product_name} → Check`);
@@ -159,8 +170,8 @@ export default function CoursesMode() {
         }, 1000);
       }
     } catch (error) {
+      console.error('❌ Error updating order', error);
       toast.error('Erreur lors de la mise à jour');
-      console.error(error);
     }
   };
 
