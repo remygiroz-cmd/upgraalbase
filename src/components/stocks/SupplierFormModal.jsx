@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 const DAYS = [
   { key: 'L', label: 'Lundi' },
@@ -24,6 +25,7 @@ export default function SupplierFormModal({ open, onClose, onSave, isSaving, sup
     address: '',
     internal_reference: '',
     delivery_days: [],
+    preferred_delivery_day: '',
     closing_time: '02:00',
     cc_emails: '',
     email_subject: '',
@@ -40,6 +42,7 @@ export default function SupplierFormModal({ open, onClose, onSave, isSaving, sup
         address: supplier.address || '',
         internal_reference: supplier.internal_reference || '',
         delivery_days: supplier.delivery_days || [],
+        preferred_delivery_day: supplier.preferred_delivery_day || '',
         closing_time: supplier.closing_time || '02:00',
         cc_emails: supplier.cc_emails || '',
         email_subject: supplier.email_subject || '',
@@ -54,6 +57,7 @@ export default function SupplierFormModal({ open, onClose, onSave, isSaving, sup
         address: '',
         internal_reference: '',
         delivery_days: [],
+        preferred_delivery_day: '',
         closing_time: '02:00',
         cc_emails: '',
         email_subject: '',
@@ -154,7 +158,7 @@ export default function SupplierFormModal({ open, onClose, onSave, isSaving, sup
             
             <div className="space-y-4">
               <div>
-                <Label className="mb-3 block">Jours d'envoi</Label>
+                <Label className="mb-3 block">Jours d'envoi automatique</Label>
                 <div className="flex flex-wrap gap-2">
                   {DAYS.map((day, idx) => (
                     <button
@@ -171,6 +175,25 @@ export default function SupplierFormModal({ open, onClose, onSave, isSaving, sup
                     </button>
                   ))}
                 </div>
+              </div>
+
+              <div>
+                <Label htmlFor="preferred_delivery_day">Jour de livraison souhaité</Label>
+                <Select
+                  value={form.preferred_delivery_day}
+                  onValueChange={(value) => setForm(prev => ({ ...prev, preferred_delivery_day: value }))}
+                >
+                  <SelectTrigger className="bg-gray-50 border-gray-300 mt-1">
+                    <SelectValue placeholder="Sélectionner un jour" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {DAYS.map((day) => (
+                      <SelectItem key={day.key} value={day.key}>
+                        {day.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
 
               <div>
