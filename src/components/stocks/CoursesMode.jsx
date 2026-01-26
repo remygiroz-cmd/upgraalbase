@@ -9,6 +9,7 @@ import { cn } from '@/lib/utils';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import EmptyState from '@/components/ui/EmptyState';
 import CelebrationOverlay from './CelebrationOverlay';
+import PartialRuptureModal from './PartialRuptureModal';
 import { AnimatePresence, motion } from 'framer-motion';
 import { toast } from 'sonner';
 
@@ -16,6 +17,7 @@ export default function CoursesMode() {
   const [selectedSupplier, setSelectedSupplier] = useState(null);
   const [statusFilter, setStatusFilter] = useState('todo');
   const [showCelebration, setShowCelebration] = useState(false);
+  const [partialRuptureItem, setPartialRuptureItem] = useState(null);
   const queryClient = useQueryClient();
 
   const { data: orders = [], isLoading } = useQuery({
@@ -154,6 +156,75 @@ export default function CoursesMode() {
     }
   };
 
+  const handlePartialRupture = async ({ checkedQuantity, ruptureQuantity }) => {
+    const item = partialRuptureItem;
+    const order = currentSupplierData.orders.find(o => o.id === item.orderId);
+    if (!order) return;
+
+    // Si tout est pris (pas de rupture), juste marquer comme checked
+    if (ruptureQuantity === 0) {
+      await handleToggleItem(item, 'checked');
+      return;
+    }
+
+    // Si tout est en rupture, marquer comme rupture
+    if (checkedQuantity === 0) {
+      await handleToggleItem(item, 'rupture');
+      return;
+    }
+
+    // Cas de rupture partielle : créer deux items
+    const updatedItems = order.items.flatMap(i => {
+      if (i.product_id === item.product_id) {
+        return [
+          {
+            ...i,
+            quantity: checkedQuantity,
+            isChecked: true,
+            isRupture: false
+          },
+          {
+            ...i,
+            quantity: ruptureQuantity,
+            isChecked: false,
+            isRupture: true
+          }
+        ];
+      }
+      return i;
+    });
+
+    await updateOrderMutation.mutateAsync({
+      id: order.id,
+      data: { items: updatedItems }
+    });
+
+    // Log rupture partielle
+    await createRuptureMutation.mutateAsync({
+      date: new Date().toISOString().split('T')[0],
+      supplier_name: order.supplier_name,
+      supplier_id: order.supplier_id,
+      item_name: item.product_name,
+      quantity: ruptureQuantity,
+      unit: item.unit,
+      order_id: order.id
+    });
+
+    toast.success(`${checkedQuantity} ${item.unit} → Check, ${ruptureQuantity} ${item.unit} → Rupture`);
+
+    // Check if all items are done
+    const allDone = updatedItems.every(i => i.isChecked || i.isRupture);
+    if (allDone && todoItems.length === 1) {
+      setShowCelebration(true);
+      setTimeout(async () => {
+        await updateOrderMutation.mutateAsync({
+          id: order.id,
+          data: { status: 'terminee' }
+        });
+      }, 1000);
+    }
+  };
+
   const handleCelebrationComplete = () => {
     setShowCelebration(false);
     // Move to next supplier or reset
@@ -282,19 +353,37 @@ export default function CoursesMode() {
                     </div>
                   )}
 
-                  {/* Rupture Button (only in TODO mode) */}
+                  {/* Action Buttons (only in TODO mode) */}
                   {statusFilter === 'todo' && (
-                    <Button
-                      variant="outline"
-                      size="icon"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleToggleItem(item, 'rupture');
-                      }}
-                      className="border-red-500 text-red-500 hover:bg-red-50 h-12 w-12 flex-shrink-0"
-                    >
-                      <Ban className="w-6 h-6" />
-                    </Button>
+                    <div className="flex gap-2 flex-shrink-0">
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setPartialRuptureItem(item);
+                        }}
+                        className="border-orange-500 text-orange-500 hover:bg-orange-50 h-12 w-12"
+                        title="Rupture partielle"
+                      >
+                        <div className="flex flex-col items-center">
+                          <CheckCircle className="w-4 h-4" />
+                          <Ban className="w-4 h-4 -mt-1" />
+                        </div>
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleToggleItem(item, 'rupture');
+                        }}
+                        className="border-red-500 text-red-500 hover:bg-red-50 h-12 w-12"
+                        title="Rupture totale"
+                      >
+                        <Ban className="w-6 h-6" />
+                      </Button>
+                    </div>
                   )}
                 </div>
               </motion.div>
@@ -325,6 +414,16 @@ export default function CoursesMode() {
           <CelebrationOverlay onComplete={handleCelebrationComplete} />
         )}
       </AnimatePresence>
+
+      {/* Partial Rupture Modal */}
+      {partialRuptureItem && (
+        <PartialRuptureModal
+          isOpen={!!partialRuptureItem}
+          onClose={() => setPartialRuptureItem(null)}
+          item={partialRuptureItem}
+          onConfirm={handlePartialRupture}
+        />
+      )}
     </div>
   );
 }
