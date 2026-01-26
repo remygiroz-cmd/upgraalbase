@@ -10,6 +10,7 @@ import { fr } from 'date-fns/locale';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
 import EmailConfirmModal from './EmailConfirmModal';
+import HistoryEntryFormatter from './HistoryEntryFormatter';
 
 export default function OrderDetailModal({ order, isOpen, onClose }) {
   const [status, setStatus] = useState(order?.status || 'en_cours');
@@ -343,14 +344,7 @@ export default function OrderDetailModal({ order, isOpen, onClose }) {
               </h3>
               <div className="space-y-2">
                 {[...order.history].reverse().map((entry, idx) => (
-                  <div key={idx} className="flex items-start gap-3 text-xs bg-gray-50 p-3 rounded-lg">
-                    <div className="flex-1">
-                      <div className="font-medium text-gray-900">{entry.details}</div>
-                      <div className="text-gray-500 mt-1">
-                        {entry.user_name} • {format(new Date(entry.timestamp), 'dd/MM/yyyy à HH:mm', { locale: fr })}
-                      </div>
-                    </div>
-                  </div>
+                  <HistoryEntryFormatter key={idx} entry={entry} />
                 ))}
                 <div className="flex items-start gap-3 text-xs bg-gray-50 p-3 rounded-lg">
                   <div className="flex-1">
