@@ -28,6 +28,9 @@ Deno.serve(async (req) => {
     const establishments = await base44.entities.Establishment.list();
     const establishment = establishments[0] || {};
 
+    // Vérifier si on doit masquer les prix
+    const hidePrices = supplier.hide_prices !== false; // true par défaut
+
     // Générer le PDF
     const doc = new jsPDF();
     
@@ -85,7 +88,9 @@ Deno.serve(async (req) => {
     doc.setFontSize(12);
     doc.text('DÉSIGNATION', 20, yPos);
     doc.text('QUANTITÉ', 120, yPos);
-    doc.text('TOTAL HT', 170, yPos);
+    if (!hidePrices) {
+      doc.text('TOTAL HT', 170, yPos);
+    }
     
     let y = yPos + 10;
     let totalAmount = 0;
@@ -112,7 +117,7 @@ Deno.serve(async (req) => {
                       `${item.quantity} ${item.unit || ''}`;
       doc.text(qtyText, 120, y);
       
-      if (item.unit_price && item.unit_price > 0) {
+      if (!hidePrices && item.unit_price && item.unit_price > 0) {
         const itemTotal = item.quantity * item.unit_price;
         totalAmount += itemTotal;
         doc.text(`${itemTotal.toFixed(2)} €`, 170, y);
@@ -121,11 +126,13 @@ Deno.serve(async (req) => {
       y += item.supplier_reference ? 10 : 8;
     });
     
-    // Total
-    y += 10;
-    doc.setFontSize(14);
-    doc.text('TOTAL ESTIMÉ HT', 20, y);
-    doc.text(`${totalAmount.toFixed(2)} €`, 170, y);
+    // Total (seulement si pas masqué)
+    if (!hidePrices) {
+      y += 10;
+      doc.setFontSize(14);
+      doc.text('TOTAL ESTIMÉ HT', 20, y);
+      doc.text(`${totalAmount.toFixed(2)} €`, 170, y);
+    }
     
     // Convertir en base64
     const pdfBase64 = doc.output('datauristring').split(',')[1];
@@ -184,14 +191,16 @@ Deno.serve(async (req) => {
                       item.unit === 'Sacs' ? `${item.quantity} Sacs` :
                       `${item.quantity} ${item.unit || ''}`;
       emailBody += `   Quantité: ${qtyText}\n`;
-      if (item.unit_price && item.unit_price > 0) {
+      if (!hidePrices && item.unit_price && item.unit_price > 0) {
         emailBody += `   Prix unitaire: ${item.unit_price.toFixed(2)} €\n`;
         emailBody += `   Total: ${(item.quantity * item.unit_price).toFixed(2)} €\n`;
       }
       emailBody += '\n';
     });
     
-    emailBody += `\n💰 TOTAL ESTIMÉ HT: ${totalAmount.toFixed(2)} €\n`;
+    if (!hidePrices) {
+      emailBody += `\n💰 TOTAL ESTIMÉ HT: ${totalAmount.toFixed(2)} €\n`;
+    }
 
     // Préparer les emails CC
     const ccEmails = supplier.cc_emails 
