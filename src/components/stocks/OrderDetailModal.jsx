@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
-import { Mail, Printer, Edit, Trash2, Calendar, Clock } from 'lucide-react';
+import { Mail, Printer, Trash2, Calendar, Clock } from 'lucide-react';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -394,13 +394,6 @@ export default function OrderDetailModal({ order, isOpen, onClose }) {
             >
               <Printer className="w-4 h-4" />
               <span className="hidden sm:inline">Imprimer</span>
-            </Button>
-            <Button
-              variant="outline"
-              className="border-blue-600 text-blue-600 hover:bg-blue-50 gap-2 h-11 sm:h-10 touch-manipulation"
-            >
-              <Edit className="w-4 h-4" />
-              <span className="hidden sm:inline">Modifier</span>
             </Button>
             <Button
               onClick={handleDelete}
