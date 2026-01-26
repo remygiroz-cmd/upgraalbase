@@ -7,6 +7,8 @@ import ArticlesTab from '@/components/stocks/ArticlesTab';
 import SuppliersTab from '@/components/stocks/SuppliersTab';
 import InventoryTab from '@/components/stocks/InventoryTab';
 import CommandesTab from '@/components/stocks/CommandesTab';
+import CoursesMode from '@/components/stocks/CoursesMode';
+import RupturesTab from '@/components/stocks/RupturesTab';
 
 export default function Stocks() {
   const [activeTab, setActiveTab] = useState('inventory');
@@ -55,6 +57,10 @@ export default function Stocks() {
               <SuppliersTab />
             ) : tab.id === 'orders' ? (
               <CommandesTab />
+            ) : tab.id === 'shopping' ? (
+              <CoursesMode />
+            ) : tab.id === 'stockouts' ? (
+              <RupturesTab />
             ) : (
               <EmptyState
                 icon={tab.icon}
