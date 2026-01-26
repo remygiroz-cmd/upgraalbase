@@ -186,6 +186,19 @@ export default function SupplierFormModal({ open, onClose, onSave, isSaving, sup
               </div>
 
               <div>
+                <Label htmlFor="closing_time">Heure d'envoi (multiples de 5 min)</Label>
+                <Input
+                  id="closing_time"
+                  type="time"
+                  step="300"
+                  value={form.closing_time}
+                  onChange={(e) => setForm(prev => ({ ...prev, closing_time: e.target.value }))}
+                  className="bg-gray-50 border-gray-300 mt-1"
+                />
+                <p className="text-xs text-gray-500 mt-1">L'heure doit être un multiple de 5 minutes (ex: 19:10, 19:15)</p>
+              </div>
+
+              <div>
                 <Label className="mb-3 block">Jours de livraison souhaités</Label>
                 <div className="flex flex-wrap gap-2">
                   {DAYS.map((day, idx) => (
@@ -203,19 +216,6 @@ export default function SupplierFormModal({ open, onClose, onSave, isSaving, sup
                     </button>
                   ))}
                 </div>
-              </div>
-
-              <div>
-                <Label htmlFor="closing_time">Heure d'envoi (multiples de 5 min)</Label>
-                <Input
-                  id="closing_time"
-                  type="time"
-                  step="300"
-                  value={form.closing_time}
-                  onChange={(e) => setForm(prev => ({ ...prev, closing_time: e.target.value }))}
-                  className="bg-gray-50 border-gray-300 mt-1"
-                />
-                <p className="text-xs text-gray-500 mt-1">L'heure doit être un multiple de 5 minutes (ex: 19:10, 19:15)</p>
               </div>
             </div>
           </div>
