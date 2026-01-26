@@ -88,7 +88,7 @@ export default function ArticlesTab() {
     groupedArticles[groupKey].sort((a, b) => (a[orderField] || 0) - (b[orderField] || 0));
   });
 
-  const handleDragEnd = (result) => {
+  const handleDragEnd = async (result) => {
     const { source, destination, draggableId } = result;
     if (!destination) return;
     if (source.droppableId === destination.droppableId && source.index === destination.index) return;
@@ -103,14 +103,23 @@ export default function ArticlesTab() {
 
     // Réassigner les ordres séquentiellement (0, 1, 2, 3...)
     const orderField = viewMode === 'shopping' ? 'order' : 'storage_order';
+    const updates = [];
+    
     updatedList.forEach((article, index) => {
       if (article[orderField] !== index) {
-        updateOrderMutation.mutate({ 
-          id: article.id, 
-          data: { [orderField]: index }
-        });
+        updates.push({ id: article.id, [orderField]: index });
       }
     });
+
+    // Faire tous les updates en même temps
+    if (updates.length > 0) {
+      await Promise.all(
+        updates.map(update => 
+          base44.entities.Article.update(update.id, { [orderField]: update[orderField] })
+        )
+      );
+      queryClient.invalidateQueries({ queryKey: ['articles'] });
+    }
   };
 
   const handleSave = (data) => {
