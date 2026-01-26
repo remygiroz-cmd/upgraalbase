@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { Package, CheckCircle2, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import confetti from 'canvas-confetti';
 import CourseItemCard from './CourseItemCard';
 import ImageZoomModal from './ImageZoomModal';
 
@@ -103,6 +104,26 @@ export default function CoursesTabs({ order }) {
   const aPrendreItems = getItemsByState('a_prendre');
   const checkItems = getItemsByState('check');
   const ruptureItems = getItemsByState('rupture');
+
+  // Auto-complete when all items are taken from "À prendre"
+  useEffect(() => {
+    if (aPrendreItems.length === 0 && itemInstances.length > 0) {
+      // Delay to ensure smooth UI transition
+      const timer = setTimeout(() => {
+        // Trigger confetti animation
+        confetti({
+          particleCount: 100,
+          spread: 70,
+          origin: { y: 0.6 }
+        });
+        
+        // Auto-complete order
+        completeOrderMutation.mutate();
+      }, 500);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [aPrendreItems.length, itemInstances.length]);
 
   return (
     <div className="space-y-4 sm:space-y-6">
