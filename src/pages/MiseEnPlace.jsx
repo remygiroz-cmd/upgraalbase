@@ -616,7 +616,7 @@ export default function MiseEnPlace() {
                 )}
 
                 {/* Category columns */}
-                {categories.map((category, index) => (
+                {categories.filter(category => getTasksByCategory(category.id).length > 0).map((category, index) => (
                   <Draggable key={category.id} draggableId={category.id} index={index} type="category">
                     {(provided, snapshot) => (
                       <div
