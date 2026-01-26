@@ -26,6 +26,16 @@ export default function RupturesTab() {
     }
   });
 
+  const deleteAllRupturesMutation = useMutation({
+    mutationFn: async () => {
+      await Promise.all(ruptures.map(rupture => base44.entities.RuptureHistory.delete(rupture.id)));
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['ruptures'] });
+      toast.success('Toutes les ruptures ont été supprimées');
+    }
+  });
+
   if (isLoading) return <LoadingSpinner />;
 
   if (ruptures.length === 0) {
@@ -40,11 +50,25 @@ export default function RupturesTab() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between mb-4">
-        <h2 className="text-xl font-bold text-gray-900">⚠️ Historique des Ruptures</h2>
-        <Badge variant="outline" className="text-gray-600">
-          {ruptures.length} rupture{ruptures.length > 1 ? 's' : ''}
-        </Badge>
+      <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
+        <div className="flex items-center gap-3">
+          <h2 className="text-xl font-bold text-gray-900">⚠️ Historique des Ruptures</h2>
+          <Badge variant="outline" className="text-gray-600">
+            {ruptures.length} rupture{ruptures.length > 1 ? 's' : ''}
+          </Badge>
+        </div>
+        <Button
+          variant="outline"
+          onClick={() => {
+            if (confirm(`Supprimer toutes les ${ruptures.length} ruptures ?`)) {
+              deleteAllRupturesMutation.mutate();
+            }
+          }}
+          className="border-red-500 text-red-500 hover:bg-red-50"
+        >
+          <Trash2 className="w-4 h-4 mr-2" />
+          Tout supprimer
+        </Button>
       </div>
 
       <div className="space-y-2">
