@@ -747,7 +747,7 @@ export default function InventoryTab() {
                         </div>
                       </div>
                       <div className="flex items-center gap-2 sm:gap-3 w-full justify-between">
-                        <div className="flex items-center gap-1">
+                        <div className="flex items-center gap-2 sm:gap-3">
                           <button
                             onClick={() => {
                               if (quantity > 1) {
@@ -776,11 +776,11 @@ export default function InventoryTab() {
                                 });
                               }
                             }}
-                            className="w-10 h-10 sm:w-8 sm:h-8 rounded bg-gray-200 hover:bg-gray-300 text-gray-900 font-bold text-lg active:scale-95 transition-transform touch-manipulation"
+                            className="w-14 h-14 sm:w-12 sm:h-12 rounded bg-gray-200 hover:bg-gray-300 text-gray-900 font-bold text-2xl sm:text-xl active:scale-95 transition-transform touch-manipulation flex items-center justify-center"
                           >
-                            -
+                            −
                           </button>
-                          <div className="w-16 h-10 sm:w-16 sm:h-8 flex items-center justify-center bg-white border-2 border-orange-600 text-gray-900 font-bold rounded text-sm sm:text-base">
+                          <div className="w-16 h-14 sm:w-16 sm:h-12 flex items-center justify-center bg-white border-2 border-orange-600 text-gray-900 font-bold rounded text-2xl sm:text-xl">
                             {quantity}
                           </div>
                           <button
@@ -790,7 +790,7 @@ export default function InventoryTab() {
                                 [article.id]: { article, quantity: quantity + 1, initialQuantity }
                               }));
                             }}
-                            className="w-10 h-10 sm:w-8 sm:h-8 rounded bg-gray-200 hover:bg-gray-300 text-gray-900 font-bold text-lg active:scale-95 transition-transform touch-manipulation"
+                            className="w-14 h-14 sm:w-12 sm:h-12 rounded bg-gray-200 hover:bg-gray-300 text-gray-900 font-bold text-2xl sm:text-xl active:scale-95 transition-transform touch-manipulation flex items-center justify-center"
                           >
                             +
                           </button>
