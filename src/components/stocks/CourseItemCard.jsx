@@ -127,18 +127,27 @@ export default function CourseItemCard({ item, itemNumber, onStateChange, isChec
           <p className="font-semibold text-gray-900 text-sm">
             Combien avez-vous trouvé?
           </p>
-          <div className="flex gap-2">
-            <input
-              type="number"
-              min="0"
-              max={item.quantity}
-              value={customQuantity}
-              onChange={(e) => setCustomQuantity(parseFloat(e.target.value) || 0)}
-              className="flex-1 px-3 py-2 border-2 border-gray-300 rounded-lg text-base h-auto min-h-[44px]"
-            />
-            <span className="flex items-center px-3 text-gray-600 font-semibold">
-              {item.unit}
-            </span>
+          <div className="flex items-center justify-center gap-4">
+            <Button
+              onClick={() => setCustomQuantity(Math.max(0, customQuantity - 1))}
+              className="w-12 h-12 p-0 bg-gray-200 hover:bg-gray-300 text-gray-900 font-bold text-2xl rounded-lg"
+            >
+              −
+            </Button>
+            <div className="flex flex-col items-center">
+              <span className="text-4xl font-bold text-gray-900">
+                {customQuantity}
+              </span>
+              <span className="text-sm text-gray-600 font-semibold">
+                {item.unit}
+              </span>
+            </div>
+            <Button
+              onClick={() => setCustomQuantity(Math.min(item.quantity, customQuantity + 1))}
+              className="w-12 h-12 p-0 bg-gray-200 hover:bg-gray-300 text-gray-900 font-bold text-2xl rounded-lg"
+            >
+              +
+            </Button>
           </div>
           <div className="flex gap-2">
             <Button
