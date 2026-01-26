@@ -8,8 +8,6 @@ import SuppliersTab from '@/components/stocks/SuppliersTab';
 import InventoryTab from '@/components/stocks/InventoryTab';
 import CommandesTab from '@/components/stocks/CommandesTab';
 import CoursesMode from '@/components/stocks/CoursesMode';
-import RupturesTab from '@/components/stocks/RupturesTab';
-
 export default function Stocks() {
   const [activeTab, setActiveTab] = useState('inventory');
 
@@ -19,7 +17,6 @@ export default function Stocks() {
     { id: 'suppliers', label: 'Fournisseurs', icon: Truck },
     { id: 'orders', label: 'Commandes', icon: ShoppingCart },
     { id: 'shopping', label: 'Courses', icon: List },
-    { id: 'stockouts', label: 'Ruptures', icon: AlertTriangle },
   ];
 
   return (
@@ -31,7 +28,7 @@ export default function Stocks() {
       />
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2 mb-6 h-auto bg-transparent p-0">
+        <TabsList className="grid w-full grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-2 mb-6 h-auto bg-transparent p-0">
           {tabs.map(tab => {
             const Icon = tab.icon;
             return (
@@ -59,8 +56,6 @@ export default function Stocks() {
               <CommandesTab />
             ) : tab.id === 'shopping' ? (
               <CoursesMode />
-            ) : tab.id === 'stockouts' ? (
-              <RupturesTab />
             ) : (
               <EmptyState
                 icon={tab.icon}
