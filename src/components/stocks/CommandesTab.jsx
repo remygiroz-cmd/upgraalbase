@@ -97,21 +97,21 @@ export default function CommandesTab() {
         </div>
         
         <Tabs value={statusFilter} onValueChange={setStatusFilter} className="w-full">
-          <TabsList className="grid w-full grid-cols-5 mb-4">
-            <TabsTrigger value="en_cours" className="text-xs">
-              En cours {statusCounts.en_cours > 0 && `(${statusCounts.en_cours})`}
+          <TabsList className="grid w-full grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-1 sm:gap-2 mb-4 h-auto bg-transparent p-0">
+            <TabsTrigger value="en_cours" className="text-[10px] sm:text-xs p-2 sm:p-3 border rounded-md">
+              <span className="line-clamp-2">En cours {statusCounts.en_cours > 0 && `(${statusCounts.en_cours})`}</span>
             </TabsTrigger>
-            <TabsTrigger value="envoyee" className="text-xs">
-              Envoyées {statusCounts.envoyee > 0 && `(${statusCounts.envoyee})`}
+            <TabsTrigger value="envoyee" className="text-[10px] sm:text-xs p-2 sm:p-3 border rounded-md">
+              <span className="line-clamp-2">Envoyées {statusCounts.envoyee > 0 && `(${statusCounts.envoyee})`}</span>
             </TabsTrigger>
-            <TabsTrigger value="terminee" className="text-xs">
-              Terminées {statusCounts.terminee > 0 && `(${statusCounts.terminee})`}
+            <TabsTrigger value="terminee" className="text-[10px] sm:text-xs p-2 sm:p-3 border rounded-md">
+              <span className="line-clamp-2">Terminées {statusCounts.terminee > 0 && `(${statusCounts.terminee})`}</span>
             </TabsTrigger>
-            <TabsTrigger value="annulee" className="text-xs">
-              Annulées {statusCounts.annulee > 0 && `(${statusCounts.annulee})`}
+            <TabsTrigger value="annulee" className="text-[10px] sm:text-xs p-2 sm:p-3 border rounded-md">
+              <span className="line-clamp-2">Annulées {statusCounts.annulee > 0 && `(${statusCounts.annulee})`}</span>
             </TabsTrigger>
-            <TabsTrigger value="all" className="text-xs">
-              Toutes {statusCounts.all > 0 && `(${statusCounts.all})`}
+            <TabsTrigger value="all" className="text-[10px] sm:text-xs p-2 sm:p-3 border rounded-md">
+              <span className="line-clamp-2">Toutes {statusCounts.all > 0 && `(${statusCounts.all})`}</span>
             </TabsTrigger>
           </TabsList>
         </Tabs>
