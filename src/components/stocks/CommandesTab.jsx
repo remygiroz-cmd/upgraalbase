@@ -18,6 +18,22 @@ export default function CommandesTab() {
     queryFn: () => base44.entities.Order.list('-date')
   });
 
+  const getStatusBadge = (status) => {
+    const styles = {
+      en_cours: 'bg-orange-100 text-orange-800',
+      envoyee: 'bg-blue-100 text-blue-800',
+      terminee: 'bg-green-100 text-green-800',
+      annulee: 'bg-red-100 text-red-800'
+    };
+    const labels = {
+      en_cours: 'EN COURS',
+      envoyee: 'ENVOYÉE',
+      terminee: 'TERMINÉE',
+      annulee: 'ANNULÉE'
+    };
+    return { style: styles[status] || styles.en_cours, label: labels[status] || 'EN COURS' };
+  };
+
   if (isLoading) return <LoadingSpinner />;
 
   // Filtrer les commandes par statut
@@ -68,22 +84,6 @@ export default function CommandesTab() {
       </div>
     );
   }
-
-  const getStatusBadge = (status) => {
-    const styles = {
-      en_cours: 'bg-orange-100 text-orange-800',
-      envoyee: 'bg-blue-100 text-blue-800',
-      terminee: 'bg-green-100 text-green-800',
-      annulee: 'bg-red-100 text-red-800'
-    };
-    const labels = {
-      en_cours: 'EN COURS',
-      envoyee: 'ENVOYÉE',
-      terminee: 'TERMINÉE',
-      annulee: 'ANNULÉE'
-    };
-    return { style: styles[status] || styles.en_cours, label: labels[status] || 'EN COURS' };
-  };
 
   return (
     <div className="space-y-4">
