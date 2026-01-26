@@ -140,18 +140,35 @@ export default function SuppliersTab() {
                   </div>
                 )}
                 {supplier.delivery_days && supplier.delivery_days.length > 0 && (
-                  <div className="pt-2 border-t border-gray-200">
-                    <p className="text-xs text-gray-500 mb-1">Jours de passage:</p>
-                    <div className="flex gap-1">
-                      {supplier.delivery_days.map((day, idx) => (
-                        <span
-                          key={idx}
-                          className="w-6 h-6 bg-blue-100 text-blue-700 rounded text-xs font-semibold flex items-center justify-center"
-                        >
-                          {day}
-                        </span>
-                      ))}
+                  <div className="pt-2 border-t border-gray-200 space-y-2">
+                    <div>
+                      <p className="text-xs text-gray-500 mb-1">Jours d'envoi automatique {supplier.closing_time && `à ${supplier.closing_time}`}</p>
+                      <div className="flex gap-1">
+                        {supplier.delivery_days.map((day, idx) => (
+                          <span
+                            key={idx}
+                            className="w-6 h-6 bg-orange-100 text-orange-700 rounded text-xs font-semibold flex items-center justify-center"
+                          >
+                            {day}
+                          </span>
+                        ))}
+                      </div>
                     </div>
+                    {supplier.preferred_delivery_days && supplier.preferred_delivery_days.length > 0 && (
+                      <div>
+                        <p className="text-xs text-gray-500 mb-1">Jours de livraison souhaités</p>
+                        <div className="flex gap-1">
+                          {supplier.preferred_delivery_days.map((day, idx) => (
+                            <span
+                              key={idx}
+                              className="w-6 h-6 bg-blue-100 text-blue-700 rounded text-xs font-semibold flex items-center justify-center"
+                            >
+                              {day}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
