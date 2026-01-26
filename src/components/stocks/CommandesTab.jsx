@@ -1,22 +1,62 @@
 import React, { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
-import { Calendar, Package, Filter } from 'lucide-react';
+import { Calendar, Package, Filter, Trash2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import EmptyState from '@/components/ui/EmptyState';
 import OrderDetailModal from './OrderDetailModal';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Button } from '@/components/ui/button';
+import { toast } from 'sonner';
 
 export default function CommandesTab() {
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [statusFilter, setStatusFilter] = useState('en_cours');
+  const queryClient = useQueryClient();
 
   const { data: orders = [], isLoading } = useQuery({
     queryKey: ['orders'],
     queryFn: () => base44.entities.Order.list('-date')
   });
+
+  const deleteOrderMutation = useMutation({
+    mutationFn: (id) => base44.entities.Order.delete(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['orders'] });
+      toast.success('Commande supprimée');
+    }
+  });
+
+  const deleteAllByStatusMutation = useMutation({
+    mutationFn: async (status) => {
+      const ordersToDelete = orders.filter(o => o.status === status);
+      await Promise.all(ordersToDelete.map(o => base44.entities.Order.delete(o.id)));
+      return ordersToDelete.length;
+    },
+    onSuccess: (count) => {
+      queryClient.invalidateQueries({ queryKey: ['orders'] });
+      toast.success(`${count} commande(s) supprimée(s)`);
+    }
+  });
+
+  const handleDeleteOrder = (e, orderId) => {
+    e.stopPropagation();
+    if (confirm('Voulez-vous vraiment supprimer cette commande ?')) {
+      deleteOrderMutation.mutate(orderId);
+    }
+  };
+
+  const handleDeleteAllByStatus = () => {
+    const count = orders.filter(o => o.status === statusFilter).length;
+    if (count === 0) return;
+    
+    const statusLabel = getStatusBadge(statusFilter).label.toLowerCase();
+    if (confirm(`Voulez-vous vraiment supprimer toutes les ${count} commande(s) ${statusLabel} ?`)) {
+      deleteAllByStatusMutation.mutate(statusFilter);
+    }
+  };
 
   const getStatusBadge = (status) => {
     const styles = {
@@ -89,6 +129,16 @@ export default function CommandesTab() {
     <div className="space-y-4">
       <div className="flex items-center justify-between mb-6">
         <h2 className="text-xl font-bold text-gray-900">📦 Bons de Commande</h2>
+        {statusFilter !== 'all' && filteredOrders.length > 0 && (
+          <Button
+            variant="outline"
+            onClick={handleDeleteAllByStatus}
+            className="border-red-600 text-red-600 hover:bg-red-50 gap-2"
+          >
+            <Trash2 className="w-4 h-4" />
+            Supprimer toutes ({filteredOrders.length})
+          </Button>
+        )}
       </div>
 
       <Tabs value={statusFilter} onValueChange={setStatusFilter} className="w-full">
@@ -122,11 +172,13 @@ export default function CommandesTab() {
           return (
             <div
               key={order.id}
-              onClick={() => setSelectedOrder(order)}
-              className="bg-white rounded-lg border-2 border-gray-300 p-4 hover:border-orange-500 hover:shadow-md transition-all cursor-pointer"
+              className="bg-white rounded-lg border-2 border-gray-300 p-4 hover:border-orange-500 hover:shadow-md transition-all group"
             >
               <div className="flex items-start justify-between gap-4">
-                <div className="flex-1 min-w-0">
+                <div 
+                  className="flex-1 min-w-0 cursor-pointer"
+                  onClick={() => setSelectedOrder(order)}
+                >
                   <h3 className="font-bold text-gray-900 text-lg truncate">
                     {order.supplier_name}
                   </h3>
@@ -139,13 +191,23 @@ export default function CommandesTab() {
                     <span>{totalItems} article{totalItems > 1 ? 's' : ''}</span>
                   </div>
                 </div>
-                <div className="flex flex-col items-end gap-2">
-                  <span className={`px-3 py-1 rounded-full text-xs font-bold ${badge.style}`}>
-                    {badge.label}
-                  </span>
-                  <div className="text-xl font-bold text-gray-900">
-                    {totalAmount.toFixed(2)} €
+                <div className="flex items-start gap-3">
+                  <div className="flex flex-col items-end gap-2">
+                    <span className={`px-3 py-1 rounded-full text-xs font-bold ${badge.style}`}>
+                      {badge.label}
+                    </span>
+                    <div className="text-xl font-bold text-gray-900">
+                      {totalAmount.toFixed(2)} €
+                    </div>
                   </div>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={(e) => handleDeleteOrder(e, order.id)}
+                    className="text-gray-400 hover:text-red-600 hover:bg-red-50 opacity-0 group-hover:opacity-100 transition-opacity"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </Button>
                 </div>
               </div>
             </div>
