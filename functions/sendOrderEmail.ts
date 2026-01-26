@@ -30,6 +30,11 @@ Deno.serve(async (req) => {
 
     // Vérifier si on doit masquer les prix
     const hidePrices = supplier.hide_prices !== false; // true par défaut
+    console.log('DEBUG hide_prices:', { 
+      supplier_name: supplier.name,
+      hide_prices_value: supplier.hide_prices, 
+      hidePrices_computed: hidePrices 
+    });
 
     // Générer le PDF
     const doc = new jsPDF();
