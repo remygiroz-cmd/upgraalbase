@@ -245,6 +245,10 @@ Deno.serve(async (req) => {
       emailPayload.cc = ccEmails;
     }
 
+    if (establishment.contact_email) {
+      emailPayload.reply_to = [establishment.contact_email];
+    }
+
     console.log('Envoi email avec les données suivantes:', {
       to: emailPayload.to,
       cc: emailPayload.cc,
