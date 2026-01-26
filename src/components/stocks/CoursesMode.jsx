@@ -127,36 +127,40 @@ export default function CoursesMode() {
       return i;
     });
 
-    await updateOrderMutation.mutateAsync({
-      id: order.id,
-      data: { items: updatedItems }
-    });
-
-    // Log rupture in history
-    if (newStatus === 'rupture') {
-      await createRuptureMutation.mutateAsync({
-        date: new Date().toISOString().split('T')[0],
-        supplier_name: order.supplier_name,
-        supplier_id: order.supplier_id,
-        item_name: item.product_name,
-        quantity: item.quantity,
-        unit: item.unit,
-        order_id: order.id
+    try {
+      await updateOrderMutation.mutateAsync({
+        id: order.id,
+        data: { items: updatedItems }
       });
-      toast.error(`${item.product_name} marqué en rupture`);
-    }
-
-    // Check if all items are done
-    const allDone = updatedItems.every(i => i.isChecked || i.isRupture);
-    if (allDone && todoItems.length === 1) {
-      setShowCelebration(true);
-      // Mark order as completed
-      setTimeout(async () => {
-        await updateOrderMutation.mutateAsync({
-          id: order.id,
-          data: { status: 'terminee' }
+      
+      if (newStatus === 'checked') {
+        toast.success(`${item.product_name} → Check`);
+      } else if (newStatus === 'rupture') {
+        await createRuptureMutation.mutateAsync({
+          date: new Date().toISOString().split('T')[0],
+          supplier_name: order.supplier_name,
+          supplier_id: order.supplier_id,
+          item_name: item.product_name,
+          quantity: item.quantity,
+          unit: item.unit,
+          order_id: order.id
         });
-      }, 1000);
+        toast.error(`${item.product_name} → Rupture`);
+      }
+
+      const allDone = updatedItems.every(i => i.isChecked || i.isRupture);
+      if (allDone && todoItems.length === 1) {
+        setShowCelebration(true);
+        setTimeout(async () => {
+          await updateOrderMutation.mutateAsync({
+            id: order.id,
+            data: { status: 'terminee' }
+          });
+        }, 1000);
+      }
+    } catch (error) {
+      toast.error('Erreur lors de la mise à jour');
+      console.error(error);
     }
   };
 
@@ -309,7 +313,7 @@ export default function CoursesMode() {
 
             return (
               <motion.div
-                key={item.uniqueKey}
+                key={`${item.uniqueKey}-${item.isChecked}-${item.isRupture}`}
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, x: -100 }}
