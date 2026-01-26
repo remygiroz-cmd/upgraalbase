@@ -84,9 +84,11 @@ export default function CoursesMode() {
 
   // Combine all items from all orders for this supplier
   const allItems = currentSupplierData?.orders.flatMap(order => 
-    (order.items || []).map(item => ({
+    (order.items || []).map((item, idx) => ({
       ...item,
       orderId: order.id,
+      itemIndex: idx,
+      uniqueKey: `${order.id}-${idx}`,
       isChecked: item.isChecked || false,
       isRupture: item.isRupture || false
     }))
@@ -114,8 +116,8 @@ export default function CoursesMode() {
     const order = currentSupplierData.orders.find(o => o.id === item.orderId);
     if (!order) return;
 
-    const updatedItems = order.items.map(i => {
-      if (i.product_id === item.product_id) {
+    const updatedItems = order.items.map((i, idx) => {
+      if (idx === item.itemIndex) {
         return {
           ...i,
           isChecked: newStatus === 'checked',
@@ -176,8 +178,8 @@ export default function CoursesMode() {
     }
 
     // Cas de rupture partielle : créer deux items
-    const updatedItems = order.items.flatMap(i => {
-      if (i.product_id === item.product_id) {
+    const updatedItems = order.items.flatMap((i, idx) => {
+      if (idx === item.itemIndex) {
         return [
           {
             ...i,
@@ -307,7 +309,7 @@ export default function CoursesMode() {
 
             return (
               <motion.div
-                key={`${item.orderId}-${item.product_id}`}
+                key={item.uniqueKey}
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, x: -100 }}
