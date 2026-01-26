@@ -25,10 +25,12 @@ export default function CoursesMode() {
     queryFn: () => base44.entities.Order.filter({ status: 'en_cours' }, '-date')
   });
 
-  const { data: products = [] } = useQuery({
-    queryKey: ['products'],
-    queryFn: () => base44.entities.Product.list('store_order')
+  const { data: articles = [] } = useQuery({
+    queryKey: ['articles'],
+    queryFn: () => base44.entities.Article.list('order')
   });
+
+  const [imageModalUrl, setImageModalUrl] = useState(null);
 
   const updateOrderMutation = useMutation({
     mutationFn: ({ id, data }) => base44.entities.Order.update(id, data),
@@ -90,12 +92,12 @@ export default function CoursesMode() {
     }))
   ) || [];
 
-  // Sort by store_order from Product entity
+  // Sort by order from Article entity
   const sortedItems = allItems.sort((a, b) => {
-    const prodA = products.find(p => p.id === a.product_id);
-    const prodB = products.find(p => p.id === b.product_id);
-    const orderA = prodA?.store_order ?? 9999;
-    const orderB = prodB?.store_order ?? 9999;
+    const artA = articles.find(p => p.id === a.product_id);
+    const artB = articles.find(p => p.id === b.product_id);
+    const orderA = artA?.order ?? 9999;
+    const orderB = artB?.order ?? 9999;
     return orderA - orderB;
   });
 
@@ -300,7 +302,7 @@ export default function CoursesMode() {
       <div className="space-y-3">
         <AnimatePresence>
           {filteredItems.map((item, index) => {
-            const product = products.find(p => p.id === item.product_id);
+            const article = articles.find(p => p.id === item.product_id);
             const rank = statusFilter === 'todo' ? index + 1 : null;
 
             return (
@@ -318,76 +320,86 @@ export default function CoursesMode() {
                 )}
               >
                 <div className="p-4 sm:p-6">
-                  <div className="flex items-center gap-3 sm:gap-4 mb-4">
+                  <div className="flex items-start gap-3 sm:gap-4">
                     {/* Rank Number */}
                     {statusFilter === 'todo' && rank && (
-                      <div className="text-4xl sm:text-6xl font-black text-orange-500/30 flex-shrink-0">
+                      <div className="text-4xl sm:text-6xl lg:text-7xl font-black text-orange-500/30 flex-shrink-0 leading-none">
                         #{rank}
                       </div>
                     )}
 
                     {/* Product Image */}
-                    <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-lg bg-gray-100 flex-shrink-0 overflow-hidden">
-                      {product?.image_url ? (
+                    <button
+                      onClick={() => article?.image_url && setImageModalUrl(article.image_url)}
+                      className="w-20 h-20 sm:w-24 sm:h-24 lg:w-28 lg:h-28 rounded-xl bg-gray-100 flex-shrink-0 overflow-hidden hover:ring-4 hover:ring-orange-300 transition-all active:scale-95 cursor-pointer"
+                    >
+                      {article?.image_url ? (
                         <img 
-                          src={product.image_url} 
+                          src={article.image_url} 
                           alt={item.product_name}
                           className="w-full h-full object-cover"
                         />
                       ) : (
                         <div className="w-full h-full flex items-center justify-center text-gray-400">
-                          <Package className="w-6 h-6 sm:w-8 sm:h-8" />
+                          <Package className="w-8 h-8 sm:w-10 sm:h-10" />
                         </div>
                       )}
-                    </div>
+                    </button>
 
                     {/* Product Info */}
                     <div className="flex-1 min-w-0">
                       <h3 className={cn(
-                        "font-bold text-gray-900 text-base sm:text-lg mb-1 truncate",
+                        "font-bold text-gray-900 text-lg sm:text-xl lg:text-2xl mb-2",
                         statusFilter === 'checked' && "line-through text-gray-500"
                       )}>
                         {item.product_name}
                       </h3>
-                      <Badge className="bg-slate-700 text-white font-semibold text-sm">
-                        {item.quantity} {item.unit}
-                      </Badge>
+                      <div className="flex flex-wrap gap-2 mb-3">
+                        <Badge className="bg-slate-700 text-white font-semibold text-sm sm:text-base">
+                          {item.quantity} {item.unit}
+                        </Badge>
+                        {article?.brand && (
+                          <Badge variant="outline" className="border-orange-500 text-orange-600 font-semibold text-sm sm:text-base">
+                            {article.brand}
+                          </Badge>
+                        )}
+                      </div>
+                      
+                      {/* Action Buttons (only in TODO mode) */}
+                      {statusFilter === 'todo' && (
+                        <div className="space-y-2 mt-3">
+                          <Button
+                            onClick={() => handleToggleItem(item, 'checked')}
+                            className="bg-green-600 hover:bg-green-700 text-white w-full h-12 sm:h-14 text-sm sm:text-base font-semibold rounded-lg shadow-md active:scale-95 transition-transform"
+                          >
+                            <CheckCircle className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
+                            Trouvé
+                          </Button>
+                          <div className="grid grid-cols-2 gap-2">
+                            <Button
+                              variant="outline"
+                              onClick={() => setPartialRuptureItem(item)}
+                              className="border-2 border-orange-500 text-orange-600 hover:bg-orange-50 h-10 sm:h-12 text-xs sm:text-sm font-semibold rounded-lg active:scale-95 transition-transform"
+                            >
+                              <div className="flex items-center gap-1">
+                                <CheckCircle className="w-3 h-3 sm:w-4 sm:h-4" />
+                                <Ban className="w-3 h-3 sm:w-4 sm:h-4" />
+                              </div>
+                              <span className="hidden sm:inline ml-1">Partielle</span>
+                            </Button>
+                            <Button
+                              variant="outline"
+                              onClick={() => handleToggleItem(item, 'rupture')}
+                              className="border-2 border-red-500 text-red-600 hover:bg-red-50 h-10 sm:h-12 text-xs sm:text-sm font-semibold rounded-lg active:scale-95 transition-transform"
+                            >
+                              <Ban className="w-3 h-3 sm:w-4 sm:h-4 sm:w-5 sm:h-5" />
+                              <span className="hidden sm:inline ml-1">Totale</span>
+                            </Button>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </div>
-
-                  {/* Action Buttons (only in TODO mode) */}
-                  {statusFilter === 'todo' && (
-                    <div className="space-y-2">
-                      <Button
-                        onClick={() => handleToggleItem(item, 'checked')}
-                        className="bg-green-600 hover:bg-green-700 text-white w-full h-12 sm:h-14 text-sm sm:text-base font-semibold rounded-lg shadow-md active:scale-95 transition-transform"
-                      >
-                        <CheckCircle className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
-                        Trouvé
-                      </Button>
-                      <div className="grid grid-cols-2 gap-2">
-                        <Button
-                          variant="outline"
-                          onClick={() => setPartialRuptureItem(item)}
-                          className="border-2 border-orange-500 text-orange-600 hover:bg-orange-50 h-12 sm:h-14 text-xs sm:text-sm font-semibold rounded-lg active:scale-95 transition-transform"
-                        >
-                          <div className="flex items-center gap-1">
-                            <CheckCircle className="w-4 h-4" />
-                            <Ban className="w-4 h-4" />
-                          </div>
-                          <span className="hidden sm:inline ml-1">Partielle</span>
-                        </Button>
-                        <Button
-                          variant="outline"
-                          onClick={() => handleToggleItem(item, 'rupture')}
-                          className="border-2 border-red-500 text-red-600 hover:bg-red-50 h-12 sm:h-14 text-xs sm:text-sm font-semibold rounded-lg active:scale-95 transition-transform"
-                        >
-                          <Ban className="w-4 h-4 sm:w-5 sm:h-5" />
-                          <span className="hidden sm:inline ml-1">Totale</span>
-                        </Button>
-                      </div>
-                    </div>
-                  )}
                 </div>
               </motion.div>
             );
@@ -426,6 +438,27 @@ export default function CoursesMode() {
           item={partialRuptureItem}
           onConfirm={handlePartialRupture}
         />
+      )}
+
+      {/* Image Zoom Modal */}
+      {imageModalUrl && (
+        <div 
+          className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4 sm:p-6"
+          onClick={() => setImageModalUrl(null)}
+        >
+          <motion.div
+            initial={{ scale: 0.8, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            exit={{ scale: 0.8, opacity: 0 }}
+            className="max-w-4xl max-h-[90vh] w-full"
+          >
+            <img 
+              src={imageModalUrl} 
+              alt="Article"
+              className="w-full h-full object-contain rounded-lg"
+            />
+          </motion.div>
+        </div>
       )}
     </div>
   );
