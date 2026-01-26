@@ -1,15 +1,17 @@
 import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
-import { Calendar, Package } from 'lucide-react';
+import { Calendar, Package, Filter } from 'lucide-react';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import EmptyState from '@/components/ui/EmptyState';
 import OrderDetailModal from './OrderDetailModal';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 export default function CommandesTab() {
   const [selectedOrder, setSelectedOrder] = useState(null);
+  const [statusFilter, setStatusFilter] = useState('en_cours');
 
   const { data: orders = [], isLoading } = useQuery({
     queryKey: ['orders'],
@@ -18,13 +20,52 @@ export default function CommandesTab() {
 
   if (isLoading) return <LoadingSpinner />;
 
-  if (orders.length === 0) {
+  // Filtrer les commandes par statut
+  const filteredOrders = orders.filter(order => 
+    statusFilter === 'all' ? true : order.status === statusFilter
+  );
+
+  const statusCounts = {
+    all: orders.length,
+    en_cours: orders.filter(o => o.status === 'en_cours').length,
+    envoyee: orders.filter(o => o.status === 'envoyee').length,
+    terminee: orders.filter(o => o.status === 'terminee').length,
+    annulee: orders.filter(o => o.status === 'annulee').length
+  };
+
+  if (filteredOrders.length === 0) {
     return (
-      <EmptyState
-        icon={Package}
-        title="Aucune commande"
-        description="Les commandes validées apparaîtront ici"
-      />
+      <div className="space-y-4">
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="text-xl font-bold text-gray-900">📦 Bons de Commande</h2>
+        </div>
+        
+        <Tabs value={statusFilter} onValueChange={setStatusFilter} className="w-full">
+          <TabsList className="grid w-full grid-cols-5 mb-4">
+            <TabsTrigger value="en_cours" className="text-xs">
+              En cours {statusCounts.en_cours > 0 && `(${statusCounts.en_cours})`}
+            </TabsTrigger>
+            <TabsTrigger value="envoyee" className="text-xs">
+              Envoyées {statusCounts.envoyee > 0 && `(${statusCounts.envoyee})`}
+            </TabsTrigger>
+            <TabsTrigger value="terminee" className="text-xs">
+              Terminées {statusCounts.terminee > 0 && `(${statusCounts.terminee})`}
+            </TabsTrigger>
+            <TabsTrigger value="annulee" className="text-xs">
+              Annulées {statusCounts.annulee > 0 && `(${statusCounts.annulee})`}
+            </TabsTrigger>
+            <TabsTrigger value="all" className="text-xs">
+              Toutes {statusCounts.all > 0 && `(${statusCounts.all})`}
+            </TabsTrigger>
+          </TabsList>
+        </Tabs>
+
+        <EmptyState
+          icon={Package}
+          title="Aucune commande"
+          description={`Aucune commande ${statusFilter === 'all' ? '' : getStatusBadge(statusFilter).label.toLowerCase()}`}
+        />
+      </div>
     );
   }
 
@@ -50,8 +91,28 @@ export default function CommandesTab() {
         <h2 className="text-xl font-bold text-gray-900">📦 Bons de Commande</h2>
       </div>
 
+      <Tabs value={statusFilter} onValueChange={setStatusFilter} className="w-full">
+        <TabsList className="grid w-full grid-cols-5 mb-4">
+          <TabsTrigger value="en_cours" className="text-xs">
+            En cours {statusCounts.en_cours > 0 && `(${statusCounts.en_cours})`}
+          </TabsTrigger>
+          <TabsTrigger value="envoyee" className="text-xs">
+            Envoyées {statusCounts.envoyee > 0 && `(${statusCounts.envoyee})`}
+          </TabsTrigger>
+          <TabsTrigger value="terminee" className="text-xs">
+            Terminées {statusCounts.terminee > 0 && `(${statusCounts.terminee})`}
+          </TabsTrigger>
+          <TabsTrigger value="annulee" className="text-xs">
+            Annulées {statusCounts.annulee > 0 && `(${statusCounts.annulee})`}
+          </TabsTrigger>
+          <TabsTrigger value="all" className="text-xs">
+            Toutes {statusCounts.all > 0 && `(${statusCounts.all})`}
+          </TabsTrigger>
+        </TabsList>
+      </Tabs>
+
       <div className="space-y-3">
-        {orders.map((order) => {
+        {filteredOrders.map((order) => {
           const badge = getStatusBadge(order.status);
           const totalItems = order.items?.length || 0;
           const totalAmount = order.items?.reduce((sum, item) => {
