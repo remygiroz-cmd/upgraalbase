@@ -65,9 +65,13 @@ export default function CourseItemCard({ item, itemNumber, onStateChange, isChec
 
         {/* Product Details */}
         <div className="flex-1 min-w-0">
-          <h3 className="font-bold text-gray-900 text-base sm:text-lg md:text-xl mb-2 truncate">
+          <h3 className="font-bold text-gray-900 text-base sm:text-lg md:text-xl mb-1 truncate">
             {item.product_name}
           </h3>
+          
+          {article?.brand && (
+            <p className="text-sm text-gray-600 mb-2">{article.brand}</p>
+          )}
 
           <div className="flex flex-wrap gap-2 items-center">
             <Badge className="bg-gray-900 text-white text-xs sm:text-sm font-bold px-3 py-1">
