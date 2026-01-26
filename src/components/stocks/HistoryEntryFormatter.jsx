@@ -73,23 +73,6 @@ export default function HistoryEntryFormatter({ entry }) {
         </div>
       )}
 
-      {/* Check */}
-      {parsed.check.length > 0 && (
-        <div className="space-y-2">
-          <div className="flex items-center gap-2">
-            <CheckCircle2 className="w-4 h-4 text-green-600" />
-            <span className="text-xs font-semibold text-green-700">Trouvés ({parsed.check.length})</span>
-          </div>
-          <div className="flex flex-wrap gap-2 pl-6">
-            {parsed.check.map((item, idx) => (
-              <Badge key={idx} className="bg-green-100 text-green-800 text-xs">
-                {item}
-              </Badge>
-            ))}
-          </div>
-        </div>
-      )}
-
       {/* Rupture */}
       {parsed.rupture.length > 0 && (
         <div className="space-y-2">
