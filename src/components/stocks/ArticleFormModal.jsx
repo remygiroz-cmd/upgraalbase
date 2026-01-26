@@ -17,6 +17,7 @@ export default function ArticleFormModal({ open, onClose, onSave, isSaving, arti
     supplier_reference: '',
     internal_code: '',
     image_url: '',
+    remarks: '',
     order: 0,
     storage_order: 0,
     inventory_mode: 'stock_reel',
@@ -39,6 +40,7 @@ export default function ArticleFormModal({ open, onClose, onSave, isSaving, arti
         supplier_reference: article.supplier_reference || '',
         internal_code: article.internal_code || '',
         image_url: article.image_url || '',
+        remarks: article.remarks || '',
         order: article.order || 0,
         storage_order: article.storage_order || 0,
         inventory_mode: article.inventory_mode || 'stock_reel',
@@ -57,6 +59,7 @@ export default function ArticleFormModal({ open, onClose, onSave, isSaving, arti
         supplier_reference: '',
         internal_code: '',
         image_url: '',
+        remarks: '',
         order: 0,
         storage_order: 0,
         inventory_mode: 'stock_reel',
@@ -292,6 +295,18 @@ export default function ArticleFormModal({ open, onClose, onSave, isSaving, arti
               id="internal_code"
               value={form.internal_code}
               onChange={(e) => setForm(prev => ({ ...prev, internal_code: e.target.value }))}
+              className="bg-white border-gray-300 text-gray-900 mt-1"
+            />
+          </div>
+
+          {/* Remarques */}
+          <div>
+            <Label htmlFor="remarks" className="text-gray-900">Remarques (visible uniquement dans l'inventaire)</Label>
+            <Input
+              id="remarks"
+              value={form.remarks}
+              onChange={(e) => setForm(prev => ({ ...prev, remarks: e.target.value }))}
+              placeholder="Notes, précisions..."
               className="bg-white border-gray-300 text-gray-900 mt-1"
             />
           </div>
