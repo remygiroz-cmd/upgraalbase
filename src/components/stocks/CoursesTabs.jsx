@@ -1,5 +1,8 @@
 import React, { useState } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { base44 } from '@/api/base44Client';
 import { Package, CheckCircle2, AlertCircle } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import CourseItemCard from './CourseItemCard';
 import ImageZoomModal from './ImageZoomModal';
 
@@ -12,6 +15,42 @@ const TAB_CONFIG = [
 export default function CoursesTabs({ order }) {
   const [activeTab, setActiveTab] = useState('a_prendre');
   const [zoomImage, setZoomImage] = useState(null);
+  const queryClient = useQueryClient();
+
+  const { data: currentUser } = useQuery({
+    queryKey: ['currentUser'],
+    queryFn: () => base44.auth.me()
+  });
+
+  const completeOrderMutation = useMutation({
+    mutationFn: async () => {
+      // Calculate statistics
+      const aPrendreCount = aPrendreItems.length;
+      const checkCount = checkItems.reduce((sum, item) => sum + item.quantity, 0);
+      const ruptureCount = ruptureItems.reduce((sum, item) => sum + item.quantity, 0);
+
+      // Create history entry
+      const historyEntry = {
+        timestamp: new Date().toISOString(),
+        action: 'Courses terminées',
+        details: `À prendre: ${aPrendreCount} articles | Check: ${checkCount} unités | Rupture: ${ruptureCount} unités`,
+        user_email: currentUser?.email,
+        user_name: currentUser?.full_name
+      };
+
+      // Update order
+      const updatedOrder = {
+        ...order,
+        status: 'terminee',
+        history: [...(order.history || []), historyEntry]
+      };
+
+      await base44.entities.Order.update(order.id, updatedOrder);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['orders'] });
+    }
+  });
 
   // Initialize items with state tracking - use array to allow splitting items
   const [itemInstances, setItemInstances] = useState(() => {
@@ -194,6 +233,17 @@ export default function CoursesTabs({ order }) {
             </div>
           )
         )}
+      </div>
+
+      {/* Complete Order Button */}
+      <div className="flex gap-2 sm:gap-3 pt-4">
+        <Button
+          onClick={() => completeOrderMutation.mutate()}
+          disabled={completeOrderMutation.isPending}
+          className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 text-base h-auto min-h-[48px] rounded-lg"
+        >
+          {completeOrderMutation.isPending ? '⏳ Terminaison...' : '✓ Terminer les courses'}
+        </Button>
       </div>
 
       {/* Image Zoom Modal */}
