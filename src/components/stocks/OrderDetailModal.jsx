@@ -304,7 +304,7 @@ export default function OrderDetailModal({ order, isOpen, onClose }) {
 
           {/* Historique */}
           {order.history && order.history.length > 0 && (
-            <div className="mt-6 pt-6 border-t border-gray-200">
+            <div className="mt-6 pt-6 border-t border-gray-200 print:hidden">
               <h3 className="text-sm font-semibold text-gray-900 mb-3 flex items-center gap-2">
                 <Clock className="w-4 h-4" />
                 Historique des actions
