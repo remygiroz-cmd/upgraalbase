@@ -21,6 +21,7 @@ Deno.serve(async (req) => {
 
     // Récupérer le fournisseur
     const supplier = await base44.entities.Supplier.get(order.supplier_id);
+    console.log('=== SUPPLIER DATA ===', JSON.stringify(supplier, null, 2));
     if (!supplier || !supplier.email) {
       return Response.json({ error: 'Email du fournisseur non configuré' }, { status: 400 });
     }
