@@ -26,14 +26,14 @@ export default function CoursesTabs({ order }) {
     mutationFn: async () => {
       // Calculate statistics
       const aPrendreCount = aPrendreItems.length;
-      const checkCount = checkItems.reduce((sum, item) => sum + item.quantity, 0);
-      const ruptureCount = ruptureItems.reduce((sum, item) => sum + item.quantity, 0);
+      const checkDetails = checkItems.map(item => `${item.product_name} (${item.quantity} ${item.unit})`).join(' | ');
+      const ruptureDetails = ruptureItems.map(item => `${item.product_name} (${item.quantity} ${item.unit})`).join(' | ');
 
       // Create history entry
       const historyEntry = {
         timestamp: new Date().toISOString(),
         action: 'Courses terminées',
-        details: `À prendre: ${aPrendreCount} articles | Check: ${checkCount} unités | Rupture: ${ruptureCount} unités`,
+        details: `À prendre: ${aPrendreCount} articles | Check: ${checkDetails || 'Aucun'} | Rupture: ${ruptureDetails || 'Aucune'}`,
         user_email: currentUser?.email,
         user_name: currentUser?.full_name
       };
