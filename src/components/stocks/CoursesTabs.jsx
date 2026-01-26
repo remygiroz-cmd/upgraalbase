@@ -136,11 +136,11 @@ export default function CoursesTabs({ order }) {
             <div className="space-y-3 sm:space-y-4">
               {aPrendreItems.map((item, index) => (
                 <CourseItemCard
-                  key={item.product_id}
+                  key={item.instanceId}
                   item={item}
                   itemNumber={index + 1}
                   onStateChange={(newState, quantity) => 
-                    updateItemState(item.product_id, newState, quantity)
+                    updateItemState(item.instanceId, newState, quantity)
                   }
                   onImageClick={(url) => setZoomImage(url)}
                 />
@@ -158,12 +158,12 @@ export default function CoursesTabs({ order }) {
             <div className="space-y-3 sm:space-y-4">
               {checkItems.map((item, index) => (
                 <CourseItemCard
-                  key={item.product_id}
+                  key={item.instanceId}
                   item={item}
                   itemNumber={index + 1}
                   isChecked={true}
                   onStateChange={(newState, quantity) => 
-                    updateItemState(item.product_id, newState, quantity)
+                    updateItemState(item.instanceId, newState, quantity)
                   }
                   onImageClick={(url) => setZoomImage(url)}
                 />
@@ -181,12 +181,12 @@ export default function CoursesTabs({ order }) {
             <div className="space-y-3 sm:space-y-4">
               {ruptureItems.map((item, index) => (
                 <CourseItemCard
-                  key={item.product_id}
+                  key={item.instanceId}
                   item={item}
                   itemNumber={index + 1}
                   isRupture={true}
                   onStateChange={(newState, quantity) => 
-                    updateItemState(item.product_id, newState, quantity)
+                    updateItemState(item.instanceId, newState, quantity)
                   }
                   onImageClick={(url) => setZoomImage(url)}
                 />

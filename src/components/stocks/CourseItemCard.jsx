@@ -26,6 +26,7 @@ export default function CourseItemCard({ item, itemNumber, onStateChange, isChec
   };
 
   const handlePartielleConfirm = () => {
+    // Pass the found quantity to split the item
     onStateChange('check', customQuantity);
     setShowQuantityInput(false);
   };
