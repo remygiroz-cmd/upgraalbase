@@ -301,10 +301,10 @@ export default function ArticlesTab() {
                             <div
                               ref={provided.innerRef}
                               {...provided.draggableProps}
-                              className={`bg-white rounded-lg border-2 overflow-hidden flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-3 p-3 sm:p-4 transition-all duration-150 ease-out ${
+                              className={`bg-white rounded-lg border-2 overflow-hidden flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-3 p-3 sm:p-4 ${
                                 snapshot.isDragging
-                                  ? 'border-blue-600 shadow-2xl bg-blue-50 z-50 scale-105'
-                                  : 'border-gray-300 hover:border-blue-400 hover:shadow-md'
+                                  ? 'border-blue-600 shadow-2xl bg-blue-50 z-50'
+                                  : 'border-gray-300 hover:border-blue-400 hover:shadow-md transition-all duration-150'
                               }`}
                             >
                               <div className="flex items-start gap-2 cursor-grab active:cursor-grabbing flex-1 min-w-0 w-full sm:w-auto touch-none" {...provided.dragHandleProps}>
