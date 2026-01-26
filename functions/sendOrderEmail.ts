@@ -78,6 +78,10 @@ Deno.serve(async (req) => {
     const orderDate = new Date(order.date);
     doc.text(`Date: ${orderDate.toLocaleDateString('fr-FR')}`, 20, yPos);
     yPos += 5;
+    if (order.desired_delivery_day) {
+      doc.text(`Livraison souhaitée: ${order.desired_delivery_day}`, 20, yPos);
+      yPos += 5;
+    }
     doc.text(`Statut: ${order.status.toUpperCase()}`, 20, yPos);
     yPos += 10;
     
@@ -215,10 +219,16 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'RESEND_API_KEY not configured' }, { status: 500 });
     }
 
+    // Construire l'objet de l'email avec le jour de livraison souhaité
+    let emailSubject = supplier.email_subject || `Commande ${order.supplier_name}`;
+    if (order.desired_delivery_day) {
+      emailSubject += ` - Livraison souhaitée ${order.desired_delivery_day.toLowerCase()}`;
+    }
+
     const emailPayload = {
       from: `${senderName} <noreply@upgraal.com>`,
       to: [supplier.email],
-      subject: supplier.email_subject || `Commande ${order.supplier_name}`,
+      subject: emailSubject,
       text: emailBody,
       attachments: [
         {
