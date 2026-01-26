@@ -53,9 +53,21 @@ export default function CoursesTabs({ order }) {
     }
   });
 
+  const { data: articles = [] } = useQuery({
+    queryKey: ['articles'],
+    queryFn: () => base44.entities.Article.filter({ is_active: true })
+  });
+
   // Initialize items with state tracking - use array to allow splitting items
   const [itemInstances, setItemInstances] = useState(() => {
-    return (order.items || []).map((item, index) => ({
+    // Trier par ordre de parcours magasin avant de créer les instances
+    const sortedItems = [...(order.items || [])].sort((a, b) => {
+      const articleA = articles.find(art => art.id === a.product_id);
+      const articleB = articles.find(art => art.id === b.product_id);
+      return (articleA?.order || 0) - (articleB?.order || 0);
+    });
+    
+    return sortedItems.map((item, index) => ({
       instanceId: `${item.product_id}-${index}`,
       ...item,
       state: 'a_prendre'
@@ -63,7 +75,13 @@ export default function CoursesTabs({ order }) {
   });
 
   const getItemsByState = (state) => {
-    return itemInstances.filter(item => item.state === state);
+    const items = itemInstances.filter(item => item.state === state);
+    // Trier par ordre de parcours magasin
+    return items.sort((a, b) => {
+      const articleA = articles.find(art => art.id === a.product_id);
+      const articleB = articles.find(art => art.id === b.product_id);
+      return (articleA?.order || 0) - (articleB?.order || 0);
+    });
   };
 
   const updateItemState = (instanceId, newState, partialQuantity = null) => {
