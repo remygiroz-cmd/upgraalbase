@@ -608,6 +608,11 @@ export default function InventoryTab() {
                             )}
                             <div className="min-w-0 flex-1">
                               <h4 className="font-semibold text-white text-sm sm:text-base truncate">{article.name}</h4>
+                              {article.remarks && (
+                                <p className="text-[11px] sm:text-xs text-gray-400 italic mt-0.5 truncate">
+                                  {article.remarks}
+                                </p>
+                              )}
                               <div className="flex gap-2 text-[10px] sm:text-xs mt-1 flex-wrap">
                                 {article.inventory_mode === 'stock_reel' ? (
                                   <span className="px-1.5 sm:px-2 py-0.5 bg-orange-600 text-white rounded whitespace-nowrap">
