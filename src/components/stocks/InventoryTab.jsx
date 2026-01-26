@@ -320,13 +320,62 @@ export default function InventoryTab() {
     await createOrders(ordersBySupplier, today);
   };
 
+  const getNextDeliveryDay = (preferredDays) => {
+    if (!preferredDays || preferredDays.length === 0) return '';
+    
+    // Mapping des jours courts vers les jours complets
+    const dayMapping = {
+      'L': 'Lundi',
+      'MA': 'Mardi',
+      'ME': 'Mercredi',
+      'J': 'Jeudi',
+      'V': 'Vendredi',
+      'S': 'Samedi',
+      'D': 'Dimanche'
+    };
+    
+    // Si un seul jour, le retourner
+    if (preferredDays.length === 1) {
+      return dayMapping[preferredDays[0]] || '';
+    }
+    
+    // Mapping des jours vers leurs indices (Lundi = 1, Dimanche = 0)
+    const dayIndices = {
+      'L': 1, 'MA': 2, 'ME': 3, 'J': 4, 'V': 5, 'S': 6, 'D': 0
+    };
+    
+    // Obtenir l'index du jour actuel
+    const today = new Date().getDay();
+    
+    // Convertir les jours préférés en indices
+    const preferredIndices = preferredDays.map(day => dayIndices[day]).sort((a, b) => a - b);
+    
+    // Trouver le prochain jour >= aujourd'hui
+    let nextDay = preferredIndices.find(index => index >= today);
+    
+    // Si aucun jour trouvé (tous les jours sont passés cette semaine), prendre le premier de la liste
+    if (nextDay === undefined) {
+      nextDay = preferredIndices[0];
+    }
+    
+    // Trouver le jour court correspondant
+    const nextDayShort = Object.keys(dayIndices).find(key => dayIndices[key] === nextDay);
+    
+    return dayMapping[nextDayShort] || '';
+  };
+
   const createOrders = async (ordersBySupplier, today) => {
     try {
       for (const order of Object.values(ordersBySupplier)) {
+        // Trouver le fournisseur et déterminer le jour de livraison souhaité
+        const supplier = suppliers.find(s => s.id === order.supplier_id);
+        const desiredDeliveryDay = supplier ? getNextDeliveryDay(supplier.preferred_delivery_days) : '';
+        
         await createOrderMutation.mutateAsync({
           ...order,
           date: today,
           delivery_date: today,
+          desired_delivery_day: desiredDeliveryDay,
           status: 'en_cours'
         });
       }
@@ -354,11 +403,16 @@ export default function InventoryTab() {
       // Supprimer l'ancienne commande
       await deleteOrderMutation.mutateAsync(conflictInfo.existingOrder.id);
       
+      // Trouver le fournisseur et déterminer le jour de livraison souhaité
+      const supplier = suppliers.find(s => s.id === conflictInfo.newOrder.supplier_id);
+      const desiredDeliveryDay = supplier ? getNextDeliveryDay(supplier.preferred_delivery_days) : '';
+      
       // Créer la nouvelle
       await createOrderMutation.mutateAsync({
         ...conflictInfo.newOrder,
         date: today,
         delivery_date: today,
+        desired_delivery_day: desiredDeliveryDay,
         status: 'en_cours'
       });
       
