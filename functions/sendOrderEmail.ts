@@ -28,18 +28,9 @@ Deno.serve(async (req) => {
     const establishments = await base44.entities.Establishment.list();
     const establishment = establishments[0] || {};
 
-    // MASQUAGE DES PRIX: true = masquer, false = afficher
-    const shouldHidePrices = supplier.hide_prices === true;
-    
-    console.log('🔍 CONFIG MASQUAGE PRIX:', {
-      supplier: supplier.name,
-      hide_prices_raw: supplier.hide_prices,
-      shouldHidePrices: shouldHidePrices,
-      will_show_prices: !shouldHidePrices
-    });
-
     // Générer le PDF
     const doc = new jsPDF();
+    
     let yPos = 20;
     
     // Informations de l'établissement
@@ -90,15 +81,11 @@ Deno.serve(async (req) => {
     doc.text(`Statut: ${order.status.toUpperCase()}`, 20, yPos);
     yPos += 10;
     
-    // Tableau des articles - EN-TÊTE
+    // Tableau des articles
     doc.setFontSize(12);
     doc.text('DÉSIGNATION', 20, yPos);
     doc.text('QUANTITÉ', 120, yPos);
-    
-    // N'afficher "TOTAL HT" QUE si on NE masque PAS les prix
-    if (!shouldHidePrices) {
-      doc.text('TOTAL HT', 170, yPos);
-    }
+    doc.text('TOTAL HT', 170, yPos);
     
     let y = yPos + 10;
     let totalAmount = 0;
@@ -125,8 +112,7 @@ Deno.serve(async (req) => {
                       `${item.quantity} ${item.unit || ''}`;
       doc.text(qtyText, 120, y);
       
-      // N'afficher les prix QUE si on NE masque PAS les prix
-      if (!shouldHidePrices && item.unit_price && item.unit_price > 0) {
+      if (item.unit_price && item.unit_price > 0) {
         const itemTotal = item.quantity * item.unit_price;
         totalAmount += itemTotal;
         doc.text(`${itemTotal.toFixed(2)} €`, 170, y);
@@ -135,13 +121,11 @@ Deno.serve(async (req) => {
       y += item.supplier_reference ? 10 : 8;
     });
     
-    // Total - N'afficher QUE si on NE masque PAS les prix
-    if (!shouldHidePrices) {
-      y += 10;
-      doc.setFontSize(14);
-      doc.text('TOTAL ESTIMÉ HT', 20, y);
-      doc.text(`${totalAmount.toFixed(2)} €`, 170, y);
-    }
+    // Total
+    y += 10;
+    doc.setFontSize(14);
+    doc.text('TOTAL ESTIMÉ HT', 20, y);
+    doc.text(`${totalAmount.toFixed(2)} €`, 170, y);
     
     // Convertir en base64
     const pdfBase64 = doc.output('datauristring').split(',')[1];
@@ -200,19 +184,14 @@ Deno.serve(async (req) => {
                       item.unit === 'Sacs' ? `${item.quantity} Sacs` :
                       `${item.quantity} ${item.unit || ''}`;
       emailBody += `   Quantité: ${qtyText}\n`;
-      
-      // N'afficher les prix QUE si on NE masque PAS les prix
-      if (!shouldHidePrices && item.unit_price && item.unit_price > 0) {
+      if (item.unit_price && item.unit_price > 0) {
         emailBody += `   Prix unitaire: ${item.unit_price.toFixed(2)} €\n`;
         emailBody += `   Total: ${(item.quantity * item.unit_price).toFixed(2)} €\n`;
       }
       emailBody += '\n';
     });
     
-    // N'afficher le total QUE si on NE masque PAS les prix
-    if (!shouldHidePrices) {
-      emailBody += `\n💰 TOTAL ESTIMÉ HT: ${totalAmount.toFixed(2)} €\n`;
-    }
+    emailBody += `\n💰 TOTAL ESTIMÉ HT: ${totalAmount.toFixed(2)} €\n`;
 
     // Préparer les emails CC
     const ccEmails = supplier.cc_emails 
@@ -253,10 +232,11 @@ Deno.serve(async (req) => {
       emailPayload.cc = ccEmails;
     }
 
-    console.log('📧 Envoi email:', {
+    console.log('Envoi email avec les données suivantes:', {
       to: emailPayload.to,
       cc: emailPayload.cc,
-      subject: emailPayload.subject
+      subject: emailPayload.subject,
+      hasAttachment: !!emailPayload.attachments
     });
 
     // Préparer l'historique
@@ -282,7 +262,7 @@ Deno.serve(async (req) => {
     });
 
     const result = await response.json();
-    console.log('✅ Résultat Resend:', result);
+    console.log('Résultat Resend:', result);
 
     if (!response.ok) {
       return Response.json({ 
@@ -303,7 +283,7 @@ Deno.serve(async (req) => {
     });
 
   } catch (error) {
-    console.error('❌ Erreur:', error);
+    console.error('Erreur:', error);
     return Response.json({ 
       error: error.message 
     }, { status: 500 });
