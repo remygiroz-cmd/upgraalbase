@@ -19,12 +19,12 @@ export default function CategoryManager({ categories }) {
   const saveCategoryMutation = useMutation({
     mutationFn: ({ id, data }) => {
       if (id) {
-        return base44.entities.Category.update(id, data);
+        return base44.entities.ArticleCategory.update(id, data);
       }
-      return base44.entities.Category.create(data);
+      return base44.entities.ArticleCategory.create(data);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['categories'] });
+      queryClient.invalidateQueries({ queryKey: ['articleCategories'] });
       setShowForm(false);
       setEditingCategory(null);
       setForm({ name: '', color: '#3b82f6' });
@@ -32,9 +32,9 @@ export default function CategoryManager({ categories }) {
   });
 
   const deleteCategoryMutation = useMutation({
-    mutationFn: (id) => base44.entities.Category.delete(id),
+    mutationFn: (id) => base44.entities.ArticleCategory.delete(id),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['categories'] });
+      queryClient.invalidateQueries({ queryKey: ['articleCategories'] });
     }
   });
 

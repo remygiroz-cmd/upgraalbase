@@ -94,8 +94,8 @@ export default function InventoryTab() {
   });
 
   const { data: categories = [] } = useQuery({
-    queryKey: ['categories'],
-    queryFn: () => base44.entities.Category.filter({ is_active: true }, 'order')
+    queryKey: ['articleCategories'],
+    queryFn: () => base44.entities.ArticleCategory.filter({ is_active: true }, 'order')
   });
 
   const { data: suppliers = [] } = useQuery({
