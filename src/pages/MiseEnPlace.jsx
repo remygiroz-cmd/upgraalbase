@@ -635,7 +635,7 @@ export default function MiseEnPlace() {
               <div 
               {...provided.droppableProps}
               ref={provided.innerRef}
-              className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5 sm:gap-6 pb-32"
+              className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-6 pb-32"
               >
                 {/* Uncategorized tasks */}
                 {uncategorizedTasks.length > 0 && (
@@ -779,22 +779,22 @@ function CategoryColumn({ categoryId, title, color, tasks, onEditTask, onDeleteT
 
   return (
     <div className={cn(
-      "bg-white rounded-2xl border-2 overflow-hidden transition-all duration-200 shadow-md",
-      isDragging ? "ring-4 ring-orange-400 shadow-2xl border-orange-500 scale-105" : "border-gray-300"
+      "bg-white rounded-xl sm:rounded-2xl border-2 overflow-hidden transition-all duration-200",
+      isDragging ? "ring-4 ring-orange-400 shadow-2xl border-orange-500" : "border-gray-200 shadow-sm"
     )}>
       <div 
         className={cn(
-          "px-4 py-4 border-b-2 flex items-center gap-3 transition-colors",
+          "px-3 sm:px-4 py-2.5 sm:py-3 border-b-2 flex items-center gap-2 transition-colors",
           isDragging ? "bg-orange-50 border-orange-300" : "border-gray-200"
         )}
-        style={{ borderLeftWidth: 6, borderLeftColor: color }}
+        style={{ borderLeftWidth: 4, borderLeftColor: color }}
       >
         {isDraggable && (
           <div 
             {...dragHandleProps}
             className="cursor-grab active:cursor-grabbing touch-none p-2 -m-1 hover:bg-orange-100 rounded-lg transition-all active:scale-110"
           >
-            <GripVertical className={cn("w-6 h-6 transition-colors", isDragging ? "text-orange-600" : "text-orange-500")} />
+            <GripVertical className={cn("w-5 h-5 transition-colors", isDragging ? "text-orange-600" : "text-orange-500")} />
           </div>
         )}
         
@@ -810,31 +810,31 @@ function CategoryColumn({ categoryId, title, color, tasks, onEditTask, onDeleteT
               }
             }}
             onBlur={handleSaveEdit}
-            className="flex-1 h-10 bg-white border-gray-300 text-base"
+            className="flex-1 h-8 bg-slate-700 border-slate-600 text-sm"
             autoFocus
           />
         ) : (
           <div className="flex-1 min-w-0">
-            <h3 className="font-bold text-gray-900 text-base sm:text-lg truncate">{title}</h3>
-            <p className="text-sm text-gray-600 font-medium">{tasks.length} tâche{tasks.length > 1 ? 's' : ''}</p>
+            <h3 className="font-semibold text-gray-900 text-sm sm:text-base truncate">{title}</h3>
+            <p className="text-xs text-gray-600">{tasks.length} tâche{tasks.length > 1 ? 's' : ''}</p>
           </div>
         )}
         
         {isDraggable && !isEditing && (
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-0.5 sm:gap-1">
             <button
               onClick={() => setIsEditing(true)}
-              className="p-2.5 rounded-lg hover:bg-orange-50 text-gray-600 hover:text-orange-600 transition-colors active:scale-95 min-h-[44px] min-w-[44px]"
+              className="p-1.5 sm:p-2 rounded-lg hover:bg-orange-50 text-gray-600 hover:text-orange-600 transition-colors active:scale-95"
               title="Modifier"
             >
-              <Pencil className="w-5 h-5" />
+              <Pencil className="w-4 h-4" />
             </button>
             <button
               onClick={handleDelete}
-              className="p-2.5 rounded-lg hover:bg-red-50 text-gray-600 hover:text-red-600 transition-colors active:scale-95 min-h-[44px] min-w-[44px]"
+              className="p-1.5 sm:p-2 rounded-lg hover:bg-red-50 text-gray-600 hover:text-red-600 transition-colors active:scale-95"
               title="Supprimer"
             >
-              <Trash2 className="w-5 h-5" />
+              <Trash2 className="w-4 h-4" />
             </button>
           </div>
         )}
@@ -846,7 +846,7 @@ function CategoryColumn({ categoryId, title, color, tasks, onEditTask, onDeleteT
             ref={provided.innerRef}
             {...provided.droppableProps}
             className={cn(
-              "p-4 space-y-3 min-h-[100px] transition-all duration-150 ease-out",
+              "p-3 space-y-2 min-h-[100px] transition-all duration-150 ease-out",
               snapshot.isDraggingOver ? "bg-orange-100 border-2 border-orange-400 -m-px" : "bg-transparent"
             )}
           >
@@ -924,125 +924,124 @@ function TaskCard({ task, onEdit, onDelete, onStartStopwatch, isSelected, onTogg
     <div
       onClick={requiresStock ? undefined : onToggleSelection}
       className={cn(
-        "group bg-white rounded-xl p-4 border-2 transition-all duration-150",
+        "group bg-white rounded-lg sm:rounded-xl p-2.5 sm:p-3 border-2 transition-all duration-150",
         !requiresStock && "cursor-pointer active:scale-[0.98]",
         isSelected 
-          ? "bg-orange-50 border-orange-500 ring-2 ring-orange-300 shadow-lg" 
-          : "border-gray-300 hover:bg-gray-50 hover:border-gray-400 hover:shadow-md",
+          ? "bg-orange-50 border-orange-500 ring-2 ring-orange-300" 
+          : "border-gray-300 hover:bg-gray-50 hover:border-gray-400",
         isDragging && "border-orange-600 shadow-2xl bg-orange-50 z-50"
       )}
     >
-      <div className="flex flex-col gap-3">
-        {/* Image en haut pour mobile, bien visible */}
+      <div className="flex items-start gap-2 sm:gap-3">
+        <div 
+          {...dragHandleProps}
+          className={cn(
+            "cursor-grab active:cursor-grabbing touch-none pt-0.5 p-1 -m-1 hover:bg-orange-100 rounded transition-all active:scale-110",
+            isDragging && "text-orange-600"
+          )}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <GripVertical className={cn("w-5 h-5 transition-colors", isDragging ? "text-orange-600" : "text-gray-400")} />
+        </div>
+        
         {task.image_url && (
           <img 
             src={task.image_url} 
             alt={task.name}
-            className="w-full h-32 sm:h-40 rounded-lg object-cover"
+            className="w-10 h-10 sm:w-12 sm:h-12 rounded-lg object-cover flex-shrink-0"
           />
         )}
-
-        <div className="flex items-start gap-2 sm:gap-3">
-          <div 
-            {...dragHandleProps}
-            className={cn(
-              "cursor-grab active:cursor-grabbing touch-none p-2 -m-1 hover:bg-orange-100 rounded-lg transition-all active:scale-110",
-              isDragging && "text-orange-600"
+        
+        <div className="flex-1 min-w-0">
+          <h4 className="font-semibold text-gray-900 text-sm sm:text-base break-words">{task.name}</h4>
+          <div className="flex items-center gap-2 sm:gap-3 mt-1 text-xs text-gray-600 flex-wrap">
+            {formatDuration() && (
+              <span className="flex items-center gap-1">
+                <Clock className="w-3 h-3" />
+                {formatDuration()}
+              </span>
             )}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <GripVertical className={cn("w-6 h-6 transition-colors", isDragging ? "text-orange-600" : "text-gray-400")} />
-          </div>
-          
-          <div className="flex-1 min-w-0">
-            <h4 className="font-bold text-gray-900 text-base sm:text-lg break-words leading-snug">{task.name}</h4>
-            <div className="flex items-center gap-2 mt-2 text-sm text-gray-600 flex-wrap">
-              {formatDuration() && (
-                <span className="flex items-center gap-1.5 px-2 py-1 bg-gray-100 rounded-md">
-                  <Clock className="w-4 h-4" />
-                  <span className="font-medium">{formatDuration()}</span>
+            <span className={cn(
+              "px-1.5 sm:px-2 py-0.5 rounded-full text-[10px] font-bold uppercase whitespace-nowrap",
+              task.tracking_mode === 'binary' 
+                ? "bg-amber-100 text-amber-700"
+                : "bg-indigo-100 text-indigo-700"
+            )}>
+              {task.tracking_mode === 'binary' ? (
+                <span className="flex items-center gap-1">
+                  <ToggleLeft className="w-3 h-3" />
+                  <span className="hidden sm:inline">Binaire</span>
+                  <span className="sm:hidden">Bin</span>
+                </span>
+              ) : (
+                <span className="flex items-center gap-1">
+                  <Hash className="w-3 h-3" />
+                  <span className="hidden sm:inline">Quantité</span>
+                  <span className="sm:hidden">Qté</span>
                 </span>
               )}
-              <span className={cn(
-                "px-2.5 py-1 rounded-md text-xs font-bold uppercase whitespace-nowrap",
-                task.tracking_mode === 'binary' 
-                  ? "bg-amber-100 text-amber-700"
-                  : "bg-indigo-100 text-indigo-700"
-              )}>
-                {task.tracking_mode === 'binary' ? (
-                  <span className="flex items-center gap-1">
-                    <ToggleLeft className="w-4 h-4" />
-                    Binaire
-                  </span>
-                ) : (
-                  <span className="flex items-center gap-1">
-                    <Hash className="w-4 h-4" />
-                    Quantité
-                  </span>
-                )}
-              </span>
-            </div>
-            
-            {requiresStock && (
-              <div className="mt-3 p-3 bg-gray-50 rounded-lg space-y-2">
-                <div className="flex items-center gap-3 flex-wrap">
-                  <label className="text-sm text-gray-700 font-semibold">Stock restant :</label>
-                  <Input
-                    type="number"
-                    min="0"
-                    value={currentStock}
-                    onChange={(e) => onStockChange?.(e.target.value)}
-                    onClick={(e) => e.stopPropagation()}
-                    className="h-10 w-20 bg-white border-gray-300 text-sm font-bold text-center"
-                    placeholder="0"
-                  />
-                  <span className="text-sm text-gray-700 font-semibold">/ {targetQuantity}</span>
-                </div>
-                {quantityToProduce > 0 && (
-                  <p className="text-sm text-orange-600 font-bold">
-                    À produire : {quantityToProduce} {task.unit || 'unités'}
-                  </p>
-                )}
+            </span>
+          </div>
+          
+          {requiresStock && (
+            <div className="mt-2 space-y-1">
+              <div className="flex items-center gap-2 flex-wrap">
+                <label className="text-[11px] sm:text-xs text-gray-700 font-medium">Stock restant :</label>
+                <Input
+                  type="number"
+                  min="0"
+                  value={currentStock}
+                  onChange={(e) => onStockChange?.(e.target.value)}
+                  onClick={(e) => e.stopPropagation()}
+                  className="h-8 sm:h-7 w-16 sm:w-20 bg-gray-50 border-gray-300 text-xs font-semibold"
+                  placeholder="0"
+                />
+                <span className="text-xs text-gray-700 font-medium">/ {targetQuantity}</span>
               </div>
-            )}
-          </div>
+              {quantityToProduce > 0 && (
+                <p className="text-[11px] sm:text-xs text-orange-600 font-semibold">
+                  À produire : {quantityToProduce} {task.unit || 'unités'}
+                </p>
+              )}
+            </div>
+          )}
+        </div>
 
-          <div className="flex flex-col gap-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                onStartStopwatch();
-              }}
-              className="p-2.5 rounded-lg hover:bg-orange-100 text-gray-600 hover:text-orange-600 transition-colors active:scale-95 min-h-[44px] min-w-[44px]"
-              title="Chronométrer"
-            >
-              <Play className="w-5 h-5" />
-            </button>
-            {isAdmin && (
-              <>
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onEdit();
-                  }}
-                  className="p-2.5 rounded-lg hover:bg-blue-100 text-gray-600 hover:text-blue-600 transition-colors active:scale-95 min-h-[44px] min-w-[44px]"
-                  title="Modifier"
-                >
-                  <Pencil className="w-5 h-5" />
-                </button>
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setConfirmDelete(true);
-                  }}
-                  className="p-2.5 rounded-lg hover:bg-red-100 text-gray-600 hover:text-red-600 transition-colors active:scale-95 min-h-[44px] min-w-[44px]"
-                  title="Supprimer"
-                >
-                  <Trash2 className="w-5 h-5" />
-                </button>
-              </>
-            )}
-          </div>
+        <div className="flex items-center gap-0.5 sm:gap-1 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onStartStopwatch();
+            }}
+            className="p-1.5 sm:p-2 rounded-lg hover:bg-orange-100 text-gray-600 hover:text-orange-600 transition-colors active:scale-95"
+            title="Chronométrer"
+          >
+            <Play className="w-4 h-4" />
+          </button>
+          {isAdmin && (
+            <>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onEdit();
+                }}
+                className="p-1.5 sm:p-2 rounded-lg hover:bg-blue-100 text-gray-600 hover:text-blue-600 transition-colors active:scale-95"
+                title="Modifier"
+              >
+                <Pencil className="w-4 h-4" />
+              </button>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setConfirmDelete(true);
+                }}
+                className="p-1.5 sm:p-2 rounded-lg hover:bg-red-100 text-gray-600 hover:text-red-600 transition-colors active:scale-95"
+                title="Supprimer"
+              >
+                <Trash2 className="w-4 h-4" />
+              </button>
+            </>
+          )}
         </div>
       </div>
 
