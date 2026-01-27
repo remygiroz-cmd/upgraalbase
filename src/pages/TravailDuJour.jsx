@@ -70,7 +70,9 @@ export default function TravailDuJour() {
   const completeSessionMutation = useMutation({
     mutationFn: ({ id }) => base44.entities.WorkSession.update(id, {
       status: 'completed',
-      completed_at: new Date().toISOString()
+      completed_at: new Date().toISOString(),
+      completed_by: currentUser?.email,
+      completed_by_name: currentUser?.full_name || currentUser?.email
     }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['workSessions'] });
@@ -310,6 +312,17 @@ export default function TravailDuJour() {
         {activeSession.started_at && (
           <div className="text-gray-700 text-xs font-medium mb-2">
             Créée le {format(new Date(activeSession.started_at), "d MMM 'à' HH:mm", { locale: fr })}
+            {activeSession.started_by_name && (
+              <span> par {activeSession.started_by_name}</span>
+            )}
+          </div>
+        )}
+        {activeSession.status === 'completed' && activeSession.completed_at && (
+          <div className="text-orange-600 text-xs font-semibold mb-2">
+            Validée le {format(new Date(activeSession.completed_at), "d MMM 'à' HH:mm", { locale: fr })}
+            {activeSession.completed_by_name && (
+              <span> par {activeSession.completed_by_name}</span>
+            )}
           </div>
         )}
         <div className="flex flex-col gap-2 mb-3">
