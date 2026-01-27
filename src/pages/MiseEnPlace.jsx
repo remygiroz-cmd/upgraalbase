@@ -33,6 +33,7 @@ export default function MiseEnPlace() {
   const [adHocTasks, setAdHocTasks] = useState([]);
   const [showNoteModal, setShowNoteModal] = useState(false);
   const [showSuccessOverlay, setShowSuccessOverlay] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
   const today = format(new Date(), 'yyyy-MM-dd');
   const dayOfWeek = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'][new Date().getDay()];
 
@@ -186,10 +187,15 @@ export default function MiseEnPlace() {
   };
 
   const getTasksByCategory = (categoryId) => {
-    return tasks.filter(t => t.category_id === categoryId).sort((a, b) => (a.order || 0) - (b.order || 0));
+    return tasks
+      .filter(t => t.category_id === categoryId)
+      .filter(t => t.name.toLowerCase().includes(searchQuery.toLowerCase()))
+      .sort((a, b) => (a.order || 0) - (b.order || 0));
   };
 
-  const uncategorizedTasks = tasks.filter(t => !t.category_id);
+  const uncategorizedTasks = tasks
+    .filter(t => !t.category_id)
+    .filter(t => t.name.toLowerCase().includes(searchQuery.toLowerCase()));
 
   const { data: currentUser } = useQuery({
     queryKey: ['currentUser'],
@@ -525,6 +531,17 @@ export default function MiseEnPlace() {
           </div>
         }
       />
+
+      {/* Search Bar */}
+      <div className="relative max-w-md">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+        <Input
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          placeholder="Rechercher une tâche..."
+          className="pl-10 bg-white border-gray-300 text-gray-900 min-h-[44px]"
+        />
+      </div>
 
       {/* Selection Actions */}
       <AnimatePresence>
