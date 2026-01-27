@@ -588,8 +588,8 @@ export default function MiseEnPlace() {
         />
       ) : (
         <DragDropContext onDragEnd={handleDragEnd}>
-          <Droppable droppableId="categories" direction="horizontal" type="category">
-            {(provided) => (
+          <Droppable droppableId="categories" type="category">
+            {(provided, snapshot) => (
               <div 
               {...provided.droppableProps}
               ref={provided.innerRef}
@@ -617,11 +617,15 @@ export default function MiseEnPlace() {
 
                 {/* Category columns */}
                 {categories.filter(category => getTasksByCategory(category.id).length > 0).map((category, index) => (
-                  <Draggable key={category.id} draggableId={category.id} index={index} type="category">
+                  <Draggable key={category.id} draggableId={category.id} index={index}>
                     {(provided, snapshot) => (
                       <div
                         ref={provided.innerRef}
                         {...provided.draggableProps}
+                        className={cn(
+                          "transition-transform duration-200",
+                          snapshot.isDragging && "z-50"
+                        )}
                       >
                         <CategoryColumn
                           categoryId={category.id}
@@ -733,19 +737,22 @@ function CategoryColumn({ categoryId, title, color, tasks, onEditTask, onDeleteT
 
   return (
     <div className={cn(
-      "bg-white rounded-xl sm:rounded-2xl border-2 border-gray-200 overflow-hidden transition-all shadow-sm",
-      isDragging && "ring-2 ring-orange-500 shadow-xl scale-105"
+      "bg-white rounded-xl sm:rounded-2xl border-2 overflow-hidden transition-all duration-200",
+      isDragging ? "ring-4 ring-orange-400 shadow-2xl border-orange-500" : "border-gray-200 shadow-sm"
     )}>
       <div 
-        className="px-3 sm:px-4 py-2.5 sm:py-3 border-b-2 border-gray-200 flex items-center gap-2"
+        className={cn(
+          "px-3 sm:px-4 py-2.5 sm:py-3 border-b-2 flex items-center gap-2 transition-colors",
+          isDragging ? "bg-orange-50 border-orange-300" : "border-gray-200"
+        )}
         style={{ borderLeftWidth: 4, borderLeftColor: color }}
       >
         {isDraggable && (
           <div 
             {...dragHandleProps}
-            className="cursor-grab active:cursor-grabbing touch-none p-1 hover:bg-slate-700/50 rounded transition-colors"
+            className="cursor-grab active:cursor-grabbing touch-none p-2 -m-1 hover:bg-orange-100 rounded-lg transition-all active:scale-110"
           >
-            <GripVertical className="w-4 h-4 text-orange-500" />
+            <GripVertical className={cn("w-5 h-5 transition-colors", isDragging ? "text-orange-600" : "text-orange-500")} />
           </div>
         )}
         
