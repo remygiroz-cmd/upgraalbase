@@ -26,8 +26,8 @@ export default function ArticlesTab() {
   });
 
   const { data: categories = [] } = useQuery({
-    queryKey: ['categories'],
-    queryFn: () => base44.entities.Category.filter({ is_active: true }, 'name')
+    queryKey: ['articleCategories'],
+    queryFn: () => base44.entities.ArticleCategory.filter({ is_active: true }, 'name')
   });
 
   const { data: suppliers = [] } = useQuery({
