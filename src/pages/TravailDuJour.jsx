@@ -485,6 +485,11 @@ function WorkTaskCard({ task, onComplete, onUncomplete, onRemove, onUpdateQuanti
             </div>
             
             <div className="flex flex-wrap gap-2">
+              {task.current_stock !== undefined && task.target_quantity !== undefined && (
+                <div className="w-full px-2 py-1.5 rounded-lg bg-gray-100 text-gray-700 text-xs font-medium">
+                  Stock restant : {task.current_stock} / {task.target_quantity}
+                </div>
+              )}
               {hasQuantity && !task.is_completed && (
                 <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-indigo-600/20">
                   <button
