@@ -212,6 +212,17 @@ export default function TravailDuJour() {
     tasksByCategory[catId].push({ ...task, originalIndex: index });
   });
 
+  // Sort tasks within each category by their order from Task entity
+  Object.keys(tasksByCategory).forEach(catId => {
+    tasksByCategory[catId].sort((a, b) => {
+      const taskA = tasks.find(t => t.id === a.task_id);
+      const taskB = tasks.find(t => t.id === b.task_id);
+      const orderA = taskA?.order || 0;
+      const orderB = taskB?.order || 0;
+      return orderA - orderB;
+    });
+  });
+
   // Calculate progress
   const completedCount = activeSession.tasks?.filter(t => t.is_completed).length || 0;
   const totalCount = activeSession.tasks?.length || 0;
