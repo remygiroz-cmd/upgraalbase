@@ -67,24 +67,31 @@ export default function MiseEnPlace() {
   });
 
   const handleDragEnd = async (result) => {
-    if (!result.destination) return;
-    
     const { source, destination, type } = result;
+    if (!destination) return;
+    if (source.droppableId === destination.droppableId && source.index === destination.index) return;
 
     // Handle category reordering
     if (type === 'category') {
-      const items = Array.from(categories);
+      const visibleCategories = categories.filter(category => getTasksByCategory(category.id).length > 0);
+      const items = Array.from(visibleCategories);
       const [reorderedItem] = items.splice(source.index, 1);
       items.splice(destination.index, 0, reorderedItem);
 
-      try {
-        const updates = items.map((item, index) => 
-          base44.entities.Category.update(item.id, { order: index })
+      const updates = [];
+      items.forEach((item, index) => {
+        if (item.order !== index) {
+          updates.push({ id: item.id, order: index });
+        }
+      });
+
+      if (updates.length > 0) {
+        await Promise.all(
+          updates.map(update => 
+            base44.entities.Category.update(update.id, { order: update.order })
+          )
         );
-        await Promise.all(updates);
         queryClient.invalidateQueries({ queryKey: ['categories'] });
-      } catch (error) {
-        console.error('Error reordering:', error);
       }
       return;
     }
@@ -109,14 +116,20 @@ export default function MiseEnPlace() {
         const [reorderedItem] = items.splice(source.index, 1);
         items.splice(destination.index, 0, reorderedItem);
 
-        try {
-          const updates = items.map((item, index) => 
-            base44.entities.Task.update(item.id, { order: index })
+        const updates = [];
+        items.forEach((item, index) => {
+          if (item.order !== index) {
+            updates.push({ id: item.id, order: index });
+          }
+        });
+
+        if (updates.length > 0) {
+          await Promise.all(
+            updates.map(update => 
+              base44.entities.Task.update(update.id, { order: update.order })
+            )
           );
-          await Promise.all(updates);
           queryClient.invalidateQueries({ queryKey: ['tasks'] });
-        } catch (error) {
-          console.error('Error reordering tasks:', error);
         }
       } else {
         // Move between categories
@@ -125,26 +138,38 @@ export default function MiseEnPlace() {
         const [movedItem] = sourceItems.splice(source.index, 1);
         destItems.splice(destination.index, 0, movedItem);
 
-        try {
-          const updates = [
-            // Update moved item's category
-            base44.entities.Task.update(movedItem.id, { 
-              category_id: destCategoryId === 'uncategorized' ? null : destCategoryId,
-              order: destination.index 
-            }),
-            // Reorder source category tasks
-            ...sourceItems.map((item, index) => 
-              base44.entities.Task.update(item.id, { order: index })
-            ),
-            // Reorder destination category tasks
-            ...destItems.map((item, index) => 
-              base44.entities.Task.update(item.id, { order: index })
+        const updates = [];
+        
+        // Update moved item's category
+        updates.push({
+          id: movedItem.id,
+          data: {
+            category_id: destCategoryId === 'uncategorized' ? null : destCategoryId,
+            order: destination.index
+          }
+        });
+
+        // Reorder source category tasks
+        sourceItems.forEach((item, index) => {
+          if (item.order !== index) {
+            updates.push({ id: item.id, data: { order: index } });
+          }
+        });
+
+        // Reorder destination category tasks
+        destItems.forEach((item, index) => {
+          if (item.order !== index) {
+            updates.push({ id: item.id, data: { order: index } });
+          }
+        });
+
+        if (updates.length > 0) {
+          await Promise.all(
+            updates.map(update => 
+              base44.entities.Task.update(update.id, update.data)
             )
-          ];
-          await Promise.all(updates);
+          );
           queryClient.invalidateQueries({ queryKey: ['tasks'] });
-        } catch (error) {
-          console.error('Error moving task:', error);
         }
       }
     }
@@ -804,16 +829,20 @@ function CategoryColumn({ categoryId, title, color, tasks, onEditTask, onDeleteT
             ref={provided.innerRef}
             {...provided.droppableProps}
             className={cn(
-              "p-3 space-y-2 min-h-[100px] transition-colors",
-              snapshot.isDraggingOver && "bg-orange-50"
+              "p-3 space-y-2 min-h-[100px] transition-all duration-150 ease-out",
+              snapshot.isDraggingOver ? "bg-orange-100 border-2 border-orange-400 -m-px" : "bg-transparent"
             )}
           >
             {tasks.map((task, index) => (
-              <Draggable key={task.id} draggableId={task.id} index={index} type="task">
+              <Draggable key={task.id} draggableId={task.id} index={index}>
                 {(provided, snapshot) => (
                   <div
                     ref={provided.innerRef}
                     {...provided.draggableProps}
+                    className={cn(
+                      "transition-transform duration-150",
+                      snapshot.isDragging && "z-50"
+                    )}
                   >
                     <TaskCard
                       task={task}
@@ -875,28 +904,27 @@ function TaskCard({ task, onEdit, onDelete, onStartStopwatch, isSelected, onTogg
   const quantityToProduce = Math.max(0, targetQuantity - currentStock);
 
   return (
-    <motion.div
-      layout
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, scale: 0.95 }}
+    <div
       onClick={requiresStock ? undefined : onToggleSelection}
       className={cn(
-        "group bg-white rounded-lg sm:rounded-xl p-2.5 sm:p-3 border-2 transition-all",
+        "group bg-white rounded-lg sm:rounded-xl p-2.5 sm:p-3 border-2 transition-all duration-150",
         !requiresStock && "cursor-pointer active:scale-[0.98]",
         isSelected 
           ? "bg-orange-50 border-orange-500 ring-2 ring-orange-300" 
           : "border-gray-300 hover:bg-gray-50 hover:border-gray-400",
-        isDragging && "shadow-2xl ring-2 ring-orange-400 scale-105 rotate-2"
+        isDragging && "border-orange-600 shadow-2xl bg-orange-50 z-50"
       )}
     >
       <div className="flex items-start gap-2 sm:gap-3">
         <div 
           {...dragHandleProps}
-          className="text-gray-400 cursor-grab active:cursor-grabbing touch-none pt-0.5"
+          className={cn(
+            "cursor-grab active:cursor-grabbing touch-none pt-0.5 p-1 -m-1 hover:bg-orange-100 rounded transition-all active:scale-110",
+            isDragging && "text-orange-600"
+          )}
           onClick={(e) => e.stopPropagation()}
         >
-          <GripVertical className="w-4 h-4" />
+          <GripVertical className={cn("w-5 h-5 transition-colors", isDragging ? "text-orange-600" : "text-gray-400")} />
         </div>
         
         {task.image_url && (
@@ -1009,6 +1037,6 @@ function TaskCard({ task, onEdit, onDelete, onStartStopwatch, isSelected, onTogg
         variant="danger"
         confirmText="Supprimer"
       />
-    </motion.div>
+    </div>
   );
 }
