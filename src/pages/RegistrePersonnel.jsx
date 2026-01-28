@@ -112,29 +112,37 @@ export default function RegistrePersonnel() {
 
     try {
       const canvas = await html2canvas(element, {
-        scale: 2,
-        useCORS: true
+        scale: 1.5,
+        useCORS: true,
+        allowTaint: true,
+        logging: false,
+        windowWidth: element.scrollWidth
       });
+      
       const pdf = new jsPDF({
         orientation: 'landscape',
         unit: 'mm',
         format: 'a4'
       });
       
-      const imgWidth = pdf.internal.pageSize.getWidth();
+      const pageWidth = pdf.internal.pageSize.getWidth();
+      const pageHeight = pdf.internal.pageSize.getHeight();
+      const imgWidth = pageWidth - 10;
       const imgHeight = (canvas.height * imgWidth) / canvas.width;
+      
       let heightLeft = imgHeight;
-      let position = 0;
+      let position = 5;
 
       const imgData = canvas.toDataURL('image/png');
-      pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
-      heightLeft -= pdf.internal.pageSize.getHeight();
+      
+      pdf.addImage(imgData, 'PNG', 5, position, imgWidth, imgHeight);
+      heightLeft -= (pageHeight - 10);
 
       while (heightLeft > 0) {
-        position = heightLeft - imgHeight;
+        position = heightLeft - imgHeight + 5;
         pdf.addPage();
-        pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
-        heightLeft -= pdf.internal.pageSize.getHeight();
+        pdf.addImage(imgData, 'PNG', 5, position, imgWidth, imgHeight);
+        heightLeft -= (pageHeight - 10);
       }
 
       pdf.save(`registre-personnel-${new Date().toISOString().split('T')[0]}.pdf`);
@@ -305,14 +313,19 @@ export default function RegistrePersonnel() {
           }
           
           body {
-            padding: 5mm;
-            font-size: 10px;
+            padding: 3mm;
+            font-size: 8px;
+          }
+          
+          #registry-table {
+            width: 100%;
+            overflow: visible !important;
           }
           
           table {
             width: 100%;
             border-collapse: collapse;
-            page-break-inside: avoid;
+            page-break-inside: auto;
           }
           
           thead {
@@ -320,16 +333,23 @@ export default function RegistrePersonnel() {
             page-break-after: avoid;
           }
           
+          tbody {
+            display: table-row-group;
+          }
+          
           tr {
             page-break-inside: avoid;
+            page-break-after: auto;
           }
           
           th, td {
             border: 1px solid #000;
-            padding: 4px 3px;
+            padding: 2px;
             text-align: left;
-            font-size: 9px;
-            white-space: nowrap;
+            font-size: 8px;
+            white-space: normal;
+            word-break: break-word;
+            max-width: 60px;
           }
           
           th {
@@ -342,8 +362,7 @@ export default function RegistrePersonnel() {
           }
           
           div[class*="PageHeader"] {
-            margin-bottom: 10px;
-            page-break-after: avoid;
+            display: none !important;
           }
         }
       `}</style>
