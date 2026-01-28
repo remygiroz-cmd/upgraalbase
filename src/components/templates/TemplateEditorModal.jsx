@@ -24,7 +24,7 @@ export default function TemplateEditorModal({ open, onOpenChange, template, onSu
     notes: ''
   });
 
-  const [htmlPreview, setHtmlPreview] = useState(false);
+
 
   useEffect(() => {
     if (template) {
