@@ -341,6 +341,30 @@ Deno.serve(async (req) => {
     const jobRoles = await base44.entities.JobRoles.filter({ label: employee.position });
     const jobTasksText = jobRoles?.[0]?.tasksText || 'Tâches à définir';
 
+    // Déterminer le type de contrat
+    const typeDocument = template.typeDocument; // 'CDD' ou 'CDI'
+
+    // Récupérer les dates
+    const startDate = options.startDate || employee.start_date;
+    const endDate = options.endDate || employee.end_date;
+
+    // Calcul de la période d'essai
+    let essayDays, periodeEssaiTexte, finEssaiDate;
+
+    if (typeDocument === 'CDD') {
+      // CDD : 1 jour ouvré par semaine, max 21 jours
+      essayDays = calculateCDDEssayDays(startDate, endDate);
+      periodeEssaiTexte = `${essayDays} jour${essayDays > 1 ? 's' : ''} ouvré${essayDays > 1 ? 's' : ''}`;
+      finEssaiDate = calculateEssayEndDate(startDate, essayDays);
+    } else {
+      // CDI : fixe à 2 mois
+      essayDays = 60; // ~2 mois (approximation)
+      periodeEssaiTexte = '2 mois';
+      const startD = new Date(startDate);
+      startD.setMonth(startD.getMonth() + 2);
+      finEssaiDate = startD.toISOString().split('T')[0];
+    }
+
     // Construire l'objet variables
     const variables = {
       prenom: employee.first_name || '',
@@ -352,12 +376,12 @@ Deno.serve(async (req) => {
       secu: employee.social_security_number || '',
       poste: employee.position || '',
       taches: jobTasksText,
-      debut: formatDateFR(options.startDate || employee.start_date),
-      fin: formatDateFR(options.endDate || employee.end_date),
+      debut: formatDateFR(startDate),
+      fin: formatDateFR(endDate),
       heures: options.contractHours || employee.contract_hours_weekly || '35',
       heuresTexte: hoursToText((parseFloat(options.contractHours || employee.contract_hours_weekly || 35) * 4.33).toFixed(2)),
-      dureeEssai: options.essayDays || '7',
-      finEssai: formatDateFR(calculateEssayEndDate(options.startDate || employee.start_date, options.essayDays || 7)),
+      periodeEssaiTexte: periodeEssaiTexte,
+      finEssai: formatDateFR(finEssaiDate),
       taux: (options.hourlyRate || employee.gross_hourly_rate || 0).toFixed(2),
       salaireBrut: (options.grossSalary || employee.gross_salary || 0).toFixed(2),
       signature: formatDateFR(new Date())
