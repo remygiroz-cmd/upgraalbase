@@ -354,12 +354,22 @@ export default function DocumentGenerationWizard({ open, onOpenChange, employee,
                 </Button>
               ) : (
                 <Button
-                  onClick={() => setShowPDFDownload(true)}
-                  className="bg-blue-600 hover:bg-blue-700 gap-2"
-                >
-                  <Download className="w-4 h-4" />
-                  Télécharger PDF
-                </Button>
+                                  onClick={() => {
+                                    if (generatedDocument?.html) {
+                                      const htmlBlob = new Blob([generatedDocument.html], { type: 'text/html;charset=UTF-8' });
+                                      const url = URL.createObjectURL(htmlBlob);
+                                      const link = document.createElement('a');
+                                      link.href = url;
+                                      link.target = '_blank';
+                                      link.click();
+                                      URL.revokeObjectURL(url);
+                                    }
+                                  }}
+                                  className="bg-blue-600 hover:bg-blue-700 gap-2"
+                                >
+                                  <Download className="w-4 h-4" />
+                                  Ouvrir le contrat
+                                </Button>
               )}
             </div>
           </div>
