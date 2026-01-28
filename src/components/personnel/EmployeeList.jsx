@@ -177,44 +177,70 @@ export default function EmployeeList() {
 }
 
 function EmployeeCard({ employee, onClick, canView = true }) {
-  return (
-    <button
-      onClick={onClick}
-      className={cn(
-        "w-full p-4 rounded-xl border-2 text-left transition-all active:scale-[0.98]",
-        canView 
-          ? "bg-white border-gray-300 hover:border-orange-400 hover:shadow-lg" 
-          : "bg-white border-gray-300 hover:border-gray-400 hover:shadow-md"
-      )}
-    >
-      <div className="flex items-center gap-3 mb-3">
-        {employee.photo_url ? (
-          <img
-            src={employee.photo_url}
-            alt={`${employee.first_name} ${employee.last_name}`}
-            className="w-12 h-12 rounded-full object-cover"
-          />
-        ) : (
-          <div className="w-12 h-12 rounded-full bg-orange-100 flex items-center justify-center">
-            <User className="w-6 h-6 text-orange-600" />
-          </div>
-        )}
-        <div className="flex-1 min-w-0">
-          <h3 className="font-semibold text-gray-900 truncate flex items-center gap-2">
-            {employee.first_name} {employee.last_name}
-            {!canView && <Lock className="w-3 h-3 text-gray-400" />}
-          </h3>
-          {employee.nickname && (
-            <p className="text-xs text-gray-500 italic truncate">"{employee.nickname}"</p>
-          )}
-          {employee.position && (
-            <p className="text-xs text-orange-600 truncate">{employee.position}</p>
-          )}
-          {employee.team && (
-            <p className="text-xs text-gray-600 truncate">{employee.team}</p>
-          )}
-        </div>
-      </div>
+        const isCDD = employee.contract_type === 'cdd';
+        const endDate = isCDD && employee.end_date ? new Date(employee.end_date) : null;
+        const today = new Date();
+        const isEndingSoon = endDate && (endDate.getTime() - today.getTime()) < (30 * 24 * 60 * 60 * 1000) && endDate > today;
+        const isExpired = endDate && endDate < today;
+
+        return (
+          <button
+            onClick={onClick}
+            className={cn(
+              "w-full p-4 rounded-xl border-2 text-left transition-all active:scale-[0.98] relative",
+              canView 
+                ? "bg-white border-gray-300 hover:border-orange-400 hover:shadow-lg" 
+                : "bg-white border-gray-300 hover:border-gray-400 hover:shadow-md",
+              isExpired && "border-red-400 bg-red-50",
+              isEndingSoon && !isExpired && "border-amber-400 bg-amber-50"
+            )}
+          >
+            {/* Badge CDD Alert */}
+            {isCDD && endDate && (
+              <div className={cn(
+                "absolute -top-3 -right-3 px-3 py-1 rounded-full text-xs font-bold text-white shadow-md",
+                isExpired ? "bg-red-600" : isEndingSoon ? "bg-amber-600" : "bg-blue-600"
+              )}>
+                {isExpired ? "EXPIRÉ" : isEndingSoon ? "⚠️ FIN PROCHE" : "CDD"}
+              </div>
+            )}
+
+            <div className="flex items-center gap-3 mb-3">
+              {employee.photo_url ? (
+                <img
+                  src={employee.photo_url}
+                  alt={`${employee.first_name} ${employee.last_name}`}
+                  className="w-12 h-12 rounded-full object-cover"
+                />
+              ) : (
+                <div className="w-12 h-12 rounded-full bg-orange-100 flex items-center justify-center">
+                  <User className="w-6 h-6 text-orange-600" />
+                </div>
+              )}
+              <div className="flex-1 min-w-0">
+                <h3 className="font-semibold text-gray-900 truncate flex items-center gap-2">
+                  {employee.first_name} {employee.last_name}
+                  {!canView && <Lock className="w-3 h-3 text-gray-400" />}
+                </h3>
+                {employee.nickname && (
+                  <p className="text-xs text-gray-500 italic truncate">"{employee.nickname}"</p>
+                )}
+                {employee.position && (
+                  <p className="text-xs text-orange-600 truncate">{employee.position}</p>
+                )}
+                {employee.team && (
+                  <p className="text-xs text-gray-600 truncate">{employee.team}</p>
+                )}
+                {isCDD && endDate && (
+                  <p className={cn(
+                    "text-xs font-semibold mt-1",
+                    isExpired ? "text-red-700" : isEndingSoon ? "text-amber-700" : "text-blue-700"
+                  )}>
+                    Fin contrat: {endDate.toLocaleDateString('fr-FR')}
+                  </p>
+                )}
+              </div>
+            </div>
 
       <div className="space-y-1.5 text-xs text-gray-600">
         {(canView || employee.show_phone_in_directory) && employee.phone && (
