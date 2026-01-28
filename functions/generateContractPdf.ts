@@ -257,9 +257,16 @@ const cddTemplate = `
 </html>
 `;
 
-const getCDDTCTemplate = () => getCDDTPTemplate().replace('TEMPS PARTIEL', 'TEMPS COMPLET');
-const getCDITPTemplate = () => getCDDTPTemplate().replace('DURÉE DÉTERMINÉE – TEMPS PARTIEL', 'DURÉE INDÉTERMINÉE - TEMPS PARTIEL').replace('du <strong>{{debut}}</strong> au <strong>{{fin}}</strong>', 'à compter du <strong>{{debut}}</strong>');
-const getCDITCTemplate = () => getCDITPTemplate().replace('TEMPS PARTIEL', 'TEMPS COMPLET');
+const getCDDTPTemplate = () => cddTemplate.replace('{{TYPE_TRAVAIL}}', 'TEMPS PARTIEL');
+const getCDDTCTemplate = () => cddTemplate.replace('{{TYPE_TRAVAIL}}', 'TEMPS COMPLET');
+
+const cdiTemplate = cddTemplate
+  .replace('À DURÉE DÉTERMINÉE – {{TYPE_TRAVAIL}}', 'À DURÉE INDÉTERMINÉE – {{TYPE_TRAVAIL}}')
+  .replace('du <strong>{{debut}}</strong> au <strong>{{fin}}</strong>, en vertu de l\'article L.1242-2 du Code du travail et de', 'à compter du <strong>{{debut}}</strong>, en vertu du Code du travail et de')
+  .replace('Une période d\'essai de {{periodeEssaiTexte}} est prévue, soit du {{debut}} au {{finEssai}}.', 'Une période d\'essai de {{periodeEssaiTexte}} est prévue.');
+
+const getCDITPTemplate = () => cdiTemplate.replace('{{TYPE_TRAVAIL}}', 'TEMPS PARTIEL');
+const getCDITCTemplate = () => cdiTemplate.replace('{{TYPE_TRAVAIL}}', 'TEMPS COMPLET');
 
 const formatDateFR = (date) => {
   if (!date) return '';
