@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Plus, FileText, Edit, Trash2, Copy } from 'lucide-react';
 import { toast } from 'sonner';
-import TemplateEditorModal from '@/components/templates/TemplateEditorModal.js';
+import TemplateEditorModal from '@/components/templates/TemplateEditorModal';
 import { cn } from '@/lib/utils';
 
 export default function TemplatesRH() {
