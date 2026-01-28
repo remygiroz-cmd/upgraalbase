@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
 import { Users, User } from 'lucide-react';
 import PageHeader from '@/components/ui/PageHeader';
-import EmptyState from '@/components/ui/EmptyState';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import EmployeeList from '@/components/personnel/EmployeeList';
+import TeamsManager from '@/components/personnel/TeamsManager';
 
 export default function Equipe() {
   const [activeTab, setActiveTab] = useState('equipes');
@@ -36,11 +36,7 @@ export default function Equipe() {
       </Tabs>
 
       {activeTab === 'equipes' ? (
-        <EmptyState
-          icon={Users}
-          title="Équipes"
-          description="Gérez vos équipes ici"
-        />
+        <TeamsManager />
       ) : (
         <EmployeeList />
       )}
