@@ -20,6 +20,7 @@ export default function EmployeeFormModal({ open, onClose, employee, isManager =
   const [showEmailDialog, setShowEmailDialog] = useState(false);
   const [recipientEmail, setRecipientEmail] = useState('');
   const [showConfirmationDialog, setShowConfirmationDialog] = useState(false);
+  const [currentUser, setCurrentUser] = useState(null);
   const [formData, setFormData] = useState(employee || {
     first_name: '',
     last_name: '',
@@ -86,6 +87,14 @@ export default function EmployeeFormModal({ open, onClose, employee, isManager =
       createMutation.mutate(formData);
     }
   };
+
+  React.useEffect(() => {
+    const fetchCurrentUser = async () => {
+      const user = await base44.auth.me();
+      setCurrentUser(user);
+    };
+    fetchCurrentUser();
+  }, []);
 
   React.useEffect(() => {
     if (employee) {
@@ -915,7 +924,7 @@ ${currentUser.email || '-'}`;
 
           {/* Actions */}
           <div className="flex flex-wrap gap-2 pt-4 border-t border-gray-200">
-            {employee && (
+            {employee && isManager && currentUser?.email !== employee.email && (
               <>
                 <Button
                   type="button"
@@ -960,7 +969,7 @@ ${currentUser.email || '-'}`;
             </Button>
             <Button
               type="submit"
-              disabled={createMutation.isPending || updateMutation.isPending || !isManager}
+              disabled={createMutation.isPending || updateMutation.isPending || (employee && currentUser?.email !== employee.email && !isManager)}
               className="bg-orange-600 hover:bg-orange-700"
             >
               {employee ? 'Mettre à jour' : 'Créer'}
