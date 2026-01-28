@@ -3,17 +3,19 @@ import { useQueryClient, useMutation } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { User, Mail, Phone, MapPin, Calendar, CreditCard, Shield, Pencil, Trash2, Archive } from 'lucide-react';
+import { User, Mail, Phone, MapPin, Calendar, CreditCard, Shield, Pencil, Trash2, Archive, FileText } from 'lucide-react';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import ConfirmDialog from '@/components/ui/ConfirmDialog';
+import DocumentGenerationWizard from './DocumentGenerationWizard';
 import { cn } from '@/lib/utils';
 
-export default function EmployeeDetailModal({ employee, open, onOpenChange, onEdit, isManager = false }) {
+export default function EmployeeDetailModal({ employee, open, onOpenChange, onEdit, isManager = false, establishment = null }) {
   const queryClient = useQueryClient();
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [confirmArchive, setConfirmArchive] = useState(false);
+  const [showGenerateDoc, setShowGenerateDoc] = useState(false);
 
   const deleteMutation = useMutation({
     mutationFn: (id) => base44.entities.Employee.delete(id),
@@ -149,6 +151,15 @@ export default function EmployeeDetailModal({ employee, open, onOpenChange, onEd
 
             {/* Actions */}
             <div className="flex flex-wrap gap-2 pt-4 border-t border-gray-200">
+              {isManager && (
+                <Button
+                  onClick={() => setShowGenerateDoc(true)}
+                  className="bg-blue-600 hover:bg-blue-700"
+                >
+                  <FileText className="w-4 h-4 mr-2" />
+                  Générer document
+                </Button>
+              )}
               <Button
                 onClick={() => onEdit(employee)}
                 className="flex-1 bg-orange-600 hover:bg-orange-700"
@@ -210,6 +221,14 @@ export default function EmployeeDetailModal({ employee, open, onOpenChange, onEd
         onConfirm={() => archiveMutation.mutate({ id: employee.id, archive: employee.is_active })}
         variant="warning"
         confirmText={employee.is_active ? "Archiver" : "Réactiver"}
+      />
+
+      {/* Document Generation Wizard */}
+      <DocumentGenerationWizard
+        open={showGenerateDoc}
+        onOpenChange={setShowGenerateDoc}
+        employee={employee}
+        establishment={establishment}
       />
     </>
   );
