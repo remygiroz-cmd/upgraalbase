@@ -239,11 +239,11 @@ export default function Layout({ children, currentPageName }) {
             {/* Home */}
             <div>
               <NavLink 
-                to="Home" 
-                icon={Home} 
-                label="Accueil" 
-                active={currentPageName === 'Home'} 
-              />
+                            to="Home" 
+                            icon={Home} 
+                            label="Accueil" 
+                            active={currentPageName === 'Home'} 
+                          />
             </div>
 
             {/* Cuisine */}
