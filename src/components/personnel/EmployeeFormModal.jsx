@@ -20,6 +20,7 @@ export default function EmployeeFormModal({ open, onClose, employee, isManager =
   const [showEmailDialog, setShowEmailDialog] = useState(false);
   const [recipientEmail, setRecipientEmail] = useState('');
   const [showConfirmationDialog, setShowConfirmationDialog] = useState(false);
+  const [showCreationSuccess, setShowCreationSuccess] = useState(false);
 
   const { data: currentUser } = useQuery({
     queryKey: ['currentUser'],
@@ -52,8 +53,7 @@ export default function EmployeeFormModal({ open, onClose, employee, isManager =
     mutationFn: (data) => base44.entities.Employee.create(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['employees'] });
-      toast.success('Employé créé avec succès');
-      onClose();
+      setShowCreationSuccess(true);
     }
   });
 
@@ -1072,6 +1072,42 @@ ${currentUser.email || '-'}`;
           <div className="flex justify-end mt-4">
             <Button
               onClick={() => setShowConfirmationDialog(false)}
+              className="bg-green-600 hover:bg-green-700 min-h-[44px]"
+            >
+              OK
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Creation Success Dialog */}
+      <Dialog open={showCreationSuccess} onOpenChange={(open) => {
+        if (!open) {
+          setShowCreationSuccess(false);
+          onClose();
+        }
+      }}>
+        <DialogContent className="bg-white border-gray-300 w-[calc(100vw-2rem)] max-w-md">
+          <DialogHeader>
+            <div className="flex items-center gap-3 mb-2">
+              <div className="w-12 h-12 rounded-full bg-green-100 flex items-center justify-center">
+                <User className="w-6 h-6 text-green-600" />
+              </div>
+              <div>
+                <DialogTitle className="text-gray-900 text-lg">Employé créé</DialogTitle>
+                <DialogDescription className="text-gray-600 text-sm">
+                  {formData.first_name} {formData.last_name} a été ajouté avec succès
+                </DialogDescription>
+              </div>
+            </div>
+          </DialogHeader>
+          
+          <div className="flex justify-end mt-4">
+            <Button
+              onClick={() => {
+                setShowCreationSuccess(false);
+                onClose();
+              }}
               className="bg-green-600 hover:bg-green-700 min-h-[44px]"
             >
               OK
