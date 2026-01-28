@@ -75,6 +75,7 @@ export default function Layout({ children, currentPageName }) {
     { name: 'RegistrePersonnel', label: 'Registre du Personnel', icon: FileText, module: 'registre_personnel' },
     { name: 'Pertes', label: 'Invendus & Pertes', icon: PackageMinus, module: 'pertes' },
     { name: 'Stocks', label: 'Inventaires', icon: Package, module: 'stocks' },
+    { name: 'TemplatesRH', label: 'Templates RH', icon: File, module: 'equipe' },
   ].filter(link => hasPermission(link.module));
 
   const NavLink = ({ to, icon: Icon, label, active }) => (
