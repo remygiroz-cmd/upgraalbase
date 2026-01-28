@@ -7,8 +7,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Label } from '@/components/ui/label';
 import { AlertCircle, FileText, ChevronRight, ChevronLeft, CheckCircle, Download, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
-import { jsPDF } from 'jspdf';
-import html2canvas from 'html2canvas';
 import PDFDownloadModal from './PDFDownloadModal';
 
 export default function DocumentGenerationWizard({ open, onOpenChange, employee, establishment }) {
@@ -118,104 +116,144 @@ export default function DocumentGenerationWizard({ open, onOpenChange, employee,
     }
   };
 
-  const generateAndSavePdf = async () => {
+  const downloadPdf = () => {
     if (!generatedDocument?.html) {
       toast.error('HTML non disponible');
       return;
     }
 
-    setIsDownloadingPdf(true);
     try {
-      // Créer un élément DOM temporaire pour générer le PDF
-      const element = document.createElement('div');
-      element.innerHTML = generatedDocument.html;
-      element.style.position = 'fixed';
-      element.style.left = '-9999px';
-      element.style.width = '210mm';
-      element.style.background = 'white';
-      document.body.appendChild(element);
-
-      // Convertir l'HTML en canvas avec html2canvas
-      const canvas = await html2canvas(element, {
-        scale: 2,
-        useCORS: true,
-        logging: false,
-        backgroundColor: '#ffffff'
-      });
-
-      // Créer le PDF avec jsPDF
-      const pdf = new jsPDF({
-        orientation: 'portrait',
-        unit: 'mm',
-        format: 'a4'
-      });
-
-      const imgData = canvas.toDataURL('image/png');
-      const imgWidth = 210; // A4 width in mm
-      const imgHeight = (canvas.height * imgWidth) / canvas.width;
-
-      let yPos = 0;
-      const pageHeight = 297; // A4 height in mm
-
-      // Ajouter la première page
-      pdf.addImage(imgData, 'PNG', 0, 0, imgWidth, imgHeight);
-      yPos += imgHeight;
-
-      // Ajouter les pages suivantes si nécessaire
-      while (yPos < imgHeight) {
-        pdf.addPage();
-        yPos -= pageHeight;
-        pdf.addImage(imgData, 'PNG', 0, -yPos, imgWidth, imgHeight);
-        yPos += pageHeight;
-      }
-
-      // Récupérer le PDF en tant que Blob
-      const pdfBlob = pdf.output('blob');
-
-      // Créer un File object à partir du Blob
-      const fileName = `${generatedDocument.contractType}_${generatedDocument.employeeName}_${new Date().toISOString().split('T')[0]}.pdf`;
-      const file = new File([pdfBlob], fileName, { type: 'application/pdf' });
-
-      // Uploader le PDF
-      const uploadResponse = await base44.integrations.Core.UploadFile({
-        file: file
-      });
-
-      // Ajouter le document aux documents de l'employé
-      const documentRecord = {
-        name: fileName,
-        url: uploadResponse.file_url,
-        category: 'Contrat',
-        tags: [generatedDocument.contractType, 'Généré'],
-        uploaded_at: new Date().toISOString()
-      };
-
-      // Mettre à jour l'employé avec le nouveau document
-      const currentDocs = employee?.documents || [];
-      await base44.entities.Employee.update(employee.id, {
-        documents: [...currentDocs, documentRecord]
-      });
-
-      // Nettoyer
-      document.body.removeChild(element);
-
-      toast.success(`PDF "${fileName}" enregistré dans les documents`);
+      // Ouvrir une nouvelle fenêtre
+      const printWindow = window.open('', '', 'width=900,height=700');
       
-      // Télécharger également le fichier localement
-      const url = window.URL.createObjectURL(pdfBlob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = fileName;
-      document.body.appendChild(link);
-      link.click();
-      window.URL.revokeObjectURL(url);
-      document.body.removeChild(link);
-
+      // Injecter le HTML avec CSS print optimisé
+      const fullHtml = `<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    html, body {
+      width: 100%;
+      height: 100%;
+    }
+    
+    body {
+      font-family: 'Calibri', 'Arial', sans-serif;
+      font-size: 11pt;
+      line-height: 1.5;
+      color: #000;
+      background: #f5f5f5;
+    }
+    
+    .print-container {
+      width: 210mm;
+      height: 297mm;
+      margin: 0 auto;
+      background: white;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    }
+    
+    @media print {
+      @page {
+        size: A4;
+        margin: 18mm 16mm 18mm 16mm;
+      }
+      
+      body {
+        margin: 0;
+        padding: 0;
+        background: white;
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+        color-adjust: exact !important;
+      }
+      
+      .print-container {
+        width: 100%;
+        height: auto;
+        margin: 0;
+        box-shadow: none;
+        page-break-after: always;
+      }
+      
+      .no-print {
+        display: none !important;
+      }
+      
+      h1, h2, h3, h4 {
+        break-after: avoid;
+        page-break-after: avoid;
+      }
+      
+      p {
+        orphans: 3;
+        widows: 3;
+      }
+      
+      .article {
+        break-inside: avoid;
+        page-break-inside: avoid;
+      }
+      
+      .signature-section {
+        break-inside: avoid;
+        page-break-inside: avoid;
+        margin-top: 2em;
+      }
+      
+      .signature-block {
+        break-inside: avoid;
+        page-break-inside: avoid;
+        margin-top: 1.5em;
+      }
+      
+      hr {
+        border: none;
+        border-top: 1px solid #666;
+        margin: 1em 0;
+        page-break-after: avoid;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="print-container">
+    ${generatedDocument.html}
+  </div>
+  <script>
+    window.onload = function() {
+      setTimeout(function() {
+        window.print();
+      }, 250);
+    };
+  </script>
+</body>
+</html>`;
+      
+      printWindow.document.write(fullHtml);
+      printWindow.document.close();
+      
+      // Attendre que le document soit chargé avant d'afficher le message
+      printWindow.onload = function() {
+        setTimeout(() => {
+          toast.success('Fenêtre d\'impression ouverte.\n\n📋 Conseils :\n1. Décochez "En-têtes et pieds de page"\n2. Format : A4 Portrait\n3. Marges : défaut du navigateur\n4. Cliquez "Enregistrer en PDF"');
+        }, 100);
+      };
+      
+      // Fallback si onload ne se déclenche pas
+      setTimeout(() => {
+        toast.success('Fenêtre d\'impression ouverte.\n\n📋 Conseils :\n1. Décochez "En-têtes et pieds de page"\n2. Format : A4 Portrait\n3. Marges : défaut du navigateur\n4. Cliquez "Enregistrer en PDF"');
+      }, 500);
     } catch (error) {
-      console.error('Erreur lors de la génération/sauvegarde du PDF:', error);
-      toast.error('Erreur lors de la génération du PDF');
-    } finally {
-      setIsDownloadingPdf(false);
+      console.error('Erreur:', error);
+      toast.error('Erreur lors de l\'ouverture de la fenêtre d\'impression');
     }
   };
 
@@ -458,7 +496,7 @@ export default function DocumentGenerationWizard({ open, onOpenChange, employee,
                 </Button>
               ) : (
                 <Button
-                  onClick={generateAndSavePdf}
+                  onClick={downloadPdf}
                   disabled={isDownloadingPdf}
                   className="bg-blue-600 hover:bg-blue-700 gap-2"
                 >
@@ -470,7 +508,7 @@ export default function DocumentGenerationWizard({ open, onOpenChange, employee,
                   ) : (
                     <>
                       <Download className="w-4 h-4" />
-                      Générer & Sauvegarder PDF
+                      Télécharger en PDF
                     </>
                   )}
                 </Button>
