@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
-import { FileText, Download, Printer, Upload } from 'lucide-react';
+import { FileText, Download, Printer, Upload, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import PageHeader from '@/components/ui/PageHeader';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
@@ -41,6 +41,13 @@ export default function RegistrePersonnel() {
 
   const handlePrint = () => {
     window.print();
+  };
+
+  const handleDeleteEntry = async (id) => {
+    if (confirm('Êtes-vous sûr de vouloir supprimer cette ligne ?')) {
+      await base44.entities.PersonnelRegistry.delete(id);
+      queryClient.invalidateQueries({ queryKey: ['personnelRegistry'] });
+    }
   };
 
   const handleDownloadCSV = () => {
@@ -155,7 +162,8 @@ export default function RegistrePersonnel() {
                 <th className="px-4 py-3 text-left text-xs font-semibold text-gray-900 border-r border-gray-300">Poste</th>
                 <th className="px-4 py-3 text-left text-xs font-semibold text-gray-900 border-r border-gray-300">Date embauche</th>
                 <th className="px-4 py-3 text-left text-xs font-semibold text-gray-900 border-r border-gray-300">Type contrat</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-900">Date de sortie</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-900 border-r border-gray-300">Date de sortie</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-900 print:hidden">Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -188,7 +196,18 @@ export default function RegistrePersonnel() {
                   )}>
                     {entry.exit_date ? new Date(entry.exit_date).toLocaleDateString('fr-FR') : '-'}
                   </td>
-                </tr>
+                  <td className="px-4 py-3 text-sm text-gray-400 hover:text-red-600 print:hidden transition-colors">
+                    {isManager && (
+                      <button
+                        onClick={() => handleDeleteEntry(entry.id)}
+                        className="p-1 hover:opacity-100 opacity-60"
+                        title="Supprimer cette ligne"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    )}
+                  </td>
+                  </tr>
               ))}
             </tbody>
           </table>
