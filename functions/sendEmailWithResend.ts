@@ -9,10 +9,10 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { to, subject, html, attachments } = await req.json();
+    const { to, subject, html, body, attachments, from_name, reply_to } = await req.json();
 
-    if (!to || !subject || !html) {
-      return Response.json({ error: 'Missing required fields: to, subject, html' }, { status: 400 });
+    if (!to || !subject || (!html && !body)) {
+      return Response.json({ error: 'Missing required fields: to, subject, html or body' }, { status: 400 });
     }
 
     const apiKey = Deno.env.get('RESEND_API_KEY');
@@ -20,24 +20,37 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'RESEND_API_KEY not configured' }, { status: 500 });
     }
 
-    // Get sender name from settings
-    let senderName = 'UpGraal';
-    try {
-      const settings = await base44.asServiceRole.entities.AppSettings.filter({ setting_key: 'email_sender_name' });
-      if (settings.length > 0 && settings[0].email_sender_name) {
-        senderName = settings[0].email_sender_name;
+    // Get sender name from settings or use provided from_name
+    let senderName = from_name || 'UpGraal';
+    if (!from_name) {
+      try {
+        const settings = await base44.asServiceRole.entities.AppSettings.filter({ setting_key: 'email_sender_name' });
+        if (settings.length > 0 && settings[0].email_sender_name) {
+          senderName = settings[0].email_sender_name;
+        }
+      } catch (err) {
+        console.log('Using default sender name');
       }
-    } catch (err) {
-      console.log('Using default sender name');
     }
 
     // Build email payload
     const emailPayload = {
       from: `${senderName} <noreply@upgraal.com>`,
       to: [to],
-      subject: subject,
-      html: html
+      subject: subject
     };
+
+    // Add HTML or plain text
+    if (html) {
+      emailPayload.html = html;
+    } else if (body) {
+      emailPayload.text = body;
+    }
+
+    // Add reply-to if provided
+    if (reply_to) {
+      emailPayload.reply_to = [reply_to];
+    }
 
     // Add attachments if provided
     if (attachments && attachments.length > 0) {
