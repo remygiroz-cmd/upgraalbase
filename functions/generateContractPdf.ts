@@ -11,6 +11,12 @@ const getTemplateHtml = (templateCode) => {
 };
 
 const getBaseStyles = () => `
+  :root {
+    --font: Arial, Helvetica, sans-serif;
+    --text: 11pt;
+    --lh: 1.3;
+  }
+
   * {
     margin: 0;
     padding: 0;
@@ -18,79 +24,76 @@ const getBaseStyles = () => `
   }
 
   body {
-    font-family: 'Calibri', 'Arial', sans-serif;
-    font-size: 11pt;
-    line-height: 1.5;
+    font-family: var(--font);
+    font-size: var(--text);
+    line-height: var(--lh);
     color: #000;
     background: #fff;
   }
 
-  .header {
-    text-align: left;
-    margin-bottom: 1.5em;
+  h1 {
+    font-size: 14pt;
+    font-weight: 700;
+    margin: 0 0 10px 0;
   }
 
   h2 {
-    font-size: 13pt;
-    font-weight: bold;
-    margin: 0 0 0.5em 0;
-    break-after: avoid;
+    font-size: 11.5pt;
+    font-weight: 700;
+    margin: 14px 0 6px 0;
   }
 
-  .subtitle {
-    font-size: 10pt;
-    margin: 0.3em 0 1.2em 0;
-  }
-
-  .company-info {
-    font-size: 10pt;
-    line-height: 1.4;
-    margin: 1em 0;
-  }
-
-  p {
-    margin: 0.5em 0;
-    text-align: justify;
-    orphans: 3;
-    widows: 3;
-  }
-
-  .article {
-    margin: 1.2em 0 1em 0;
-    break-inside: avoid;
-    page-break-inside: avoid;
-  }
-
-  .article-title {
-    font-weight: bold;
-    margin-bottom: 0.5em;
-    text-decoration: underline;
-    break-after: avoid;
+  .section-title {
+    font-weight: 700;
+    text-transform: uppercase;
+    margin: 14px 0 6px 0;
   }
 
   hr {
     border: none;
-    border-top: 1px solid #666;
-    margin: 1em 0;
-    break-after: avoid;
+    border-top: 1px solid #333;
+    margin: 10px 0 12px;
   }
 
-  .signature-section {
-    margin-top: 2em;
+  p {
+    margin: 0 0 8px 0;
+  }
+
+  .small-gap {
+    margin-top: 6px;
+  }
+
+  .block {
+    margin-top: 10px;
+  }
+
+  .section {
+    margin: 12px 0;
     break-inside: avoid;
     page-break-inside: avoid;
   }
 
   .signature-block {
-    margin-top: 1.5em;
+    margin-top: 18px;
     break-inside: avoid;
     page-break-inside: avoid;
   }
 
-  .section-title {
-    font-weight: bold;
-    margin-top: 1em;
-    margin-bottom: 0.5em;
+  .signature-row {
+    display: flex;
+    gap: 24px;
+    margin-top: 10px;
+  }
+
+  .signature-col {
+    flex: 1;
+    break-inside: avoid;
+  }
+
+  .signature-box {
+    border-top: 1px solid #000;
+    height: 90px;
+    margin-top: 10px;
   }
 
   strong {
@@ -99,6 +102,39 @@ const getBaseStyles = () => `
 
   em {
     font-style: italic;
+  }
+
+  @media print {
+    @page {
+      size: A4;
+      margin: 18mm 16mm 18mm 16mm;
+    }
+
+    body {
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+
+    h1, h2, .section-title {
+      break-after: avoid-page;
+    }
+
+    p, li {
+      orphans: 3;
+      widows: 3;
+    }
+
+    .signature-block, .signature-row, .signature-col {
+      break-inside: avoid;
+    }
+
+    hr {
+      break-after: avoid;
+    }
+
+    .no-print {
+      display: none !important;
+    }
   }
 `;
 
