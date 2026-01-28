@@ -160,6 +160,8 @@ export default function EmployeeFormModal({ open, onClose, employee, isManager =
     setShowEmailDialog(false);
     try {
       const currentUser = await base44.auth.me();
+      const establishments = await base44.entities.Establishment.list();
+      const establishment = establishments[0];
       
       const isFemale = formData.gender === 'female';
       const subject = isFemale ? 'Nouvelle employée' : 'Nouvel employé';
@@ -195,10 +197,12 @@ ${currentUser.full_name || '-'}
 ${currentUser.email || '-'}
 ${currentUser.phone ? `Tél: ${currentUser.phone}` : ''}`;
 
-      await base44.integrations.Core.SendEmail({
+      await base44.functions.invoke('sendEmailWithResend', {
         to: recipientEmail,
         subject: subject,
-        body: body
+        body: body,
+        from_name: establishment?.name || 'UpGraal',
+        reply_to: currentUser.email
       });
 
       toast.success('Email envoyé avec succès');
