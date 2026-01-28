@@ -6,16 +6,18 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
-import { Trash2, Archive } from 'lucide-react';
+import { Trash2, Archive, Upload, User } from 'lucide-react';
 import ConfirmDialog from '@/components/ui/ConfirmDialog';
 
 export default function EmployeeFormModal({ open, onClose, employee }) {
   const queryClient = useQueryClient();
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [confirmArchive, setConfirmArchive] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const [formData, setFormData] = useState(employee || {
     first_name: '',
     last_name: '',
+    nickname: '',
     birth_date: '',
     birth_place: '',
     address: '',
@@ -23,6 +25,7 @@ export default function EmployeeFormModal({ open, onClose, employee }) {
     phone: '',
     social_security_number: '',
     iban: '',
+    photo_url: '',
     is_active: true
   });
 
@@ -76,6 +79,22 @@ export default function EmployeeFormModal({ open, onClose, employee }) {
       setFormData(employee);
     }
   }, [employee]);
+
+  const handlePhotoUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploading(true);
+    try {
+      const { file_url } = await base44.integrations.Core.UploadFile({ file });
+      setFormData({ ...formData, photo_url: file_url });
+      toast.success('Photo téléchargée');
+    } catch (error) {
+      toast.error('Erreur lors du téléchargement');
+    } finally {
+      setUploading(false);
+    }
+  };
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
