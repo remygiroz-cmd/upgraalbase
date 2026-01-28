@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
-import { Trash2, Archive, Upload, User, FileText, Download } from 'lucide-react';
+import { Trash2, Archive, Upload, User, FileText, Download, Send } from 'lucide-react';
 import ConfirmDialog from '@/components/ui/ConfirmDialog';
 
 export default function EmployeeFormModal({ open, onClose, employee, isManager = false }) {
@@ -16,6 +16,7 @@ export default function EmployeeFormModal({ open, onClose, employee, isManager =
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [confirmArchive, setConfirmArchive] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [sendingEmail, setSendingEmail] = useState(false);
   const [formData, setFormData] = useState(employee || {
     first_name: '',
     last_name: '',
@@ -144,6 +145,65 @@ export default function EmployeeFormModal({ open, onClose, employee, isManager =
       toast.error('Erreur lors du téléchargement');
     } finally {
       setUploading(false);
+    }
+  };
+
+  const handleSendToAccounting = async () => {
+    const recipientEmail = prompt('Email du destinataire (comptabilité):');
+    if (!recipientEmail || !recipientEmail.includes('@')) {
+      toast.error('Email valide requis');
+      return;
+    }
+
+    setSendingEmail(true);
+    try {
+      const { data: currentUser } = await base44.auth.me();
+      
+      const isFemale = formData.gender === 'female';
+      const subject = isFemale ? 'Nouvelle employée' : 'Nouvel employé';
+      
+      const contractTypes = {
+        cdi: 'CDI',
+        cdd: 'CDD',
+        extra: 'Extra',
+        apprenti: 'Alternant',
+        stage: 'Stage'
+      };
+
+      const body = `Bonjour,
+
+Merci d'enregistrer ${isFemale ? 'notre nouvelle employée' : 'notre nouvel employé'}.
+
+Informations :
+━━━━━━━━━━━━━━━━━━━━━━━━
+
+• Nom : ${formData.last_name || '-'}
+• Prénom(s) : ${formData.first_name || '-'}${formData.married_name ? `\n• Nom d'épouse : ${formData.married_name}` : ''}
+• Email : ${formData.email || '-'}
+• Date d'embauche : ${formData.start_date ? new Date(formData.start_date).toLocaleDateString('fr-FR') : '-'}
+• Type de contrat : ${formData.contract_type ? contractTypes[formData.contract_type] : '-'}${formData.contract_type === 'cdd' && formData.end_date ? `\n• Date de fin de contrat : ${new Date(formData.end_date).toLocaleDateString('fr-FR')}` : ''}
+• Heures contractuelles / mois : ${formData.contract_hours || '-'}
+• Heures contractuelles / semaine : ${formData.contract_hours_weekly || '-'}
+• Nombre de jours de travail / semaine : ${formData.work_days_per_week || '-'}
+• Taux horaire brut : ${formData.gross_hourly_rate ? `${formData.gross_hourly_rate} €/h` : '-'}
+
+Cordialement,
+
+${currentUser.full_name || '-'}
+${currentUser.email || '-'}
+${currentUser.phone ? `Tél: ${currentUser.phone}` : ''}`;
+
+      await base44.integrations.Core.SendEmail({
+        to: recipientEmail,
+        subject: subject,
+        body: body
+      });
+
+      toast.success('Email envoyé avec succès');
+    } catch (error) {
+      toast.error('Erreur lors de l\'envoi de l\'email');
+    } finally {
+      setSendingEmail(false);
     }
   };
 
@@ -863,6 +923,18 @@ export default function EmployeeFormModal({ open, onClose, employee, isManager =
                   Supprimer
                 </Button>
               </>
+            )}
+            {isManager && (
+              <Button
+                type="button"
+                variant="outline"
+                onClick={handleSendToAccounting}
+                disabled={sendingEmail}
+                className="border-blue-400 text-blue-700 hover:bg-blue-50"
+              >
+                <Send className="w-4 h-4 mr-2" />
+                Déclarer à la compta
+              </Button>
             )}
             <div className="flex-1" />
             <Button
