@@ -25,7 +25,7 @@ export default function RegistrePersonnel() {
 
   const { data: registryEntries = [], isLoading } = useQuery({
     queryKey: ['personnelRegistry'],
-    queryFn: () => base44.entities.PersonnelRegistry.list('entry_order')
+    queryFn: () => base44.entities.PersonnelRegistry.list('start_date')
   });
 
   // Check if user is manager/admin
