@@ -230,6 +230,7 @@ export default function RegistrePersonnel() {
           <table className="w-full">
             <thead>
               <tr className="bg-gray-100 border-b-2 border-gray-300 print:bg-white">
+                {isManager && <th className="px-2 py-3 text-center text-xs font-semibold text-gray-900 border-r border-gray-300 w-12 lg:w-auto print:hidden"></th>}
                 <th className="px-4 py-3 text-left text-xs font-semibold text-gray-900 border-r border-gray-300">N°</th>
                 <th className="px-4 py-3 text-left text-xs font-semibold text-gray-900 border-r border-gray-300">Nom</th>
                 <th className="px-4 py-3 text-left text-xs font-semibold text-gray-900 border-r border-gray-300">Prénom</th>
@@ -252,37 +253,35 @@ export default function RegistrePersonnel() {
                   onTouchStart={handleTouchStart}
                   onTouchEnd={(e) => handleTouchEnd(e, entry.id)}
                   className={cn(
-                    "border-b border-gray-200 print:hover:bg-white relative transition-all duration-200",
+                    "border-b border-gray-200 print:hover:bg-white transition-all duration-200",
                     swipedId === entry.id ? "bg-red-50" : (index % 2 === 0 ? "bg-white" : ""),
                     "hover:bg-gray-50 group"
                   )}>
-                  {/* Desktop delete overlay - hidden, shows on hover */}
                   {isManager && (
-                    <div className="absolute right-0 top-0 h-full hidden lg:flex items-center px-3 bg-white/95 border-l-2 border-red-300 print:hidden">
+                    <td className="px-2 py-3 text-center border-r border-gray-200 print:hidden">
+                      {/* Desktop - show on hover */}
                       <button
                         onClick={() => setDeleteConfirm(entry)}
-                        className="opacity-0 group-hover:opacity-100 text-red-600 hover:text-red-800 transition-opacity"
+                        className="hidden lg:inline-block opacity-0 group-hover:opacity-100 text-red-600 hover:text-red-800 transition-opacity"
                         title="Supprimer"
                       >
                         <Trash2 className="w-4 h-4" />
                       </button>
-                    </div>
-                  )}
-                  
-                  {/* Mobile swipe delete overlay */}
-                  {isManager && swipedId === entry.id && (
-                    <div className="absolute right-0 top-0 h-full lg:hidden flex items-center px-3 bg-red-500">
-                      <button
-                        onClick={() => {
-                          setDeleteConfirm(entry);
-                          setSwipedId(null);
-                        }}
-                        className="text-white hover:text-red-100 transition-colors"
-                        title="Supprimer"
-                      >
-                        <Trash2 className="w-5 h-5" />
-                      </button>
-                    </div>
+                      
+                      {/* Mobile - show when swiped */}
+                      {swipedId === entry.id && (
+                        <button
+                          onClick={() => {
+                            setDeleteConfirm(entry);
+                            setSwipedId(null);
+                          }}
+                          className="lg:hidden text-red-600 hover:text-red-800 transition-colors"
+                          title="Supprimer"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      )}
+                    </td>
                   )}
                   <td className="px-4 py-3 text-sm text-gray-900 border-r border-gray-200 font-semibold">{index + 1}</td>
                   <td className="px-4 py-3 text-sm text-gray-900 border-r border-gray-200">{entry.last_name}</td>
