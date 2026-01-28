@@ -20,7 +20,12 @@ export default function EmployeeFormModal({ open, onClose, employee, isManager =
   const [showEmailDialog, setShowEmailDialog] = useState(false);
   const [recipientEmail, setRecipientEmail] = useState('');
   const [showConfirmationDialog, setShowConfirmationDialog] = useState(false);
-  const [currentUser, setCurrentUser] = useState(null);
+
+  const { data: currentUser } = useQuery({
+    queryKey: ['currentUser'],
+    queryFn: () => base44.auth.me()
+  });
+
   const [formData, setFormData] = useState(employee || {
     first_name: '',
     last_name: '',
@@ -87,14 +92,6 @@ export default function EmployeeFormModal({ open, onClose, employee, isManager =
       createMutation.mutate(formData);
     }
   };
-
-  React.useEffect(() => {
-    const fetchCurrentUser = async () => {
-      const user = await base44.auth.me();
-      setCurrentUser(user);
-    };
-    fetchCurrentUser();
-  }, []);
 
   React.useEffect(() => {
     if (employee) {
@@ -969,7 +966,7 @@ ${currentUser.email || '-'}`;
             </Button>
             <Button
               type="submit"
-              disabled={createMutation.isPending || updateMutation.isPending || (employee && currentUser?.email !== employee.email && !isManager)}
+              disabled={createMutation.isPending || updateMutation.isPending || (employee && !isManager && currentUser?.email !== employee.email)}
               className="bg-orange-600 hover:bg-orange-700"
             >
               {employee ? 'Mettre à jour' : 'Créer'}
