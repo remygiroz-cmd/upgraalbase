@@ -410,6 +410,38 @@ Deno.serve(async (req) => {
       finEssaiDate = startD.toISOString().split('T')[0];
     }
 
+    // Construire le motif du CDD
+    let motifCDD = '';
+    if (typeDocument === 'CDD') {
+      const cddReason = employee.cdd_reason || 'replacement';
+      const reasonLabels = {
+        'replacement': 'Remplacement d\'un salarié absent',
+        'temporary_activity': 'Accroissement temporaire d\'activité',
+        'seasonal': 'Emploi saisonnier',
+        'apprenticeship': 'Contrat d\'apprentissage ou de professionnalisation',
+        'cascade_replacement': 'Remplacement en cascade'
+      };
+      
+      let reasonText = reasonLabels[cddReason] || 'Remplacement d\'un salarié absent';
+      
+      // Ajouter les détails si présents
+      if (cddReason === 'replacement' && employee.cdd_replacement_employee) {
+        const absenceReasonLabel = {
+          'sick_leave': 'arrêt maladie',
+          'maternity_leave': 'congé maternité',
+          'paternity_leave': 'congé paternité',
+          'paid_leave': 'congé payé',
+          'training': 'formation'
+        };
+        const absenceReason = absenceReasonLabel[employee.cdd_replacement_reason] || 'absence';
+        reasonText = `Remplacement du salarié ${employee.cdd_replacement_employee} en ${absenceReason}`;
+      } else if (cddReason === 'cascade_replacement' && employee.cdd_custom_reason) {
+        reasonText = employee.cdd_custom_reason;
+      }
+      
+      motifCDD = `Le présent CDD est conclu en vertu de l'article L.1242-2 du Code du travail pour le motif suivant : <strong>${reasonText}</strong>. Ce motif justifie le recours à un contrat à durée déterminée conformément à la convention collective de la restauration rapide.`;
+    }
+
     // Construire l'objet variables
     const variables = {
       prenom: employee.first_name || '',
@@ -429,6 +461,7 @@ Deno.serve(async (req) => {
       finEssai: formatDateFR(finEssaiDate),
       taux: (options.hourlyRate || employee.gross_hourly_rate || 0).toFixed(2),
       salaireBrut: (options.grossSalary || employee.gross_salary || 0).toFixed(2),
+      motifCDD: motifCDD,
       signature: formatDateFR(new Date())
     };
 
