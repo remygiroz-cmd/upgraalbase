@@ -445,7 +445,7 @@ export default function DocumentGenerationWizard({ open, onOpenChange, employee,
                 </Button>
               ) : (
                 <Button
-                  onClick={downloadPdf}
+                  onClick={generateAndSavePdf}
                   disabled={isDownloadingPdf}
                   className="bg-blue-600 hover:bg-blue-700 gap-2"
                 >
@@ -457,7 +457,7 @@ export default function DocumentGenerationWizard({ open, onOpenChange, employee,
                   ) : (
                     <>
                       <Download className="w-4 h-4" />
-                      Télécharger en PDF
+                      Générer & Sauvegarder PDF
                     </>
                   )}
                 </Button>
