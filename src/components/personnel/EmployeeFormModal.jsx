@@ -313,14 +313,25 @@ export default function EmployeeFormModal({ open, onClose, employee }) {
           </div>
 
           {/* RIB */}
-          <div>
-            <Label className="text-gray-900">IBAN</Label>
-            <Input
-              value={formData.iban}
-              onChange={(e) => setFormData({ ...formData, iban: e.target.value })}
-              className="bg-white border-gray-300 text-gray-900"
-              placeholder="FR76 XXXX XXXX XXXX XXXX XXXX XXX"
-            />
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <Label className="text-gray-900">IBAN</Label>
+              <Input
+                value={formData.iban || ''}
+                onChange={(e) => setFormData({ ...formData, iban: e.target.value })}
+                className="bg-white border-gray-300 text-gray-900"
+                placeholder="FR76 XXXX XXXX XXXX XXXX XXXX XXX"
+              />
+            </div>
+            <div>
+              <Label className="text-gray-900">BIC</Label>
+              <Input
+                value={formData.bic || ''}
+                onChange={(e) => setFormData({ ...formData, bic: e.target.value })}
+                className="bg-white border-gray-300 text-gray-900"
+                placeholder="BNPAFRPPXXX"
+              />
+            </div>
           </div>
             </TabsContent>
 

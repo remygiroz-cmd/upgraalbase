@@ -121,7 +121,7 @@ export default function EmployeeDetailModal({ employee, open, onOpenChange, onEd
             </div>
 
             {/* Informations administratives */}
-            {(employee.social_security_number || employee.iban) && (
+            {(employee.social_security_number || employee.iban || employee.bic) && (
               <div className="space-y-3">
                 <h3 className="font-semibold text-gray-900 text-sm uppercase tracking-wide">
                   Informations administratives
@@ -136,6 +136,12 @@ export default function EmployeeDetailModal({ employee, open, onOpenChange, onEd
                 {employee.iban && (
                   <InfoRow icon={CreditCard} label="IBAN">
                     {employee.iban}
+                  </InfoRow>
+                )}
+
+                {employee.bic && (
+                  <InfoRow icon={CreditCard} label="BIC">
+                    {employee.bic}
                   </InfoRow>
                 )}
               </div>
