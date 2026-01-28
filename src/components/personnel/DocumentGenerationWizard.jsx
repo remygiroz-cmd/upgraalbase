@@ -118,6 +118,73 @@ export default function DocumentGenerationWizard({ open, onOpenChange, employee,
     }
   };
 
+  const downloadPdf = async () => {
+    if (!generatedDocument?.html) {
+      toast.error('HTML non disponible');
+      return;
+    }
+
+    setIsDownloadingPdf(true);
+    try {
+      // Créer un conteneur temporaire
+      const container = document.createElement('div');
+      container.innerHTML = generatedDocument.html;
+      container.style.position = 'fixed';
+      container.style.left = '-9999px';
+      container.style.width = '210mm';
+      container.style.height = '297mm';
+      document.body.appendChild(container);
+
+      // Attendre le rendu
+      await new Promise(resolve => setTimeout(resolve, 100));
+
+      // Convertir en canvas
+      const canvas = await html2canvas(container, {
+        scale: 2,
+        useCORS: true,
+        logging: false,
+        backgroundColor: '#ffffff'
+      });
+
+      document.body.removeChild(container);
+
+      // Créer le PDF
+      const pdf = new jsPDF({
+        orientation: 'portrait',
+        unit: 'mm',
+        format: 'a4'
+      });
+
+      const imgData = canvas.toDataURL('image/png');
+      const imgWidth = 210; // A4 width
+      const imgHeight = (canvas.height * imgWidth) / canvas.width;
+
+      let yPos = 0;
+      const pageHeight = 297; // A4 height
+
+      pdf.addImage(imgData, 'PNG', 0, yPos, imgWidth, imgHeight);
+      yPos += imgHeight;
+
+      while (yPos < imgHeight) {
+        pdf.addPage();
+        yPos -= pageHeight;
+        pdf.addImage(imgData, 'PNG', 0, -yPos, imgWidth, imgHeight);
+        yPos += pageHeight;
+      }
+
+      // Télécharger
+      const filename = `${generatedDocument.contractType}_${generatedDocument.employeeName}_${new Date().toISOString().split('T')[0]}.pdf`;
+      pdf.save(filename);
+
+      toast.success('PDF téléchargé avec succès');
+    } catch (error) {
+      console.error('Erreur lors de la génération du PDF:', error);
+      toast.error('Erreur lors de la génération du PDF');
+    } finally {
+      setIsDownloadingPdf(false);
+    }
+  };
+
   const handleClose = () => {
     setStep(1);
     setDocumentType('');
