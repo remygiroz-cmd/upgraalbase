@@ -8,6 +8,7 @@ import { Label } from '@/components/ui/label';
 import { AlertCircle, FileText, ChevronRight, ChevronLeft, CheckCircle, Download, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { jsPDF } from 'jspdf';
+import html2canvas from 'html2canvas';
 import PDFDownloadModal from './PDFDownloadModal';
 
 export default function DocumentGenerationWizard({ open, onOpenChange, employee, establishment }) {
