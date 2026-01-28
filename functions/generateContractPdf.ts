@@ -100,7 +100,8 @@ const getBaseStyles = () => `
   }
 `;
 
-const getCDDTPTemplate = () => `
+// Définir les templates comme chaînes séparées
+const cddTemplate = `
 <!DOCTYPE html>
 <html lang="fr">
 <head>
@@ -109,7 +110,7 @@ const getCDDTPTemplate = () => `
 </head>
 <body>
   <div class="header">
-    <h2>CONTRAT DE TRAVAIL À DURÉE DÉTERMINÉE – TEMPS PARTIEL</h2>
+    <h2>CONTRAT DE TRAVAIL À DURÉE DÉTERMINÉE – {{TYPE_TRAVAIL}}</h2>
     <p class="subtitle">CONFORME À LA CONVENTION COLLECTIVE DE LA RESTAURATION RAPIDE</p>
   </div>
   
