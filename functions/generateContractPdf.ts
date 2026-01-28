@@ -360,42 +360,8 @@ Deno.serve(async (req) => {
       htmlContent = htmlContent.split(placeholder).join(String(value));
     });
 
-    // Générer le PDF via api.html2pdf.eu
-    const html2pdfResponse = await fetch('https://api.html2pdf.app/v1/generate', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        html: htmlContent,
-        options: {
-          pageSize: 'A4',
-          margin: 20,
-          filename: `${template.typeDocument}_${employee.last_name}_${employee.first_name}.pdf`
-        }
-      })
-    });
-
-    if (!html2pdfResponse.ok) {
-      throw new Error(`PDF generation failed: ${html2pdfResponse.statusText}`);
-    }
-
-    const pdfBuffer = await html2pdfResponse.arrayBuffer();
-    const pdfUint8 = new Uint8Array(pdfBuffer);
-
-    // Uploader le PDF en stockage privé
-    const fileName = `${template.templateCode}_${employee.last_name}_${employee.first_name}_${new Date().toISOString().split('T')[0]}.pdf`;
-    const uploadResult = await base44.integrations.Core.UploadPrivateFile({
-      file: pdfUint8
-    });
-
-    // Créer l'URL signée
-    const signedUrlResult = await base44.integrations.Core.CreateFileSignedUrl({
-      file_uri: uploadResult.file_uri,
-      expires_in: 2592000 // 30 jours
-    });
-
-    // Créer l'enregistrement DocumentsRH
+    // Retourner le HTML pour que le client génère le PDF côté client
+    // via html2pdf.js ou une autre solution
     const documentRecord = {
       employee_id: employeeId,
       establishment_id: establishment.id,
@@ -405,8 +371,6 @@ Deno.serve(async (req) => {
       typeDocument: template.typeDocument,
       titre: `${template.typeDocument}_${employee.last_name}_${employee.first_name}_${new Date().toISOString().split('T')[0]}`,
       payloadSnapshot: variables,
-      pdfUrl: signedUrlResult.signed_url,
-      pdfFileUri: uploadResult.file_uri,
       statusSignature: 'non_signe',
       generatedAt: new Date().toISOString(),
       generatedBy: user.email,
@@ -418,8 +382,8 @@ Deno.serve(async (req) => {
     return Response.json({
       success: true,
       documentId: createdDocument.id,
-      pdfUrl: signedUrlResult.signed_url,
-      message: 'Contract PDF generated successfully',
+      html: htmlContent,
+      message: 'Contract HTML generated. PDF generation on client-side.',
       payload: variables
     });
 
