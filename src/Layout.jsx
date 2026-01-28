@@ -17,7 +17,8 @@ import {
         Home,
         Settings,
         LogOut,
-        FileText
+        FileText,
+        File
       } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import UserAccessCheck from '@/components/UserAccessCheck';
