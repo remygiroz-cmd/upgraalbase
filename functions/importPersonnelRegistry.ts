@@ -144,9 +144,9 @@ Deno.serve(async (req) => {
     const fieldIndexes = parseHeaders(headerLine);
     
     // ===== IMPORT LOGIC =====
-    const entries = [];
     const errors = [];
-    let imported = 0;
+    let created = 0;
+    let updated = 0;
 
     const allEntries = await base44.entities.PersonnelRegistry.list('-entry_order', 1);
     let nextOrder = (allEntries[0]?.entry_order || 0) + 1;
@@ -173,58 +173,87 @@ Deno.serve(async (req) => {
         }
 
         // Parse and normalize data
-        const registryEntry = {
-          employee_id: uuidv4(),
-          last_name: row.last_name.trim(),
-          first_name: row.first_name.trim(),
-          birth_date: row.birth_date ? formatDate(row.birth_date) : null,
-          birth_place: row.birth_place?.trim() || null,
-          address: row.address?.trim() || null,
-          nationality: row.nationality?.trim() || null,
-          gender: row.gender ? normalizeGender(row.gender) : null,
-          social_security_number: row.social_security_number ? normalizeSSN(row.social_security_number) : null,
-          position: row.position?.trim() || null,
-          start_date: row.start_date ? formatDate(row.start_date) : null,
-          contract_type: row.contract_type ? normalizeContractType(row.contract_type) : null,
-          exit_date: row.exit_date ? formatDate(row.exit_date) : null,
-          entry_order: nextOrder,
-          registered_by: user.email,
-          registered_at: new Date().toISOString(),
+        const normalizedSSN = row.social_security_number ? normalizeSSN(row.social_security_number) : null;
+        const birthDate = row.birth_date ? formatDate(row.birth_date) : null;
+        const lastName = row.last_name.trim();
+        const firstName = row.first_name.trim();
+
+        // ===== UPSERT LOGIC: Find duplicate =====
+        let existingRecord = null;
+
+        // Priorité 1: N° SS (si présent et valide)
+        if (normalizedSSN) {
+          const matches = await base44.entities.PersonnelRegistry.filter({
+            social_security_number: normalizedSSN
+          });
+          if (matches && matches.length > 1) {
+            errors.push(`Ligne ${i + 1}: Plusieurs doublons trouvés avec ce N° SS (ambiguïté)`);
+            continue;
+          }
+          if (matches && matches.length === 1) {
+            existingRecord = matches[0];
+          }
+        }
+
+        // Priorité 2: Nom + Prénom + Date de naissance (si pas trouvé par N° SS)
+        if (!existingRecord && birthDate) {
+          const matches = await base44.entities.PersonnelRegistry.filter({
+            last_name: lastName,
+            first_name: firstName,
+            birth_date: birthDate
+          });
+          if (matches && matches.length > 1) {
+            errors.push(`Ligne ${i + 1}: Plusieurs doublons trouvés (ambiguïté sur Nom+Prénom+Naissance)`);
+            continue;
+          }
+          if (matches && matches.length === 1) {
+            existingRecord = matches[0];
+          }
+        }
+
+        // ===== BUILD UPDATE/CREATE DATA (ne pas écraser champs vides) =====
+        const dataToSave = {
+          last_name: lastName,
+          first_name: firstName,
+          birth_date: birthDate,
+          birth_place: row.birth_place?.trim() || existingRecord?.birth_place || null,
+          address: row.address?.trim() || existingRecord?.address || null,
+          nationality: row.nationality?.trim() || existingRecord?.nationality || null,
+          gender: row.gender ? normalizeGender(row.gender) : (existingRecord?.gender || null),
+          social_security_number: normalizedSSN || existingRecord?.social_security_number || null,
+          position: row.position?.trim() || existingRecord?.position || null,
+          start_date: row.start_date ? formatDate(row.start_date) : (existingRecord?.start_date || null),
+          contract_type: row.contract_type ? normalizeContractType(row.contract_type) : (existingRecord?.contract_type || null),
+          exit_date: row.exit_date ? formatDate(row.exit_date) : (existingRecord?.exit_date || null),
           last_updated_at: new Date().toISOString()
         };
 
-        // Check for duplicate (SSN or Name+Birth)
-        let isDuplicate = false;
-        
-        if (registryEntry.social_security_number) {
-          const existingSSN = await base44.entities.PersonnelRegistry.filter({
-            social_security_number: registryEntry.social_security_number
+        // ===== CREATE or UPDATE =====
+        if (existingRecord) {
+          // UPDATE: merge with existing data, keeping non-empty fields from import
+          const updateData = {};
+          Object.keys(dataToSave).forEach(key => {
+            if (row[key] !== undefined || dataToSave[key] !== null) {
+              updateData[key] = dataToSave[key];
+            }
           });
-          if (existingSSN && existingSSN.length > 0) {
-            isDuplicate = true;
-          }
-        }
+          updateData.last_updated_at = new Date().toISOString();
 
-        if (!isDuplicate && registryEntry.birth_date) {
-          const existingName = await base44.entities.PersonnelRegistry.filter({
-            last_name: registryEntry.last_name,
-            first_name: registryEntry.first_name,
-            birth_date: registryEntry.birth_date
-          });
-          if (existingName && existingName.length > 0) {
-            isDuplicate = true;
-          }
+          await base44.entities.PersonnelRegistry.update(existingRecord.id, updateData);
+          updated++;
+        } else {
+          // CREATE: new entry
+          const newEntry = {
+            ...dataToSave,
+            employee_id: uuidv4(),
+            entry_order: nextOrder,
+            registered_by: user.email,
+            registered_at: new Date().toISOString()
+          };
+          await base44.entities.PersonnelRegistry.create(newEntry);
+          created++;
+          nextOrder++;
         }
-
-        if (isDuplicate) {
-          errors.push(`Ligne ${i + 1}: Employé déjà existant (doublon)`);
-          continue;
-        }
-
-        // Create entry
-        await base44.entities.PersonnelRegistry.create(registryEntry);
-        imported++;
-        nextOrder++;
 
       } catch (error) {
         errors.push(`Ligne ${i + 1}: ${error.message}`);
@@ -233,7 +262,9 @@ Deno.serve(async (req) => {
 
     return Response.json({
       success: true,
-      imported: imported,
+      created: created,
+      updated: updated,
+      ignored: errors.length,
       errors: errors
     });
   } catch (error) {
