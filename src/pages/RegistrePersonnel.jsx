@@ -218,43 +218,44 @@ export default function RegistrePersonnel() {
         title="Registre Unique du Personnel"
         subtitle="Enregistrement légal de tous les employés"
         actions={
-          <div className="flex gap-2">
-            {isManager && (
-              <>
-                <Button
-                  onClick={() => setShowImport(true)}
-                  className="bg-orange-600 hover:bg-orange-700"
-                >
-                  <Upload className="w-4 h-4 mr-2" />
-                  Importer
-                </Button>
-                <Button
-                  onClick={handleDownloadPDF}
-                  variant="outline"
-                  className="border-gray-300 text-gray-700 hover:bg-gray-100"
-                >
-                  <FileJson className="w-4 h-4 mr-2" />
-                  Exporter PDF
-                </Button>
-                <Button
-                  onClick={handleDownloadCSV}
-                  variant="outline"
-                  className="border-gray-300 text-gray-700 hover:bg-gray-100"
-                >
-                  <Download className="w-4 h-4 mr-2" />
-                  Exporter CSV
-                </Button>
-                <Button
-                  onClick={handlePrint}
-                  variant="outline"
-                  className="border-gray-300 text-gray-700 hover:bg-gray-100"
-                >
-                  <Printer className="w-4 h-4 mr-2" />
-                  Imprimer
-                </Button>
-              </>
-            )}
-          </div>
+          isManager && (
+            <div className="flex flex-col md:flex-row gap-2 w-full md:w-auto">
+              <Button
+                onClick={() => setShowImport(true)}
+                className="bg-orange-600 hover:bg-orange-700 flex-1 md:flex-none"
+              >
+                <Upload className="w-4 h-4 mr-2" />
+                Importer
+              </Button>
+              <Button
+                onClick={handleDownloadPDF}
+                variant="outline"
+                className="border-gray-300 text-gray-700 hover:bg-gray-100 flex-1 md:flex-none"
+              >
+                <FileJson className="w-4 h-4 mr-2" />
+                <span className="hidden sm:inline">Exporter PDF</span>
+                <span className="sm:hidden">PDF</span>
+              </Button>
+              <Button
+                onClick={handleDownloadCSV}
+                variant="outline"
+                className="border-gray-300 text-gray-700 hover:bg-gray-100 flex-1 md:flex-none"
+              >
+                <Download className="w-4 h-4 mr-2" />
+                <span className="hidden sm:inline">Exporter CSV</span>
+                <span className="sm:hidden">CSV</span>
+              </Button>
+              <Button
+                onClick={handlePrint}
+                variant="outline"
+                className="border-gray-300 text-gray-700 hover:bg-gray-100 flex-1 md:flex-none"
+              >
+                <Printer className="w-4 h-4 mr-2" />
+                <span className="hidden sm:inline">Imprimer</span>
+                <span className="sm:hidden">Imprimer</span>
+              </Button>
+            </div>
+          )
         }
       />
 
