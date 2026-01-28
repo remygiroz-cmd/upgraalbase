@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useQueryClient, useMutation } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -136,6 +137,13 @@ export default function EmployeeFormModal({ open, onClose, employee }) {
             </div>
           </div>
 
+          <Tabs defaultValue="infos" className="w-full">
+            <TabsList className="grid w-full grid-cols-2 bg-gray-100">
+              <TabsTrigger value="infos" className="data-[state=active]:bg-white">Informations</TabsTrigger>
+              <TabsTrigger value="contrat" className="data-[state=active]:bg-white">Contrat</TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="infos" className="space-y-4 mt-4">
           {/* Nom et prénom */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
@@ -273,6 +281,143 @@ export default function EmployeeFormModal({ open, onClose, employee }) {
               placeholder="FR76 XXXX XXXX XXXX XXXX XXXX XXX"
             />
           </div>
+            </TabsContent>
+
+            <TabsContent value="contrat" className="space-y-4 mt-4">
+              {/* Poste et Équipe */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <Label className="text-gray-900">Poste</Label>
+                  <Input
+                    value={formData.position || ''}
+                    onChange={(e) => setFormData({ ...formData, position: e.target.value })}
+                    placeholder="Ex: Cuisinier, Livreur..."
+                    className="bg-white border-gray-300 text-gray-900"
+                  />
+                </div>
+                <div>
+                  <Label className="text-gray-900">Équipe</Label>
+                  <Input
+                    value={formData.team || ''}
+                    onChange={(e) => setFormData({ ...formData, team: e.target.value })}
+                    placeholder="Équipe"
+                    className="bg-white border-gray-300 text-gray-900"
+                  />
+                </div>
+              </div>
+
+              {/* Type de contrat et Temps de travail */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <Label className="text-gray-900">Type de contrat</Label>
+                  <Select
+                    value={formData.contract_type || ''}
+                    onValueChange={(value) => setFormData({ ...formData, contract_type: value })}
+                  >
+                    <SelectTrigger className="bg-white border-gray-300 text-gray-900">
+                      <SelectValue placeholder="Sélectionner" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="cdi">CDI</SelectItem>
+                      <SelectItem value="cdd">CDD</SelectItem>
+                      <SelectItem value="extra">Extra</SelectItem>
+                      <SelectItem value="apprenti">Alternant</SelectItem>
+                      <SelectItem value="stage">Stage</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label className="text-gray-900">Temps de travail</Label>
+                  <Select
+                    value={formData.work_time_type || ''}
+                    onValueChange={(value) => setFormData({ ...formData, work_time_type: value })}
+                  >
+                    <SelectTrigger className="bg-white border-gray-300 text-gray-900">
+                      <SelectValue placeholder="Sélectionner" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="full_time">Temps plein</SelectItem>
+                      <SelectItem value="part_time">Temps partiel</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              {/* Dates de contrat */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <Label className="text-gray-900">Date d'embauche</Label>
+                  <Input
+                    type="date"
+                    value={formData.start_date || ''}
+                    onChange={(e) => setFormData({ ...formData, start_date: e.target.value })}
+                    className="bg-white border-gray-300 text-gray-900"
+                  />
+                </div>
+                <div>
+                  <Label className="text-gray-900">Date de fin de contrat</Label>
+                  <Input
+                    type="date"
+                    value={formData.end_date || ''}
+                    onChange={(e) => setFormData({ ...formData, end_date: e.target.value })}
+                    className="bg-white border-gray-300 text-gray-900"
+                    placeholder={formData.contract_type === 'cdd' ? 'Obligatoire pour CDD' : 'Optionnel'}
+                  />
+                </div>
+              </div>
+
+              {/* Heures contractuelles et Coefficient */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <Label className="text-gray-900">Heures contractuelles / mois</Label>
+                  <Input
+                    type="number"
+                    value={formData.contract_hours || ''}
+                    onChange={(e) => setFormData({ ...formData, contract_hours: parseFloat(e.target.value) })}
+                    className="bg-white border-gray-300 text-gray-900"
+                    placeholder="Ex: 151.67"
+                  />
+                </div>
+                <div>
+                  <Label className="text-gray-900">Coefficient / Niveau</Label>
+                  <Input
+                    value={formData.coefficient_level || ''}
+                    onChange={(e) => setFormData({ ...formData, coefficient_level: e.target.value })}
+                    className="bg-white border-gray-300 text-gray-900"
+                    placeholder="Ex: Niveau 2, Coef 150"
+                  />
+                </div>
+              </div>
+
+              {/* Responsable hiérarchique */}
+              <div>
+                <Label className="text-gray-900">Responsable hiérarchique</Label>
+                <Input
+                  value={formData.manager || ''}
+                  onChange={(e) => setFormData({ ...formData, manager: e.target.value })}
+                  className="bg-white border-gray-300 text-gray-900"
+                  placeholder="Nom du responsable"
+                />
+              </div>
+
+              {/* Statut */}
+              <div>
+                <Label className="text-gray-900">Statut</Label>
+                <Select
+                  value={formData.is_active ? 'active' : 'archived'}
+                  onValueChange={(value) => setFormData({ ...formData, is_active: value === 'active' })}
+                >
+                  <SelectTrigger className="bg-white border-gray-300 text-gray-900">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="active">Actif</SelectItem>
+                    <SelectItem value="archived">Sorti (Archivé)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </TabsContent>
+          </Tabs>
 
           {/* Actions */}
           <div className="flex flex-wrap gap-2 pt-4 border-t border-gray-200">
