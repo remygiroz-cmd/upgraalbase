@@ -98,11 +98,12 @@ export default function EmployeeList() {
         {isManager && (
           <>
             <Button
-              variant={showArchived ? "outline" : "default"}
+              variant={showArchived ? "default" : "outline"}
               onClick={() => setShowArchived(!showArchived)}
               className={cn(
                 "min-h-[44px]",
-                !showArchived && "border-gray-400 text-gray-700 hover:bg-gray-100"
+                showArchived && "bg-gray-800 text-white hover:bg-gray-900",
+                !showArchived && "border-gray-400 text-gray-900 font-semibold hover:bg-gray-200"
               )}
             >
               <Archive className="w-4 h-4 sm:mr-2" />

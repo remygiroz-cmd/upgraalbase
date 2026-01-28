@@ -327,22 +327,22 @@ export default function Pertes() {
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="mb-6">
         <TabsList className="bg-slate-800 p-1 grid grid-cols-4">
-          <TabsTrigger value="pos" className="data-[state=active]:bg-slate-700">
+          <TabsTrigger value="pos" className="data-[state=active]:bg-orange-600 data-[state=active]:text-white text-slate-400 hover:text-slate-200">
             <ShoppingCart className="w-4 h-4 mr-2" />
             <span className="hidden sm:inline">Saisie POS</span>
             <span className="sm:hidden">POS</span>
           </TabsTrigger>
-          <TabsTrigger value="recap" className="data-[state=active]:bg-slate-700">
+          <TabsTrigger value="recap" className="data-[state=active]:bg-orange-600 data-[state=active]:text-white text-slate-400 hover:text-slate-200">
             <Download className="w-4 h-4 mr-2" />
             <span className="hidden sm:inline">Récapitulatif</span>
             <span className="sm:hidden">Récap</span>
           </TabsTrigger>
-          <TabsTrigger value="history" className="data-[state=active]:bg-slate-700">
+          <TabsTrigger value="history" className="data-[state=active]:bg-orange-600 data-[state=active]:text-white text-slate-400 hover:text-slate-200">
             <History className="w-4 h-4 mr-2" />
             <span className="hidden sm:inline">Historique</span>
             <span className="sm:hidden">Histo</span>
           </TabsTrigger>
-          <TabsTrigger value="products" className="data-[state=active]:bg-slate-700">
+          <TabsTrigger value="products" className="data-[state=active]:bg-orange-600 data-[state=active]:text-white text-slate-400 hover:text-slate-200">
             <PackageMinus className="w-4 h-4 mr-2" />
             <span className="hidden sm:inline">Produits</span>
             <span className="sm:hidden">Prods</span>
