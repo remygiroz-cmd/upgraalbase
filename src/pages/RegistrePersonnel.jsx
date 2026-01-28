@@ -112,11 +112,11 @@ export default function RegistrePersonnel() {
 
     try {
       const canvas = await html2canvas(element, {
-        scale: 1.5,
+        scale: 1,
         useCORS: true,
         allowTaint: true,
         logging: false,
-        windowWidth: element.scrollWidth
+        windowWidth: 1400
       });
       
       const pdf = new jsPDF({
@@ -127,22 +127,22 @@ export default function RegistrePersonnel() {
       
       const pageWidth = pdf.internal.pageSize.getWidth();
       const pageHeight = pdf.internal.pageSize.getHeight();
-      const imgWidth = pageWidth - 10;
+      const imgWidth = pageWidth - 4;
       const imgHeight = (canvas.height * imgWidth) / canvas.width;
       
       let heightLeft = imgHeight;
-      let position = 5;
+      let position = 2;
 
       const imgData = canvas.toDataURL('image/png');
       
-      pdf.addImage(imgData, 'PNG', 5, position, imgWidth, imgHeight);
-      heightLeft -= (pageHeight - 10);
+      pdf.addImage(imgData, 'PNG', 2, position, imgWidth, imgHeight);
+      heightLeft -= (pageHeight - 4);
 
       while (heightLeft > 0) {
-        position = heightLeft - imgHeight + 5;
+        position = heightLeft - imgHeight + 2;
         pdf.addPage();
-        pdf.addImage(imgData, 'PNG', 5, position, imgWidth, imgHeight);
-        heightLeft -= (pageHeight - 10);
+        pdf.addImage(imgData, 'PNG', 2, position, imgWidth, imgHeight);
+        heightLeft -= (pageHeight - 4);
       }
 
       pdf.save(`registre-personnel-${new Date().toISOString().split('T')[0]}.pdf`);
@@ -313,8 +313,8 @@ export default function RegistrePersonnel() {
           }
           
           body {
-            padding: 3mm;
-            font-size: 8px;
+            padding: 1mm;
+            font-size: 7px;
           }
           
           #registry-table {
@@ -326,6 +326,7 @@ export default function RegistrePersonnel() {
             width: 100%;
             border-collapse: collapse;
             page-break-inside: auto;
+            font-size: 7px;
           }
           
           thead {
@@ -343,13 +344,12 @@ export default function RegistrePersonnel() {
           }
           
           th, td {
-            border: 1px solid #000;
-            padding: 2px;
+            border: 0.5px solid #000;
+            padding: 1px;
             text-align: left;
-            font-size: 8px;
+            font-size: 7px;
             white-space: normal;
             word-break: break-word;
-            max-width: 60px;
           }
           
           th {
