@@ -54,49 +54,48 @@ export default function RegistrePersonnel() {
   const handleDownloadPDF = () => {
     const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
     const pageWidth = doc.internal.pageSize.getWidth();
-    const pageHeight = doc.internal.pageSize.getHeight();
-    const margin = 8;
+    const margin = 6;
     const contentWidth = pageWidth - margin * 2;
 
+    // Colonnes avec largeurs intelligentes (courtes/longues adaptées)
     const columns = [
-      { header: 'N°', width: 8 },
-      { header: 'Nom', width: 18 },
-      { header: 'Prénom', width: 18 },
-      { header: 'Date naissance', width: 20 },
-      { header: 'Lieu', width: 18 },
-      { header: 'Nationalité', width: 18 },
-      { header: 'Sexe', width: 8 },
-      { header: 'Adresse', width: 30 },
-      { header: 'N° SS', width: 25 },
-      { header: 'Poste', width: 20 },
-      { header: 'Date embauche', width: 20 },
-      { header: 'Type contrat', width: 14 },
-      { header: 'Date sortie', width: 20 }
+      { key: 'index', header: 'N°', width: 6 },
+      { key: 'last_name', header: 'Nom', width: 14 },
+      { key: 'first_name', header: 'Prénom', width: 14 },
+      { key: 'birth_date', header: 'Date naissance', width: 16 },
+      { key: 'birth_place', header: 'Lieu', width: 14 },
+      { key: 'nationality', header: 'Nationalité', width: 12 },
+      { key: 'gender', header: 'Sexe', width: 6 },
+      { key: 'address', header: 'Adresse', width: 35 },
+      { key: 'social_security_number', header: 'N° SS', width: 22 },
+      { key: 'position', header: 'Poste', width: 16 },
+      { key: 'start_date', header: 'Date embauche', width: 16 },
+      { key: 'contract_type', header: 'Type contrat', width: 11 },
+      { key: 'exit_date', header: 'Date sortie', width: 14 }
     ];
 
     const totalWidth = columns.reduce((sum, col) => sum + col.width, 0);
     const scaleFactor = contentWidth / totalWidth;
+    const fontSize = 8;
+    const headerHeight = 6;
+    const lineHeight = 3.5;
 
-    const fontSize = 7;
-    const rowHeight = 5;
-    let yPosition = margin + 8;
+    let yPosition = margin;
 
     // Headers
     doc.setFontSize(fontSize);
     doc.setFont(undefined, 'bold');
-    let xPosition = margin;
     columns.forEach((col) => {
       const colWidth = col.width * scaleFactor;
-      doc.text(col.header, xPosition + 1, yPosition, { maxWidth: colWidth - 2, fontSize: fontSize });
-      xPosition += colWidth;
+      const x = margin + columns.slice(0, columns.indexOf(col)).reduce((sum, c) => sum + c.width * scaleFactor, 0);
+      doc.text(col.header, x + 0.5, yPosition + 4, { maxWidth: colWidth - 1, align: 'left' });
     });
 
-    yPosition += rowHeight;
+    yPosition += headerHeight;
     doc.setFont(undefined, 'normal');
 
     // Data rows
     registryEntries.forEach((entry, index) => {
-      xPosition = margin;
       const rowData = [
         (index + 1).toString(),
         entry.last_name || '',
@@ -113,10 +112,23 @@ export default function RegistrePersonnel() {
         entry.exit_date ? new Date(entry.exit_date).toLocaleDateString('fr-FR') : ''
       ];
 
-      rowData.forEach((data, colIndex) => {
-        const colWidth = columns[colIndex].width * scaleFactor;
-        doc.text(data, xPosition + 1, yPosition, { maxWidth: colWidth - 2, fontSize: fontSize });
-        xPosition += colWidth;
+      // Calculer la hauteur de la ligne (en fonction du texte qui wrap)
+      let maxLines = 1;
+      columns.forEach((col, colIndex) => {
+        const colWidth = col.width * scaleFactor - 1;
+        const text = rowData[colIndex];
+        const lines = doc.splitTextToSize(text, colWidth);
+        maxLines = Math.max(maxLines, lines.length);
+      });
+
+      const rowHeight = lineHeight * maxLines;
+
+      // Dessiner les cellules
+      columns.forEach((col, colIndex) => {
+        const colWidth = col.width * scaleFactor;
+        const x = margin + columns.slice(0, colIndex).reduce((sum, c) => sum + c.width * scaleFactor, 0);
+        const text = rowData[colIndex];
+        doc.text(text, x + 0.5, yPosition + 1, { maxWidth: colWidth - 1, align: 'left' });
       });
 
       yPosition += rowHeight;
