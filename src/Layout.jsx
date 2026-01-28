@@ -4,20 +4,21 @@ import { createPageUrl } from './utils';
 import { useQuery } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { 
-  ChefHat, 
-  ClipboardList, 
-  Thermometer, 
-  BookOpen, 
-  History,
-  Users, 
-  PackageMinus, 
-  Package,
-  Menu,
-  X,
-  Home,
-  Settings,
-  LogOut
-} from 'lucide-react';
+        ChefHat, 
+        ClipboardList, 
+        Thermometer, 
+        BookOpen, 
+        History,
+        Users, 
+        PackageMinus, 
+        Package,
+        Menu,
+        X,
+        Home,
+        Settings,
+        LogOut,
+        FileText
+      } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import UserAccessCheck from '@/components/UserAccessCheck';
 
@@ -70,6 +71,7 @@ export default function Layout({ children, currentPageName }) {
 
   const gestionLinks = [
     { name: 'Equipe', label: 'Équipe & Shifts', icon: Users, module: 'equipe' },
+    { name: 'RegistrePersonnel', label: 'Registre du Personnel', icon: FileText, module: 'registre_personnel' },
     { name: 'Pertes', label: 'Invendus & Pertes', icon: PackageMinus, module: 'pertes' },
     { name: 'Stocks', label: 'Inventaires', icon: Package, module: 'stocks' },
   ].filter(link => hasPermission(link.module));
