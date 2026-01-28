@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useQueryClient, useMutation } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -17,6 +17,8 @@ export default function EmployeeFormModal({ open, onClose, employee, isManager =
   const [confirmArchive, setConfirmArchive] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [sendingEmail, setSendingEmail] = useState(false);
+  const [showEmailDialog, setShowEmailDialog] = useState(false);
+  const [recipientEmail, setRecipientEmail] = useState('');
   const [formData, setFormData] = useState(employee || {
     first_name: '',
     last_name: '',
@@ -149,15 +151,15 @@ export default function EmployeeFormModal({ open, onClose, employee, isManager =
   };
 
   const handleSendToAccounting = async () => {
-    const recipientEmail = prompt('Email du destinataire (comptabilité):');
     if (!recipientEmail || !recipientEmail.includes('@')) {
       toast.error('Email valide requis');
       return;
     }
 
     setSendingEmail(true);
+    setShowEmailDialog(false);
     try {
-      const { data: currentUser } = await base44.auth.me();
+      const currentUser = await base44.auth.me();
       
       const isFemale = formData.gender === 'female';
       const subject = isFemale ? 'Nouvelle employée' : 'Nouvel employé';
@@ -200,11 +202,17 @@ ${currentUser.phone ? `Tél: ${currentUser.phone}` : ''}`;
       });
 
       toast.success('Email envoyé avec succès');
+      setRecipientEmail('');
     } catch (error) {
       toast.error('Erreur lors de l\'envoi de l\'email');
     } finally {
       setSendingEmail(false);
     }
+  };
+
+  const openEmailDialog = () => {
+    setRecipientEmail('');
+    setShowEmailDialog(true);
   };
 
   return (
@@ -928,7 +936,7 @@ ${currentUser.phone ? `Tél: ${currentUser.phone}` : ''}`;
               <Button
                 type="button"
                 variant="outline"
-                onClick={handleSendToAccounting}
+                onClick={openEmailDialog}
                 disabled={sendingEmail}
                 className="border-blue-400 text-blue-700 hover:bg-blue-50"
               >
@@ -981,6 +989,57 @@ ${currentUser.phone ? `Tél: ${currentUser.phone}` : ''}`;
         variant="warning"
         confirmText={employee?.is_active ? "Archiver" : "Réactiver"}
       />
+
+      {/* Email Dialog */}
+      <Dialog open={showEmailDialog} onOpenChange={setShowEmailDialog}>
+        <DialogContent className="bg-white border-gray-300 w-[calc(100vw-2rem)] max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-gray-900 flex items-center gap-2">
+              <Send className="w-5 h-5 text-blue-600" />
+              Déclarer à la comptabilité
+            </DialogTitle>
+            <DialogDescription className="text-gray-600">
+              Envoyer les informations de {formData.gender === 'female' ? 'la nouvelle employée' : 'le nouvel employé'} par email
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4 py-4">
+            <div>
+              <Label className="text-gray-900">Email du destinataire *</Label>
+              <Input
+                type="email"
+                value={recipientEmail}
+                onChange={(e) => setRecipientEmail(e.target.value)}
+                placeholder="compta@exemple.fr"
+                className="bg-white border-gray-300 text-gray-900 mt-1"
+                autoFocus
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                L'email contiendra toutes les informations nécessaires
+              </p>
+            </div>
+          </div>
+
+          <div className="flex flex-col sm:flex-row justify-end gap-2 sm:gap-3">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setShowEmailDialog(false)}
+              className="border-gray-300 text-gray-900 w-full sm:w-auto min-h-[44px]"
+            >
+              Annuler
+            </Button>
+            <Button
+              onClick={handleSendToAccounting}
+              disabled={sendingEmail || !recipientEmail}
+              className="bg-blue-600 hover:bg-blue-700 w-full sm:w-auto min-h-[44px]"
+            >
+              <Send className="w-4 h-4 mr-2" />
+              {sendingEmail ? 'Envoi...' : 'Envoyer'}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </Dialog>
   );
 }
