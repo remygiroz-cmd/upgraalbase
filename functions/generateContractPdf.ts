@@ -305,13 +305,32 @@ const cddTemplate = `
 const getCDDTPTemplate = () => cddTemplate.replace('{{TYPE_TRAVAIL}}', 'TEMPS PARTIEL');
 const getCDDTCTemplate = () => cddTemplate.replace('{{TYPE_TRAVAIL}}', 'TEMPS COMPLET');
 
-const cdiTemplate = cddTemplate
-  .replace('À DURÉE DÉTERMINÉE – {{TYPE_TRAVAIL}}', 'À DURÉE INDÉTERMINÉE – {{TYPE_TRAVAIL}}')
-  .replace('du <strong>{{debut}}</strong> au <strong>{{fin}}</strong>, en vertu de l\'article L.1242-2 du Code du travail et de', 'à compter du <strong>{{debut}}</strong>, en vertu du Code du travail et de')
-  .replace('Une période d\'essai de {{periodeEssaiTexte}} est prévue, soit du {{debut}} au {{finEssai}}.', 'Une période d\'essai de {{periodeEssaiTexte}} est prévue.');
+const createCDITemplate = () => {
+  return cddTemplate
+    .replace('À DURÉE DÉTERMINÉE – {{TYPE_TRAVAIL}}', 'À DURÉE INDÉTERMINÉE – {{TYPE_TRAVAIL}}')
+    .replace('du <strong>{{debut}}</strong> au <strong>{{fin}}</strong>, en vertu de l\'article L.1242-2 du Code du travail et de', 'à compter du <strong>{{debut}}</strong>, en vertu du Code du travail et de')
+    .replace('Une période d\'essai de {{periodeEssaiTexte}} est prévue, soit du {{debut}} au {{finEssai}}.', 'Une période d\'essai de {{periodeEssaiTexte}} est prévue.')
+    // Supprimer l'Article 2 (Motif du CDD) et renumeroter les articles
+    .replace(
+      /<div class="section">\s*<div class="section-title">ARTICLE 2 – MOTIF DU RECOURS AU CDD<\/div>[\s\S]*?<\/div>\s*<hr>/,
+      '<hr>'
+    )
+    .replace(/ARTICLE 3 – EMPLOI ET QUALIFICATION/g, 'ARTICLE 2 – EMPLOI ET QUALIFICATION')
+    .replace(/ARTICLE 4 – LIEU DE TRAVAIL/g, 'ARTICLE 3 – LIEU DE TRAVAIL')
+    .replace(/ARTICLE 5 – DURÉE ET HORAIRES DE TRAVAIL/g, 'ARTICLE 4 – DURÉE ET HORAIRES DE TRAVAIL')
+    .replace(/ARTICLE 6 – HEURES COMPLÉMENTAIRES/g, 'ARTICLE 5 – HEURES COMPLÉMENTAIRES')
+    .replace(/ARTICLE 7 – PÉRIODE D'ESSAI/g, 'ARTICLE 6 – PÉRIODE D\'ESSAI')
+    .replace(/ARTICLE 8 – RÉMUNÉRATION/g, 'ARTICLE 7 – RÉMUNÉRATION')
+    .replace(/ARTICLE 9 – FORMATION & CLAUSE DE REMBOURSEMENT/g, 'ARTICLE 8 – FORMATION & CLAUSE DE REMBOURSEMENT')
+    .replace(/ARTICLE 10 – CONGÉS PAYÉS/g, 'ARTICLE 9 – CONGÉS PAYÉS')
+    .replace(/ARTICLE 11 – PROTECTION SOCIALE/g, 'ARTICLE 10 – PROTECTION SOCIALE')
+    .replace(/ARTICLE 12 – OBLIGATIONS DU SALARIÉ/g, 'ARTICLE 11 – OBLIGATIONS DU SALARIÉ')
+    .replace(/ARTICLE 13 – CLAUSE DE NON-CONCURRENCE/g, 'ARTICLE 12 – CLAUSE DE NON-CONCURRENCE')
+    .replace(/ARTICLE 14 – RUPTURE ANTICIPÉE/g, 'ARTICLE 13 – RUPTURE ANTICIPÉE');
+};
 
-const getCDITPTemplate = () => cdiTemplate.replace('{{TYPE_TRAVAIL}}', 'TEMPS PARTIEL');
-const getCDITCTemplate = () => cdiTemplate.replace('{{TYPE_TRAVAIL}}', 'TEMPS COMPLET');
+const getCDITPTemplate = () => createCDITemplate().replace('{{TYPE_TRAVAIL}}', 'TEMPS PARTIEL');
+const getCDITCTemplate = () => createCDITemplate().replace('{{TYPE_TRAVAIL}}', 'TEMPS COMPLET');
 
 const formatDateFR = (date) => {
   if (!date) return '';
