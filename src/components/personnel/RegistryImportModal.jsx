@@ -22,13 +22,14 @@ export default function RegistryImportModal({ open, onOpenChange, onSuccess }) {
       const response = await base44.functions.invoke('importPersonnelRegistry', { data });
       setResult(response.data);
       
+      const totalProcessed = response.data.created + response.data.updated;
       if (response.data.errors?.length > 0) {
-        toast.warning(`${response.data.imported} importés, ${response.data.errors.length} erreurs`);
-      } else if (response.data.imported > 0) {
-        toast.success(`${response.data.imported} employé(s) importé(s) avec succès`);
+        toast.warning(`${totalProcessed} traités, ${response.data.errors.length} erreurs`);
+      } else if (totalProcessed > 0) {
+        toast.success(`${response.data.created} créés, ${response.data.updated} mis à jour`);
       }
       
-      if (response.data.imported > 0) {
+      if (totalProcessed > 0) {
         setTimeout(() => onSuccess(), 800);
       }
     } catch (error) {
