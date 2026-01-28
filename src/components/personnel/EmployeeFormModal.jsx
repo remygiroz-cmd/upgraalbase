@@ -217,6 +217,19 @@ export default function EmployeeFormModal({ open, onClose, employee, isManager =
             </div>
           </div>
 
+          {/* Nom d'épouse (affiché seulement si féminin) */}
+          {formData.gender === 'female' && (
+            <div>
+              <Label className="text-gray-900">Nom d'épouse</Label>
+              <Input
+                value={formData.married_name || ''}
+                onChange={(e) => setFormData({ ...formData, married_name: e.target.value })}
+                placeholder="Nom d'épouse"
+                className="bg-white border-gray-300 text-gray-900"
+              />
+            </div>
+          )}
+
           {/* Surnom */}
           <div>
             <Label className="text-gray-900">Surnom</Label>
