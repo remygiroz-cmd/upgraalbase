@@ -17,6 +17,8 @@ export default function RegistrePersonnel() {
   const queryClient = useQueryClient();
   const [showImport, setShowImport] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState(null);
+  const [swipedId, setSwipedId] = useState(null);
+  const [touchStart, setTouchStart] = useState(0);
 
   const { data: currentUser } = useQuery({
     queryKey: ['currentUser'],
@@ -58,6 +60,21 @@ export default function RegistrePersonnel() {
 
   const handlePrint = () => {
     window.print();
+  };
+
+  const handleTouchStart = (e) => {
+    setTouchStart(e.touches[0].clientX);
+  };
+
+  const handleTouchEnd = (e, entryId) => {
+    const touchEnd = e.changedTouches[0].clientX;
+    const diff = touchStart - touchEnd;
+    
+    if (diff > 50) {
+      setSwipedId(entryId);
+    } else if (diff < -50) {
+      setSwipedId(null);
+    }
   };
 
   const handleDownloadCSV = () => {
@@ -213,7 +230,6 @@ export default function RegistrePersonnel() {
           <table className="w-full">
             <thead>
               <tr className="bg-gray-100 border-b-2 border-gray-300 print:bg-white">
-                {isManager && <th className="px-4 py-3 text-center text-xs font-semibold text-gray-900 border-r border-gray-300 w-12 print:hidden">Action</th>}
                 <th className="px-4 py-3 text-left text-xs font-semibold text-gray-900 border-r border-gray-300">N°</th>
                 <th className="px-4 py-3 text-left text-xs font-semibold text-gray-900 border-r border-gray-300">Nom</th>
                 <th className="px-4 py-3 text-left text-xs font-semibold text-gray-900 border-r border-gray-300">Prénom</th>
@@ -231,18 +247,40 @@ export default function RegistrePersonnel() {
             </thead>
             <tbody>
               {registryEntries.map((entry, index) => (
-                <tr key={entry.id} className={cn(
-                  "border-b border-gray-200 hover:bg-gray-50 print:hover:bg-white",
-                  index % 2 === 0 && "bg-white"
-                )}>
+                <tr 
+                  key={entry.id} 
+                  onTouchStart={handleTouchStart}
+                  onTouchEnd={(e) => handleTouchEnd(e, entry.id)}
+                  className={cn(
+                    "border-b border-gray-200 print:hover:bg-white relative transition-all duration-200",
+                    swipedId === entry.id ? "bg-red-50" : (index % 2 === 0 ? "bg-white" : ""),
+                    "hover:bg-gray-50 group"
+                  )}>
+                  {/* Desktop delete button - hidden, shows on hover */}
                   {isManager && (
-                    <td className="px-4 py-3 text-center border-r border-gray-200 print:hidden">
+                    <td className="absolute right-0 top-0 h-full hidden lg:flex items-center px-3 bg-white/95 border-l-2 border-red-300 print:hidden">
                       <button
                         onClick={() => setDeleteConfirm(entry)}
-                        className="text-red-600 hover:text-red-800 transition-colors"
+                        className="opacity-0 group-hover:opacity-100 text-red-600 hover:text-red-800 transition-opacity"
                         title="Supprimer"
                       >
                         <Trash2 className="w-4 h-4" />
+                      </button>
+                    </td>
+                  )}
+                  
+                  {/* Mobile swipe delete button */}
+                  {isManager && swipedId === entry.id && (
+                    <td className="absolute right-0 top-0 h-full lg:hidden flex items-center px-3 bg-red-500">
+                      <button
+                        onClick={() => {
+                          setDeleteConfirm(entry);
+                          setSwipedId(null);
+                        }}
+                        className="text-white hover:text-red-100 transition-colors"
+                        title="Supprimer"
+                      >
+                        <Trash2 className="w-5 h-5" />
                       </button>
                     </td>
                   )}
