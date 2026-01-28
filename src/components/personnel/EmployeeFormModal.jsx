@@ -28,7 +28,12 @@ export default function EmployeeFormModal({ open, onClose, employee }) {
     show_phone_in_directory: false,
     social_security_number: '',
     iban: '',
+    bic: '',
     photo_url: '',
+    gross_salary: '',
+    gross_hourly_rate: '',
+    payment_method: '',
+    payslips: [],
     is_active: true
   });
 
@@ -93,7 +98,12 @@ export default function EmployeeFormModal({ open, onClose, employee }) {
         show_phone_in_directory: false,
         social_security_number: '',
         iban: '',
+        bic: '',
         photo_url: '',
+        gross_salary: '',
+        gross_hourly_rate: '',
+        payment_method: '',
+        payslips: [],
         is_active: true
       });
     }
