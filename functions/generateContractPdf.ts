@@ -175,7 +175,7 @@ const cddTemplate = `
   
   <div class="article">
     <div class="article-title">ARTICLE 6 – PÉRIODE D'ESSAI</div>
-    <p>Une période d'essai de {{dureeEssai}} jours ouvrés est prévue, soit du {{debut}} au {{finEssai}}. Toute suspension prolonge d'autant cette période. La rupture de la période d'essai respecte les délais de prévenance légaux.</p>
+    <p>Une période d'essai de {{periodeEssaiTexte}} est prévue, soit du {{debut}} au {{finEssai}}. Toute suspension prolonge d'autant cette période. La rupture de la période d'essai respecte les délais de prévenance légaux.</p>
   </div>
   
   <hr>
