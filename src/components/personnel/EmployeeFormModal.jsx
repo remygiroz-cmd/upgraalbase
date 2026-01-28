@@ -155,9 +155,10 @@ export default function EmployeeFormModal({ open, onClose, employee }) {
           </div>
 
           <Tabs defaultValue="infos" className="w-full">
-            <TabsList className="grid w-full grid-cols-2 bg-gray-100">
+            <TabsList className="grid w-full grid-cols-3 bg-gray-100">
               <TabsTrigger value="infos" className="data-[state=active]:bg-white">Informations</TabsTrigger>
               <TabsTrigger value="contrat" className="data-[state=active]:bg-white">Contrat</TabsTrigger>
+              <TabsTrigger value="remuneration" className="data-[state=active]:bg-white">Rémunération</TabsTrigger>
             </TabsList>
 
             <TabsContent value="infos" className="space-y-4 mt-4">
@@ -471,6 +472,150 @@ export default function EmployeeFormModal({ open, onClose, employee }) {
                     <SelectItem value="archived">Sorti (Archivé)</SelectItem>
                   </SelectContent>
                 </Select>
+              </div>
+            </TabsContent>
+
+            <TabsContent value="remuneration" className="space-y-4 mt-4">
+              {/* Salaire brut */}
+              <div>
+                <Label className="text-gray-900">Salaire brut mensuel (€)</Label>
+                <Input
+                  type="number"
+                  step="0.01"
+                  value={formData.gross_salary || ''}
+                  onChange={(e) => setFormData({ ...formData, gross_salary: parseFloat(e.target.value) || '' })}
+                  className="bg-white border-gray-300 text-gray-900"
+                  placeholder="Ex: 2500.00"
+                />
+              </div>
+
+              {/* Taux horaire brut */}
+              <div>
+                <Label className="text-gray-900">Taux horaire brut (€/h)</Label>
+                <Input
+                  type="number"
+                  step="0.01"
+                  value={formData.gross_hourly_rate || ''}
+                  onChange={(e) => setFormData({ ...formData, gross_hourly_rate: parseFloat(e.target.value) || '' })}
+                  className="bg-white border-gray-300 text-gray-900"
+                  placeholder="Ex: 15.50"
+                />
+              </div>
+
+              {/* Mode de paiement */}
+              <div>
+                <Label className="text-gray-900">Mode de paiement</Label>
+                <Select
+                  value={formData.payment_method || ''}
+                  onValueChange={(value) => setFormData({ ...formData, payment_method: value })}
+                >
+                  <SelectTrigger className="bg-white border-gray-300 text-gray-900">
+                    <SelectValue placeholder="Sélectionner" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="virement">Virement</SelectItem>
+                    <SelectItem value="cheque">Chèque</SelectItem>
+                    <SelectItem value="especes">Espèces</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* IBAN (copié depuis l'onglet Informations) */}
+              <div>
+                <Label className="text-gray-900">IBAN</Label>
+                <Input
+                  value={formData.iban || ''}
+                  onChange={(e) => setFormData({ ...formData, iban: e.target.value })}
+                  className="bg-white border-gray-300 text-gray-900"
+                  placeholder="FR76 XXXX XXXX XXXX XXXX XXXX XXX"
+                />
+              </div>
+
+              {/* Fiches de paie */}
+              <div>
+                <Label className="text-gray-900 mb-2 block">Fiches de paie</Label>
+                
+                {/* Liste des fiches existantes */}
+                {formData.payslips && formData.payslips.length > 0 && (
+                  <div className="space-y-2 mb-3">
+                    {formData.payslips.map((payslip, index) => (
+                      <div key={index} className="flex items-center justify-between p-3 bg-gray-50 border border-gray-300 rounded-lg">
+                        <div>
+                          <p className="text-sm font-medium text-gray-900">{payslip.month}</p>
+                          <p className="text-xs text-gray-500">
+                            Uploadée le {new Date(payslip.uploaded_at).toLocaleDateString('fr-FR')}
+                          </p>
+                        </div>
+                        <div className="flex gap-2">
+                          <a
+                            href={payslip.file_url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-xs text-blue-600 hover:text-blue-700 underline"
+                          >
+                            Télécharger
+                          </a>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const newPayslips = formData.payslips.filter((_, i) => i !== index);
+                              setFormData({ ...formData, payslips: newPayslips });
+                            }}
+                            className="text-xs text-red-600 hover:text-red-700"
+                          >
+                            Supprimer
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Upload nouvelle fiche */}
+                <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center">
+                  <label className="cursor-pointer">
+                    <Upload className="w-8 h-8 text-gray-400 mx-auto mb-2" />
+                    <p className="text-sm text-gray-600 mb-1">Ajouter une fiche de paie</p>
+                    <p className="text-xs text-gray-500">PDF, max 10MB</p>
+                    <input
+                      type="file"
+                      accept=".pdf"
+                      onChange={async (e) => {
+                        const file = e.target.files?.[0];
+                        if (!file) return;
+
+                        setUploading(true);
+                        try {
+                          const { file_url } = await base44.integrations.Core.UploadFile({ file });
+                          const monthPrompt = prompt('Mois de la fiche de paie (ex: 2026-01)');
+                          if (!monthPrompt) {
+                            toast.error('Mois requis');
+                            return;
+                          }
+                          
+                          const newPayslip = {
+                            month: monthPrompt,
+                            file_url,
+                            uploaded_at: new Date().toISOString(),
+                            uploaded_by: formData.email
+                          };
+
+                          setFormData({
+                            ...formData,
+                            payslips: [...(formData.payslips || []), newPayslip]
+                          });
+                          toast.success('Fiche de paie ajoutée');
+                        } catch (error) {
+                          toast.error('Erreur lors du téléchargement');
+                        } finally {
+                          setUploading(false);
+                        }
+                      }}
+                      disabled={uploading}
+                      className="hidden"
+                    />
+                  </label>
+                </div>
               </div>
             </TabsContent>
           </Tabs>
