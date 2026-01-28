@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
-import { Trash2, Archive, Upload, User, FileText, Download, Send } from 'lucide-react';
+import { Trash2, Archive, Upload, User, FileText, Download, Send, BookOpen } from 'lucide-react';
 import ConfirmDialog from '@/components/ui/ConfirmDialog';
 
 export default function EmployeeFormModal({ open, onClose, employee, isManager = false }) {
@@ -20,7 +20,8 @@ export default function EmployeeFormModal({ open, onClose, employee, isManager =
   const [showEmailDialog, setShowEmailDialog] = useState(false);
   const [recipientEmail, setRecipientEmail] = useState('');
   const [showConfirmationDialog, setShowConfirmationDialog] = useState(false);
-  const [showCreationSuccess, setShowCreationSuccess] = useState(false);
+    const [showCreationSuccess, setShowCreationSuccess] = useState(false);
+    const [registering, setRegistering] = useState(false);
 
   const { data: currentUser } = useQuery({
     queryKey: ['currentUser'],
@@ -254,6 +255,18 @@ ${currentUser.email || '-'}`;
   const openEmailDialog = () => {
     setRecipientEmail('');
     setShowEmailDialog(true);
+  };
+
+  const handleRegisterToRegistry = async () => {
+    setRegistering(true);
+    try {
+      await base44.functions.invoke('registerEmployeeToRegistry', { employeeId: employee.id });
+      toast.success('Employé enregistré au registre');
+    } catch (error) {
+      toast.error('Erreur lors de l\'enregistrement');
+    } finally {
+      setRegistering(false);
+    }
   };
 
   return (
@@ -1108,16 +1121,28 @@ ${currentUser.email || '-'}`;
               </>
             )}
             {isManager && (
-              <Button
-                type="button"
-                variant="outline"
-                onClick={openEmailDialog}
-                disabled={sendingEmail}
-                className="border-blue-400 text-blue-700 hover:bg-blue-50"
-              >
-                <Send className="w-4 h-4 mr-2" />
-                Déclarer à la compta
-              </Button>
+              <>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={openEmailDialog}
+                  disabled={sendingEmail}
+                  className="border-blue-400 text-blue-700 hover:bg-blue-50"
+                >
+                  <Send className="w-4 h-4 mr-2" />
+                  Déclarer à la compta
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={handleRegisterToRegistry}
+                  disabled={registering}
+                  className="border-purple-400 text-purple-700 hover:bg-purple-50"
+                >
+                  <BookOpen className="w-4 h-4 mr-2" />
+                  {registering ? 'Enregistrement...' : 'Enregistrer au registre'}
+                </Button>
+              </>
             )}
             <div className="flex-1" />
             <Button
