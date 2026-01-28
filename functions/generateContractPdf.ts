@@ -209,14 +209,14 @@ const cddTemplate = `
     <hr>
 
     <div class="section">
-      <div class="section-title">ARTICLE 5 – HEURES COMPLÉMENTAIRES</div>
+      <div class="section-title">ARTICLE 6 – HEURES COMPLÉMENTAIRES</div>
       <p>Le Salarié accepte d'effectuer des heures complémentaires dans la limite du tiers du contrat hebdomadaire, rémunérées conformément à la législation.</p>
     </div>
 
     <hr>
 
     <div class="section">
-      <div class="section-title">ARTICLE 6 – PÉRIODE D'ESSAI</div>
+      <div class="section-title">ARTICLE 7 – PÉRIODE D'ESSAI</div>
       <p>Une période d'essai de {{periodeEssaiTexte}} est prévue, soit du {{debut}} au {{finEssai}}. Toute suspension prolonge d'autant cette période. La rupture de la période d'essai respecte les délais de prévenance légaux.</p>
     </div>
 
