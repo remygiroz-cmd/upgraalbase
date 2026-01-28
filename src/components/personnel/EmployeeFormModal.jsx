@@ -79,6 +79,21 @@ export default function EmployeeFormModal({ open, onClose, employee }) {
   React.useEffect(() => {
     if (employee) {
       setFormData(employee);
+    } else {
+      setFormData({
+        first_name: '',
+        last_name: '',
+        nickname: '',
+        birth_date: '',
+        birth_place: '',
+        address: '',
+        email: '',
+        phone: '',
+        social_security_number: '',
+        iban: '',
+        photo_url: '',
+        is_active: true
+      });
     }
   }, [employee]);
 
