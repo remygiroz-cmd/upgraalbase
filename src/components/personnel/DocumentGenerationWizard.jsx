@@ -118,70 +118,134 @@ export default function DocumentGenerationWizard({ open, onOpenChange, employee,
     }
   };
 
-  const downloadPdf = async () => {
+  const downloadPdf = () => {
     if (!generatedDocument?.html) {
       toast.error('HTML non disponible');
       return;
     }
 
-    setIsDownloadingPdf(true);
     try {
-      // Créer un conteneur temporaire
-      const container = document.createElement('div');
-      container.innerHTML = generatedDocument.html;
-      container.style.position = 'fixed';
-      container.style.left = '-9999px';
-      container.style.width = '210mm';
-      container.style.height = '297mm';
-      document.body.appendChild(container);
-
-      // Attendre le rendu
-      await new Promise(resolve => setTimeout(resolve, 100));
-
-      // Convertir en canvas
-      const canvas = await html2canvas(container, {
-        scale: 2,
-        useCORS: true,
-        logging: false,
-        backgroundColor: '#ffffff'
-      });
-
-      document.body.removeChild(container);
-
-      // Créer le PDF
-      const pdf = new jsPDF({
-        orientation: 'portrait',
-        unit: 'mm',
-        format: 'a4'
-      });
-
-      const imgData = canvas.toDataURL('image/png');
-      const imgWidth = 210; // A4 width
-      const imgHeight = (canvas.height * imgWidth) / canvas.width;
-
-      let yPos = 0;
-      const pageHeight = 297; // A4 height
-
-      pdf.addImage(imgData, 'PNG', 0, yPos, imgWidth, imgHeight);
-      yPos += imgHeight;
-
-      while (yPos < imgHeight) {
-        pdf.addPage();
-        yPos -= pageHeight;
-        pdf.addImage(imgData, 'PNG', 0, -yPos, imgWidth, imgHeight);
-        yPos += pageHeight;
+      // Ouvrir une nouvelle fenêtre
+      const printWindow = window.open('', '', 'width=900,height=700');
+      
+      // Injecter le HTML avec CSS print optimisé
+      const fullHtml = `<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    html, body {
+      width: 100%;
+      height: 100%;
+    }
+    
+    body {
+      font-family: 'Calibri', 'Arial', sans-serif;
+      font-size: 11pt;
+      line-height: 1.5;
+      color: #000;
+      background: #f5f5f5;
+    }
+    
+    .print-container {
+      width: 210mm;
+      height: 297mm;
+      margin: 0 auto;
+      background: white;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    }
+    
+    @media print {
+      @page {
+        size: A4;
+        margin: 18mm 16mm 18mm 16mm;
       }
-
-      // Télécharger
-      const filename = `${generatedDocument.contractType}_${generatedDocument.employeeName}_${new Date().toISOString().split('T')[0]}.pdf`;
-      pdf.save(filename);
-
-      toast.success('PDF téléchargé avec succès');
+      
+      body {
+        margin: 0;
+        padding: 0;
+        background: white;
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+        color-adjust: exact !important;
+      }
+      
+      .print-container {
+        width: 100%;
+        height: auto;
+        margin: 0;
+        box-shadow: none;
+        page-break-after: always;
+      }
+      
+      .no-print {
+        display: none !important;
+      }
+      
+      h1, h2, h3, h4 {
+        break-after: avoid;
+        page-break-after: avoid;
+      }
+      
+      p {
+        orphans: 3;
+        widows: 3;
+      }
+      
+      .article {
+        break-inside: avoid;
+        page-break-inside: avoid;
+      }
+      
+      .signature-section {
+        break-inside: avoid;
+        page-break-inside: avoid;
+        margin-top: 2em;
+      }
+      
+      .signature-block {
+        break-inside: avoid;
+        page-break-inside: avoid;
+        margin-top: 1.5em;
+      }
+      
+      hr {
+        border: none;
+        border-top: 1px solid #666;
+        margin: 1em 0;
+        page-break-after: avoid;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="print-container">
+    ${generatedDocument.html}
+  </div>
+  <script>
+    window.onload = function() {
+      setTimeout(function() {
+        window.print();
+      }, 250);
+    };
+  </script>
+</body>
+</html>`;
+      
+      printWindow.document.write(fullHtml);
+      printWindow.document.close();
+      
+      toast.success('Fenêtre d\'impression ouverte. Sélectionnez "Enregistrer en PDF" dans les paramètres d\'impression.');
     } catch (error) {
-      console.error('Erreur lors de la génération du PDF:', error);
-      toast.error('Erreur lors de la génération du PDF');
-    } finally {
-      setIsDownloadingPdf(false);
+      console.error('Erreur:', error);
+      toast.error('Erreur lors de l\'ouverture de la fenêtre d\'impression');
     }
   };
 
