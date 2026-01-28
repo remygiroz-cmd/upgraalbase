@@ -366,27 +366,53 @@ export default function EmployeeFormModal({ open, onClose, employee }) {
                 </div>
               </div>
 
-              {/* Heures contractuelles et Coefficient */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <Label className="text-gray-900">Heures contractuelles / mois</Label>
-                  <Input
-                    type="number"
-                    value={formData.contract_hours || ''}
-                    onChange={(e) => setFormData({ ...formData, contract_hours: parseFloat(e.target.value) })}
-                    className="bg-white border-gray-300 text-gray-900"
-                    placeholder="Ex: 151.67"
-                  />
-                </div>
-                <div>
-                  <Label className="text-gray-900">Coefficient / Niveau</Label>
-                  <Input
-                    value={formData.coefficient_level || ''}
-                    onChange={(e) => setFormData({ ...formData, coefficient_level: e.target.value })}
-                    className="bg-white border-gray-300 text-gray-900"
-                    placeholder="Ex: Niveau 2, Coef 150"
-                  />
-                </div>
+              {/* Heures contractuelles / mois */}
+              <div>
+                <Label className="text-gray-900">Heures contractuelles / mois</Label>
+                <Input
+                  type="number"
+                  value={formData.contract_hours || ''}
+                  onChange={(e) => setFormData({ ...formData, contract_hours: parseFloat(e.target.value) })}
+                  className="bg-white border-gray-300 text-gray-900"
+                  placeholder="Ex: 151.67"
+                />
+              </div>
+
+              {/* Heures contractuelles / semaine */}
+              <div>
+                <Label className="text-gray-900">Heures contractuelles / semaine</Label>
+                <Input
+                  type="number"
+                  value={formData.contract_hours_weekly || ''}
+                  onChange={(e) => setFormData({ ...formData, contract_hours_weekly: parseFloat(e.target.value) })}
+                  className="bg-white border-gray-300 text-gray-900"
+                  placeholder="Ex: 35"
+                />
+              </div>
+
+              {/* Nombre de jours de travail par semaine */}
+              <div>
+                <Label className="text-gray-900">Nombre de jours de travail par semaine</Label>
+                <Input
+                  type="number"
+                  min="1"
+                  max="7"
+                  value={formData.work_days_per_week || ''}
+                  onChange={(e) => setFormData({ ...formData, work_days_per_week: parseFloat(e.target.value) })}
+                  className="bg-white border-gray-300 text-gray-900"
+                  placeholder="Ex: 5"
+                />
+              </div>
+
+              {/* Coefficient / Niveau */}
+              <div>
+                <Label className="text-gray-900">Coefficient / Niveau</Label>
+                <Input
+                  value={formData.coefficient_level || ''}
+                  onChange={(e) => setFormData({ ...formData, coefficient_level: e.target.value })}
+                  className="bg-white border-gray-300 text-gray-900"
+                  placeholder="Ex: Niveau 2, Coef 150"
+                />
               </div>
 
               {/* Responsable hiérarchique */}
