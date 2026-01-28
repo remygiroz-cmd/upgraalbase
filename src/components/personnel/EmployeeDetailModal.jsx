@@ -10,7 +10,7 @@ import { fr } from 'date-fns/locale';
 import ConfirmDialog from '@/components/ui/ConfirmDialog';
 import { cn } from '@/lib/utils';
 
-export default function EmployeeDetailModal({ employee, onClose, onEdit }) {
+export default function EmployeeDetailModal({ employee, open, onOpenChange, onEdit, isManager = false }) {
   const queryClient = useQueryClient();
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [confirmArchive, setConfirmArchive] = useState(false);
@@ -20,7 +20,7 @@ export default function EmployeeDetailModal({ employee, onClose, onEdit }) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['employees'] });
       toast.success('Employé supprimé');
-      onClose();
+      onOpenChange(false);
     }
   });
 
@@ -29,13 +29,15 @@ export default function EmployeeDetailModal({ employee, onClose, onEdit }) {
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['employees'] });
       toast.success(variables.archive ? 'Employé archivé' : 'Employé réactivé');
-      onClose();
+      onOpenChange(false);
     }
   });
+  
+  if (!employee) return null;
 
   return (
     <>
-      <Dialog open={true} onOpenChange={onClose}>
+      <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent className="bg-white border-gray-300 max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="text-gray-900">Détails de l'employé</DialogTitle>
@@ -142,33 +144,37 @@ export default function EmployeeDetailModal({ employee, onClose, onEdit }) {
             {/* Actions */}
             <div className="flex flex-wrap gap-2 pt-4 border-t border-gray-200">
               <Button
-                onClick={onEdit}
+                onClick={() => onEdit(employee)}
                 className="flex-1 bg-orange-600 hover:bg-orange-700"
               >
                 <Pencil className="w-4 h-4 mr-2" />
                 Modifier
               </Button>
-              <Button
-                onClick={() => setConfirmArchive(true)}
-                variant="outline"
-                className={cn(
-                  "flex-1",
-                  employee.is_active 
-                    ? "border-gray-400 text-gray-700 hover:bg-gray-100"
-                    : "border-orange-400 text-orange-700 hover:bg-orange-50"
-                )}
-              >
-                <Archive className="w-4 h-4 mr-2" />
-                {employee.is_active ? 'Archiver' : 'Réactiver'}
-              </Button>
-              <Button
-                onClick={() => setConfirmDelete(true)}
-                variant="outline"
-                className="border-red-400 text-red-700 hover:bg-red-50"
-              >
-                <Trash2 className="w-4 h-4 mr-2" />
-                Supprimer
-              </Button>
+              {isManager && (
+                <>
+                  <Button
+                    onClick={() => setConfirmArchive(true)}
+                    variant="outline"
+                    className={cn(
+                      "flex-1",
+                      employee.is_active 
+                        ? "border-gray-400 text-gray-700 hover:bg-gray-100"
+                        : "border-orange-400 text-orange-700 hover:bg-orange-50"
+                    )}
+                  >
+                    <Archive className="w-4 h-4 mr-2" />
+                    {employee.is_active ? 'Archiver' : 'Réactiver'}
+                  </Button>
+                  <Button
+                    onClick={() => setConfirmDelete(true)}
+                    variant="outline"
+                    className="border-red-400 text-red-700 hover:bg-red-50"
+                  >
+                    <Trash2 className="w-4 h-4 mr-2" />
+                    Supprimer
+                  </Button>
+                </>
+              )}
             </div>
           </div>
         </DialogContent>
