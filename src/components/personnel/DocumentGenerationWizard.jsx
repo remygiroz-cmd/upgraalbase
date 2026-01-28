@@ -19,6 +19,7 @@ export default function DocumentGenerationWizard({ open, onOpenChange, employee,
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatedDocument, setGeneratedDocument] = useState(null);
   const [showPDFDownload, setShowPDFDownload] = useState(false);
+  const [isDownloadingPdf, setIsDownloadingPdf] = useState(false);
 
   const documentTypes = [
     { value: 'CDD', label: 'Contrat CDD' },
