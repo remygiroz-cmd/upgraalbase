@@ -370,11 +370,11 @@ export default function EmployeeFormModal({ open, onClose, employee }) {
               <div>
                 <Label className="text-gray-900">Heures contractuelles / mois</Label>
                 <Input
-                  type="number"
+                  type="text"
                   value={formData.contract_hours || ''}
-                  onChange={(e) => setFormData({ ...formData, contract_hours: parseFloat(e.target.value) })}
+                  onChange={(e) => setFormData({ ...formData, contract_hours: e.target.value })}
                   className="bg-white border-gray-300 text-gray-900"
-                  placeholder="Ex: 151.67"
+                  placeholder="Ex: 151:40"
                 />
               </div>
 
@@ -382,11 +382,11 @@ export default function EmployeeFormModal({ open, onClose, employee }) {
               <div>
                 <Label className="text-gray-900">Heures contractuelles / semaine</Label>
                 <Input
-                  type="number"
+                  type="text"
                   value={formData.contract_hours_weekly || ''}
-                  onChange={(e) => setFormData({ ...formData, contract_hours_weekly: parseFloat(e.target.value) })}
+                  onChange={(e) => setFormData({ ...formData, contract_hours_weekly: e.target.value })}
                   className="bg-white border-gray-300 text-gray-900"
-                  placeholder="Ex: 35"
+                  placeholder="Ex: 35:00"
                 />
               </div>
 
