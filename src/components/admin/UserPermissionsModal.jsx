@@ -24,24 +24,12 @@ const MODULES = [
 export default function UserPermissionsModal({ open, onClose, user, roles }) {
   const queryClient = useQueryClient();
   const [selectedRoleId, setSelectedRoleId] = useState('');
-  const [overrides, setOverrides] = useState({});
-
-  const { data: existingOverride } = useQuery({
-    queryKey: ['userPermissionOverride', user?.email],
-    queryFn: async () => {
-      if (!user?.email) return null;
-      const results = await base44.entities.UserPermissionOverride.filter({ user_email: user.email });
-      return results[0] || null;
-    },
-    enabled: !!user?.email && open
-  });
 
   useEffect(() => {
     if (user) {
       setSelectedRoleId(user.role_id || '');
-      setOverrides(existingOverride?.permissions_override || {});
     }
-  }, [user, existingOverride, open]);
+  }, [user, open]);
 
   const updateUserMutation = useMutation({
     mutationFn: async (data) => {
@@ -49,18 +37,7 @@ export default function UserPermissionsModal({ open, onClose, user, roles }) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['users'] });
-    }
-  });
-
-  const saveOverrideMutation = useMutation({
-    mutationFn: async (data) => {
-      if (existingOverride) {
-        return await base44.entities.UserPermissionOverride.update(existingOverride.id, data);
-      }
-      return await base44.entities.UserPermissionOverride.create(data);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['userPermissionOverride'] });
+      queryClient.invalidateQueries({ queryKey: ['currentUser'] });
       onClose();
     }
   });
@@ -70,37 +47,10 @@ export default function UserPermissionsModal({ open, onClose, user, roles }) {
     
     // Update role if changed
     if (selectedRoleId !== user.role_id) {
-      await updateUserMutation.mutateAsync({ role_id: selectedRoleId });
-    }
-
-    // Save overrides if any
-    const hasOverrides = Object.keys(overrides).length > 0;
-    if (hasOverrides) {
-      saveOverrideMutation.mutate({
-        user_email: user.email,
-        permissions_override: overrides
-      });
+      updateUserMutation.mutate({ role_id: selectedRoleId });
     } else {
       onClose();
     }
-  };
-
-  const toggleOverride = (moduleKey) => {
-    // Empêcher la modification si l'utilisateur est désactivé
-    if (user?.status === 'disabled') {
-      return;
-    }
-    setOverrides(prev => {
-      const newOverrides = { ...prev };
-      if (moduleKey in newOverrides) {
-        delete newOverrides[moduleKey];
-      } else {
-        const selectedRole = roles.find(r => r.id === selectedRoleId);
-        const rolePermission = selectedRole?.permissions?.[moduleKey] || false;
-        newOverrides[moduleKey] = !rolePermission;
-      }
-      return newOverrides;
-    });
   };
 
   const getEffectivePermission = (moduleKey) => {
@@ -108,28 +58,23 @@ export default function UserPermissionsModal({ open, onClose, user, roles }) {
     if (user?.status === 'disabled') {
       return false;
     }
-    if (moduleKey in overrides) {
-      return overrides[moduleKey];
-    }
     const selectedRole = roles.find(r => r.id === selectedRoleId);
     return selectedRole?.permissions?.[moduleKey] || false;
   };
-
-  const hasOverride = (moduleKey) => moduleKey in overrides;
 
   if (!user) return null;
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="bg-slate-800 border-slate-700 max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="bg-white border-gray-300 max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Permissions - {user.full_name}</DialogTitle>
+          <DialogTitle className="text-gray-900">Permissions - {user.full_name}</DialogTitle>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-6">
           {user?.status === 'disabled' && (
-            <div className="bg-red-500/10 border border-red-500/50 rounded-lg p-4">
-              <p className="text-sm text-red-400">
+            <div className="bg-red-50 border border-red-300 rounded-lg p-4">
+              <p className="text-sm text-red-700">
                 ⚠️ Cet utilisateur est désactivé. Toutes les permissions sont automatiquement bloquées. 
                 Réactivez le compte pour restaurer les permissions.
               </p>
@@ -137,16 +82,16 @@ export default function UserPermissionsModal({ open, onClose, user, roles }) {
           )}
 
           <div>
-            <Label htmlFor="role">Rôle de base</Label>
+            <Label htmlFor="role" className="text-gray-900">Rôle</Label>
             <Select
               value={selectedRoleId}
               onValueChange={setSelectedRoleId}
               disabled={user?.status === 'disabled'}
             >
-              <SelectTrigger className="bg-slate-700 border-slate-600 mt-1">
+              <SelectTrigger className="bg-white border-gray-300 text-gray-900 mt-1">
                 <SelectValue placeholder="Sélectionner un rôle..." />
               </SelectTrigger>
-              <SelectContent className="bg-slate-700 border-slate-600">
+              <SelectContent className="bg-white border-gray-200">
                 {roles.map((role) => (
                   <SelectItem key={role.id} value={role.id}>
                     {role.name}
@@ -157,60 +102,49 @@ export default function UserPermissionsModal({ open, onClose, user, roles }) {
           </div>
 
           <div>
-            <Label className="mb-3 block">
-              Surcharges individuelles
-              <span className="text-xs text-slate-400 block font-normal mt-1">
-                Cliquez sur un module pour surcharger la permission du rôle
+            <Label className="mb-3 block text-gray-900">
+              Permissions du rôle
+              <span className="text-xs text-gray-500 block font-normal mt-1">
+                Les permissions sont définies par le rôle sélectionné
               </span>
             </Label>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               {MODULES.map((module) => {
                 const isActive = getEffectivePermission(module.key);
-                const isOverridden = hasOverride(module.key);
 
                 return (
-                  <button
+                  <div
                     key={module.key}
-                    type="button"
-                    onClick={() => toggleOverride(module.key)}
-                    disabled={user?.status === 'disabled'}
                     className={cn(
-                      "flex items-center justify-between p-3 rounded-lg border-2 transition-all text-left",
+                      "flex items-center justify-between p-3 rounded-lg border-2",
                       isActive
-                        ? "bg-green-500/10 border-green-500"
-                        : "bg-slate-700/50 border-slate-600",
-                      isOverridden && "ring-2 ring-orange-500",
-                      user?.status === 'disabled' && "opacity-50 cursor-not-allowed"
+                        ? "bg-green-50 border-green-500"
+                        : "bg-gray-50 border-gray-300"
                     )}
                   >
-                    <span className="text-sm font-medium">{module.label}</span>
-                    {isOverridden && (
-                      <span className="text-xs text-orange-400 font-semibold">
-                        SURCHARGÉ
-                      </span>
-                    )}
-                  </button>
+                    <span className="text-sm font-medium text-gray-900">{module.label}</span>
+                  </div>
                 );
               })}
             </div>
           </div>
 
-          <div className="flex justify-end gap-3 pt-4 border-t border-slate-700">
+          <div className="flex justify-end gap-3 pt-4 border-t border-gray-200">
             <Button
               type="button"
               variant="outline"
               onClick={onClose}
-              className="border-slate-600 text-slate-900 hover:text-slate-100 hover:bg-slate-700"
+              className="border-gray-300 text-gray-700 hover:bg-gray-50"
             >
               Annuler
             </Button>
             <Button
               type="submit"
-              disabled={saveOverrideMutation.isPending || updateUserMutation.isPending}
+              disabled={updateUserMutation.isPending}
               className="bg-orange-600 hover:bg-orange-700"
             >
-              {(saveOverrideMutation.isPending || updateUserMutation.isPending) && (
+              {updateUserMutation.isPending && (
                 <Loader2 className="w-4 h-4 mr-2 animate-spin" />
               )}
               Enregistrer
