@@ -1,24 +1,17 @@
 import React, { useState } from 'react';
-import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
-import { FileText, Download, Printer, Upload, Trash2, FileJson } from 'lucide-react';
+import { FileText, Download, Printer, Upload } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import PageHeader from '@/components/ui/PageHeader';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import EmptyState from '@/components/ui/EmptyState';
-import ConfirmDialog from '@/components/ui/ConfirmDialog';
 import RegistryImportModal from '@/components/personnel/RegistryImportModal';
-import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
-import html2canvas from 'html2canvas';
-import jsPDF from 'jspdf';
 
 export default function RegistrePersonnel() {
   const queryClient = useQueryClient();
   const [showImport, setShowImport] = useState(false);
-  const [deleteConfirm, setDeleteConfirm] = useState(null);
-  const [swipedId, setSwipedId] = useState(null);
-  const [touchStart, setTouchStart] = useState(0);
 
   const { data: currentUser } = useQuery({
     queryKey: ['currentUser'],
@@ -35,18 +28,6 @@ export default function RegistrePersonnel() {
     queryFn: () => base44.entities.PersonnelRegistry.list('entry_order')
   });
 
-  const deleteMutation = useMutation({
-    mutationFn: (id) => base44.entities.PersonnelRegistry.delete(id),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['personnelRegistry'] });
-      toast.success('Entrée supprimée');
-      setDeleteConfirm(null);
-    },
-    onError: () => {
-      toast.error('Erreur lors de la suppression');
-    }
-  });
-
   // Check if user is manager/admin
   const isManager = React.useMemo(() => {
     if (!currentUser) return false;
@@ -60,21 +41,6 @@ export default function RegistrePersonnel() {
 
   const handlePrint = () => {
     window.print();
-  };
-
-  const handleTouchStart = (e) => {
-    setTouchStart(e.touches[0].clientX);
-  };
-
-  const handleTouchEnd = (e, entryId) => {
-    const touchEnd = e.changedTouches[0].clientX;
-    const diff = touchStart - touchEnd;
-    
-    if (diff > 50) {
-      setSwipedId(entryId);
-    } else if (diff < -50) {
-      setSwipedId(null);
-    }
   };
 
   const handleDownloadCSV = () => {
@@ -123,51 +89,6 @@ export default function RegistrePersonnel() {
     link.click();
   };
 
-  const handleDownloadPDF = async () => {
-    const element = document.getElementById('registry-table');
-    if (!element) return;
-
-    try {
-      const canvas = await html2canvas(element, {
-        scale: 1,
-        useCORS: true,
-        allowTaint: true,
-        logging: false,
-        windowWidth: 1400
-      });
-      
-      const pdf = new jsPDF({
-        orientation: 'landscape',
-        unit: 'mm',
-        format: 'a4'
-      });
-      
-      const pageWidth = pdf.internal.pageSize.getWidth();
-      const pageHeight = pdf.internal.pageSize.getHeight();
-      const imgWidth = pageWidth - 4;
-      const imgHeight = (canvas.height * imgWidth) / canvas.width;
-      
-      let heightLeft = imgHeight;
-      let position = 2;
-
-      const imgData = canvas.toDataURL('image/png');
-      
-      pdf.addImage(imgData, 'PNG', 2, position, imgWidth, imgHeight);
-      heightLeft -= (pageHeight - 4);
-
-      while (heightLeft > 0) {
-        position = heightLeft - imgHeight + 2;
-        pdf.addPage();
-        pdf.addImage(imgData, 'PNG', 2, position, imgWidth, imgHeight);
-        heightLeft -= (pageHeight - 4);
-      }
-
-      pdf.save(`registre-personnel-${new Date().toISOString().split('T')[0]}.pdf`);
-    } catch (error) {
-      toast.error('Erreur lors de la génération du PDF');
-    }
-  };
-
   if (isLoading) {
     return <LoadingSpinner />;
   }
@@ -195,15 +116,7 @@ export default function RegistrePersonnel() {
                   className="border-gray-300 text-gray-700 hover:bg-gray-100"
                 >
                   <Download className="w-4 h-4 mr-2" />
-                  CSV
-                </Button>
-                <Button
-                  onClick={handleDownloadPDF}
-                  variant="outline"
-                  className="border-gray-300 text-gray-700 hover:bg-gray-100"
-                >
-                  <FileJson className="w-4 h-4 mr-2" />
-                  PDF
+                  Exporter CSV
                 </Button>
                 <Button
                   onClick={handlePrint}
@@ -226,7 +139,7 @@ export default function RegistrePersonnel() {
           description="Aucun employé n'a été ajouté au registre pour le moment"
         />
       ) : (
-        <div id="registry-table" className="bg-white border-2 border-gray-300 rounded-lg overflow-x-auto print:border-0">
+        <div className="bg-white border-2 border-gray-300 rounded-lg overflow-x-auto print:border-0">
           <table className="w-full">
             <thead>
               <tr className="bg-gray-100 border-b-2 border-gray-300 print:bg-white">
@@ -247,41 +160,10 @@ export default function RegistrePersonnel() {
             </thead>
             <tbody>
               {registryEntries.map((entry, index) => (
-                <tr 
-                  key={entry.id} 
-                  onTouchStart={handleTouchStart}
-                  onTouchEnd={(e) => handleTouchEnd(e, entry.id)}
-                  className={cn(
-                    "border-b border-gray-200 print:hover:bg-white transition-all duration-200",
-                    swipedId === entry.id ? "bg-red-50" : (index % 2 === 0 ? "bg-white" : ""),
-                    "hover:bg-gray-50 group"
-                  )}>
-                  {isManager && (
-                    <td className="px-2 py-3 text-center border-r border-gray-200 print:hidden">
-                      {/* Desktop - show on hover */}
-                      <button
-                        onClick={() => setDeleteConfirm(entry)}
-                        className="hidden lg:inline-block opacity-0 group-hover:opacity-100 text-red-600 hover:text-red-800 transition-opacity"
-                        title="Supprimer"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                      
-                      {/* Mobile - show when swiped */}
-                      {swipedId === entry.id && (
-                        <button
-                          onClick={() => {
-                            setDeleteConfirm(entry);
-                            setSwipedId(null);
-                          }}
-                          className="lg:hidden text-red-600 hover:text-red-800 transition-colors"
-                          title="Supprimer"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      )}
-                    </td>
-                  )}
+                <tr key={entry.id} className={cn(
+                  "border-b border-gray-200 hover:bg-gray-50 print:hover:bg-white",
+                  index % 2 === 0 && "bg-white"
+                )}>
                   <td className="px-4 py-3 text-sm text-gray-900 border-r border-gray-200 font-semibold">{index + 1}</td>
                   <td className="px-4 py-3 text-sm text-gray-900 border-r border-gray-200">{entry.last_name}</td>
                   <td className="px-4 py-3 text-sm text-gray-900 border-r border-gray-200">{entry.first_name}</td>
@@ -322,83 +204,25 @@ export default function RegistrePersonnel() {
         }}
       />
 
-      <ConfirmDialog
-        open={!!deleteConfirm}
-        onOpenChange={(open) => !open && setDeleteConfirm(null)}
-        title="Supprimer du registre"
-        description={deleteConfirm ? `Supprimer ${deleteConfirm.first_name} ${deleteConfirm.last_name} du registre ? Cette action est irréversible.` : ''}
-        onConfirm={() => deleteConfirm && deleteMutation.mutate(deleteConfirm.id)}
-        variant="danger"
-        confirmText="Supprimer"
-      />
-
       <style>{`
         @media print {
-          * {
-            margin: 0 !important;
-            padding: 0 !important;
-          }
-          
-          body, html, #__next, main, [role="main"] {
-            margin: 0 !important;
-            padding: 0 !important;
-          }
-          
-          aside, nav, [class*="sidebar"], [class*="Sidebar"] {
-            display: none !important;
-          }
-          
           body {
-            padding: 1mm;
-            font-size: 7px;
+            margin: 0;
+            padding: 10mm;
           }
-          
-          #registry-table {
-            width: 100%;
-            overflow: visible !important;
-          }
-          
           table {
             width: 100%;
             border-collapse: collapse;
-            page-break-inside: auto;
-            font-size: 7px;
           }
-          
-          thead {
-            display: table-header-group;
-            page-break-after: avoid;
-          }
-          
-          tbody {
-            display: table-row-group;
-          }
-          
-          tr {
-            page-break-inside: avoid;
-            page-break-after: auto;
-          }
-          
           th, td {
-            border: 0.5px solid #000;
-            padding: 1px;
+            border: 1px solid black;
+            padding: 8px;
             text-align: left;
-            font-size: 7px;
-            white-space: normal;
-            word-break: break-word;
+            font-size: 11px;
           }
-          
           th {
-            background-color: #e0e0e0 !important;
+            background-color: #f0f0f0;
             font-weight: bold;
-          }
-          
-          .print\\:hidden {
-            display: none !important;
-          }
-          
-          div[class*="PageHeader"] {
-            display: none !important;
           }
         }
       `}</style>
