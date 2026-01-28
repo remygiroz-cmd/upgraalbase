@@ -238,7 +238,7 @@ function EmployeeCard({ employee, onClick, canView = true }) {
       </div>
 
       {/* Contact Actions */}
-      {canView && (employee.email || employee.phone) && (
+      {(employee.email || (employee.phone && employee.show_phone_in_directory)) && (
         <div className="grid grid-cols-2 gap-2 pt-3 mt-3 border-t border-gray-200">
           {employee.email && (
             <a
@@ -250,7 +250,7 @@ function EmployeeCard({ employee, onClick, canView = true }) {
               <span>Email</span>
             </a>
           )}
-          {employee.phone && (
+          {employee.phone && employee.show_phone_in_directory && (
             <>
               <a
                 href={`tel:${employee.phone}`}
