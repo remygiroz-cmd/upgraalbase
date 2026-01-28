@@ -332,6 +332,22 @@ export default function MiseEnPlace() {
   }, [tasks, hasActiveSession]);
 
   const handleCreateNewSession = async () => {
+    // Clôturer toutes les sessions actives existantes
+    const allActiveSessions = await base44.entities.WorkSession.filter({ status: 'active' });
+    if (allActiveSessions.length > 0) {
+      await Promise.all(
+        allActiveSessions.map(session =>
+          base44.entities.WorkSession.update(session.id, {
+            status: 'completed',
+            completed_by: currentUser?.email,
+            completed_by_name: currentUser?.full_name || currentUser?.email,
+            completed_at: new Date().toISOString()
+          })
+        )
+      );
+      queryClient.invalidateQueries({ queryKey: ['workSessions'] });
+    }
+
     const selectedTasksArray = Array.from(selectedTasks).map(taskId => {
       const task = tasks.find(t => t.id === taskId);
       const category = categories.find(c => c.id === task?.category_id);
