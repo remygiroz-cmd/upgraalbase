@@ -19,6 +19,7 @@ export default function EmployeeFormModal({ open, onClose, employee, isManager =
   const [sendingEmail, setSendingEmail] = useState(false);
   const [showEmailDialog, setShowEmailDialog] = useState(false);
   const [recipientEmail, setRecipientEmail] = useState('');
+  const [showConfirmationDialog, setShowConfirmationDialog] = useState(false);
   const [formData, setFormData] = useState(employee || {
     first_name: '',
     last_name: '',
@@ -205,8 +206,8 @@ ${currentUser.email || '-'}`;
         reply_to: currentUser.email
       });
 
-      toast.success('OK, message bien envoyé ✓');
       setRecipientEmail('');
+      setShowConfirmationDialog(true);
     } catch (error) {
       toast.error('Erreur lors de l\'envoi de l\'email');
     } finally {
@@ -1040,6 +1041,34 @@ ${currentUser.email || '-'}`;
             >
               <Send className="w-4 h-4 mr-2" />
               {sendingEmail ? 'Envoi...' : 'Envoyer'}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Confirmation Dialog */}
+      <Dialog open={showConfirmationDialog} onOpenChange={setShowConfirmationDialog}>
+        <DialogContent className="bg-white border-gray-300 w-[calc(100vw-2rem)] max-w-md">
+          <DialogHeader>
+            <div className="flex items-center gap-3 mb-2">
+              <div className="w-12 h-12 rounded-full bg-green-100 flex items-center justify-center">
+                <Send className="w-6 h-6 text-green-600" />
+              </div>
+              <div>
+                <DialogTitle className="text-gray-900 text-lg">Message bien envoyé</DialogTitle>
+                <DialogDescription className="text-gray-600 text-sm">
+                  Les informations ont été transmises avec succès
+                </DialogDescription>
+              </div>
+            </div>
+          </DialogHeader>
+          
+          <div className="flex justify-end mt-4">
+            <Button
+              onClick={() => setShowConfirmationDialog(false)}
+              className="bg-green-600 hover:bg-green-700 min-h-[44px]"
+            >
+              OK
             </Button>
           </div>
         </DialogContent>
