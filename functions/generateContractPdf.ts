@@ -179,7 +179,14 @@ const cddTemplate = `
     <hr>
 
     <div class="section">
-      <div class="section-title">ARTICLE 2 – EMPLOI ET QUALIFICATION</div>
+      <div class="section-title">ARTICLE 2 – MOTIF DU RECOURS AU CDD</div>
+      <p>{{motifCDD}}</p>
+    </div>
+
+    <hr>
+
+    <div class="section">
+      <div class="section-title">ARTICLE 3 – EMPLOI ET QUALIFICATION</div>
       <p>Le Salarié est engagé en qualité de <strong>{{poste}}</strong>, niveau I, échelon 1, statut non cadre. Ses missions principales sont notamment :</p>
       <p>{{taches}}</p>
       <p>Cette liste est non exhaustive et pourra être modifiée par Monsieur Sébastien RODRIGO et/ou Monsieur Rémy GIROZ.</p>
