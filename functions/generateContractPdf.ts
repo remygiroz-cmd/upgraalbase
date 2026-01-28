@@ -11,17 +11,12 @@ const getTemplateHtml = (templateCode) => {
 };
 
 const getBaseStyles = () => `
-  @page {
-    size: A4 portrait;
-    margin: 20mm;
-  }
-  
   * {
     margin: 0;
     padding: 0;
     box-sizing: border-box;
   }
-  
+
   body {
     font-family: 'Calibri', 'Arial', sans-serif;
     font-size: 11pt;
@@ -29,72 +24,79 @@ const getBaseStyles = () => `
     color: #000;
     background: #fff;
   }
-  
+
   .header {
     text-align: left;
     margin-bottom: 1.5em;
   }
-  
+
   h2 {
     font-size: 13pt;
     font-weight: bold;
-    margin: 0 0 0.3em 0;
+    margin: 0 0 0.5em 0;
+    break-after: avoid;
   }
-  
+
   .subtitle {
     font-size: 10pt;
-    margin: 0.3em 0 1em 0;
+    margin: 0.3em 0 1.2em 0;
   }
-  
+
   .company-info {
     font-size: 10pt;
     line-height: 1.4;
     margin: 1em 0;
   }
-  
+
   p {
-    margin: 0.4em 0;
+    margin: 0.5em 0;
+    text-align: justify;
     orphans: 3;
     widows: 3;
   }
-  
+
   .article {
-    margin: 1.2em 0;
+    margin: 1.2em 0 1em 0;
     break-inside: avoid;
+    page-break-inside: avoid;
   }
-  
+
   .article-title {
     font-weight: bold;
-    margin-bottom: 0.4em;
+    margin-bottom: 0.5em;
     text-decoration: underline;
+    break-after: avoid;
   }
-  
+
   hr {
     border: none;
     border-top: 1px solid #666;
     margin: 1em 0;
+    break-after: avoid;
   }
-  
+
   .signature-section {
     margin-top: 2em;
+    break-inside: avoid;
     page-break-inside: avoid;
   }
-  
+
   .signature-block {
     margin-top: 1.5em;
+    break-inside: avoid;
     page-break-inside: avoid;
   }
-  
+
   .section-title {
     font-weight: bold;
     margin-top: 1em;
     margin-bottom: 0.5em;
   }
-  
+
   strong {
     font-weight: bold;
   }
-  
+
   em {
     font-style: italic;
   }
