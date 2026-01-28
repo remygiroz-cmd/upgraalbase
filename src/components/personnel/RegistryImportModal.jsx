@@ -103,25 +103,33 @@ export default function RegistryImportModal({ open, onOpenChange, onSuccess }) {
           </div>
         ) : (
           <div className="space-y-4 py-4">
-            <div className={`rounded-lg p-4 flex gap-3 ${
+            <div className={`rounded-lg p-4 space-y-3 ${
               result.errors?.length === 0 
                 ? 'bg-green-50 border border-green-200' 
                 : 'bg-amber-50 border border-amber-200'
             }`}>
-              <CheckCircle className={`w-5 h-5 flex-shrink-0 mt-0.5 ${
-                result.errors?.length === 0 ? 'text-green-600' : 'text-amber-600'
-              }`} />
-              <div>
-                <p className={`font-medium ${
-                  result.errors?.length === 0 ? 'text-green-800' : 'text-amber-800'
-                }`}>
-                  {result.imported} employé(s) importé(s) avec succès
-                </p>
-                {result.errors?.length > 0 && (
-                  <p className="text-amber-700 text-sm mt-1">
-                    {result.errors.length} ligne(s) non importée(s)
+              <div className="flex gap-2">
+                <CheckCircle className={`w-5 h-5 flex-shrink-0 mt-0.5 ${
+                  result.errors?.length === 0 ? 'text-green-600' : 'text-amber-600'
+                }`} />
+                <div className="flex-1">
+                  <p className={`font-semibold ${
+                    result.errors?.length === 0 ? 'text-green-800' : 'text-amber-800'
+                  }`}>
+                    Import complété
                   </p>
-                )}
+                  <div className="text-sm mt-2 space-y-1">
+                    {result.created > 0 && (
+                      <p className="text-green-700">✓ {result.created} employé(s) créé(s)</p>
+                    )}
+                    {result.updated > 0 && (
+                      <p className="text-blue-700">↻ {result.updated} fiche(s) mise(s) à jour</p>
+                    )}
+                    {result.ignored > 0 && (
+                      <p className="text-amber-700">⚠ {result.ignored} ligne(s) ignorée(s)</p>
+                    )}
+                  </div>
+                </div>
               </div>
             </div>
 
@@ -141,7 +149,7 @@ export default function RegistryImportModal({ open, onOpenChange, onSuccess }) {
                 onClick={handleClose}
                 className="bg-orange-600 hover:bg-orange-700"
               >
-                {result.imported > 0 ? 'Fermer et voir' : 'Fermer'}
+                {(result.created + result.updated) > 0 ? 'Fermer et voir' : 'Fermer'}
               </Button>
             </div>
           </div>
