@@ -343,24 +343,89 @@ export default function RegistrePersonnel() {
       />
 
       <style>{`
+        @page {
+          size: A4 landscape;
+          margin: 6mm;
+        }
         @media print {
+          * {
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+          }
           body {
             margin: 0;
-            padding: 10mm;
+            padding: 0;
+            background: white;
+          }
+          html {
+            margin: 0;
+            padding: 0;
+          }
+          div {
+            display: none !important;
+          }
+          div:has(table) {
+            display: block !important;
+          }
+          .bg-white.border-2 {
+            border: none !important;
+            box-shadow: none !important;
+            background: white !important;
           }
           table {
             width: 100%;
             border-collapse: collapse;
+            font-size: 7.5pt;
+            margin: 0;
+            padding: 0;
           }
-          th, td {
-            border: 1px solid black;
-            padding: 8px;
-            text-align: left;
-            font-size: 11px;
+          thead {
+            display: table-header-group;
           }
           th {
-            background-color: #f0f0f0;
+            background-color: #f0f0f0 !important;
+            border: none;
+            border-bottom: 0.6mm solid black;
+            padding: 6mm 1mm;
+            text-align: left;
             font-weight: bold;
+            font-size: 7.5pt;
+            height: 8mm;
+            vertical-align: middle;
+            word-wrap: break-word;
+            overflow-wrap: break-word;
+            white-space: normal;
+          }
+          td {
+            border: none;
+            border-bottom: 0.2mm solid #b4b4b4;
+            padding: 1.5mm;
+            text-align: left;
+            font-size: 7.5pt;
+            min-height: 10mm;
+            vertical-align: middle;
+            word-wrap: break-word;
+            overflow-wrap: break-word;
+            white-space: normal;
+            line-height: 3.8mm;
+          }
+          tr {
+            page-break-inside: avoid;
+          }
+          tr:last-child td {
+            border-bottom: 0.6mm solid black;
+          }
+          .print\\:hidden {
+            display: none !important;
+          }
+          .print\\:hover\\:bg-white {
+            background-color: white !important;
+          }
+          .print\\:border-0 {
+            border: none !important;
+          }
+          .print\\:bg-white {
+            background-color: white !important;
           }
         }
       `}</style>
