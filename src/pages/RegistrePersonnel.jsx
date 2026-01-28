@@ -1,13 +1,14 @@
 import React, { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
-import { FileText, Download, Printer, Upload, Trash2 } from 'lucide-react';
+import { FileText, Download, Printer, Upload, Trash2, FileJson } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import PageHeader from '@/components/ui/PageHeader';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import EmptyState from '@/components/ui/EmptyState';
 import RegistryImportModal from '@/components/personnel/RegistryImportModal';
 import { cn } from '@/lib/utils';
+import jsPDF from 'jspdf';
 
 export default function RegistrePersonnel() {
   const queryClient = useQueryClient();
@@ -48,6 +49,80 @@ export default function RegistrePersonnel() {
       await base44.entities.PersonnelRegistry.delete(id);
       queryClient.invalidateQueries({ queryKey: ['personnelRegistry'] });
     }
+  };
+
+  const handleDownloadPDF = () => {
+    const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const pageHeight = doc.internal.pageSize.getHeight();
+    const margin = 8;
+    const contentWidth = pageWidth - margin * 2;
+
+    const columns = [
+      { header: 'N°', width: 8 },
+      { header: 'Nom', width: 18 },
+      { header: 'Prénom', width: 18 },
+      { header: 'Date naissance', width: 20 },
+      { header: 'Lieu', width: 18 },
+      { header: 'Nationalité', width: 18 },
+      { header: 'Sexe', width: 8 },
+      { header: 'Adresse', width: 30 },
+      { header: 'N° SS', width: 25 },
+      { header: 'Poste', width: 20 },
+      { header: 'Date embauche', width: 20 },
+      { header: 'Type contrat', width: 14 },
+      { header: 'Date sortie', width: 20 }
+    ];
+
+    const totalWidth = columns.reduce((sum, col) => sum + col.width, 0);
+    const scaleFactor = contentWidth / totalWidth;
+
+    const fontSize = 7;
+    const rowHeight = 5;
+    let yPosition = margin + 8;
+
+    // Headers
+    doc.setFontSize(fontSize);
+    doc.setFont(undefined, 'bold');
+    let xPosition = margin;
+    columns.forEach((col) => {
+      const colWidth = col.width * scaleFactor;
+      doc.text(col.header, xPosition + 1, yPosition, { maxWidth: colWidth - 2, fontSize: fontSize });
+      xPosition += colWidth;
+    });
+
+    yPosition += rowHeight;
+    doc.setFont(undefined, 'normal');
+
+    // Data rows
+    registryEntries.forEach((entry, index) => {
+      xPosition = margin;
+      const rowData = [
+        (index + 1).toString(),
+        entry.last_name || '',
+        entry.first_name || '',
+        entry.birth_date ? new Date(entry.birth_date).toLocaleDateString('fr-FR') : '',
+        entry.birth_place || '',
+        entry.nationality || '',
+        entry.gender === 'male' ? 'H' : entry.gender === 'female' ? 'F' : '',
+        entry.address || '',
+        entry.social_security_number || '',
+        entry.position || '',
+        entry.start_date ? new Date(entry.start_date).toLocaleDateString('fr-FR') : '',
+        entry.contract_type || '',
+        entry.exit_date ? new Date(entry.exit_date).toLocaleDateString('fr-FR') : ''
+      ];
+
+      rowData.forEach((data, colIndex) => {
+        const colWidth = columns[colIndex].width * scaleFactor;
+        doc.text(data, xPosition + 1, yPosition, { maxWidth: colWidth - 2, fontSize: fontSize });
+        xPosition += colWidth;
+      });
+
+      yPosition += rowHeight;
+    });
+
+    doc.save(`registre-personnel-${new Date().toISOString().split('T')[0]}.pdf`);
   };
 
   const handleDownloadCSV = () => {
@@ -116,6 +191,14 @@ export default function RegistrePersonnel() {
                 >
                   <Upload className="w-4 h-4 mr-2" />
                   Importer
+                </Button>
+                <Button
+                  onClick={handleDownloadPDF}
+                  variant="outline"
+                  className="border-gray-300 text-gray-700 hover:bg-gray-100"
+                >
+                  <FileJson className="w-4 h-4 mr-2" />
+                  Exporter PDF
                 </Button>
                 <Button
                   onClick={handleDownloadCSV}
