@@ -239,14 +239,14 @@ const cddTemplate = `
     <hr>
 
     <div class="section">
-      <div class="section-title">ARTICLE 9 – CONGÉS PAYÉS</div>
+      <div class="section-title">ARTICLE 10 – CONGÉS PAYÉS</div>
       <p>Le Salarié bénéficiera de 2,5 jours ouvrables de congés par mois de travail effectif. Les dates seront déterminées par l'Employeur selon les nécessités du service.</p>
     </div>
 
     <hr>
 
     <div class="section">
-      <div class="section-title">ARTICLE 10 – PROTECTION SOCIALE</div>
+      <div class="section-title">ARTICLE 11 – PROTECTION SOCIALE</div>
       <p>Le Salarié cotisera aux organismes suivants :</p>
       <p>– Retraite complémentaire : Malakoff Humanis</p>
       <p>– Prévoyance : AG2R La Mondiale</p>
@@ -255,7 +255,7 @@ const cddTemplate = `
     <hr>
 
     <div class="section">
-      <div class="section-title">ARTICLE 11 – OBLIGATIONS DU SALARIÉ</div>
+      <div class="section-title">ARTICLE 12 – OBLIGATIONS DU SALARIÉ</div>
       <p>Le Salarié s'engage à :</p>
       <p>- respecter les consignes, procédures, horaires et normes d'hygiène ;</p>
       <p>- respecter la confidentialité des informations de l'entreprise ;</p>
@@ -267,14 +267,14 @@ const cddTemplate = `
     <hr>
 
     <div class="section">
-      <div class="section-title">ARTICLE 12 – CLAUSE DE NON-CONCURRENCE</div>
+      <div class="section-title">ARTICLE 13 – CLAUSE DE NON-CONCURRENCE</div>
       <p>Aucune clause de non-concurrence n'est prévue dans ce contrat.</p>
     </div>
 
     <hr>
 
     <div class="section">
-      <div class="section-title">ARTICLE 13 – RUPTURE ANTICIPÉE</div>
+      <div class="section-title">ARTICLE 14 – RUPTURE ANTICIPÉE</div>
       <p>Le contrat pourra être rompu avant son terme uniquement selon les cas prévus par la loi.</p>
     </div>
 
