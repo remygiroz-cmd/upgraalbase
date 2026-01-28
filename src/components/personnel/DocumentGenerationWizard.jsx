@@ -1,12 +1,13 @@
 import React, { useState } from 'react';
+import { base44 } from '@/api/base44Client';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { AlertCircle, FileText, ChevronRight, ChevronLeft } from 'lucide-react';
+import { AlertCircle, FileText, ChevronRight, ChevronLeft, CheckCircle, Download, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
+import PDFDownloadModal from './PDFDownloadModal';
 
 export default function DocumentGenerationWizard({ open, onOpenChange, employee, establishment }) {
   const [step, setStep] = useState(1);
@@ -14,6 +15,8 @@ export default function DocumentGenerationWizard({ open, onOpenChange, employee,
   const [selectedTemplate, setSelectedTemplate] = useState('');
   const [editData, setEditData] = useState({});
   const [isGenerating, setIsGenerating] = useState(false);
+  const [generatedDocument, setGeneratedDocument] = useState(null);
+  const [showPDFDownload, setShowPDFDownload] = useState(false);
 
   const documentTypes = [
     { value: 'CDD', label: 'Contrat CDD' },
@@ -67,18 +70,46 @@ export default function DocumentGenerationWizard({ open, onOpenChange, employee,
   };
 
   const handleGenerate = async () => {
-    if (!employee?.id || !establishment?.id) {
-      toast.error('Données employé ou établissement manquantes');
+    if (!employee?.id) {
+      toast.error('Données employé manquantes');
       return;
     }
 
     setIsGenerating(true);
     try {
-      // TODO: Appeler la fonction backend pour générer le document
-      toast.success('Document généré avec succès');
-      onOpenChange(false);
+      // Récupérer l'ID du template de la base de données
+      const templatesRH = await base44.entities.TemplatesRH.filter({ 
+        templateCode: selectedTemplate 
+      });
+      
+      if (!templatesRH || templatesRH.length === 0) {
+        toast.error('Template non trouvé');
+        setIsGenerating(false);
+        return;
+      }
+
+      const templateId = templatesRH[0].id;
+
+      const response = await base44.functions.invoke('generateContractPdf', {
+        templateId: templateId,
+        employeeId: employee.id
+      });
+
+      if (response.data.success) {
+        setGeneratedDocument({
+          id: response.data.documentId,
+          html: response.data.html,
+          contractType: documentType,
+          employeeName: `${employee.last_name}_${employee.first_name}`
+        });
+        setStep(5);
+        toast.success('Contrat généré avec succès');
+      } else {
+        toast.error('Erreur lors de la génération');
+      }
     } catch (error) {
-      toast.error('Erreur lors de la génération : ' + error.message);
+      console.error('Error:', error);
+      toast.error(error.response?.data?.error || 'Erreur lors de la génération');
     } finally {
       setIsGenerating(false);
     }
@@ -89,221 +120,260 @@ export default function DocumentGenerationWizard({ open, onOpenChange, employee,
     setDocumentType('');
     setSelectedTemplate('');
     setEditData({});
+    setGeneratedDocument(null);
+    setShowPDFDownload(false);
     onOpenChange(false);
   };
 
   return (
-    <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="bg-white border-gray-300 max-w-3xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle className="text-gray-900 flex items-center gap-2">
-            <FileText className="w-5 h-5 text-orange-600" />
-            Générer un document RH
-          </DialogTitle>
-          <DialogDescription className="text-gray-600">
-            Étape {step} / 4 - {['Choix du type', 'Choix du template', 'Vérification', 'Génération'][step - 1]}
-          </DialogDescription>
-        </DialogHeader>
+    <>
+      <Dialog open={open} onOpenChange={handleClose}>
+        <DialogContent className="bg-white border-gray-300 max-w-3xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="text-gray-900 flex items-center gap-2">
+              <FileText className="w-5 h-5 text-orange-600" />
+              Générer un document RH
+            </DialogTitle>
+            <DialogDescription className="text-gray-600">
+              Étape {step} / 5 - {['Choix du type', 'Choix du template', 'Vérification', 'Génération', 'Téléchargement'][step - 1]}
+            </DialogDescription>
+          </DialogHeader>
 
-        {/* STEP 1: Choix du type */}
-        {step === 1 && (
-          <div className="space-y-4 py-4">
-            <div className="grid grid-cols-1 gap-3">
-              {documentTypes.map(type => (
-                <button
-                  key={type.value}
-                  onClick={() => setDocumentType(type.value)}
-                  className={`p-4 border-2 rounded-lg text-left transition-all ${
-                    documentType === type.value
-                      ? 'border-orange-600 bg-orange-50'
-                      : 'border-gray-300 hover:border-gray-400'
-                  }`}
-                >
-                  <p className="font-semibold text-gray-900">{type.label}</p>
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* STEP 2: Choix du template */}
-        {step === 2 && (
-          <div className="space-y-4 py-4">
-            <div>
-              <Label className="text-gray-900 mb-2 block">Choisir un template</Label>
-              <Select value={selectedTemplate} onValueChange={setSelectedTemplate}>
-                <SelectTrigger className="border-gray-300">
-                  <SelectValue placeholder="Sélectionner un template..." />
-                </SelectTrigger>
-                <SelectContent>
-                  {filteredTemplates.map(template => (
-                    <SelectItem key={template.id} value={template.id}>
-                      {template.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-        )}
-
-        {/* STEP 3: Vérification des données */}
-        {step === 3 && (
-          <div className="space-y-4 py-4">
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 flex gap-2">
-              <AlertCircle className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
-              <div className="text-sm text-blue-800">
-                Vérifiez les données avant génération. Les champs modifiables peuvent être éditées ci-dessous.
+          {/* STEP 1: Choix du type */}
+          {step === 1 && (
+            <div className="space-y-4 py-4">
+              <div className="grid grid-cols-1 gap-3">
+                {documentTypes.map(type => (
+                  <button
+                    key={type.value}
+                    onClick={() => setDocumentType(type.value)}
+                    className={`p-4 border-2 rounded-lg text-left transition-all ${
+                      documentType === type.value
+                        ? 'border-orange-600 bg-orange-50'
+                        : 'border-gray-300 hover:border-gray-400'
+                    }`}
+                  >
+                    <p className="font-semibold text-gray-900">{type.label}</p>
+                  </button>
+                ))}
               </div>
             </div>
+          )}
 
-            <Tabs defaultValue="employee" className="w-full">
-              <TabsList className="grid w-full grid-cols-3">
-                <TabsTrigger value="employee">Employé</TabsTrigger>
-                <TabsTrigger value="contract">Contrat</TabsTrigger>
-                <TabsTrigger value="remuneration">Rémunération</TabsTrigger>
-              </TabsList>
-
-              <TabsContent value="employee" className="space-y-3 mt-4">
-                <div className="grid grid-cols-2 gap-3 text-sm">
-                  <div>
-                    <p className="font-semibold text-gray-700">Nom</p>
-                    <p className="text-gray-900">{employee?.last_name || '-'}</p>
-                  </div>
-                  <div>
-                    <p className="font-semibold text-gray-700">Prénom</p>
-                    <p className="text-gray-900">{employee?.first_name || '-'}</p>
-                  </div>
-                  <div>
-                    <p className="font-semibold text-gray-700">Date de naissance</p>
-                    <p className="text-gray-900">{employee?.birth_date || '-'}</p>
-                  </div>
-                  <div>
-                    <p className="font-semibold text-gray-700">Nationalité</p>
-                    <p className="text-gray-900">{employee?.nationality || '-'}</p>
-                  </div>
-                  <div className="col-span-2">
-                    <p className="font-semibold text-gray-700">Adresse</p>
-                    <p className="text-gray-900">{employee?.address || '-'}</p>
-                  </div>
-                  <div>
-                    <p className="font-semibold text-gray-700">Email</p>
-                    <p className="text-gray-900">{employee?.email || '-'}</p>
-                  </div>
-                  <div>
-                    <p className="font-semibold text-gray-700">Téléphone</p>
-                    <p className="text-gray-900">{employee?.phone || '-'}</p>
-                  </div>
-                </div>
-              </TabsContent>
-
-              <TabsContent value="contract" className="space-y-3 mt-4">
-                <div className="grid grid-cols-2 gap-3 text-sm">
-                  <div>
-                    <p className="font-semibold text-gray-700">Poste</p>
-                    <p className="text-gray-900">{employee?.position || '-'}</p>
-                  </div>
-                  <div>
-                    <p className="font-semibold text-gray-700">Type de contrat</p>
-                    <p className="text-gray-900">{documentType || '-'}</p>
-                  </div>
-                  <div>
-                    <p className="font-semibold text-gray-700">Date d'embauche</p>
-                    <p className="text-gray-900">{employee?.start_date || '-'}</p>
-                  </div>
-                  <div>
-                    <p className="font-semibold text-gray-700">Temps de travail</p>
-                    <p className="text-gray-900">{employee?.work_time_type || '-'}</p>
-                  </div>
-                  <div>
-                    <p className="font-semibold text-gray-700">Heures/mois</p>
-                    <p className="text-gray-900">{employee?.contract_hours || '-'}</p>
-                  </div>
-                  <div>
-                    <p className="font-semibold text-gray-700">Heures/semaine</p>
-                    <p className="text-gray-900">{employee?.contract_hours_weekly || '-'}</p>
-                  </div>
-                </div>
-              </TabsContent>
-
-              <TabsContent value="remuneration" className="space-y-3 mt-4">
-                <div className="grid grid-cols-2 gap-3 text-sm">
-                  <div>
-                    <p className="font-semibold text-gray-700">Taux horaire brut</p>
-                    <p className="text-gray-900">{employee?.gross_hourly_rate ? `${employee.gross_hourly_rate}€` : '-'}</p>
-                  </div>
-                  <div>
-                    <p className="font-semibold text-gray-700">Salaire brut mensuel</p>
-                    <p className="text-gray-900">{employee?.gross_salary ? `${employee.gross_salary}€` : '-'}</p>
-                  </div>
-                  <div>
-                    <p className="font-semibold text-gray-700">Mode de paiement</p>
-                    <p className="text-gray-900">{employee?.payment_method || '-'}</p>
-                  </div>
-                </div>
-              </TabsContent>
-            </Tabs>
-          </div>
-        )}
-
-        {/* STEP 4: Résumé & Génération */}
-        {step === 4 && (
-          <div className="space-y-4 py-4">
-            <div className="bg-green-50 border border-green-200 rounded-lg p-3">
-              <p className="text-sm text-green-800">
-                ✓ Tous les éléments sont prêts. Cliquez sur "Générer" pour créer le document.
-              </p>
+          {/* STEP 2: Choix du template */}
+          {step === 2 && (
+            <div className="space-y-4 py-4">
+              <div>
+                <Label className="text-gray-900 mb-2 block">Choisir un template</Label>
+                <Select value={selectedTemplate} onValueChange={setSelectedTemplate}>
+                  <SelectTrigger className="border-gray-300">
+                    <SelectValue placeholder="Sélectionner un template..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {filteredTemplates.map(template => (
+                      <SelectItem key={template.id} value={template.id}>
+                        {template.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
-            <div className="text-sm space-y-1 text-gray-700">
-              <p><strong>Type :</strong> {documentType}</p>
-              <p><strong>Template :</strong> {selectedTemplate}</p>
-              <p><strong>Employé :</strong> {employee?.first_name} {employee?.last_name}</p>
-              <p><strong>Établissement :</strong> {establishment?.name}</p>
+          )}
+
+          {/* STEP 3: Vérification des données */}
+          {step === 3 && (
+            <div className="space-y-4 py-4">
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 flex gap-2">
+                <AlertCircle className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
+                <div className="text-sm text-blue-800">
+                  Vérifiez les données avant génération.
+                </div>
+              </div>
+
+              <Tabs defaultValue="employee" className="w-full">
+                <TabsList className="grid w-full grid-cols-3">
+                  <TabsTrigger value="employee">Employé</TabsTrigger>
+                  <TabsTrigger value="contract">Contrat</TabsTrigger>
+                  <TabsTrigger value="remuneration">Rémunération</TabsTrigger>
+                </TabsList>
+
+                <TabsContent value="employee" className="space-y-3 mt-4">
+                  <div className="grid grid-cols-2 gap-3 text-sm">
+                    <div>
+                      <p className="font-semibold text-gray-700">Nom</p>
+                      <p className="text-gray-900">{employee?.last_name || '-'}</p>
+                    </div>
+                    <div>
+                      <p className="font-semibold text-gray-700">Prénom</p>
+                      <p className="text-gray-900">{employee?.first_name || '-'}</p>
+                    </div>
+                    <div>
+                      <p className="font-semibold text-gray-700">Date de naissance</p>
+                      <p className="text-gray-900">{employee?.birth_date || '-'}</p>
+                    </div>
+                    <div>
+                      <p className="font-semibold text-gray-700">Nationalité</p>
+                      <p className="text-gray-900">{employee?.nationality || '-'}</p>
+                    </div>
+                    <div className="col-span-2">
+                      <p className="font-semibold text-gray-700">Adresse</p>
+                      <p className="text-gray-900">{employee?.address || '-'}</p>
+                    </div>
+                    <div>
+                      <p className="font-semibold text-gray-700">Email</p>
+                      <p className="text-gray-900">{employee?.email || '-'}</p>
+                    </div>
+                    <div>
+                      <p className="font-semibold text-gray-700">Téléphone</p>
+                      <p className="text-gray-900">{employee?.phone || '-'}</p>
+                    </div>
+                  </div>
+                </TabsContent>
+
+                <TabsContent value="contract" className="space-y-3 mt-4">
+                  <div className="grid grid-cols-2 gap-3 text-sm">
+                    <div>
+                      <p className="font-semibold text-gray-700">Poste</p>
+                      <p className="text-gray-900">{employee?.position || '-'}</p>
+                    </div>
+                    <div>
+                      <p className="font-semibold text-gray-700">Type de contrat</p>
+                      <p className="text-gray-900">{documentType || '-'}</p>
+                    </div>
+                    <div>
+                      <p className="font-semibold text-gray-700">Date d'embauche</p>
+                      <p className="text-gray-900">{employee?.start_date || '-'}</p>
+                    </div>
+                    <div>
+                      <p className="font-semibold text-gray-700">Temps de travail</p>
+                      <p className="text-gray-900">{employee?.work_time_type === 'full_time' ? 'Temps complet' : 'Temps partiel'}</p>
+                    </div>
+                    <div>
+                      <p className="font-semibold text-gray-700">Heures/semaine</p>
+                      <p className="text-gray-900">{employee?.contract_hours_weekly || '-'}</p>
+                    </div>
+                  </div>
+                </TabsContent>
+
+                <TabsContent value="remuneration" className="space-y-3 mt-4">
+                  <div className="grid grid-cols-2 gap-3 text-sm">
+                    <div>
+                      <p className="font-semibold text-gray-700">Taux horaire brut</p>
+                      <p className="text-gray-900">{employee?.gross_hourly_rate ? `${employee.gross_hourly_rate}€` : '-'}</p>
+                    </div>
+                    <div>
+                      <p className="font-semibold text-gray-700">Salaire brut mensuel</p>
+                      <p className="text-gray-900">{employee?.gross_salary ? `${employee.gross_salary}€` : '-'}</p>
+                    </div>
+                  </div>
+                </TabsContent>
+              </Tabs>
             </div>
-          </div>
-        )}
+          )}
 
-        {/* Navigation */}
-        <div className="flex gap-2 justify-between pt-4 border-t border-gray-200">
-          <Button
-            onClick={handlePrevStep}
-            disabled={step === 1}
-            variant="outline"
-            className="border-gray-300"
-          >
-            <ChevronLeft className="w-4 h-4 mr-1" />
-            Retour
-          </Button>
+          {/* STEP 4: Résumé & Génération */}
+          {step === 4 && (
+            <div className="space-y-4 py-4">
+              <div className="bg-green-50 border border-green-200 rounded-lg p-3">
+                <p className="text-sm text-green-800">
+                  ✓ Tous les éléments sont prêts. Cliquez sur "Générer" pour créer le document.
+                </p>
+              </div>
+              <div className="text-sm space-y-1 text-gray-700">
+                <p><strong>Type :</strong> {documentType}</p>
+                <p><strong>Employé :</strong> {employee?.first_name} {employee?.last_name}</p>
+              </div>
+            </div>
+          )}
 
-          <div className="flex gap-2">
+          {/* STEP 5: Téléchargement */}
+          {step === 5 && generatedDocument && (
+            <div className="space-y-4 py-4">
+              <div className="bg-green-50 border border-green-200 rounded-lg p-4 flex items-start gap-3">
+                <CheckCircle className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
+                <div>
+                  <p className="font-semibold text-green-800">Contrat généré avec succès</p>
+                  <p className="text-sm text-green-700 mt-1">
+                    Le contrat est prêt à être téléchargé en PDF. Format A4 portrait avec marges fixes.
+                  </p>
+                </div>
+              </div>
+
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                <p className="text-sm text-blue-800">
+                  <strong>Document ID:</strong> {generatedDocument.id}
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* Navigation */}
+          <div className="flex gap-2 justify-between pt-4 border-t border-gray-200">
             <Button
-              onClick={handleClose}
+              onClick={handlePrevStep}
+              disabled={step === 1 || step === 5}
               variant="outline"
               className="border-gray-300"
             >
-              Annuler
+              <ChevronLeft className="w-4 h-4 mr-1" />
+              Retour
             </Button>
 
-            {step < 4 ? (
+            <div className="flex gap-2">
               <Button
-                onClick={handleNextStep}
-                className="bg-orange-600 hover:bg-orange-700"
+                onClick={handleClose}
+                variant="outline"
+                className="border-gray-300"
               >
-                Suivant
-                <ChevronRight className="w-4 h-4 ml-1" />
+                {step === 5 ? 'Fermer' : 'Annuler'}
               </Button>
-            ) : (
-              <Button
-                onClick={handleGenerate}
-                disabled={isGenerating}
-                className="bg-green-600 hover:bg-green-700"
-              >
-                {isGenerating ? 'Génération en cours...' : 'Générer le document'}
-              </Button>
-            )}
+
+              {step < 4 ? (
+                <Button
+                  onClick={handleNextStep}
+                  className="bg-orange-600 hover:bg-orange-700"
+                >
+                  Suivant
+                  <ChevronRight className="w-4 h-4 ml-1" />
+                </Button>
+              ) : step === 4 ? (
+                <Button
+                  onClick={handleGenerate}
+                  disabled={isGenerating}
+                  className="bg-green-600 hover:bg-green-700"
+                >
+                  {isGenerating ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-1 animate-spin" />
+                      Génération...
+                    </>
+                  ) : (
+                    'Générer'
+                  )}
+                </Button>
+              ) : (
+                <Button
+                  onClick={() => setShowPDFDownload(true)}
+                  className="bg-blue-600 hover:bg-blue-700 gap-2"
+                >
+                  <Download className="w-4 h-4" />
+                  Télécharger PDF
+                </Button>
+              )}
+            </div>
           </div>
-        </div>
-      </DialogContent>
-    </Dialog>
+        </DialogContent>
+      </Dialog>
+
+      <PDFDownloadModal
+        open={showPDFDownload}
+        onOpenChange={setShowPDFDownload}
+        documentId={generatedDocument?.id}
+        html={generatedDocument?.html}
+        contractType={generatedDocument?.contractType}
+        employeeName={generatedDocument?.employeeName}
+      />
+    </>
   );
 }
