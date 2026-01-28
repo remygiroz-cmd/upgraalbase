@@ -229,45 +229,45 @@ function RoleFormModal({ open, onClose, role }) {
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="bg-slate-800 border-slate-700 max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="bg-white border-gray-300 max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>{role?.id ? 'Modifier le rôle' : 'Nouveau rôle'}</DialogTitle>
+          <DialogTitle className="text-gray-900">{role?.id ? 'Modifier le rôle' : 'Nouveau rôle'}</DialogTitle>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-6">
           <div>
-            <Label htmlFor="name">Nom du rôle *</Label>
+            <Label htmlFor="name" className="text-gray-900">Nom du rôle *</Label>
             <Input
               id="name"
               value={form.name}
               onChange={(e) => setForm({ ...form, name: e.target.value })}
-              className="bg-slate-700 border-slate-600 mt-1"
+              className="bg-white border-gray-300 text-gray-900 mt-1"
               placeholder="Ex: Chef de partie"
               required
             />
           </div>
 
           <div>
-            <Label htmlFor="description">Description</Label>
+            <Label htmlFor="description" className="text-gray-900">Description</Label>
             <Textarea
               id="description"
               value={form.description}
               onChange={(e) => setForm({ ...form, description: e.target.value })}
-              className="bg-slate-700 border-slate-600 mt-1"
+              className="bg-white border-gray-300 text-gray-900 mt-1"
               placeholder="Description du rôle..."
             />
           </div>
 
           <div>
             <div className="flex items-center justify-between mb-3">
-              <Label>Permissions par module</Label>
+              <Label className="text-gray-900">Permissions par module</Label>
               <div className="flex gap-2">
                 <Button
                   type="button"
                   variant="outline"
                   size="sm"
                   onClick={() => toggleAll(true)}
-                  className="border-slate-600 text-slate-900 hover:text-slate-100 hover:bg-slate-700 text-xs"
+                  className="border-gray-300 text-gray-700 hover:bg-gray-50 text-xs"
                 >
                   Tout cocher
                 </Button>
@@ -276,7 +276,7 @@ function RoleFormModal({ open, onClose, role }) {
                   variant="outline"
                   size="sm"
                   onClick={() => toggleAll(false)}
-                  className="border-slate-600 text-slate-900 hover:text-slate-100 hover:bg-slate-700 text-xs"
+                  className="border-gray-300 text-gray-700 hover:bg-gray-50 text-xs"
                 >
                   Tout décocher
                 </Button>
@@ -290,28 +290,28 @@ function RoleFormModal({ open, onClose, role }) {
                   className={cn(
                     "flex items-center gap-3 p-3 rounded-lg border-2 cursor-pointer transition-all",
                     form.permissions[module.key]
-                      ? "bg-orange-500/10 border-orange-500"
-                      : "bg-slate-700/50 border-slate-600 hover:border-slate-500"
+                      ? "bg-green-50 border-green-500"
+                      : "bg-gray-50 border-gray-300 hover:border-gray-400"
                   )}
                 >
                   <input
                     type="checkbox"
                     checked={form.permissions[module.key] || false}
                     onChange={() => togglePermission(module.key)}
-                    className="w-5 h-5 rounded border-slate-600 bg-slate-700 text-orange-600 focus:ring-orange-500"
+                    className="w-5 h-5 rounded border-gray-300 text-green-600 focus:ring-green-500"
                   />
-                  <span className="text-sm font-medium">{module.label}</span>
+                  <span className="text-sm font-medium text-gray-900">{module.label}</span>
                 </label>
               ))}
             </div>
           </div>
 
-          <div className="flex justify-end gap-3 pt-4 border-t border-slate-700">
+          <div className="flex justify-end gap-3 pt-4 border-t border-gray-200">
             <Button
               type="button"
               variant="outline"
               onClick={onClose}
-              className="border-slate-600 text-slate-900 hover:text-slate-100 hover:bg-slate-700"
+              className="border-gray-300 text-gray-700 hover:bg-gray-50"
             >
               Annuler
             </Button>
