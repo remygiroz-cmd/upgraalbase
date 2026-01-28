@@ -111,6 +111,26 @@ export default function EmployeeFormModal({ open, onClose, employee }) {
     }
   }, [employee]);
 
+  // Calcul automatique du salaire brut mensuel
+  React.useEffect(() => {
+    if (formData.gross_hourly_rate && formData.contract_hours) {
+      const hourlyRate = parseFloat(formData.gross_hourly_rate);
+      const hoursMatch = formData.contract_hours.match(/^(\d+):(\d+)$/);
+      
+      if (hoursMatch && !isNaN(hourlyRate)) {
+        const hours = parseInt(hoursMatch[1]);
+        const minutes = parseInt(hoursMatch[2]);
+        const totalHours = hours + (minutes / 60);
+        const calculatedSalary = totalHours * hourlyRate;
+        
+        setFormData(prev => ({
+          ...prev,
+          gross_salary: Math.round(calculatedSalary * 100) / 100
+        }));
+      }
+    }
+  }, [formData.gross_hourly_rate, formData.contract_hours]);
+
   const handlePhotoUpload = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -509,8 +529,12 @@ export default function EmployeeFormModal({ open, onClose, employee }) {
                   value={formData.gross_salary || ''}
                   onChange={(e) => setFormData({ ...formData, gross_salary: parseFloat(e.target.value) || '' })}
                   className="bg-white border-gray-300 text-gray-900"
-                  placeholder="Ex: 2500.00"
+                  placeholder="Calculé automatiquement"
+                  disabled
                 />
+                <p className="text-xs text-gray-500 mt-1">
+                  Calculé à partir du taux horaire × heures contractuelles/mois
+                </p>
               </div>
 
               {/* Taux horaire brut */}
