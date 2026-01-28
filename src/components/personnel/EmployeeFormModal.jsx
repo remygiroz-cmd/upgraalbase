@@ -86,10 +86,30 @@ export default function EmployeeFormModal({ open, onClose, employee, isManager =
 
   const handleSubmit = (e) => {
     e.preventDefault();
+    
+    // Convertir les champs texte en majuscules
+    const uppercasedData = {
+      ...formData,
+      first_name: formData.first_name?.toUpperCase() || '',
+      last_name: formData.last_name?.toUpperCase() || '',
+      married_name: formData.married_name?.toUpperCase() || '',
+      nickname: formData.nickname?.toUpperCase() || '',
+      address: formData.address?.toUpperCase() || '',
+      birth_place: formData.birth_place?.toUpperCase() || '',
+      nationality: formData.nationality?.toUpperCase() || '',
+      position: formData.position?.toUpperCase() || '',
+      team: formData.team?.toUpperCase() || '',
+      manager: formData.manager?.toUpperCase() || '',
+      coefficient_level: formData.coefficient_level?.toUpperCase() || '',
+      social_security_number: formData.social_security_number?.toUpperCase() || '',
+      iban: formData.iban?.toUpperCase() || '',
+      bic: formData.bic?.toUpperCase() || ''
+    };
+    
     if (employee) {
-      updateMutation.mutate({ id: employee.id, data: formData });
+      updateMutation.mutate({ id: employee.id, data: uppercasedData });
     } else {
-      createMutation.mutate(formData);
+      createMutation.mutate(uppercasedData);
     }
   };
 
