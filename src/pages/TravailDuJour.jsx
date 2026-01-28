@@ -10,6 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import PageHeader from '@/components/ui/PageHeader';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import EmptyState from '@/components/ui/EmptyState';
+import UserAvatar from '@/components/ui/UserAvatar';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
@@ -310,18 +311,28 @@ export default function TravailDuJour() {
           <span className="text-gray-900 font-semibold text-base sm:text-lg">tâches complétées</span>
         </div>
         {activeSession.started_at && (
-          <div className="text-gray-700 text-xs font-medium mb-2">
-            Créée le {format(new Date(activeSession.started_at), "d MMM 'à' HH:mm", { locale: fr })}
+          <div className="flex items-center gap-2 text-gray-700 text-xs font-medium mb-2 flex-wrap">
+            <span>Créée le {format(new Date(activeSession.started_at), "d MMM 'à' HH:mm", { locale: fr })} par</span>
             {activeSession.started_by && (
-              <span> par {activeSession.started_by}</span>
+              <UserAvatar 
+                userEmail={activeSession.started_by} 
+                userName={activeSession.started_by_name}
+                size="xs"
+                showName={true}
+              />
             )}
           </div>
         )}
         {activeSession.status === 'completed' && activeSession.completed_at && (
-          <div className="text-orange-600 text-xs font-semibold mb-2">
-            Validée le {format(new Date(activeSession.completed_at), "d MMM 'à' HH:mm", { locale: fr })}
+          <div className="flex items-center gap-2 text-orange-600 text-xs font-semibold mb-2 flex-wrap">
+            <span>Validée le {format(new Date(activeSession.completed_at), "d MMM 'à' HH:mm", { locale: fr })} par</span>
             {activeSession.completed_by && (
-              <span> par {activeSession.completed_by}</span>
+              <UserAvatar 
+                userEmail={activeSession.completed_by} 
+                userName={activeSession.completed_by_name}
+                size="xs"
+                showName={true}
+              />
             )}
           </div>
         )}
@@ -532,12 +543,14 @@ function WorkTaskCard({ task, onComplete, onUncomplete, onRemove, onUpdateQuanti
               </p>
             )}
             
-            {task.is_completed && task.completed_by_name && (
+            {task.is_completed && task.completed_by && (
               <div className="mt-2 flex items-center gap-2 flex-wrap">
-                <div className="w-6 h-6 rounded-full bg-orange-600 flex items-center justify-center text-xs font-medium text-white flex-shrink-0">
-                  {task.completed_by_name.charAt(0).toUpperCase()}
-                </div>
-                <span className="text-xs sm:text-sm text-gray-900 font-medium truncate">{task.completed_by_name}</span>
+                <UserAvatar 
+                  userEmail={task.completed_by} 
+                  userName={task.completed_by_name}
+                  size="sm"
+                  showName={true}
+                />
                 <span className="text-xs text-gray-700 whitespace-nowrap">
                   {format(new Date(task.completed_at), 'HH:mm')}
                 </span>
