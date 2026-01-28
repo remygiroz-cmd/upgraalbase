@@ -103,33 +103,33 @@ export default function RegistryImportModal({ open, onOpenChange, onSuccess }) {
         ) : (
           <div className="space-y-4 py-4">
             <div className={`rounded-lg p-4 flex gap-3 ${
-              result.errors.length === 0 
+              result.errors?.length === 0 
                 ? 'bg-green-50 border border-green-200' 
                 : 'bg-amber-50 border border-amber-200'
             }`}>
               <CheckCircle className={`w-5 h-5 flex-shrink-0 mt-0.5 ${
-                result.errors.length === 0 ? 'text-green-600' : 'text-amber-600'
+                result.errors?.length === 0 ? 'text-green-600' : 'text-amber-600'
               }`} />
               <div>
                 <p className={`font-medium ${
-                  result.errors.length === 0 ? 'text-green-800' : 'text-amber-800'
+                  result.errors?.length === 0 ? 'text-green-800' : 'text-amber-800'
                 }`}>
-                  {result.imported} employé(s) importé(s)
+                  {result.imported} employé(s) importé(s) avec succès
                 </p>
-                {result.errors.length > 0 && (
+                {result.errors?.length > 0 && (
                   <p className="text-amber-700 text-sm mt-1">
-                    {result.errors.length} erreur(s) rencontrée(s)
+                    {result.errors.length} ligne(s) non importée(s)
                   </p>
                 )}
               </div>
             </div>
 
-            {result.errors.length > 0 && (
-              <div className="bg-white border border-gray-300 rounded-lg p-3 max-h-40 overflow-y-auto">
-                <p className="text-xs font-semibold text-gray-900 mb-2">Erreurs :</p>
+            {result.errors?.length > 0 && (
+              <div className="bg-white border border-red-200 rounded-lg p-3 max-h-48 overflow-y-auto">
+                <p className="text-xs font-semibold text-red-900 mb-2">Détail des erreurs :</p>
                 <div className="space-y-1">
                   {result.errors.map((error, idx) => (
-                    <p key={idx} className="text-xs text-red-700">{error}</p>
+                    <p key={idx} className="text-xs text-red-700 font-mono">{error}</p>
                   ))}
                 </div>
               </div>
@@ -140,7 +140,7 @@ export default function RegistryImportModal({ open, onOpenChange, onSuccess }) {
                 onClick={handleClose}
                 className="bg-orange-600 hover:bg-orange-700"
               >
-                Fermer
+                {result.imported > 0 ? 'Fermer et voir' : 'Fermer'}
               </Button>
             </div>
           </div>
