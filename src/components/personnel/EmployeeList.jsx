@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
-import { User, Plus, Search, Mail, Phone, MapPin } from 'lucide-react';
+import { User, Plus, Search, Mail, Phone, MapPin, Archive } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import EmptyState from '@/components/ui/EmptyState';
@@ -15,6 +15,7 @@ export default function EmployeeList() {
   const [showForm, setShowForm] = useState(false);
   const [editingEmployee, setEditingEmployee] = useState(null);
   const [viewingEmployee, setViewingEmployee] = useState(null);
+  const [showArchived, setShowArchived] = useState(false);
 
   const { data: employees = [], isLoading } = useQuery({
     queryKey: ['employees'],
@@ -22,6 +23,11 @@ export default function EmployeeList() {
   });
 
   const filteredEmployees = employees.filter(emp => {
+    // Filter by active/archived status
+    if (showArchived && emp.is_active) return false;
+    if (!showArchived && !emp.is_active) return false;
+    
+    // Filter by search query
     if (!searchQuery) return true;
     const fullName = `${emp.first_name} ${emp.last_name}`.toLowerCase();
     return fullName.includes(searchQuery.toLowerCase()) || 
@@ -57,6 +63,17 @@ export default function EmployeeList() {
           />
         </div>
         <Button
+          variant={showArchived ? "outline" : "default"}
+          onClick={() => setShowArchived(!showArchived)}
+          className={cn(
+            "min-h-[44px]",
+            !showArchived && "border-gray-400 text-gray-700 hover:bg-gray-100"
+          )}
+        >
+          <Archive className="w-4 h-4 sm:mr-2" />
+          <span className="hidden sm:inline">{showArchived ? 'Actifs' : 'Archives'}</span>
+        </Button>
+        <Button
           onClick={() => setShowForm(true)}
           className="bg-orange-600 hover:bg-orange-700 min-h-[44px]"
         >
@@ -68,11 +85,17 @@ export default function EmployeeList() {
       {/* Employee list */}
       {filteredEmployees.length === 0 ? (
         <EmptyState
-          icon={User}
-          title="Aucun employé"
-          description={searchQuery ? "Aucun résultat trouvé" : "Commencez par ajouter votre premier employé"}
+          icon={showArchived ? Archive : User}
+          title={showArchived ? "Aucun employé archivé" : "Aucun employé"}
+          description={
+            searchQuery 
+              ? "Aucun résultat trouvé" 
+              : showArchived 
+                ? "Aucun employé archivé pour le moment"
+                : "Commencez par ajouter votre premier employé"
+          }
           action={
-            !searchQuery && (
+            !searchQuery && !showArchived && (
               <Button
                 onClick={() => setShowForm(true)}
                 className="bg-orange-600 hover:bg-orange-700"
