@@ -195,14 +195,14 @@ const cddTemplate = `
     <hr>
 
     <div class="section">
-      <div class="section-title">ARTICLE 3 – LIEU DE TRAVAIL</div>
+      <div class="section-title">ARTICLE 4 – LIEU DE TRAVAIL</div>
       <p>Le lieu principal d'exercice est fixé au siège de l'entreprise. L'Employeur se réserve la possibilité de muter le Salarié dans tout établissement situé dans un rayon de 20 km, sans modification substantielle du contrat.</p>
     </div>
 
     <hr>
 
     <div class="section">
-      <div class="section-title">ARTICLE 4 – DURÉE ET HORAIRES DE TRAVAIL</div>
+      <div class="section-title">ARTICLE 5 – DURÉE ET HORAIRES DE TRAVAIL</div>
       <p>Le Salarié travaillera <strong>{{heures}}</strong> heures par semaine, soit un total de <strong>{{heuresTexte}}</strong> heures par mois, selon un planning communiqué 15 jours à l'avance, modulable en fonction des besoins du service. L'Employeur pourra modifier les horaires dans le respect d'un préavis de 7 jours, sauf urgence ou remplacement de dernière minute.</p>
     </div>
 
