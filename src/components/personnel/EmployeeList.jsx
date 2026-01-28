@@ -161,6 +161,7 @@ export default function EmployeeList() {
         open={showForm}
         onClose={handleCloseForm}
         employee={editingEmployee}
+        isManager={isManager}
       />
 
       {/* Detail Modal */}
