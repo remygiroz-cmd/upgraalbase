@@ -26,7 +26,7 @@ export default function EstablishmentSettings() {
     siret: '',
     website: '',
     contact_email: '',
-    managers: [{ name: '', phone: '' }]
+    managers: [{ name: '', phone: '', email: '' }]
   });
 
   useEffect(() => {
@@ -38,7 +38,7 @@ export default function EstablishmentSettings() {
         siret: establishment.siret || '',
         website: establishment.website || '',
         contact_email: establishment.contact_email || '',
-        managers: establishment.managers?.length > 0 ? establishment.managers : [{ name: '', phone: '' }]
+        managers: establishment.managers?.length > 0 ? establishment.managers : [{ name: '', phone: '', email: '' }]
       });
     }
   }, [establishment]);
@@ -70,7 +70,7 @@ export default function EstablishmentSettings() {
     // Filter out empty managers
     const cleanedData = {
       ...formData,
-      managers: formData.managers.filter(m => m.name.trim() || m.phone.trim())
+      managers: formData.managers.filter(m => m.name.trim() || m.phone.trim() || m.email.trim())
     };
     
     setSaving(true);
@@ -80,7 +80,7 @@ export default function EstablishmentSettings() {
   const addManager = () => {
     setFormData({
       ...formData,
-      managers: [...formData.managers, { name: '', phone: '' }]
+      managers: [...formData.managers, { name: '', phone: '', email: '' }]
     });
   };
 
@@ -88,7 +88,7 @@ export default function EstablishmentSettings() {
     const newManagers = formData.managers.filter((_, i) => i !== index);
     setFormData({
       ...formData,
-      managers: newManagers.length > 0 ? newManagers : [{ name: '', phone: '' }]
+      managers: newManagers.length > 0 ? newManagers : [{ name: '', phone: '', email: '' }]
     });
   };
 
@@ -212,32 +212,43 @@ export default function EstablishmentSettings() {
 
           <div className="space-y-3">
             {formData.managers.map((manager, index) => (
-              <div key={index} className="flex flex-col sm:flex-row gap-3 p-4 bg-gray-50 rounded-lg border border-gray-200">
-                <div className="flex-1">
+              <div key={index} className="flex flex-col gap-3 p-4 bg-gray-50 rounded-lg border border-gray-200">
+                <div className="flex flex-col sm:flex-row gap-3">
+                  <div className="flex-1">
+                    <Input
+                      value={manager.name}
+                      onChange={(e) => updateManager(index, 'name', e.target.value)}
+                      placeholder="Nom du responsable"
+                      className="bg-white"
+                    />
+                  </div>
+                  <div className="flex-1">
+                    <Input
+                      value={manager.phone}
+                      onChange={(e) => updateManager(index, 'phone', e.target.value)}
+                      placeholder="Téléphone"
+                      className="bg-white"
+                    />
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => removeManager(index)}
+                    className="text-red-600 hover:text-red-700 hover:bg-red-50 flex-shrink-0"
+                    disabled={formData.managers.length === 1}
+                  >
+                    <X className="w-4 h-4" />
+                  </Button>
+                </div>
+                <div>
                   <Input
-                    value={manager.name}
-                    onChange={(e) => updateManager(index, 'name', e.target.value)}
-                    placeholder="Nom du responsable"
+                    type="email"
+                    value={manager.email || ''}
+                    onChange={(e) => updateManager(index, 'email', e.target.value)}
+                    placeholder="Email du responsable"
                     className="bg-white"
                   />
                 </div>
-                <div className="flex-1">
-                  <Input
-                    value={manager.phone}
-                    onChange={(e) => updateManager(index, 'phone', e.target.value)}
-                    placeholder="Téléphone"
-                    className="bg-white"
-                  />
-                </div>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => removeManager(index)}
-                  className="text-red-600 hover:text-red-700 hover:bg-red-50 flex-shrink-0"
-                  disabled={formData.managers.length === 1}
-                >
-                  <X className="w-4 h-4" />
-                </Button>
               </div>
             ))}
           </div>
