@@ -223,7 +223,7 @@ const cddTemplate = `
     <hr>
 
     <div class="section">
-      <div class="section-title">ARTICLE 7 – RÉMUNÉRATION</div>
+      <div class="section-title">ARTICLE 8 – RÉMUNÉRATION</div>
       <p>Le Salarié percevra un salaire brut mensuel de :</p>
       <p><em>(Heures par mois × Taux horaire)</em> = <strong>{{taux}} €</strong>/h × <strong>{{heuresTexte}}</strong></p>
       <p>Soit un salaire brut mensuel de <strong>{{salaireBrut}} €</strong>.</p>
@@ -232,7 +232,7 @@ const cddTemplate = `
     <hr>
 
     <div class="section">
-      <div class="section-title">ARTICLE 8 – FORMATION & CLAUSE DE REMBOURSEMENT</div>
+      <div class="section-title">ARTICLE 9 – FORMATION & CLAUSE DE REMBOURSEMENT</div>
       <p>En cas de formation spécifique prise en charge par l'Employeur, le Salarié s'engage à rembourser l'intégralité des frais engagés s'il quitte volontairement son poste sans respecter son préavis contractuel ou s'absente de manière injustifiée.</p>
     </div>
 
