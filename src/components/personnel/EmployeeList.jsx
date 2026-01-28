@@ -125,7 +125,7 @@ export default function EmployeeList() {
   );
 }
 
-function EmployeeCard({ employee, onClick }) {
+function EmployeeCard({ employee, onClick, canView = true }) {
   return (
     <button
       onClick={onClick}
