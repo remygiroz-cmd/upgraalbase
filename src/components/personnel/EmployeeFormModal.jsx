@@ -49,10 +49,10 @@ export default function EmployeeFormModal({ open, onClose, employee }) {
 
   const updateMutation = useMutation({
     mutationFn: ({ id, data }) => base44.entities.Employee.update(id, data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['employees'] });
+    onSuccess: async (updatedEmployee) => {
+      await queryClient.invalidateQueries({ queryKey: ['employees'] });
+      setFormData(updatedEmployee);
       toast.success('Employé mis à jour');
-      onClose();
     }
   });
 
