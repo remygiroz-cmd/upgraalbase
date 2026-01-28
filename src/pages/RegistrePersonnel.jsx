@@ -1,17 +1,20 @@
 import React, { useState } from 'react';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
-import { FileText, Download, Printer, Upload } from 'lucide-react';
+import { FileText, Download, Printer, Upload, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import PageHeader from '@/components/ui/PageHeader';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import EmptyState from '@/components/ui/EmptyState';
+import ConfirmDialog from '@/components/ui/ConfirmDialog';
 import RegistryImportModal from '@/components/personnel/RegistryImportModal';
+import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 
 export default function RegistrePersonnel() {
   const queryClient = useQueryClient();
   const [showImport, setShowImport] = useState(false);
+  const [deleteConfirm, setDeleteConfirm] = useState(null);
 
   const { data: currentUser } = useQuery({
     queryKey: ['currentUser'],
@@ -26,6 +29,18 @@ export default function RegistrePersonnel() {
   const { data: registryEntries = [], isLoading } = useQuery({
     queryKey: ['personnelRegistry'],
     queryFn: () => base44.entities.PersonnelRegistry.list('entry_order')
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (id) => base44.entities.PersonnelRegistry.delete(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['personnelRegistry'] });
+      toast.success('Entrée supprimée');
+      setDeleteConfirm(null);
+    },
+    onError: () => {
+      toast.error('Erreur lors de la suppression');
+    }
   });
 
   // Check if user is manager/admin
@@ -143,6 +158,7 @@ export default function RegistrePersonnel() {
           <table className="w-full">
             <thead>
               <tr className="bg-gray-100 border-b-2 border-gray-300 print:bg-white">
+                {isManager && <th className="px-4 py-3 text-center text-xs font-semibold text-gray-900 border-r border-gray-300 w-12 print:hidden">Action</th>}
                 <th className="px-4 py-3 text-left text-xs font-semibold text-gray-900 border-r border-gray-300">N°</th>
                 <th className="px-4 py-3 text-left text-xs font-semibold text-gray-900 border-r border-gray-300">Nom</th>
                 <th className="px-4 py-3 text-left text-xs font-semibold text-gray-900 border-r border-gray-300">Prénom</th>
@@ -164,6 +180,17 @@ export default function RegistrePersonnel() {
                   "border-b border-gray-200 hover:bg-gray-50 print:hover:bg-white",
                   index % 2 === 0 && "bg-white"
                 )}>
+                  {isManager && (
+                    <td className="px-4 py-3 text-center border-r border-gray-200 print:hidden">
+                      <button
+                        onClick={() => setDeleteConfirm(entry)}
+                        className="text-red-600 hover:text-red-800 transition-colors"
+                        title="Supprimer"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </td>
+                  )}
                   <td className="px-4 py-3 text-sm text-gray-900 border-r border-gray-200 font-semibold">{index + 1}</td>
                   <td className="px-4 py-3 text-sm text-gray-900 border-r border-gray-200">{entry.last_name}</td>
                   <td className="px-4 py-3 text-sm text-gray-900 border-r border-gray-200">{entry.first_name}</td>
@@ -202,6 +229,16 @@ export default function RegistrePersonnel() {
           queryClient.invalidateQueries({ queryKey: ['personnelRegistry'] });
           setShowImport(false);
         }}
+      />
+
+      <ConfirmDialog
+        open={!!deleteConfirm}
+        onOpenChange={(open) => !open && setDeleteConfirm(null)}
+        title="Supprimer du registre"
+        description={deleteConfirm ? `Supprimer ${deleteConfirm.first_name} ${deleteConfirm.last_name} du registre ? Cette action est irréversible.` : ''}
+        onConfirm={() => deleteConfirm && deleteMutation.mutate(deleteConfirm.id)}
+        variant="danger"
+        confirmText="Supprimer"
       />
 
       <style>{`
