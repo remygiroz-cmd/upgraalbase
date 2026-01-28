@@ -194,8 +194,8 @@ Informations :
 Cordialement,
 
 ${currentUser.full_name || '-'}
-${currentUser.email || '-'}
-${currentUser.phone ? `Tél: ${currentUser.phone}` : ''}`;
+${currentUser.phone ? currentUser.phone : '-'}
+${currentUser.email || '-'}`;
 
       await base44.functions.invoke('sendEmailWithResend', {
         to: recipientEmail,
@@ -205,7 +205,7 @@ ${currentUser.phone ? `Tél: ${currentUser.phone}` : ''}`;
         reply_to: currentUser.email
       });
 
-      toast.success('Email envoyé avec succès');
+      toast.success('OK, message bien envoyé ✓');
       setRecipientEmail('');
     } catch (error) {
       toast.error('Erreur lors de l\'envoi de l\'email');
