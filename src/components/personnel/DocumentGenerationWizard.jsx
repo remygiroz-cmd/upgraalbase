@@ -240,7 +240,17 @@ export default function DocumentGenerationWizard({ open, onOpenChange, employee,
       printWindow.document.write(fullHtml);
       printWindow.document.close();
       
-      toast.success('Fenêtre d\'impression ouverte. Sélectionnez "Enregistrer en PDF" dans les paramètres d\'impression.');
+      // Attendre que le document soit chargé avant d'afficher le message
+      printWindow.onload = function() {
+        setTimeout(() => {
+          toast.success('Fenêtre d\'impression ouverte.\n\n📋 Conseils :\n1. Décochez "En-têtes et pieds de page"\n2. Format : A4 Portrait\n3. Marges : défaut du navigateur\n4. Cliquez "Enregistrer en PDF"');
+        }, 100);
+      };
+      
+      // Fallback si onload ne se déclenche pas
+      setTimeout(() => {
+        toast.success('Fenêtre d\'impression ouverte.\n\n📋 Conseils :\n1. Décochez "En-têtes et pieds de page"\n2. Format : A4 Portrait\n3. Marges : défaut du navigateur\n4. Cliquez "Enregistrer en PDF"');
+      }, 500);
     } catch (error) {
       console.error('Erreur:', error);
       toast.error('Erreur lors de l\'ouverture de la fenêtre d\'impression');
