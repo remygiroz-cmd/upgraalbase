@@ -256,9 +256,9 @@ export default function RegistrePersonnel() {
                     swipedId === entry.id ? "bg-red-50" : (index % 2 === 0 ? "bg-white" : ""),
                     "hover:bg-gray-50 group"
                   )}>
-                  {/* Desktop delete button - hidden, shows on hover */}
+                  {/* Desktop delete overlay - hidden, shows on hover */}
                   {isManager && (
-                    <td className="absolute right-0 top-0 h-full hidden lg:flex items-center px-3 bg-white/95 border-l-2 border-red-300 print:hidden">
+                    <div className="absolute right-0 top-0 h-full hidden lg:flex items-center px-3 bg-white/95 border-l-2 border-red-300 print:hidden">
                       <button
                         onClick={() => setDeleteConfirm(entry)}
                         className="opacity-0 group-hover:opacity-100 text-red-600 hover:text-red-800 transition-opacity"
@@ -266,12 +266,12 @@ export default function RegistrePersonnel() {
                       >
                         <Trash2 className="w-4 h-4" />
                       </button>
-                    </td>
+                    </div>
                   )}
                   
-                  {/* Mobile swipe delete button */}
+                  {/* Mobile swipe delete overlay */}
                   {isManager && swipedId === entry.id && (
-                    <td className="absolute right-0 top-0 h-full lg:hidden flex items-center px-3 bg-red-500">
+                    <div className="absolute right-0 top-0 h-full lg:hidden flex items-center px-3 bg-red-500">
                       <button
                         onClick={() => {
                           setDeleteConfirm(entry);
@@ -282,7 +282,7 @@ export default function RegistrePersonnel() {
                       >
                         <Trash2 className="w-5 h-5" />
                       </button>
-                    </td>
+                    </div>
                   )}
                   <td className="px-4 py-3 text-sm text-gray-900 border-r border-gray-200 font-semibold">{index + 1}</td>
                   <td className="px-4 py-3 text-sm text-gray-900 border-r border-gray-200">{entry.last_name}</td>
