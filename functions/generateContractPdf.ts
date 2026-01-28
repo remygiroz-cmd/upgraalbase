@@ -275,7 +275,17 @@ const hoursToText = (hours) => {
   return num.toFixed(2).replace('.', ',');
 };
 
-const calculateEssayEndDate = (startDate, essayDays = 7) => {
+// Calcul période d'essai CDD : 1 jour ouvré par semaine, max 21 jours
+const calculateCDDEssayDays = (startDate, endDate) => {
+  const start = new Date(startDate);
+  const end = new Date(endDate);
+  const diffMs = end - start;
+  const diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+  const weeks = Math.ceil(diffDays / 7);
+  return Math.min(weeks, 21);
+};
+
+const calculateEssayEndDate = (startDate, essayDays) => {
   const d = new Date(startDate);
   let workDays = 0;
   while (workDays < essayDays) {
