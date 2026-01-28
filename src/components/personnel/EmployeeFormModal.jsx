@@ -383,19 +383,19 @@ ${currentUser.email || '-'}`;
           {/* Email et téléphone */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <Label className="text-gray-900">Email *</Label>
+              <Label className="text-gray-900">Email</Label>
               <Input
                 type="email"
-                required
                 value={formData.email}
                 onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                 className="bg-white border-gray-300 text-gray-900"
               />
             </div>
             <div>
-              <Label className="text-gray-900">Téléphone</Label>
+              <Label className="text-gray-900">Téléphone *</Label>
               <Input
                 type="tel"
+                required
                 value={formData.phone}
                 onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                 className="bg-white border-gray-300 text-gray-900"
