@@ -6,9 +6,13 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
+import { Trash2, Archive } from 'lucide-react';
+import ConfirmDialog from '@/components/ui/ConfirmDialog';
 
 export default function EmployeeFormModal({ open, onClose, employee }) {
   const queryClient = useQueryClient();
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [confirmArchive, setConfirmArchive] = useState(false);
   const [formData, setFormData] = useState(employee || {
     first_name: '',
     last_name: '',
@@ -18,7 +22,8 @@ export default function EmployeeFormModal({ open, onClose, employee }) {
     email: '',
     phone: '',
     social_security_number: '',
-    iban: ''
+    iban: '',
+    is_active: true
   });
 
   const createMutation = useMutation({
@@ -39,6 +44,24 @@ export default function EmployeeFormModal({ open, onClose, employee }) {
     }
   });
 
+  const deleteMutation = useMutation({
+    mutationFn: (id) => base44.entities.Employee.delete(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['employees'] });
+      toast.success('Employé supprimé');
+      onClose();
+    }
+  });
+
+  const archiveMutation = useMutation({
+    mutationFn: ({ id, archive }) => base44.entities.Employee.update(id, { is_active: !archive }),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['employees'] });
+      toast.success(variables.archive ? 'Employé archivé' : 'Employé réactivé');
+      onClose();
+    }
+  });
+
   const handleSubmit = (e) => {
     e.preventDefault();
     if (employee) {
@@ -47,6 +70,12 @@ export default function EmployeeFormModal({ open, onClose, employee }) {
       createMutation.mutate(formData);
     }
   };
+
+  React.useEffect(() => {
+    if (employee) {
+      setFormData(employee);
+    }
+  }, [employee]);
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
@@ -157,7 +186,30 @@ export default function EmployeeFormModal({ open, onClose, employee }) {
           </div>
 
           {/* Actions */}
-          <div className="flex justify-end gap-3 pt-4">
+          <div className="flex flex-wrap gap-2 pt-4 border-t border-gray-200">
+            {employee && (
+              <>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setConfirmArchive(true)}
+                  className="border-gray-400 text-gray-700 hover:bg-gray-100"
+                >
+                  <Archive className="w-4 h-4 mr-2" />
+                  {employee.is_active ? 'Archiver' : 'Réactiver'}
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setConfirmDelete(true)}
+                  className="border-red-400 text-red-700 hover:bg-red-50"
+                >
+                  <Trash2 className="w-4 h-4 mr-2" />
+                  Supprimer
+                </Button>
+              </>
+            )}
+            <div className="flex-1" />
             <Button
               type="button"
               variant="outline"
@@ -176,6 +228,32 @@ export default function EmployeeFormModal({ open, onClose, employee }) {
           </div>
         </form>
       </DialogContent>
+
+      {/* Confirm Delete */}
+      <ConfirmDialog
+        open={confirmDelete}
+        onOpenChange={setConfirmDelete}
+        title="Supprimer l'employé"
+        description={`Êtes-vous sûr de vouloir supprimer ${employee?.first_name} ${employee?.last_name} ? Cette action est irréversible.`}
+        onConfirm={() => deleteMutation.mutate(employee.id)}
+        variant="danger"
+        confirmText="Supprimer"
+      />
+
+      {/* Confirm Archive */}
+      <ConfirmDialog
+        open={confirmArchive}
+        onOpenChange={setConfirmArchive}
+        title={employee?.is_active ? "Archiver l'employé" : "Réactiver l'employé"}
+        description={
+          employee?.is_active 
+            ? `Voulez-vous archiver ${employee?.first_name} ${employee?.last_name} ? Il n'apparaîtra plus dans la liste active.`
+            : `Voulez-vous réactiver ${employee?.first_name} ${employee?.last_name} ?`
+        }
+        onConfirm={() => archiveMutation.mutate({ id: employee.id, archive: employee.is_active })}
+        variant="warning"
+        confirmText={employee?.is_active ? "Archiver" : "Réactiver"}
+      />
     </Dialog>
   );
 }

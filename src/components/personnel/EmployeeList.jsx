@@ -7,14 +7,12 @@ import { Input } from '@/components/ui/input';
 import EmptyState from '@/components/ui/EmptyState';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import EmployeeFormModal from './EmployeeFormModal';
-import EmployeeDetailModal from './EmployeeDetailModal';
 import { cn } from '@/lib/utils';
 
 export default function EmployeeList() {
   const [searchQuery, setSearchQuery] = useState('');
   const [showForm, setShowForm] = useState(false);
   const [editingEmployee, setEditingEmployee] = useState(null);
-  const [viewingEmployee, setViewingEmployee] = useState(null);
   const [showArchived, setShowArchived] = useState(false);
 
   const { data: employees = [], isLoading } = useQuery({
@@ -37,7 +35,6 @@ export default function EmployeeList() {
   const handleEdit = (emp) => {
     setEditingEmployee(emp);
     setShowForm(true);
-    setViewingEmployee(null);
   };
 
   const handleCloseForm = () => {
@@ -112,7 +109,7 @@ export default function EmployeeList() {
             <EmployeeCard
               key={emp.id}
               employee={emp}
-              onClick={() => setViewingEmployee(emp)}
+              onClick={() => handleEdit(emp)}
             />
           ))}
         </div>
@@ -124,15 +121,6 @@ export default function EmployeeList() {
         onClose={handleCloseForm}
         employee={editingEmployee}
       />
-
-      {/* Detail Modal */}
-      {viewingEmployee && (
-        <EmployeeDetailModal
-          employee={viewingEmployee}
-          onClose={() => setViewingEmployee(null)}
-          onEdit={() => handleEdit(viewingEmployee)}
-        />
-      )}
     </div>
   );
 }
