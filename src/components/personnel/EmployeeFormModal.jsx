@@ -11,7 +11,7 @@ import { toast } from 'sonner';
 import { Trash2, Archive, Upload, User, FileText, Download } from 'lucide-react';
 import ConfirmDialog from '@/components/ui/ConfirmDialog';
 
-export default function EmployeeFormModal({ open, onClose, employee }) {
+export default function EmployeeFormModal({ open, onClose, employee, isManager = false }) {
   const queryClient = useQueryClient();
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [confirmArchive, setConfirmArchive] = useState(false);
@@ -359,6 +359,14 @@ export default function EmployeeFormModal({ open, onClose, employee }) {
             </TabsContent>
 
             <TabsContent value="contrat" className="space-y-4 mt-4">
+              {!isManager && (
+                <div className="bg-orange-50 border border-orange-200 rounded-lg p-3 mb-4">
+                  <p className="text-sm text-orange-800">
+                    ℹ️ Vous pouvez consulter ces informations mais seuls les responsables peuvent les modifier.
+                  </p>
+                </div>
+              )}
+
               {/* Poste et Équipe */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
@@ -368,6 +376,7 @@ export default function EmployeeFormModal({ open, onClose, employee }) {
                     onChange={(e) => setFormData({ ...formData, position: e.target.value })}
                     placeholder="Ex: Cuisinier, Livreur..."
                     className="bg-white border-gray-300 text-gray-900"
+                    disabled={!isManager}
                   />
                 </div>
                 <div>
@@ -377,6 +386,7 @@ export default function EmployeeFormModal({ open, onClose, employee }) {
                     onChange={(e) => setFormData({ ...formData, team: e.target.value })}
                     placeholder="Équipe"
                     className="bg-white border-gray-300 text-gray-900"
+                    disabled={!isManager}
                   />
                 </div>
               </div>
@@ -388,6 +398,7 @@ export default function EmployeeFormModal({ open, onClose, employee }) {
                   <Select
                     value={formData.contract_type || ''}
                     onValueChange={(value) => setFormData({ ...formData, contract_type: value })}
+                    disabled={!isManager}
                   >
                     <SelectTrigger className="bg-white border-gray-300 text-gray-900">
                       <SelectValue placeholder="Sélectionner" />
@@ -406,6 +417,7 @@ export default function EmployeeFormModal({ open, onClose, employee }) {
                   <Select
                     value={formData.work_time_type || ''}
                     onValueChange={(value) => setFormData({ ...formData, work_time_type: value })}
+                    disabled={!isManager}
                   >
                     <SelectTrigger className="bg-white border-gray-300 text-gray-900">
                       <SelectValue placeholder="Sélectionner" />
@@ -427,6 +439,7 @@ export default function EmployeeFormModal({ open, onClose, employee }) {
                     value={formData.start_date || ''}
                     onChange={(e) => setFormData({ ...formData, start_date: e.target.value })}
                     className="bg-white border-gray-300 text-gray-900"
+                    disabled={!isManager}
                   />
                 </div>
                 <div>
@@ -437,6 +450,7 @@ export default function EmployeeFormModal({ open, onClose, employee }) {
                     onChange={(e) => setFormData({ ...formData, end_date: e.target.value })}
                     className="bg-white border-gray-300 text-gray-900"
                     placeholder={formData.contract_type === 'cdd' ? 'Obligatoire pour CDD' : 'Optionnel'}
+                    disabled={!isManager}
                   />
                 </div>
               </div>
@@ -450,6 +464,7 @@ export default function EmployeeFormModal({ open, onClose, employee }) {
                   onChange={(e) => setFormData({ ...formData, contract_hours: e.target.value })}
                   className="bg-white border-gray-300 text-gray-900"
                   placeholder="Ex: 151:40"
+                  disabled={!isManager}
                 />
               </div>
 
@@ -462,6 +477,7 @@ export default function EmployeeFormModal({ open, onClose, employee }) {
                   onChange={(e) => setFormData({ ...formData, contract_hours_weekly: e.target.value })}
                   className="bg-white border-gray-300 text-gray-900"
                   placeholder="Ex: 35:00"
+                  disabled={!isManager}
                 />
               </div>
 
@@ -476,6 +492,7 @@ export default function EmployeeFormModal({ open, onClose, employee }) {
                   onChange={(e) => setFormData({ ...formData, work_days_per_week: parseFloat(e.target.value) })}
                   className="bg-white border-gray-300 text-gray-900"
                   placeholder="Ex: 5"
+                  disabled={!isManager}
                 />
               </div>
 
@@ -487,6 +504,7 @@ export default function EmployeeFormModal({ open, onClose, employee }) {
                   onChange={(e) => setFormData({ ...formData, coefficient_level: e.target.value })}
                   className="bg-white border-gray-300 text-gray-900"
                   placeholder="Ex: Niveau 2, Coef 150"
+                  disabled={!isManager}
                 />
               </div>
 
@@ -498,6 +516,7 @@ export default function EmployeeFormModal({ open, onClose, employee }) {
                   onChange={(e) => setFormData({ ...formData, manager: e.target.value })}
                   className="bg-white border-gray-300 text-gray-900"
                   placeholder="Nom du responsable"
+                  disabled={!isManager}
                 />
               </div>
 
@@ -507,6 +526,7 @@ export default function EmployeeFormModal({ open, onClose, employee }) {
                 <Select
                   value={formData.is_active ? 'active' : 'archived'}
                   onValueChange={(value) => setFormData({ ...formData, is_active: value === 'active' })}
+                  disabled={!isManager}
                 >
                   <SelectTrigger className="bg-white border-gray-300 text-gray-900">
                     <SelectValue />
@@ -520,6 +540,14 @@ export default function EmployeeFormModal({ open, onClose, employee }) {
             </TabsContent>
 
             <TabsContent value="remuneration" className="space-y-4 mt-4">
+              {!isManager && (
+                <div className="bg-orange-50 border border-orange-200 rounded-lg p-3 mb-4">
+                  <p className="text-sm text-orange-800">
+                    ℹ️ Vous pouvez consulter ces informations mais seuls les responsables peuvent les modifier.
+                  </p>
+                </div>
+              )}
+
               {/* Salaire brut */}
               <div>
                 <Label className="text-gray-900">Salaire brut mensuel (€)</Label>
@@ -547,6 +575,7 @@ export default function EmployeeFormModal({ open, onClose, employee }) {
                   onChange={(e) => setFormData({ ...formData, gross_hourly_rate: parseFloat(e.target.value) || '' })}
                   className="bg-white border-gray-300 text-gray-900"
                   placeholder="Ex: 15.50"
+                  disabled={!isManager}
                 />
               </div>
 
@@ -556,6 +585,7 @@ export default function EmployeeFormModal({ open, onClose, employee }) {
                 <Select
                   value={formData.payment_method || ''}
                   onValueChange={(value) => setFormData({ ...formData, payment_method: value })}
+                  disabled={!isManager}
                 >
                   <SelectTrigger className="bg-white border-gray-300 text-gray-900">
                     <SelectValue placeholder="Sélectionner" />
@@ -576,6 +606,7 @@ export default function EmployeeFormModal({ open, onClose, employee }) {
                   onChange={(e) => setFormData({ ...formData, iban: e.target.value })}
                   className="bg-white border-gray-300 text-gray-900"
                   placeholder="FR76 XXXX XXXX XXXX XXXX XXXX XXX"
+                  disabled={!isManager}
                 />
               </div>
 
@@ -603,16 +634,18 @@ export default function EmployeeFormModal({ open, onClose, employee }) {
                           >
                             Télécharger
                           </a>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              const newPayslips = formData.payslips.filter((_, i) => i !== index);
-                              setFormData({ ...formData, payslips: newPayslips });
-                            }}
-                            className="text-xs text-red-600 hover:text-red-700"
-                          >
-                            Supprimer
-                          </button>
+                          {isManager && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const newPayslips = formData.payslips.filter((_, i) => i !== index);
+                                setFormData({ ...formData, payslips: newPayslips });
+                              }}
+                              className="text-xs text-red-600 hover:text-red-700"
+                            >
+                              Supprimer
+                            </button>
+                          )}
                         </div>
                       </div>
                     ))}
@@ -620,54 +653,64 @@ export default function EmployeeFormModal({ open, onClose, employee }) {
                 )}
 
                 {/* Upload nouvelle fiche */}
-                <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center">
-                  <label className="cursor-pointer">
-                    <Upload className="w-8 h-8 text-gray-400 mx-auto mb-2" />
-                    <p className="text-sm text-gray-600 mb-1">Ajouter une fiche de paie</p>
-                    <p className="text-xs text-gray-500">PDF, max 10MB</p>
-                    <input
-                      type="file"
-                      accept=".pdf"
-                      onChange={async (e) => {
-                        const file = e.target.files?.[0];
-                        if (!file) return;
+                {isManager && (
+                  <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center">
+                    <label className="cursor-pointer">
+                      <Upload className="w-8 h-8 text-gray-400 mx-auto mb-2" />
+                      <p className="text-sm text-gray-600 mb-1">Ajouter une fiche de paie</p>
+                      <p className="text-xs text-gray-500">PDF, max 10MB</p>
+                      <input
+                        type="file"
+                        accept=".pdf"
+                        onChange={async (e) => {
+                          const file = e.target.files?.[0];
+                          if (!file) return;
 
-                        setUploading(true);
-                        try {
-                          const { file_url } = await base44.integrations.Core.UploadFile({ file });
-                          const monthPrompt = prompt('Mois de la fiche de paie (ex: 2026-01)');
-                          if (!monthPrompt) {
-                            toast.error('Mois requis');
-                            return;
+                          setUploading(true);
+                          try {
+                            const { file_url } = await base44.integrations.Core.UploadFile({ file });
+                            const monthPrompt = prompt('Mois de la fiche de paie (ex: 2026-01)');
+                            if (!monthPrompt) {
+                              toast.error('Mois requis');
+                              return;
+                            }
+                            
+                            const newPayslip = {
+                              month: monthPrompt,
+                              file_url,
+                              uploaded_at: new Date().toISOString(),
+                              uploaded_by: formData.email
+                            };
+
+                            setFormData({
+                              ...formData,
+                              payslips: [...(formData.payslips || []), newPayslip]
+                            });
+                            toast.success('Fiche de paie ajoutée');
+                          } catch (error) {
+                            toast.error('Erreur lors du téléchargement');
+                          } finally {
+                            setUploading(false);
                           }
-                          
-                          const newPayslip = {
-                            month: monthPrompt,
-                            file_url,
-                            uploaded_at: new Date().toISOString(),
-                            uploaded_by: formData.email
-                          };
-
-                          setFormData({
-                            ...formData,
-                            payslips: [...(formData.payslips || []), newPayslip]
-                          });
-                          toast.success('Fiche de paie ajoutée');
-                        } catch (error) {
-                          toast.error('Erreur lors du téléchargement');
-                        } finally {
-                          setUploading(false);
-                        }
-                      }}
-                      disabled={uploading}
-                      className="hidden"
-                    />
-                  </label>
-                </div>
+                        }}
+                        disabled={uploading}
+                        className="hidden"
+                      />
+                    </label>
+                  </div>
+                )}
               </div>
             </TabsContent>
 
             <TabsContent value="documents" className="space-y-4 mt-4">
+              {!isManager && (
+                <div className="bg-orange-50 border border-orange-200 rounded-lg p-3 mb-4">
+                  <p className="text-sm text-orange-800">
+                    ℹ️ Vous pouvez télécharger ces documents mais seuls les responsables peuvent en ajouter ou supprimer.
+                  </p>
+                </div>
+              )}
+
               {/* Catégories de documents */}
               <div>
                 <Label className="text-gray-900 mb-3 block">Documents de l'employé</Label>
@@ -703,17 +746,19 @@ export default function EmployeeFormModal({ open, onClose, employee }) {
                           >
                             <Download className="w-4 h-4" />
                           </a>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              const newDocs = formData.documents.filter((_, i) => i !== index);
-                              setFormData({ ...formData, documents: newDocs });
-                            }}
-                            className="text-red-600 hover:text-red-700 p-2"
-                            title="Supprimer"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
+                          {isManager && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const newDocs = formData.documents.filter((_, i) => i !== index);
+                                setFormData({ ...formData, documents: newDocs });
+                              }}
+                              className="text-red-600 hover:text-red-700 p-2"
+                              title="Supprimer"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          )}
                         </div>
                       </div>
                     ))}
@@ -721,56 +766,58 @@ export default function EmployeeFormModal({ open, onClose, employee }) {
                 )}
 
                 {/* Upload nouveau document */}
-                <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
-                  <label className="cursor-pointer">
-                    <Upload className="w-10 h-10 text-gray-400 mx-auto mb-3" />
-                    <p className="text-sm text-gray-600 mb-1 font-medium">Ajouter un document</p>
-                    <p className="text-xs text-gray-500 mb-2">PDF, images, max 10MB</p>
-                    <input
-                      type="file"
-                      accept=".pdf,.png,.jpg,.jpeg,.doc,.docx"
-                      onChange={async (e) => {
-                        const file = e.target.files?.[0];
-                        if (!file) return;
+                {isManager && (
+                  <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
+                    <label className="cursor-pointer">
+                      <Upload className="w-10 h-10 text-gray-400 mx-auto mb-3" />
+                      <p className="text-sm text-gray-600 mb-1 font-medium">Ajouter un document</p>
+                      <p className="text-xs text-gray-500 mb-2">PDF, images, max 10MB</p>
+                      <input
+                        type="file"
+                        accept=".pdf,.png,.jpg,.jpeg,.doc,.docx"
+                        onChange={async (e) => {
+                          const file = e.target.files?.[0];
+                          if (!file) return;
 
-                        setUploading(true);
-                        try {
-                          const { file_url } = await base44.integrations.Core.UploadFile({ file });
-                          
-                          const docName = prompt('Nom du document (ex: Contrat CDI)');
-                          if (!docName) {
-                            toast.error('Nom requis');
-                            return;
+                          setUploading(true);
+                          try {
+                            const { file_url } = await base44.integrations.Core.UploadFile({ file });
+                            
+                            const docName = prompt('Nom du document (ex: Contrat CDI)');
+                            if (!docName) {
+                              toast.error('Nom requis');
+                              return;
+                            }
+
+                            const docCategory = prompt('Catégorie (ex: Contrat, Identité, Visite médicale, Avertissement, DPAE, Courrier)');
+                            
+                            const newDocument = {
+                              name: docName,
+                              url: file_url,
+                              category: docCategory || 'Autre',
+                              uploaded_at: new Date().toISOString()
+                            };
+
+                            setFormData({
+                              ...formData,
+                              documents: [...(formData.documents || []), newDocument]
+                            });
+                            toast.success('Document ajouté');
+                          } catch (error) {
+                            toast.error('Erreur lors du téléchargement');
+                          } finally {
+                            setUploading(false);
                           }
-
-                          const docCategory = prompt('Catégorie (ex: Contrat, Identité, Visite médicale, Avertissement, DPAE, Courrier)');
-                          
-                          const newDocument = {
-                            name: docName,
-                            url: file_url,
-                            category: docCategory || 'Autre',
-                            uploaded_at: new Date().toISOString()
-                          };
-
-                          setFormData({
-                            ...formData,
-                            documents: [...(formData.documents || []), newDocument]
-                          });
-                          toast.success('Document ajouté');
-                        } catch (error) {
-                          toast.error('Erreur lors du téléchargement');
-                        } finally {
-                          setUploading(false);
-                        }
-                      }}
-                      disabled={uploading}
-                      className="hidden"
-                    />
-                  </label>
-                  {uploading && (
-                    <p className="text-xs text-gray-500 mt-2">Téléchargement en cours...</p>
-                  )}
-                </div>
+                        }}
+                        disabled={uploading}
+                        className="hidden"
+                      />
+                    </label>
+                    {uploading && (
+                      <p className="text-xs text-gray-500 mt-2">Téléchargement en cours...</p>
+                    )}
+                  </div>
+                )}
 
                 <p className="text-xs text-gray-500 mt-2">
                   Types de documents : Contrats, Avenants, Papiers d'identité, Permis de conduire, 
@@ -815,7 +862,7 @@ export default function EmployeeFormModal({ open, onClose, employee }) {
             </Button>
             <Button
               type="submit"
-              disabled={createMutation.isPending || updateMutation.isPending}
+              disabled={createMutation.isPending || updateMutation.isPending || !isManager}
               className="bg-orange-600 hover:bg-orange-700"
             >
               {employee ? 'Mettre à jour' : 'Créer'}
