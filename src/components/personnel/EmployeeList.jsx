@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
-import { User, Plus, Search, Mail, Phone, MapPin, Archive, Lock } from 'lucide-react';
+import { User, Plus, Search, Mail, Phone, MapPin, Archive, Lock, MessageSquare } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import EmptyState from '@/components/ui/EmptyState';
@@ -236,6 +236,50 @@ function EmployeeCard({ employee, onClick, canView = true }) {
           </div>
         )}
       </div>
+
+      {/* Contact Actions */}
+      {canView && employee.email && (
+        <div className="flex flex-wrap gap-1.5 pt-3 mt-3 border-t border-gray-200">
+          <a
+            href={`mailto:${employee.email}`}
+            className="flex items-center gap-1 px-2 py-1 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded text-xs font-medium transition-colors"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <Mail className="w-3 h-3" />
+            <span>Email</span>
+          </a>
+          {employee.phone && (
+            <>
+              <a
+                href={`tel:${employee.phone}`}
+                className="flex items-center gap-1 px-2 py-1 bg-green-50 hover:bg-green-100 text-green-700 rounded text-xs font-medium transition-colors"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <Phone className="w-3 h-3" />
+                <span>Appeler</span>
+              </a>
+              <a
+                href={`sms:${employee.phone}`}
+                className="flex items-center gap-1 px-2 py-1 bg-purple-50 hover:bg-purple-100 text-purple-700 rounded text-xs font-medium transition-colors"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <MessageSquare className="w-3 h-3" />
+                <span>SMS</span>
+              </a>
+              <a
+                href={`https://wa.me/${employee.phone.replace(/[^0-9]/g, '')}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-1 px-2 py-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 rounded text-xs font-medium transition-colors"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <MessageSquare className="w-3 h-3" />
+                <span>WhatsApp</span>
+              </a>
+            </>
+          )}
+        </div>
+      )}
     </button>
   );
 }
