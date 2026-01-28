@@ -230,7 +230,6 @@ export default function RegistrePersonnel() {
           <table className="w-full">
             <thead>
               <tr className="bg-gray-100 border-b-2 border-gray-300 print:bg-white">
-                {isManager && <th className="px-2 py-3 text-center text-xs font-semibold text-gray-900 border-r border-gray-300 w-12 lg:w-auto print:hidden"></th>}
                 <th className="px-4 py-3 text-left text-xs font-semibold text-gray-900 border-r border-gray-300">N°</th>
                 <th className="px-4 py-3 text-left text-xs font-semibold text-gray-900 border-r border-gray-300">Nom</th>
                 <th className="px-4 py-3 text-left text-xs font-semibold text-gray-900 border-r border-gray-300">Prénom</th>
