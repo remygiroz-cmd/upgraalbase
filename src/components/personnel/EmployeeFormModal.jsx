@@ -106,6 +106,35 @@ export default function EmployeeFormModal({ open, onClose, employee }) {
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
+          {/* Photo */}
+          <div className="flex justify-center">
+            <div className="relative">
+              <div className="w-24 h-24 rounded-full overflow-hidden bg-gray-100 border-2 border-gray-300">
+                {formData.photo_url ? (
+                  <img 
+                    src={formData.photo_url} 
+                    alt="Photo" 
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center">
+                    <User className="w-12 h-12 text-gray-400" />
+                  </div>
+                )}
+              </div>
+              <label className="absolute bottom-0 right-0 bg-orange-600 hover:bg-orange-700 text-white rounded-full p-2 cursor-pointer shadow-lg">
+                <Upload className="w-4 h-4" />
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={handlePhotoUpload}
+                  disabled={uploading}
+                  className="hidden"
+                />
+              </label>
+            </div>
+          </div>
+
           {/* Nom et prénom */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
@@ -126,6 +155,17 @@ export default function EmployeeFormModal({ open, onClose, employee }) {
                 className="bg-white border-gray-300 text-gray-900"
               />
             </div>
+          </div>
+
+          {/* Surnom */}
+          <div>
+            <Label className="text-gray-900">Surnom</Label>
+            <Input
+              value={formData.nickname || ''}
+              onChange={(e) => setFormData({ ...formData, nickname: e.target.value })}
+              placeholder="Surnom de l'employé"
+              className="bg-white border-gray-300 text-gray-900"
+            />
           </div>
 
           {/* Date et lieu de naissance */}
