@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import html2pdf from 'npm:html2pdf.js@0.10.1';
+import { jsPDF } from 'jspdf';
+import html2canvas from 'html2canvas';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Download, Loader2, CheckCircle } from 'lucide-react';
@@ -20,18 +21,37 @@ export default function PDFDownloadModal({ open, onOpenChange, documentId, html,
       // Créer un élément temporaire pour le contenu HTML
       const element = document.createElement('div');
       element.innerHTML = html;
+      element.style.padding = '20mm';
+      element.style.background = 'white';
+      element.style.width = '210mm';
+      element.style.minHeight = '297mm';
+      document.body.appendChild(element);
 
-      // Options pour html2pdf
-      const options = {
-        margin: [20, 20, 20, 20],
-        filename: `${contractType}_${employeeName}_${new Date().toISOString().split('T')[0]}.pdf`,
-        image: { type: 'jpeg', quality: 0.98 },
-        html2canvas: { scale: 2 },
-        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
-      };
+      // Convertir HTML en canvas
+      const canvas = await html2canvas(element, {
+        scale: 2,
+        useCORS: true,
+        backgroundColor: '#ffffff'
+      });
 
-      // Générer et télécharger le PDF
-      await html2pdf().set(options).from(element).save();
+      // Créer le PDF
+      const pdf = new jsPDF({
+        orientation: 'portrait',
+        unit: 'mm',
+        format: 'a4'
+      });
+
+      const imgData = canvas.toDataURL('image/jpeg', 0.95);
+      const imgWidth = 210;
+      const imgHeight = (canvas.height * imgWidth) / canvas.width;
+
+      pdf.addImage(imgData, 'JPEG', 0, 0, imgWidth, imgHeight);
+
+      // Télécharger
+      pdf.save(`${contractType}_${employeeName}_${new Date().toISOString().split('T')[0]}.pdf`);
+
+      // Nettoyer
+      document.body.removeChild(element);
 
       setDownloaded(true);
       toast.success('PDF téléchargé avec succès');
