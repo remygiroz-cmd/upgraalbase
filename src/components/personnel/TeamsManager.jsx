@@ -1,8 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
-import { Plus, Trash2, Edit2, GripHorizontal } from 'lucide-react';
+import { Plus, Trash2, Edit2, GripVertical } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -16,6 +16,7 @@ export default function TeamsManager() {
   const [showForm, setShowForm] = useState(false);
   const [editingTeam, setEditingTeam] = useState(null);
   const [confirmDelete, setConfirmDelete] = useState(null);
+  const [localEmployees, setLocalEmployees] = useState(null);
 
   const { data: teams = [], isLoading: teamsLoading } = useQuery({
     queryKey: ['teams'],
@@ -26,6 +27,9 @@ export default function TeamsManager() {
     queryKey: ['employees'],
     queryFn: () => base44.entities.Employee.list('last_name')
   });
+
+  // Use local state if it exists, otherwise use query data
+  const displayEmployees = localEmployees || employees;
 
   const createTeamMutation = useMutation({
     mutationFn: (data) => base44.entities.Team.create(data),
@@ -58,38 +62,48 @@ export default function TeamsManager() {
     setEditingTeam(null);
   };
 
-  const assignEmployeeMutation = useMutation({
-    mutationFn: ({ empId, teamId }) => {
-      const teamName = teamId ? teams.find(t => t.id === teamId)?.name : '';
-      return base44.entities.Employee.update(empId, { team_id: teamId, team: teamName });
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['employees'] });
+  const handleDragEnd = useCallback(async (result) => {
+    const { draggableId, destination, source } = result;
+
+    if (!destination) return;
+    if (destination.droppableId === source.droppableId && destination.index === source.index) return;
+
+    const empId = draggableId.replace('employee-', '');
+    const newTeamId = destination.droppableId === 'unassigned' ? null : destination.droppableId;
+
+    // Optimistic update
+    const updatedEmps = displayEmployees.map(e => {
+      if (e.id === empId) {
+        return {
+          ...e,
+          team_id: newTeamId,
+          team: newTeamId ? teams.find(t => t.id === newTeamId)?.name : ''
+        };
+      }
+      return e;
+    });
+    setLocalEmployees(updatedEmps);
+
+    try {
+      await base44.entities.Employee.update(empId, {
+        team_id: newTeamId,
+        team: newTeamId ? teams.find(t => t.id === newTeamId)?.name : ''
+      });
+      await queryClient.invalidateQueries({ queryKey: ['employees'] });
+      setLocalEmployees(null);
       toast.success('Employé assigné');
-    },
-    onError: () => {
+    } catch (error) {
+      setLocalEmployees(null);
       queryClient.invalidateQueries({ queryKey: ['employees'] });
       toast.error('Erreur lors de l\'assignation');
     }
-  });
+  }, [displayEmployees, teams, queryClient]);
 
-  const handleDragEnd = (result) => {
-    const { draggableId, destination } = result;
-
-    if (!destination) return;
-
-    const empId = draggableId.replace('employee-', '');
-    const teamId = destination.droppableId === 'unassigned' ? null : destination.droppableId;
-
-    assignEmployeeMutation.mutate({ empId, teamId });
-  };
+  const teamsList = teams.filter(t => t.is_active);
 
   if (teamsLoading) {
     return <div className="text-center py-8 text-gray-600">Chargement...</div>;
   }
-
-  const unassignedEmployees = employees.filter(e => !e.team_id && e.is_active);
-  const teamsList = teams.filter(t => t.is_active);
 
   return (
     <div>
@@ -107,7 +121,7 @@ export default function TeamsManager() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
           {/* Teams */}
           {teamsList.map((team) => {
-            const teamEmployees = employees.filter(e => e.team_id === team.id && e.is_active);
+            const teamEmployees = displayEmployees.filter(e => e.team_id === team.id && e.is_active);
             return (
               <Droppable key={team.id} droppableId={team.id}>
                 {(provided, snapshot) => (
@@ -159,12 +173,13 @@ export default function TeamsManager() {
                               <div
                                 ref={provided.innerRef}
                                 {...provided.draggableProps}
+                                {...provided.dragHandleProps}
                                 className={cn(
-                                  "bg-gray-50 border border-gray-200 rounded-lg p-2 flex items-center gap-2 cursor-move transition-all",
-                                  snapshot.isDragging && "shadow-lg bg-white border-orange-400"
+                                  "bg-gray-50 border border-gray-200 rounded-lg p-2 flex items-center gap-2 transition-all",
+                                  snapshot.isDragging && "shadow-lg bg-white border-orange-400 opacity-100"
                                 )}
                               >
-                                <GripHorizontal className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                                <GripVertical className="w-4 h-4 text-gray-400 flex-shrink-0" />
                                 <div className="flex-1 min-w-0">
                                   <p className="text-sm font-medium text-gray-900 truncate">
                                     {emp.first_name} {emp.last_name}
@@ -195,39 +210,44 @@ export default function TeamsManager() {
               ref={provided.innerRef}
               {...provided.droppableProps}
               className={cn(
-                "bg-white border-2 rounded-lg p-4 transition-all",
+                "bg-white border-2 rounded-lg p-4 transition-all min-h-[100px]",
                 snapshot.isDraggingOver ? "border-orange-400 bg-orange-50" : "border-gray-300"
               )}
             >
-              <h3 className="font-semibold text-gray-900 mb-4">Sans équipe ({unassignedEmployees.length})</h3>
-              <div className="space-y-2 min-h-[50px]">
-                {unassignedEmployees.length === 0 ? (
+              <h3 className="font-semibold text-gray-900 mb-4">
+                Sans équipe ({displayEmployees.filter(e => !e.team_id && e.is_active).length})
+              </h3>
+              <div className="space-y-2">
+                {displayEmployees.filter(e => !e.team_id && e.is_active).length === 0 ? (
                   <p className="text-xs text-gray-400 text-center py-4">Tous les employés sont assignés</p>
                 ) : (
-                  unassignedEmployees.map((emp, index) => (
-                    <Draggable key={emp.id} draggableId={`employee-${emp.id}`} index={index}>
-                      {(provided, snapshot) => (
-                        <div
-                          ref={provided.innerRef}
-                          {...provided.draggableProps}
-                          className={cn(
-                            "bg-gray-50 border border-gray-200 rounded-lg p-2 flex items-center gap-2 cursor-move transition-all",
-                            snapshot.isDragging && "shadow-lg bg-white border-orange-400"
-                          )}
-                        >
-                          <GripHorizontal className="w-4 h-4 text-gray-400 flex-shrink-0" />
-                          <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium text-gray-900 truncate">
-                              {emp.first_name} {emp.last_name}
-                            </p>
-                            {emp.position && (
-                              <p className="text-xs text-gray-600 truncate">{emp.position}</p>
+                  displayEmployees
+                    .filter(e => !e.team_id && e.is_active)
+                    .map((emp, index) => (
+                      <Draggable key={emp.id} draggableId={`employee-${emp.id}`} index={index}>
+                        {(provided, snapshot) => (
+                          <div
+                            ref={provided.innerRef}
+                            {...provided.draggableProps}
+                            {...provided.dragHandleProps}
+                            className={cn(
+                              "bg-gray-50 border border-gray-200 rounded-lg p-2 flex items-center gap-2 transition-all",
+                              snapshot.isDragging && "shadow-lg bg-white border-orange-400 opacity-100"
                             )}
+                          >
+                            <GripVertical className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-medium text-gray-900 truncate">
+                                {emp.first_name} {emp.last_name}
+                              </p>
+                              {emp.position && (
+                                <p className="text-xs text-gray-600 truncate">{emp.position}</p>
+                              )}
+                            </div>
                           </div>
-                        </div>
-                      )}
-                    </Draggable>
-                  ))
+                        )}
+                      </Draggable>
+                    ))
                 )}
               </div>
               {provided.placeholder}
