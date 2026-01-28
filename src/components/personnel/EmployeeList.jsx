@@ -1,24 +1,48 @@
 import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
-import { User, Plus, Search, Mail, Phone, MapPin, Archive } from 'lucide-react';
+import { User, Plus, Search, Mail, Phone, MapPin, Archive, Lock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import EmptyState from '@/components/ui/EmptyState';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import EmployeeFormModal from './EmployeeFormModal';
+import EmployeeDetailModal from './EmployeeDetailModal';
 import { cn } from '@/lib/utils';
+import { toast } from 'sonner';
 
 export default function EmployeeList() {
   const [searchQuery, setSearchQuery] = useState('');
   const [showForm, setShowForm] = useState(false);
   const [editingEmployee, setEditingEmployee] = useState(null);
+  const [viewingEmployee, setViewingEmployee] = useState(null);
   const [showArchived, setShowArchived] = useState(false);
+
+  const { data: currentUser } = useQuery({
+    queryKey: ['currentUser'],
+    queryFn: () => base44.auth.me()
+  });
+
+  const { data: establishments = [] } = useQuery({
+    queryKey: ['establishment'],
+    queryFn: () => base44.entities.Establishment.list()
+  });
 
   const { data: employees = [], isLoading } = useQuery({
     queryKey: ['employees'],
     queryFn: () => base44.entities.Employee.list('last_name')
   });
+
+  // Check if current user is a manager/admin
+  const isManager = React.useMemo(() => {
+    if (!currentUser) return false;
+    if (currentUser.role === 'admin') return true;
+    
+    const establishment = establishments[0];
+    if (!establishment?.managers) return false;
+    
+    return establishment.managers.some(m => m.email?.toLowerCase() === currentUser.email?.toLowerCase());
+  }, [currentUser, establishments]);
 
   const filteredEmployees = employees.filter(emp => {
     // Filter by active/archived status
@@ -33,8 +57,20 @@ export default function EmployeeList() {
   });
 
   const handleEdit = (emp) => {
+    if (!isManager && emp.email !== currentUser?.email) {
+      toast.error('Vous pouvez uniquement modifier votre propre fiche');
+      return;
+    }
     setEditingEmployee(emp);
     setShowForm(true);
+  };
+
+  const handleView = (emp) => {
+    if (!isManager && emp.email !== currentUser?.email) {
+      toast.error('Vous pouvez uniquement consulter votre propre fiche');
+      return;
+    }
+    setViewingEmployee(emp);
   };
 
   const handleCloseForm = () => {
@@ -59,24 +95,28 @@ export default function EmployeeList() {
             className="pl-10 bg-white border-gray-300 text-gray-900 min-h-[44px]"
           />
         </div>
-        <Button
-          variant={showArchived ? "outline" : "default"}
-          onClick={() => setShowArchived(!showArchived)}
-          className={cn(
-            "min-h-[44px]",
-            !showArchived && "border-gray-400 text-gray-700 hover:bg-gray-100"
-          )}
-        >
-          <Archive className="w-4 h-4 sm:mr-2" />
-          <span className="hidden sm:inline">{showArchived ? 'Actifs' : 'Archives'}</span>
-        </Button>
-        <Button
-          onClick={() => setShowForm(true)}
-          className="bg-orange-600 hover:bg-orange-700 min-h-[44px]"
-        >
-          <Plus className="w-4 h-4 sm:mr-2" />
-          <span className="hidden sm:inline">Ajouter</span>
-        </Button>
+        {isManager && (
+          <>
+            <Button
+              variant={showArchived ? "outline" : "default"}
+              onClick={() => setShowArchived(!showArchived)}
+              className={cn(
+                "min-h-[44px]",
+                !showArchived && "border-gray-400 text-gray-700 hover:bg-gray-100"
+              )}
+            >
+              <Archive className="w-4 h-4 sm:mr-2" />
+              <span className="hidden sm:inline">{showArchived ? 'Actifs' : 'Archives'}</span>
+            </Button>
+            <Button
+              onClick={() => setShowForm(true)}
+              className="bg-orange-600 hover:bg-orange-700 min-h-[44px]"
+            >
+              <Plus className="w-4 h-4 sm:mr-2" />
+              <span className="hidden sm:inline">Ajouter</span>
+            </Button>
+          </>
+        )}
       </div>
 
       {/* Employee list */}
@@ -109,7 +149,8 @@ export default function EmployeeList() {
             <EmployeeCard
               key={emp.id}
               employee={emp}
-              onClick={() => handleEdit(emp)}
+              onClick={() => handleView(emp)}
+              canView={isManager || emp.email === currentUser?.email}
             />
           ))}
         </div>
@@ -121,6 +162,15 @@ export default function EmployeeList() {
         onClose={handleCloseForm}
         employee={editingEmployee}
       />
+
+      {/* Detail Modal */}
+      <EmployeeDetailModal
+        employee={viewingEmployee}
+        open={!!viewingEmployee}
+        onOpenChange={(open) => !open && setViewingEmployee(null)}
+        onEdit={handleEdit}
+        isManager={isManager}
+      />
     </div>
   );
 }
@@ -128,10 +178,12 @@ export default function EmployeeList() {
 function EmployeeCard({ employee, onClick, canView = true }) {
   return (
     <button
-      onClick={onClick}
+      onClick={canView ? onClick : () => toast.error('Accès restreint - Vous pouvez uniquement consulter votre propre fiche')}
       className={cn(
-        "w-full p-4 rounded-xl border-2 text-left transition-all hover:shadow-lg active:scale-[0.98]",
-        "bg-white border-gray-300 hover:border-orange-400"
+        "w-full p-4 rounded-xl border-2 text-left transition-all active:scale-[0.98]",
+        canView 
+          ? "bg-white border-gray-300 hover:border-orange-400 hover:shadow-lg" 
+          : "bg-gray-50 border-gray-200 cursor-not-allowed opacity-60"
       )}
     >
       <div className="flex items-center gap-3 mb-3">
@@ -147,35 +199,41 @@ function EmployeeCard({ employee, onClick, canView = true }) {
           </div>
         )}
         <div className="flex-1 min-w-0">
-          <h3 className="font-semibold text-gray-900 truncate">
+          <h3 className="font-semibold text-gray-900 truncate flex items-center gap-2">
             {employee.first_name} {employee.last_name}
+            {!canView && <Lock className="w-3 h-3 text-gray-400" />}
           </h3>
-          {employee.position && (
+          {canView && employee.position && (
             <p className="text-xs text-gray-600 truncate">{employee.position}</p>
+          )}
+          {!canView && (
+            <p className="text-xs text-gray-500">Informations restreintes</p>
           )}
         </div>
       </div>
 
-      <div className="space-y-1.5 text-xs text-gray-600">
-        {employee.email && (
-          <div className="flex items-center gap-2 truncate">
-            <Mail className="w-3 h-3 flex-shrink-0" />
-            <span className="truncate">{employee.email}</span>
-          </div>
-        )}
-        {employee.phone && (
-          <div className="flex items-center gap-2 truncate">
-            <Phone className="w-3 h-3 flex-shrink-0" />
-            <span className="truncate">{employee.phone}</span>
-          </div>
-        )}
-        {employee.address && (
-          <div className="flex items-center gap-2 truncate">
-            <MapPin className="w-3 h-3 flex-shrink-0" />
-            <span className="truncate">{employee.address}</span>
-          </div>
-        )}
-      </div>
+      {canView && (
+        <div className="space-y-1.5 text-xs text-gray-600">
+          {employee.email && (
+            <div className="flex items-center gap-2 truncate">
+              <Mail className="w-3 h-3 flex-shrink-0" />
+              <span className="truncate">{employee.email}</span>
+            </div>
+          )}
+          {employee.phone && (
+            <div className="flex items-center gap-2 truncate">
+              <Phone className="w-3 h-3 flex-shrink-0" />
+              <span className="truncate">{employee.phone}</span>
+            </div>
+          )}
+          {employee.address && (
+            <div className="flex items-center gap-2 truncate">
+              <MapPin className="w-3 h-3 flex-shrink-0" />
+              <span className="truncate">{employee.address}</span>
+            </div>
+          )}
+        </div>
+      )}
     </button>
   );
 }
