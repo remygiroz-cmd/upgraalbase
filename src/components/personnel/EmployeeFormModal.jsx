@@ -5,6 +5,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
 import { Trash2, Archive, Upload, User } from 'lucide-react';
 import ConfirmDialog from '@/components/ui/ConfirmDialog';
@@ -166,6 +167,35 @@ export default function EmployeeFormModal({ open, onClose, employee }) {
               placeholder="Surnom de l'employé"
               className="bg-white border-gray-300 text-gray-900"
             />
+          </div>
+
+          {/* Sexe et Nationalité */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <Label className="text-gray-900">Sexe</Label>
+              <Select
+                value={formData.gender || ''}
+                onValueChange={(value) => setFormData({ ...formData, gender: value })}
+              >
+                <SelectTrigger className="bg-white border-gray-300 text-gray-900">
+                  <SelectValue placeholder="Sélectionner" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="male">Homme</SelectItem>
+                  <SelectItem value="female">Femme</SelectItem>
+                  <SelectItem value="other">Autre</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label className="text-gray-900">Nationalité</Label>
+              <Input
+                value={formData.nationality || ''}
+                onChange={(e) => setFormData({ ...formData, nationality: e.target.value })}
+                placeholder="Nationalité"
+                className="bg-white border-gray-300 text-gray-900"
+              />
+            </div>
           </div>
 
           {/* Date et lieu de naissance */}
