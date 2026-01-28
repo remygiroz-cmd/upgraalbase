@@ -44,6 +44,11 @@ export default function EmployeeFormModal({ open, onClose, employee, isManager =
     gross_salary: null,
     gross_hourly_rate: null,
     payment_method: '',
+    contract_type: '',
+    cdd_reason: '',
+    cdd_replacement_employee: '',
+    cdd_replacement_reason: '',
+    cdd_custom_reason: '',
     payslips: [],
     documents: [],
     is_active: true
@@ -134,6 +139,11 @@ export default function EmployeeFormModal({ open, onClose, employee, isManager =
         gross_salary: null,
         gross_hourly_rate: null,
         payment_method: '',
+        contract_type: '',
+        cdd_reason: '',
+        cdd_replacement_employee: '',
+        cdd_replacement_reason: '',
+        cdd_custom_reason: '',
         payslips: [],
         documents: [],
         is_active: true
@@ -509,7 +519,7 @@ ${currentUser.email || '-'}`;
                   <Label className="text-gray-900">Type de contrat</Label>
                   <Select
                     value={formData.contract_type || ''}
-                    onValueChange={(value) => setFormData({ ...formData, contract_type: value })}
+                    onValueChange={(value) => setFormData({ ...formData, contract_type: value, cdd_reason: '', cdd_replacement_employee: '', cdd_replacement_reason: '', cdd_custom_reason: '' })}
                     disabled={!isManager}
                   >
                     <SelectTrigger className="bg-white border-gray-300 text-gray-900">
@@ -541,6 +551,140 @@ ${currentUser.email || '-'}`;
                   </Select>
                 </div>
               </div>
+
+              {/* Section Motif CDD - Affichée seulement si CDD */}
+              {formData.contract_type === 'cdd' && (
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 space-y-4">
+                  <Label className="text-gray-900 font-semibold">Motif du CDD *</Label>
+                  <div className="space-y-3">
+                    {/* Remplacement d'un salarié absent */}
+                    <label className="flex items-start gap-3 p-3 border border-gray-300 rounded-lg hover:bg-gray-50 cursor-pointer">
+                      <input
+                        type="radio"
+                        name="cdd_reason"
+                        value="replacement"
+                        checked={formData.cdd_reason === 'replacement'}
+                        onChange={(e) => setFormData({ ...formData, cdd_reason: e.target.value, cdd_custom_reason: '' })}
+                        disabled={!isManager}
+                        className="mt-1"
+                      />
+                      <div className="flex-1">
+                        <p className="font-medium text-gray-900">Remplacement d'un salarié absent</p>
+                        {formData.cdd_reason === 'replacement' && (
+                          <div className="mt-3 space-y-3 ml-6 pt-3 border-t border-gray-300">
+                            <div>
+                              <Label className="text-sm text-gray-900">Nom du salarié à remplacer</Label>
+                              <Input
+                                value={formData.cdd_replacement_employee || ''}
+                                onChange={(e) => setFormData({ ...formData, cdd_replacement_employee: e.target.value })}
+                                placeholder="Nom du salarié"
+                                className="bg-white border-gray-300 text-gray-900 mt-1"
+                                disabled={!isManager}
+                              />
+                            </div>
+                            <div>
+                              <Label className="text-sm text-gray-900">Motif de l'absence</Label>
+                              <Select
+                                value={formData.cdd_replacement_reason || ''}
+                                onValueChange={(value) => setFormData({ ...formData, cdd_replacement_reason: value })}
+                                disabled={!isManager}
+                              >
+                                <SelectTrigger className="bg-white border-gray-300 text-gray-900">
+                                  <SelectValue placeholder="Sélectionner" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="sick_leave">Arrêt maladie</SelectItem>
+                                  <SelectItem value="maternity_leave">Congé maternité</SelectItem>
+                                  <SelectItem value="paternity_leave">Congé paternité</SelectItem>
+                                  <SelectItem value="paid_leave">Congés payés</SelectItem>
+                                  <SelectItem value="training">Formation</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </label>
+
+                    {/* Accroissement temporaire d'activité */}
+                    <label className="flex items-start gap-3 p-3 border border-gray-300 rounded-lg hover:bg-gray-50 cursor-pointer">
+                      <input
+                        type="radio"
+                        name="cdd_reason"
+                        value="temporary_activity"
+                        checked={formData.cdd_reason === 'temporary_activity'}
+                        onChange={(e) => setFormData({ ...formData, cdd_reason: e.target.value, cdd_replacement_employee: '', cdd_replacement_reason: '', cdd_custom_reason: '' })}
+                        disabled={!isManager}
+                        className="mt-1"
+                      />
+                      <div>
+                        <p className="font-medium text-gray-900">Accroissement temporaire d'activité</p>
+                      </div>
+                    </label>
+
+                    {/* Emploi saisonnier */}
+                    <label className="flex items-start gap-3 p-3 border border-gray-300 rounded-lg hover:bg-gray-50 cursor-pointer">
+                      <input
+                        type="radio"
+                        name="cdd_reason"
+                        value="seasonal"
+                        checked={formData.cdd_reason === 'seasonal'}
+                        onChange={(e) => setFormData({ ...formData, cdd_reason: e.target.value, cdd_replacement_employee: '', cdd_replacement_reason: '', cdd_custom_reason: '' })}
+                        disabled={!isManager}
+                        className="mt-1"
+                      />
+                      <div>
+                        <p className="font-medium text-gray-900">Emploi saisonnier</p>
+                      </div>
+                    </label>
+
+                    {/* Apprentissage ou professionnalisation */}
+                    <label className="flex items-start gap-3 p-3 border border-gray-300 rounded-lg hover:bg-gray-50 cursor-pointer">
+                      <input
+                        type="radio"
+                        name="cdd_reason"
+                        value="apprenticeship"
+                        checked={formData.cdd_reason === 'apprenticeship'}
+                        onChange={(e) => setFormData({ ...formData, cdd_reason: e.target.value, cdd_replacement_employee: '', cdd_replacement_reason: '', cdd_custom_reason: '' })}
+                        disabled={!isManager}
+                        className="mt-1"
+                      />
+                      <div>
+                        <p className="font-medium text-gray-900">Contrat d'apprentissage ou de professionnalisation</p>
+                      </div>
+                    </label>
+
+                    {/* Remplacement en cascade */}
+                    <label className="flex items-start gap-3 p-3 border border-gray-300 rounded-lg hover:bg-gray-50 cursor-pointer">
+                      <input
+                        type="radio"
+                        name="cdd_reason"
+                        value="cascade_replacement"
+                        checked={formData.cdd_reason === 'cascade_replacement'}
+                        onChange={(e) => setFormData({ ...formData, cdd_reason: e.target.value, cdd_replacement_employee: '', cdd_replacement_reason: '' })}
+                        disabled={!isManager}
+                        className="mt-1"
+                      />
+                      <div className="flex-1">
+                        <p className="font-medium text-gray-900">Remplacement en cascade</p>
+                        {formData.cdd_reason === 'cascade_replacement' && (
+                          <div className="mt-3 ml-6 pt-3 border-t border-gray-300">
+                            <Label className="text-sm text-gray-900">Détail du motif</Label>
+                            <textarea
+                              value={formData.cdd_custom_reason || ''}
+                              onChange={(e) => setFormData({ ...formData, cdd_custom_reason: e.target.value })}
+                              placeholder="Précisez le motif du remplacement en cascade..."
+                              className="w-full mt-1 p-3 border border-gray-300 rounded-lg bg-white text-gray-900 text-sm"
+                              rows="3"
+                              disabled={!isManager}
+                            />
+                          </div>
+                        )}
+                      </div>
+                    </label>
+                  </div>
+                </div>
+              )}
 
               {/* Dates de contrat */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
