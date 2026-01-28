@@ -1,14 +1,18 @@
 import React, { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
-import { FileText, Download, Printer } from 'lucide-react';
+import { FileText, Download, Printer, Upload } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import PageHeader from '@/components/ui/PageHeader';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import EmptyState from '@/components/ui/EmptyState';
+import RegistryImportModal from '@/components/personnel/RegistryImportModal';
 import { cn } from '@/lib/utils';
 
 export default function RegistrePersonnel() {
+  const queryClient = useQueryClient();
+  const [showImport, setShowImport] = useState(false);
+
   const { data: currentUser } = useQuery({
     queryKey: ['currentUser'],
     queryFn: () => base44.auth.me()
@@ -100,6 +104,13 @@ export default function RegistrePersonnel() {
             {isManager && (
               <>
                 <Button
+                  onClick={() => setShowImport(true)}
+                  className="bg-orange-600 hover:bg-orange-700"
+                >
+                  <Upload className="w-4 h-4 mr-2" />
+                  Importer
+                </Button>
+                <Button
                   onClick={handleDownloadCSV}
                   variant="outline"
                   className="border-gray-300 text-gray-700 hover:bg-gray-100"
@@ -183,6 +194,15 @@ export default function RegistrePersonnel() {
           </table>
         </div>
       )}
+
+      <RegistryImportModal
+        open={showImport}
+        onOpenChange={setShowImport}
+        onSuccess={() => {
+          queryClient.invalidateQueries({ queryKey: ['personnelRegistry'] });
+          setShowImport(false);
+        }}
+      />
 
       <style>{`
         @media print {
