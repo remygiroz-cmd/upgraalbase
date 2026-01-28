@@ -178,12 +178,12 @@ export default function EmployeeList() {
 function EmployeeCard({ employee, onClick, canView = true }) {
   return (
     <button
-      onClick={canView ? onClick : () => toast.error('Accès restreint - Vous pouvez uniquement consulter votre propre fiche')}
+      onClick={onClick}
       className={cn(
         "w-full p-4 rounded-xl border-2 text-left transition-all active:scale-[0.98]",
         canView 
           ? "bg-white border-gray-300 hover:border-orange-400 hover:shadow-lg" 
-          : "bg-gray-50 border-gray-200 cursor-not-allowed opacity-60"
+          : "bg-white border-gray-300 hover:border-gray-400 hover:shadow-md"
       )}
     >
       <div className="flex items-center gap-3 mb-3">
@@ -203,37 +203,38 @@ function EmployeeCard({ employee, onClick, canView = true }) {
             {employee.first_name} {employee.last_name}
             {!canView && <Lock className="w-3 h-3 text-gray-400" />}
           </h3>
-          {canView && employee.position && (
-            <p className="text-xs text-gray-600 truncate">{employee.position}</p>
+          {employee.nickname && (
+            <p className="text-xs text-gray-500 italic truncate">"{employee.nickname}"</p>
           )}
-          {!canView && (
-            <p className="text-xs text-gray-500">Informations restreintes</p>
+          {employee.position && (
+            <p className="text-xs text-orange-600 truncate">{employee.position}</p>
+          )}
+          {employee.team && (
+            <p className="text-xs text-gray-600 truncate">{employee.team}</p>
           )}
         </div>
       </div>
 
-      {canView && (
-        <div className="space-y-1.5 text-xs text-gray-600">
-          {employee.email && (
-            <div className="flex items-center gap-2 truncate">
-              <Mail className="w-3 h-3 flex-shrink-0" />
-              <span className="truncate">{employee.email}</span>
-            </div>
-          )}
-          {employee.phone && (
-            <div className="flex items-center gap-2 truncate">
-              <Phone className="w-3 h-3 flex-shrink-0" />
-              <span className="truncate">{employee.phone}</span>
-            </div>
-          )}
-          {employee.address && (
-            <div className="flex items-center gap-2 truncate">
-              <MapPin className="w-3 h-3 flex-shrink-0" />
-              <span className="truncate">{employee.address}</span>
-            </div>
-          )}
-        </div>
-      )}
+      <div className="space-y-1.5 text-xs text-gray-600">
+        {(canView || employee.show_phone_in_directory) && employee.phone && (
+          <div className="flex items-center gap-2 truncate">
+            <Phone className="w-3 h-3 flex-shrink-0" />
+            <span className="truncate">{employee.phone}</span>
+          </div>
+        )}
+        {canView && employee.email && (
+          <div className="flex items-center gap-2 truncate">
+            <Mail className="w-3 h-3 flex-shrink-0" />
+            <span className="truncate">{employee.email}</span>
+          </div>
+        )}
+        {canView && employee.address && (
+          <div className="flex items-center gap-2 truncate">
+            <MapPin className="w-3 h-3 flex-shrink-0" />
+            <span className="truncate">{employee.address}</span>
+          </div>
+        )}
+      </div>
     </button>
   );
 }
