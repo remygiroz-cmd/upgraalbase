@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
-import { Trash2, Archive, Upload, User } from 'lucide-react';
+import { Trash2, Archive, Upload, User, FileText, Download } from 'lucide-react';
 import ConfirmDialog from '@/components/ui/ConfirmDialog';
 
 export default function EmployeeFormModal({ open, onClose, employee }) {
@@ -34,6 +34,7 @@ export default function EmployeeFormModal({ open, onClose, employee }) {
     gross_hourly_rate: '',
     payment_method: '',
     payslips: [],
+    documents: [],
     is_active: true
   });
 
@@ -104,6 +105,7 @@ export default function EmployeeFormModal({ open, onClose, employee }) {
         gross_hourly_rate: '',
         payment_method: '',
         payslips: [],
+        documents: [],
         is_active: true
       });
     }
@@ -165,10 +167,11 @@ export default function EmployeeFormModal({ open, onClose, employee }) {
           </div>
 
           <Tabs defaultValue="infos" className="w-full">
-            <TabsList className="grid w-full grid-cols-3 bg-gray-100">
-              <TabsTrigger value="infos" className="data-[state=active]:bg-white">Informations</TabsTrigger>
-              <TabsTrigger value="contrat" className="data-[state=active]:bg-white">Contrat</TabsTrigger>
-              <TabsTrigger value="remuneration" className="data-[state=active]:bg-white">Rémunération</TabsTrigger>
+            <TabsList className="grid w-full grid-cols-4 bg-gray-100">
+              <TabsTrigger value="infos" className="data-[state=active]:bg-white text-xs sm:text-sm">Informations</TabsTrigger>
+              <TabsTrigger value="contrat" className="data-[state=active]:bg-white text-xs sm:text-sm">Contrat</TabsTrigger>
+              <TabsTrigger value="remuneration" className="data-[state=active]:bg-white text-xs sm:text-sm">Rémunération</TabsTrigger>
+              <TabsTrigger value="documents" className="data-[state=active]:bg-white text-xs sm:text-sm">Documents</TabsTrigger>
             </TabsList>
 
             <TabsContent value="infos" className="space-y-4 mt-4">
@@ -637,6 +640,118 @@ export default function EmployeeFormModal({ open, onClose, employee }) {
                     />
                   </label>
                 </div>
+              </div>
+            </TabsContent>
+
+            <TabsContent value="documents" className="space-y-4 mt-4">
+              {/* Catégories de documents */}
+              <div>
+                <Label className="text-gray-900 mb-3 block">Documents de l'employé</Label>
+                
+                {/* Liste des documents existants */}
+                {formData.documents && formData.documents.length > 0 && (
+                  <div className="space-y-2 mb-4">
+                    {formData.documents.map((doc, index) => (
+                      <div key={index} className="flex items-center justify-between p-3 bg-gray-50 border border-gray-300 rounded-lg">
+                        <div className="flex items-center gap-3 flex-1 min-w-0">
+                          <FileText className="w-5 h-5 text-gray-500 flex-shrink-0" />
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium text-gray-900 truncate">{doc.name}</p>
+                            <div className="flex items-center gap-2 flex-wrap">
+                              {doc.category && (
+                                <span className="text-xs text-gray-500 bg-gray-200 px-2 py-0.5 rounded">
+                                  {doc.category}
+                                </span>
+                              )}
+                              <span className="text-xs text-gray-400">
+                                {new Date(doc.uploaded_at).toLocaleDateString('fr-FR')}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                        <div className="flex gap-2 flex-shrink-0">
+                          <a
+                            href={doc.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-blue-600 hover:text-blue-700 p-2"
+                            title="Télécharger"
+                          >
+                            <Download className="w-4 h-4" />
+                          </a>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const newDocs = formData.documents.filter((_, i) => i !== index);
+                              setFormData({ ...formData, documents: newDocs });
+                            }}
+                            className="text-red-600 hover:text-red-700 p-2"
+                            title="Supprimer"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Upload nouveau document */}
+                <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
+                  <label className="cursor-pointer">
+                    <Upload className="w-10 h-10 text-gray-400 mx-auto mb-3" />
+                    <p className="text-sm text-gray-600 mb-1 font-medium">Ajouter un document</p>
+                    <p className="text-xs text-gray-500 mb-2">PDF, images, max 10MB</p>
+                    <input
+                      type="file"
+                      accept=".pdf,.png,.jpg,.jpeg,.doc,.docx"
+                      onChange={async (e) => {
+                        const file = e.target.files?.[0];
+                        if (!file) return;
+
+                        setUploading(true);
+                        try {
+                          const { file_url } = await base44.integrations.Core.UploadFile({ file });
+                          
+                          const docName = prompt('Nom du document (ex: Contrat CDI)');
+                          if (!docName) {
+                            toast.error('Nom requis');
+                            return;
+                          }
+
+                          const docCategory = prompt('Catégorie (ex: Contrat, Identité, Visite médicale, Avertissement, DPAE, Courrier)');
+                          
+                          const newDocument = {
+                            name: docName,
+                            url: file_url,
+                            category: docCategory || 'Autre',
+                            uploaded_at: new Date().toISOString()
+                          };
+
+                          setFormData({
+                            ...formData,
+                            documents: [...(formData.documents || []), newDocument]
+                          });
+                          toast.success('Document ajouté');
+                        } catch (error) {
+                          toast.error('Erreur lors du téléchargement');
+                        } finally {
+                          setUploading(false);
+                        }
+                      }}
+                      disabled={uploading}
+                      className="hidden"
+                    />
+                  </label>
+                  {uploading && (
+                    <p className="text-xs text-gray-500 mt-2">Téléchargement en cours...</p>
+                  )}
+                </div>
+
+                <p className="text-xs text-gray-500 mt-2">
+                  Types de documents : Contrats, Avenants, Papiers d'identité, Permis de conduire, 
+                  Avertissements, Courriers, DPAE, Visites médicales, etc.
+                </p>
               </div>
             </TabsContent>
           </Tabs>
