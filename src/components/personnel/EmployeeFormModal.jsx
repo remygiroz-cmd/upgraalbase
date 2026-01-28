@@ -25,6 +25,7 @@ export default function EmployeeFormModal({ open, onClose, employee }) {
     address: '',
     email: '',
     phone: '',
+    show_phone_in_directory: false,
     social_security_number: '',
     iban: '',
     photo_url: '',
@@ -89,6 +90,7 @@ export default function EmployeeFormModal({ open, onClose, employee }) {
         address: '',
         email: '',
         phone: '',
+        show_phone_in_directory: false,
         social_security_number: '',
         iban: '',
         photo_url: '',
@@ -271,7 +273,20 @@ export default function EmployeeFormModal({ open, onClose, employee }) {
                 value={formData.phone}
                 onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                 className="bg-white border-gray-300 text-gray-900"
+                placeholder="+33 6 12 34 56 78"
               />
+              <div className="flex items-center gap-2 mt-2">
+                <input
+                  type="checkbox"
+                  id="show_phone_in_directory"
+                  checked={formData.show_phone_in_directory || false}
+                  onChange={(e) => setFormData({ ...formData, show_phone_in_directory: e.target.checked })}
+                  className="w-4 h-4 rounded border-gray-300"
+                />
+                <Label htmlFor="show_phone_in_directory" className="text-xs text-gray-600 font-normal cursor-pointer">
+                  Afficher le téléphone sur l'étiquette pour tous
+                </Label>
+              </div>
             </div>
           </div>
 
