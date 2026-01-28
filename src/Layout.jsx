@@ -51,27 +51,12 @@ export default function Layout({ children, currentPageName }) {
     enabled: !!currentUser?.role_id
   });
 
-  const { data: permissionOverride } = useQuery({
-    queryKey: ['permissionOverride', currentUser?.email],
-    queryFn: async () => {
-      if (!currentUser?.email) return null;
-      const overrides = await base44.entities.UserPermissionOverride.filter({ user_email: currentUser.email });
-      return overrides[0] || null;
-    },
-    enabled: !!currentUser?.email
-  });
-
   // Calculate effective permissions
   const hasPermission = (moduleKey) => {
     // Admin has all permissions
     if (currentUser?.role === 'admin') return true;
     
-    // Check override first
-    if (permissionOverride?.permissions_override?.[moduleKey] !== undefined) {
-      return permissionOverride.permissions_override[moduleKey];
-    }
-    
-    // Fall back to role permissions
+    // Check role permissions
     return userRole?.permissions?.[moduleKey] || false;
   };
 
