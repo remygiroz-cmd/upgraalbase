@@ -55,12 +55,13 @@ import Home from './pages/Home';
 import Invite from './pages/Invite';
 import MiseEnPlace from './pages/MiseEnPlace';
 import Parametres from './pages/Parametres';
+import Pertes from './pages/Pertes';
 import Recettes from './pages/Recettes';
+import RegistrePersonnel from './pages/RegistrePersonnel';
 import Stocks from './pages/Stocks';
 import Temperatures from './pages/Temperatures';
 import TravailDuJour from './pages/TravailDuJour';
-import Pertes from './pages/Pertes';
-import RegistrePersonnel from './pages/RegistrePersonnel';
+import TemplatesRH from './pages/TemplatesRH';
 import __Layout from './Layout.jsx';
 
 
@@ -73,12 +74,13 @@ export const PAGES = {
     "Invite": Invite,
     "MiseEnPlace": MiseEnPlace,
     "Parametres": Parametres,
+    "Pertes": Pertes,
     "Recettes": Recettes,
+    "RegistrePersonnel": RegistrePersonnel,
     "Stocks": Stocks,
     "Temperatures": Temperatures,
     "TravailDuJour": TravailDuJour,
-    "Pertes": Pertes,
-    "RegistrePersonnel": RegistrePersonnel,
+    "TemplatesRH": TemplatesRH,
 }
 
 export const pagesConfig = {
