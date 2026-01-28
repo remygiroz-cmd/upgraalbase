@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
-import { FileText, Download, Printer, Upload, Trash2 } from 'lucide-react';
+import { FileText, Download, Printer, Upload, Trash2, FileJson } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import PageHeader from '@/components/ui/PageHeader';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
@@ -10,6 +10,8 @@ import ConfirmDialog from '@/components/ui/ConfirmDialog';
 import RegistryImportModal from '@/components/personnel/RegistryImportModal';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import html2canvas from 'html2canvas';
+import jsPDF from 'jspdf';
 
 export default function RegistrePersonnel() {
   const queryClient = useQueryClient();
@@ -104,6 +106,43 @@ export default function RegistrePersonnel() {
     link.click();
   };
 
+  const handleDownloadPDF = async () => {
+    const element = document.getElementById('registry-table');
+    if (!element) return;
+
+    try {
+      const canvas = await html2canvas(element, {
+        scale: 2,
+        useCORS: true
+      });
+      const pdf = new jsPDF({
+        orientation: 'landscape',
+        unit: 'mm',
+        format: 'a4'
+      });
+      
+      const imgWidth = pdf.internal.pageSize.getWidth();
+      const imgHeight = (canvas.height * imgWidth) / canvas.width;
+      let heightLeft = imgHeight;
+      let position = 0;
+
+      const imgData = canvas.toDataURL('image/png');
+      pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+      heightLeft -= pdf.internal.pageSize.getHeight();
+
+      while (heightLeft > 0) {
+        position = heightLeft - imgHeight;
+        pdf.addPage();
+        pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+        heightLeft -= pdf.internal.pageSize.getHeight();
+      }
+
+      pdf.save(`registre-personnel-${new Date().toISOString().split('T')[0]}.pdf`);
+    } catch (error) {
+      toast.error('Erreur lors de la génération du PDF');
+    }
+  };
+
   if (isLoading) {
     return <LoadingSpinner />;
   }
@@ -131,7 +170,15 @@ export default function RegistrePersonnel() {
                   className="border-gray-300 text-gray-700 hover:bg-gray-100"
                 >
                   <Download className="w-4 h-4 mr-2" />
-                  Exporter CSV
+                  CSV
+                </Button>
+                <Button
+                  onClick={handleDownloadPDF}
+                  variant="outline"
+                  className="border-gray-300 text-gray-700 hover:bg-gray-100"
+                >
+                  <FileJson className="w-4 h-4 mr-2" />
+                  PDF
                 </Button>
                 <Button
                   onClick={handlePrint}
@@ -154,7 +201,7 @@ export default function RegistrePersonnel() {
           description="Aucun employé n'a été ajouté au registre pour le moment"
         />
       ) : (
-        <div className="bg-white border-2 border-gray-300 rounded-lg overflow-x-auto print:border-0">
+        <div id="registry-table" className="bg-white border-2 border-gray-300 rounded-lg overflow-x-auto print:border-0">
           <table className="w-full">
             <thead>
               <tr className="bg-gray-100 border-b-2 border-gray-300 print:bg-white">
@@ -243,23 +290,60 @@ export default function RegistrePersonnel() {
 
       <style>{`
         @media print {
-          body {
-            margin: 0;
-            padding: 10mm;
+          * {
+            margin: 0 !important;
+            padding: 0 !important;
           }
+          
+          body, html, #__next, main, [role="main"] {
+            margin: 0 !important;
+            padding: 0 !important;
+          }
+          
+          aside, nav, [class*="sidebar"], [class*="Sidebar"] {
+            display: none !important;
+          }
+          
+          body {
+            padding: 5mm;
+            font-size: 10px;
+          }
+          
           table {
             width: 100%;
             border-collapse: collapse;
+            page-break-inside: avoid;
           }
+          
+          thead {
+            display: table-header-group;
+            page-break-after: avoid;
+          }
+          
+          tr {
+            page-break-inside: avoid;
+          }
+          
           th, td {
-            border: 1px solid black;
-            padding: 8px;
+            border: 1px solid #000;
+            padding: 4px 3px;
             text-align: left;
-            font-size: 11px;
+            font-size: 9px;
+            white-space: nowrap;
           }
+          
           th {
-            background-color: #f0f0f0;
+            background-color: #e0e0e0 !important;
             font-weight: bold;
+          }
+          
+          .print\\:hidden {
+            display: none !important;
+          }
+          
+          div[class*="PageHeader"] {
+            margin-bottom: 10px;
+            page-break-after: avoid;
           }
         }
       `}</style>
