@@ -1,5 +1,4 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
-import puppeteer from 'npm:puppeteer@22.4.0';
 
 const getTemplateHtml = (templateCode) => {
   const templates = {
@@ -288,7 +287,6 @@ const calculateEssayEndDate = (startDate, essayDays = 7) => {
 };
 
 Deno.serve(async (req) => {
-  let browser = null;
   try {
     const base44 = createClientFromRequest(req);
     const user = await base44.auth.me();
@@ -362,28 +360,33 @@ Deno.serve(async (req) => {
       htmlContent = htmlContent.split(placeholder).join(String(value));
     });
 
-    // Générer le PDF avec Puppeteer
-    browser = await puppeteer.launch({
-      headless: 'new',
-      args: ['--no-sandbox', '--disable-setuid-sandbox']
+    // Générer le PDF via api.html2pdf.eu
+    const html2pdfResponse = await fetch('https://api.html2pdf.app/v1/generate', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        html: htmlContent,
+        options: {
+          pageSize: 'A4',
+          margin: 20,
+          filename: `${template.typeDocument}_${employee.last_name}_${employee.first_name}.pdf`
+        }
+      })
     });
 
-    const page = await browser.newPage();
-    await page.setContent(htmlContent, { waitUntil: 'networkidle2' });
-    
-    const pdfBuffer = await page.pdf({
-      format: 'A4',
-      margin: { top: '20mm', right: '20mm', bottom: '20mm', left: '20mm' },
-      printBackground: true,
-      scale: 1
-    });
+    if (!html2pdfResponse.ok) {
+      throw new Error(`PDF generation failed: ${html2pdfResponse.statusText}`);
+    }
 
-    await browser.close();
+    const pdfBuffer = await html2pdfResponse.arrayBuffer();
+    const pdfUint8 = new Uint8Array(pdfBuffer);
 
     // Uploader le PDF en stockage privé
     const fileName = `${template.templateCode}_${employee.last_name}_${employee.first_name}_${new Date().toISOString().split('T')[0]}.pdf`;
     const uploadResult = await base44.integrations.Core.UploadPrivateFile({
-      file: pdfBuffer
+      file: pdfUint8
     });
 
     // Créer l'URL signée
@@ -423,9 +426,5 @@ Deno.serve(async (req) => {
   } catch (error) {
     console.error('Error in generateContractPdf:', error);
     return Response.json({ error: error.message }, { status: 500 });
-  } finally {
-    if (browser) {
-      await browser.close().catch(() => {});
-    }
   }
 });
