@@ -20,12 +20,35 @@ export default function DocumentGenerationWizard({ open, onOpenChange, employee,
     { value: 'CDI', label: 'Contrat CDI' }
   ];
 
-  const templates = [
-    { id: 'CDD_RR', type: 'CDD', label: 'CDD - Restauration Rapide' },
-    { id: 'CDI_RR', type: 'CDI', label: 'CDI - Restauration Rapide' }
-  ];
+  // Filtrer les templates en fonction du typeContrat et tempsTravail de l'employé
+  const getAvailableTemplates = () => {
+    if (!documentType) return [];
+    
+    const employeeWorkType = employee?.work_time_type === 'full_time' ? 'TEMPS_COMPLET' : 'TEMPS_PARTIEL';
+    
+    const templateCodes = {
+      CDD: {
+        TEMPS_COMPLET: 'CDD_TC_RESTAURATION_RAPIDE',
+        TEMPS_PARTIEL: 'CDD_TP_RESTAURATION_RAPIDE'
+      },
+      CDI: {
+        TEMPS_COMPLET: 'CDI_TC_RESTAURATION_RAPIDE',
+        TEMPS_PARTIEL: 'CDI_TP_RESTAURATION_RAPIDE'
+      }
+    };
 
-  const filteredTemplates = templates.filter(t => t.type === documentType);
+    const templateCode = templateCodes[documentType]?.[employeeWorkType];
+    
+    return templateCode ? [{ 
+      id: templateCode, 
+      type: documentType,
+      label: documentType === 'CDD' 
+        ? `CDD - ${employeeWorkType === 'TEMPS_COMPLET' ? 'Temps complet' : 'Temps partiel'}`
+        : `CDI - ${employeeWorkType === 'TEMPS_COMPLET' ? 'Temps complet' : 'Temps partiel'}`
+    }] : [];
+  };
+
+  const filteredTemplates = getAvailableTemplates();
 
   const handleNextStep = () => {
     if (step === 1 && !documentType) {
