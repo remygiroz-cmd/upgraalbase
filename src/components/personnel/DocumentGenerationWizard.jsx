@@ -132,41 +132,53 @@ export default function DocumentGenerationWizard({ open, onOpenChange, employee,
       element.style.position = 'fixed';
       element.style.left = '-9999px';
       element.style.width = '210mm';
+      element.style.background = 'white';
       document.body.appendChild(element);
+
+      // Convertir l'HTML en canvas avec html2canvas
+      const canvas = await html2canvas(element, {
+        scale: 2,
+        useCORS: true,
+        logging: false,
+        backgroundColor: '#ffffff'
+      });
 
       // Créer le PDF avec jsPDF
       const pdf = new jsPDF({
         orientation: 'portrait',
         unit: 'mm',
-        format: 'a4',
-        compress: true
+        format: 'a4'
       });
 
-      const pageWidth = pdf.internal.pageSize.getWidth();
-      const pageHeight = pdf.internal.pageSize.getHeight();
-      const margin = 16; // 16mm de marges
+      const imgData = canvas.toDataURL('image/png');
+      const imgWidth = 210; // A4 width in mm
+      const imgHeight = (canvas.height * imgWidth) / canvas.width;
 
-      // Ajouter le contenu HTML au PDF
-      const content = element.innerHTML;
-      pdf.html(content, {
-        x: margin,
-        y: margin,
-        width: pageWidth - (2 * margin),
-        margin: [margin, margin, margin, margin],
-        fontFace: 'Arial',
-        fontSize: 11
-      });
+      let yPos = 0;
+      const pageHeight = 297; // A4 height in mm
+
+      // Ajouter la première page
+      pdf.addImage(imgData, 'PNG', 0, 0, imgWidth, imgHeight);
+      yPos += imgHeight;
+
+      // Ajouter les pages suivantes si nécessaire
+      while (yPos < imgHeight) {
+        pdf.addPage();
+        yPos -= pageHeight;
+        pdf.addImage(imgData, 'PNG', 0, -yPos, imgWidth, imgHeight);
+        yPos += pageHeight;
+      }
 
       // Récupérer le PDF en tant que Blob
       const pdfBlob = pdf.output('blob');
 
-      // Uploader le PDF
-      const formData = new FormData();
+      // Créer un File object à partir du Blob
       const fileName = `${generatedDocument.contractType}_${generatedDocument.employeeName}_${new Date().toISOString().split('T')[0]}.pdf`;
-      formData.append('file', pdfBlob, fileName);
+      const file = new File([pdfBlob], fileName, { type: 'application/pdf' });
 
+      // Uploader le PDF
       const uploadResponse = await base44.integrations.Core.UploadFile({
-        file: pdfBlob
+        file: file
       });
 
       // Ajouter le document aux documents de l'employé
@@ -189,15 +201,15 @@ export default function DocumentGenerationWizard({ open, onOpenChange, employee,
 
       toast.success(`PDF "${fileName}" enregistré dans les documents`);
       
-      // Optionnel : proposer le téléchargement
+      // Télécharger également le fichier localement
       const url = window.URL.createObjectURL(pdfBlob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = fileName;
-      document.body.appendChild(a);
-      a.click();
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = fileName;
+      document.body.appendChild(link);
+      link.click();
       window.URL.revokeObjectURL(url);
-      document.body.removeChild(a);
+      document.body.removeChild(link);
 
     } catch (error) {
       console.error('Erreur lors de la génération/sauvegarde du PDF:', error);
