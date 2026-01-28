@@ -147,148 +147,148 @@ const cddTemplate = `
   <style>${getBaseStyles()}</style>
 </head>
 <body>
-  <div class="header">
-    <h2>CONTRAT DE TRAVAIL À DURÉE DÉTERMINÉE – {{TYPE_TRAVAIL}}</h2>
-    <p class="subtitle">CONFORME À LA CONVENTION COLLECTIVE DE LA RESTAURATION RAPIDE</p>
-  </div>
-  
-  <p style="margin-top: 1.5em; margin-bottom: 0.5em;"><strong>ENTRE LES SOUSSIGNÉS :</strong></p>
-  
-  <div class="company-info">
-    <p><strong>SARL FRENCHY SUSHI</strong></p>
-    <p>101 Quartier Souque Nègre – 13112 LA DESTROUSSE</p>
-    <p>SIRET : 795 143 676 00018 – Code NAF : 5610C</p>
-    <p>URSSAF : 20 Avenue Viton – 13299 MARSEILLE CEDEX 20</p>
-    <p>Représentée par Monsieur Rémy GIROZ, en qualité de Gérant,</p>
-    <p>Ci-après dénommée « l'Employeur »,</p>
-  </div>
-  
-  <p style="margin-top: 1em; margin-bottom: 0.5em;"><strong>ET :</strong></p>
-  
-  <p>{{prenom}} {{nom}}</p>
-  <p>Né(e) le {{naissance}} à {{lieuNaissance}},</p>
-  <p>Domicilié(e) : {{adresse}}</p>
-  <p>Nationalité : {{nationalite}}</p>
-  <p>N° de Sécurité Sociale : {{secu}}</p>
-  <p>Ci-après dénommé(e) « le Salarié »,</p>
-  
-  <hr>
-  
-  <div class="article">
-    <div class="article-title">ARTICLE 1 – OBJET</div>
-    <p>Le présent contrat est conclu à durée déterminée, du <strong>{{debut}}</strong> au <strong>{{fin}}</strong>, en vertu de l'article L.1242-2 du Code du travail et de la convention collective de la restauration rapide.</p>
-  </div>
-  
-  <hr>
-  
-  <div class="article">
-    <div class="article-title">ARTICLE 2 – EMPLOI ET QUALIFICATION</div>
-    <p>Le Salarié est engagé en qualité de <strong>{{poste}}</strong>, niveau I, échelon 1, statut non cadre. Ses missions principales sont notamment :</p>
-    <p>{{taches}}</p>
-    <p>Cette liste est non exhaustive et pourra être modifiée par Monsieur Sébastien RODRIGO et/ou Monsieur Rémy GIROZ.</p>
-  </div>
-  
-  <hr>
-  
-  <div class="article">
-    <div class="article-title">ARTICLE 3 – LIEU DE TRAVAIL</div>
-    <p>Le lieu principal d'exercice est fixé au siège de l'entreprise. L'Employeur se réserve la possibilité de muter le Salarié dans tout établissement situé dans un rayon de 20 km, sans modification substantielle du contrat.</p>
-  </div>
-  
-  <hr>
-  
-  <div class="article">
-    <div class="article-title">ARTICLE 4 – DURÉE ET HORAIRES DE TRAVAIL</div>
-    <p>Le Salarié travaillera <strong>{{heures}}</strong> heures par semaine, soit un total de <strong>{{heuresTexte}}</strong> heures par mois, selon un planning communiqué 15 jours à l'avance, modulable en fonction des besoins du service. L'Employeur pourra modifier les horaires dans le respect d'un préavis de 7 jours, sauf urgence ou remplacement de dernière minute.</p>
-  </div>
-  
-  <hr>
-  
-  <div class="article">
-    <div class="article-title">ARTICLE 5 – HEURES COMPLÉMENTAIRES</div>
-    <p>Le Salarié accepte d'effectuer des heures complémentaires dans la limite du tiers du contrat hebdomadaire, rémunérées conformément à la législation.</p>
-  </div>
-  
-  <hr>
-  
-  <div class="article">
-    <div class="article-title">ARTICLE 6 – PÉRIODE D'ESSAI</div>
-    <p>Une période d'essai de {{periodeEssaiTexte}} est prévue, soit du {{debut}} au {{finEssai}}. Toute suspension prolonge d'autant cette période. La rupture de la période d'essai respecte les délais de prévenance légaux.</p>
-  </div>
-  
-  <hr>
-  
-  <div class="article">
-    <div class="article-title">ARTICLE 7 – RÉMUNÉRATION</div>
-    <p>Le Salarié percevra un salaire brut mensuel de :</p>
-    <p><em>(Heures par mois × Taux horaire)</em> = <strong>{{taux}} €</strong>/h × <strong>{{heuresTexte}}</strong></p>
-    <p>Soit un salaire brut mensuel de <strong>{{salaireBrut}} €</strong>.</p>
-  </div>
-  
-  <hr>
-  
-  <div class="article">
-    <div class="article-title">ARTICLE 8 – FORMATION & CLAUSE DE REMBOURSEMENT</div>
-    <p>En cas de formation spécifique prise en charge par l'Employeur, le Salarié s'engage à rembourser l'intégralité des frais engagés s'il quitte volontairement son poste sans respecter son préavis contractuel ou s'absente de manière injustifiée.</p>
-  </div>
-  
-  <hr>
-  
-  <div class="article">
-    <div class="article-title">ARTICLE 9 – CONGÉS PAYÉS</div>
-    <p>Le Salarié bénéficiera de 2,5 jours ouvrables de congés par mois de travail effectif. Les dates seront déterminées par l'Employeur selon les nécessités du service.</p>
-  </div>
-  
-  <hr>
-  
-  <div class="article">
-    <div class="article-title">ARTICLE 10 – PROTECTION SOCIALE</div>
-    <p>Le Salarié cotisera aux organismes suivants :</p>
-    <p>– Retraite complémentaire : Malakoff Humanis</p>
-    <p>– Prévoyance : AG2R La Mondiale</p>
-  </div>
-  
-  <hr>
-  
-  <div class="article">
-    <div class="article-title">ARTICLE 11 – OBLIGATIONS DU SALARIÉ</div>
-    <p>Le Salarié s'engage à :</p>
-    <p>- respecter les consignes, procédures, horaires et normes d'hygiène ;</p>
-    <p>- respecter la confidentialité des informations de l'entreprise ;</p>
-    <p>- signaler toute absence ou retard dans les meilleurs délais ;</p>
-    <p>- mettre à jour ses informations administratives ;</p>
-    <p>- respecter strictement le règlement intérieur fourni et signé en annexe</p>
-  </div>
-  
-  <hr>
-  
-  <div class="article">
-    <div class="article-title">ARTICLE 12 – CLAUSE DE NON-CONCURRENCE</div>
-    <p>Aucune clause de non-concurrence n'est prévue dans ce contrat.</p>
-  </div>
-  
-  <hr>
-  
-  <div class="article">
-    <div class="article-title">ARTICLE 13 – RUPTURE ANTICIPÉE</div>
-    <p>Le contrat pourra être rompu avant son terme uniquement selon les cas prévus par la loi.</p>
-  </div>
-  
-  <hr>
-  
-  <div class="signature-section">
-    <p>Fait à La Destrousse, le <strong>{{signature}}</strong>,</p>
-    <p>En double exemplaire, dont un remis au Salarié.</p>
-    
-    <div class="signature-block">
-      <p><strong>Signature du Salarié</strong></p>
-      <p>(précédée de la mention manuscrite « Lu et approuvé »)</p>
+  <div class="contract">
+    <h1>CONTRAT DE TRAVAIL À DURÉE DÉTERMINÉE – {{TYPE_TRAVAIL}}</h1>
+    <p class="block">CONFORME À LA CONVENTION COLLECTIVE DE LA RESTAURATION RAPIDE</p>
+
+    <p class="block"><strong>ENTRE LES SOUSSIGNÉS :</strong></p>
+
+    <p class="block"><strong>SARL FRENCHY SUSHI</strong><br>
+    101 Quartier Souque Nègre – 13112 LA DESTROUSSE<br>
+    SIRET : 795 143 676 00018 – Code NAF : 5610C<br>
+    URSSAF : 20 Avenue Viton – 13299 MARSEILLE CEDEX 20<br>
+    Représentée par Monsieur Rémy GIROZ, en qualité de Gérant,<br>
+    Ci-après dénommée « l'Employeur »,</p>
+
+    <p class="block"><strong>ET :</strong></p>
+
+    <p class="block">{{prenom}} {{nom}}<br>
+    Né(e) le {{naissance}} à {{lieuNaissance}},<br>
+    Domicilié(e) : {{adresse}}<br>
+    Nationalité : {{nationalite}}<br>
+    N° de Sécurité Sociale : {{secu}}<br>
+    Ci-après dénommé(e) « le Salarié »,</p>
+
+    <hr>
+
+    <div class="section">
+      <div class="section-title">ARTICLE 1 – OBJET</div>
+      <p>Le présent contrat est conclu à durée déterminée, du <strong>{{debut}}</strong> au <strong>{{fin}}</strong>, en vertu de l'article L.1242-2 du Code du travail et de la convention collective de la restauration rapide.</p>
     </div>
-    
+
+    <hr>
+
+    <div class="section">
+      <div class="section-title">ARTICLE 2 – EMPLOI ET QUALIFICATION</div>
+      <p>Le Salarié est engagé en qualité de <strong>{{poste}}</strong>, niveau I, échelon 1, statut non cadre. Ses missions principales sont notamment :</p>
+      <p>{{taches}}</p>
+      <p>Cette liste est non exhaustive et pourra être modifiée par Monsieur Sébastien RODRIGO et/ou Monsieur Rémy GIROZ.</p>
+    </div>
+
+    <hr>
+
+    <div class="section">
+      <div class="section-title">ARTICLE 3 – LIEU DE TRAVAIL</div>
+      <p>Le lieu principal d'exercice est fixé au siège de l'entreprise. L'Employeur se réserve la possibilité de muter le Salarié dans tout établissement situé dans un rayon de 20 km, sans modification substantielle du contrat.</p>
+    </div>
+
+    <hr>
+
+    <div class="section">
+      <div class="section-title">ARTICLE 4 – DURÉE ET HORAIRES DE TRAVAIL</div>
+      <p>Le Salarié travaillera <strong>{{heures}}</strong> heures par semaine, soit un total de <strong>{{heuresTexte}}</strong> heures par mois, selon un planning communiqué 15 jours à l'avance, modulable en fonction des besoins du service. L'Employeur pourra modifier les horaires dans le respect d'un préavis de 7 jours, sauf urgence ou remplacement de dernière minute.</p>
+    </div>
+
+    <hr>
+
+    <div class="section">
+      <div class="section-title">ARTICLE 5 – HEURES COMPLÉMENTAIRES</div>
+      <p>Le Salarié accepte d'effectuer des heures complémentaires dans la limite du tiers du contrat hebdomadaire, rémunérées conformément à la législation.</p>
+    </div>
+
+    <hr>
+
+    <div class="section">
+      <div class="section-title">ARTICLE 6 – PÉRIODE D'ESSAI</div>
+      <p>Une période d'essai de {{periodeEssaiTexte}} est prévue, soit du {{debut}} au {{finEssai}}. Toute suspension prolonge d'autant cette période. La rupture de la période d'essai respecte les délais de prévenance légaux.</p>
+    </div>
+
+    <hr>
+
+    <div class="section">
+      <div class="section-title">ARTICLE 7 – RÉMUNÉRATION</div>
+      <p>Le Salarié percevra un salaire brut mensuel de :</p>
+      <p><em>(Heures par mois × Taux horaire)</em> = <strong>{{taux}} €</strong>/h × <strong>{{heuresTexte}}</strong></p>
+      <p>Soit un salaire brut mensuel de <strong>{{salaireBrut}} €</strong>.</p>
+    </div>
+
+    <hr>
+
+    <div class="section">
+      <div class="section-title">ARTICLE 8 – FORMATION & CLAUSE DE REMBOURSEMENT</div>
+      <p>En cas de formation spécifique prise en charge par l'Employeur, le Salarié s'engage à rembourser l'intégralité des frais engagés s'il quitte volontairement son poste sans respecter son préavis contractuel ou s'absente de manière injustifiée.</p>
+    </div>
+
+    <hr>
+
+    <div class="section">
+      <div class="section-title">ARTICLE 9 – CONGÉS PAYÉS</div>
+      <p>Le Salarié bénéficiera de 2,5 jours ouvrables de congés par mois de travail effectif. Les dates seront déterminées par l'Employeur selon les nécessités du service.</p>
+    </div>
+
+    <hr>
+
+    <div class="section">
+      <div class="section-title">ARTICLE 10 – PROTECTION SOCIALE</div>
+      <p>Le Salarié cotisera aux organismes suivants :</p>
+      <p>– Retraite complémentaire : Malakoff Humanis</p>
+      <p>– Prévoyance : AG2R La Mondiale</p>
+    </div>
+
+    <hr>
+
+    <div class="section">
+      <div class="section-title">ARTICLE 11 – OBLIGATIONS DU SALARIÉ</div>
+      <p>Le Salarié s'engage à :</p>
+      <p>- respecter les consignes, procédures, horaires et normes d'hygiène ;</p>
+      <p>- respecter la confidentialité des informations de l'entreprise ;</p>
+      <p>- signaler toute absence ou retard dans les meilleurs délais ;</p>
+      <p>- mettre à jour ses informations administratives ;</p>
+      <p>- respecter strictement le règlement intérieur fourni et signé en annexe</p>
+    </div>
+
+    <hr>
+
+    <div class="section">
+      <div class="section-title">ARTICLE 12 – CLAUSE DE NON-CONCURRENCE</div>
+      <p>Aucune clause de non-concurrence n'est prévue dans ce contrat.</p>
+    </div>
+
+    <hr>
+
+    <div class="section">
+      <div class="section-title">ARTICLE 13 – RUPTURE ANTICIPÉE</div>
+      <p>Le contrat pourra être rompu avant son terme uniquement selon les cas prévus par la loi.</p>
+    </div>
+
+    <hr>
+
     <div class="signature-block">
-      <p><strong>Signature de l'Employeur</strong></p>
-      <p>Monsieur Rémy GIROZ ou Monsieur Rodrigo</p>
-      <p>(précédée de la mention manuscrite « Lu et approuvé »)</p>
+      <p>Fait à La Destrousse, le <strong>{{signature}}</strong>,</p>
+      <p class="small-gap">En double exemplaire, dont un remis au Salarié.</p>
+
+      <div class="signature-row">
+        <div class="signature-col">
+          <p><strong>Signature du Salarié</strong></p>
+          <p class="small-gap">(précédée de la mention manuscrite « Lu et approuvé »)</p>
+          <div class="signature-box"></div>
+        </div>
+        <div class="signature-col">
+          <p><strong>Signature de l'Employeur</strong></p>
+          <p class="small-gap">Monsieur Rémy GIROZ ou Monsieur Rodrigo</p>
+          <div class="signature-box"></div>
+        </div>
+      </div>
     </div>
   </div>
 </body>
