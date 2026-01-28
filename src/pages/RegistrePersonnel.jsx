@@ -57,47 +57,58 @@ export default function RegistrePersonnel() {
     const margin = 6;
     const contentWidth = pageWidth - margin * 2;
 
-    // Colonnes avec largeurs intelligentes (courtes/longues adaptées)
     const columns = [
-      { key: 'index', header: 'N°', width: 6 },
-      { key: 'last_name', header: 'Nom', width: 14 },
-      { key: 'first_name', header: 'Prénom', width: 14 },
-      { key: 'birth_date', header: 'Date naissance', width: 16 },
-      { key: 'birth_place', header: 'Lieu', width: 14 },
-      { key: 'nationality', header: 'Nationalité', width: 12 },
-      { key: 'gender', header: 'Sexe', width: 6 },
-      { key: 'address', header: 'Adresse', width: 35 },
-      { key: 'social_security_number', header: 'N° SS', width: 22 },
-      { key: 'position', header: 'Poste', width: 16 },
-      { key: 'start_date', header: 'Date embauche', width: 16 },
-      { key: 'contract_type', header: 'Type contrat', width: 11 },
-      { key: 'exit_date', header: 'Date sortie', width: 14 }
+      { header: 'N°', width: 6 },
+      { header: 'Nom', width: 14 },
+      { header: 'Prénom', width: 14 },
+      { header: 'Date naissance', width: 16 },
+      { header: 'Lieu', width: 14 },
+      { header: 'Nationalité', width: 12 },
+      { header: 'Sexe', width: 6 },
+      { header: 'Adresse', width: 35 },
+      { header: 'N° SS', width: 22 },
+      { header: 'Poste', width: 16 },
+      { header: 'Date embauche', width: 16 },
+      { header: 'Type contrat', width: 11 },
+      { header: 'Date sortie', width: 14 }
     ];
 
     const totalWidth = columns.reduce((sum, col) => sum + col.width, 0);
     const scaleFactor = contentWidth / totalWidth;
-    const fontSize = 8;
-    const headerHeight = 6;
-    const lineHeight = 3.5;
+    const fontSize = 7.5;
+    const headerHeight = 8;
+    const minRowHeight = 10;
+    const lineHeight = 3.8;
 
     let yPosition = margin;
 
-    // Headers
+    // **HEADER ROW**
     doc.setFontSize(fontSize);
     doc.setFont(undefined, 'bold');
-    columns.forEach((col) => {
+    doc.setFillColor(240, 240, 240);
+    
+    doc.rect(margin, yPosition, contentWidth, headerHeight, 'F');
+    
+    columns.forEach((col, colIndex) => {
       const colWidth = col.width * scaleFactor;
-      const x = margin + columns.slice(0, columns.indexOf(col)).reduce((sum, c) => sum + c.width * scaleFactor, 0);
-      doc.text(col.header, x + 0.5, yPosition + 4, { maxWidth: colWidth - 1, align: 'left' });
+      const x = margin + columns.slice(0, colIndex).reduce((sum, c) => sum + c.width * scaleFactor, 0);
+      doc.text(col.header, x + 1, yPosition + 5, { maxWidth: colWidth - 2, align: 'left' });
     });
 
     yPosition += headerHeight;
+
+    // Trait épais sous le header
+    doc.setLineWidth(0.6);
+    doc.setDrawColor(0, 0, 0);
+    doc.line(margin, yPosition, margin + contentWidth, yPosition);
+    yPosition += 1;
+
     doc.setFont(undefined, 'normal');
 
-    // Data rows
-    registryEntries.forEach((entry, index) => {
+    // **DATA ROWS**
+    registryEntries.forEach((entry, entryIndex) => {
       const rowData = [
-        (index + 1).toString(),
+        (entryIndex + 1).toString(),
         entry.last_name || '',
         entry.first_name || '',
         entry.birth_date ? new Date(entry.birth_date).toLocaleDateString('fr-FR') : '',
@@ -112,26 +123,39 @@ export default function RegistrePersonnel() {
         entry.exit_date ? new Date(entry.exit_date).toLocaleDateString('fr-FR') : ''
       ];
 
-      // Calculer la hauteur de la ligne (en fonction du texte qui wrap)
       let maxLines = 1;
       columns.forEach((col, colIndex) => {
-        const colWidth = col.width * scaleFactor - 1;
+        const colWidth = col.width * scaleFactor - 2;
         const text = rowData[colIndex];
         const lines = doc.splitTextToSize(text, colWidth);
         maxLines = Math.max(maxLines, lines.length);
       });
 
-      const rowHeight = lineHeight * maxLines;
+      const rowHeight = Math.max(minRowHeight, lineHeight * maxLines + 2);
+      const rowStartY = yPosition;
 
-      // Dessiner les cellules
+      doc.setFontSize(fontSize);
       columns.forEach((col, colIndex) => {
         const colWidth = col.width * scaleFactor;
         const x = margin + columns.slice(0, colIndex).reduce((sum, c) => sum + c.width * scaleFactor, 0);
         const text = rowData[colIndex];
-        doc.text(text, x + 0.5, yPosition + 1, { maxWidth: colWidth - 1, align: 'left' });
+        const lines = doc.splitTextToSize(text, colWidth - 2);
+        
+        const textHeight = lines.length * lineHeight;
+        const topOffset = (rowHeight - textHeight) / 2 + 1;
+        
+        doc.text(text, x + 1, rowStartY + topOffset, { 
+          maxWidth: colWidth - 2, 
+          align: 'left',
+          lineHeightFactor: 1.2
+        });
       });
 
       yPosition += rowHeight;
+
+      doc.setLineWidth(0.2);
+      doc.setDrawColor(180, 180, 180);
+      doc.line(margin, yPosition, margin + contentWidth, yPosition);
     });
 
     doc.save(`registre-personnel-${new Date().toISOString().split('T')[0]}.pdf`);
