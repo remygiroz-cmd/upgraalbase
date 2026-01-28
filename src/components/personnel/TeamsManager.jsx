@@ -58,6 +58,21 @@ export default function TeamsManager() {
     setEditingTeam(null);
   };
 
+  const assignEmployeeMutation = useMutation({
+    mutationFn: ({ empId, teamId }) => {
+      const teamName = teamId ? teams.find(t => t.id === teamId)?.name : '';
+      return base44.entities.Employee.update(empId, { team_id: teamId, team: teamName });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['employees'] });
+      toast.success('Employé assigné');
+    },
+    onError: () => {
+      queryClient.invalidateQueries({ queryKey: ['employees'] });
+      toast.error('Erreur lors de l\'assignation');
+    }
+  });
+
   const handleDragEnd = (result) => {
     const { draggableId, destination } = result;
 
@@ -66,12 +81,7 @@ export default function TeamsManager() {
     const empId = draggableId.replace('employee-', '');
     const teamId = destination.droppableId === 'unassigned' ? null : destination.droppableId;
 
-    const employee = employees.find(e => e.id === empId);
-    if (employee) {
-      base44.entities.Employee.update(empId, { team_id: teamId, team: teamId ? teams.find(t => t.id === teamId)?.name : '' });
-      queryClient.invalidateQueries({ queryKey: ['employees'] });
-      toast.success('Employé assigné');
-    }
+    assignEmployeeMutation.mutate({ empId, teamId });
   };
 
   if (teamsLoading) {
