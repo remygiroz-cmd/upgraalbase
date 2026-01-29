@@ -305,7 +305,14 @@ Deno.serve(async (req) => {
     // Injecter les données personnalisées du template (customData)
     const customVariables = {};
     Object.keys(customData).forEach(key => {
-      customVariables[key] = customData[key];
+      let value = customData[key];
+
+      // Formater les dates au format français si c'est une date ISO
+      if (value && typeof value === 'string' && /^\d{4}-\d{2}-\d{2}/.test(value)) {
+        value = formatDateFR(value);
+      }
+
+      customVariables[key] = value;
     });
 
     // Construire l'objet variables (communes + spécifiques selon type + customData)
