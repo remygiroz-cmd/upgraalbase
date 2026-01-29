@@ -67,6 +67,7 @@ export default function Layout({ children, currentPageName }) {
     { name: 'TravailDuJour', label: 'Travail du Jour', icon: ChefHat, module: 'travail_du_jour' },
     { name: 'Temperatures', label: 'Températures', icon: Thermometer, module: 'temperatures' },
     { name: 'Recettes', label: 'Recettes', icon: BookOpen, module: 'recettes' },
+    { name: 'Stocks', label: 'Inventaires', icon: Package, module: 'stocks' },
     { name: 'Historique', label: 'Historique', icon: History, module: 'historique' },
   ].filter(link => hasPermission(link.module));
 
@@ -75,7 +76,6 @@ export default function Layout({ children, currentPageName }) {
     { name: 'RegistrePersonnel', label: 'Registre du Personnel', icon: FileText, module: 'registre_personnel' },
     { name: 'GestionPostes', label: 'Postes & Tâches', icon: Users, module: 'equipe' },
     { name: 'Pertes', label: 'Invendus & Pertes', icon: PackageMinus, module: 'pertes' },
-    { name: 'Stocks', label: 'Inventaires', icon: Package, module: 'stocks' },
     { name: 'TemplatesRH', label: 'Templates RH', icon: File, module: 'equipe' },
   ].filter(link => hasPermission(link.module));
 
