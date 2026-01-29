@@ -99,15 +99,6 @@ export default function DocumentGenerationWizard({ open, onOpenChange, employee,
           toast.error(`Le champ "${field.label}" est obligatoire`);
           return;
         }
-        
-        // Validation longueur minimale textarea
-        if (field.type === 'textarea' && field.required && customFieldsData[field.key]) {
-          const minLength = field.minLength || 50;
-          if (customFieldsData[field.key].trim().length < minLength) {
-            toast.error(`"${field.label}" doit contenir au moins ${minLength} caractères`);
-            return;
-          }
-        }
       }
       
       // Validation juridique stricte pour documents disciplinaires
@@ -457,18 +448,10 @@ export default function DocumentGenerationWizard({ open, onOpenChange, employee,
                             {field.helpText}
                           </div>
                         )}
-                        <div className="flex justify-between items-center text-xs">
-                          <span className={`font-medium ${
-                            (customFieldsData[field.key] || '').length < (field.minLength || 50) ? 'text-red-600' : 
-                            (customFieldsData[field.key] || '').length < 300 ? 'text-orange-600' : 
-                            'text-green-600'
-                          }`}>
-                            {(customFieldsData[field.key] || '').length} caractères
-                            {field.required && (customFieldsData[field.key] || '').length < (field.minLength || 50) && ` (minimum ${field.minLength || 50})`}
-                          </span>
+                        <div className="flex justify-end items-center text-xs">
                           {field.maxLength && (
                             <span className="text-gray-500">
-                              Maximum {field.maxLength}
+                              {(customFieldsData[field.key] || '').length} / {field.maxLength} caractères
                             </span>
                           )}
                         </div>

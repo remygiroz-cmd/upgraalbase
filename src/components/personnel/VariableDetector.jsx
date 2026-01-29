@@ -82,7 +82,6 @@ function inferVariableType(variableName) {
       required: true,
       placeholder: 'Qualification juridique du manquement (ex: manquement à l\'obligation de ponctualité)',
       helpText: '⚖️ Qualifier juridiquement le manquement justifiant la sanction, sans décrire les faits',
-      minLength: 20,
       maxLength: 500
     };
   }
@@ -96,7 +95,6 @@ function inferVariableType(variableName) {
       required: true,
       placeholder: 'Détaillez de manière factuelle, avec dates et lieux précis...',
       helpText: '⚠️ Restez factuel : dates, lieux, témoins, faits observables',
-      minLength: 50,
       maxLength: 2000
     };
   }
@@ -110,7 +108,6 @@ function inferVariableType(variableName) {
       required: true,
       placeholder: 'Détaillez le motif...',
       helpText: '⚠️ Soyez précis et factuel',
-      minLength: 20,
       maxLength: 1000
     };
   }
