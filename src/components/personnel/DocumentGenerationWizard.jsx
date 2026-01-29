@@ -14,6 +14,8 @@ export default function DocumentGenerationWizard({ open, onOpenChange, employee,
   const [step, setStep] = useState(1);
   const [documentType, setDocumentType] = useState('');
   const [selectedTemplate, setSelectedTemplate] = useState('');
+  const [selectedTemplateData, setSelectedTemplateData] = useState(null);
+  const [customFieldsData, setCustomFieldsData] = useState({});
   const [editData, setEditData] = useState({});
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatedDocument, setGeneratedDocument] = useState(null);
@@ -50,7 +52,7 @@ export default function DocumentGenerationWizard({ open, onOpenChange, employee,
 
   const filteredTemplates = getAvailableTemplates();
 
-  const handleNextStep = () => {
+  const handleNextStep = async () => {
     if (step === 1 && !documentType) {
       toast.error('Veuillez choisir un type de document');
       return;
@@ -59,6 +61,36 @@ export default function DocumentGenerationWizard({ open, onOpenChange, employee,
       toast.error('Veuillez choisir un template');
       return;
     }
+    
+    // Charger les détails du template sélectionné pour step 3
+    if (step === 2 && selectedTemplate) {
+      const template = allTemplates.find(t => t.id === selectedTemplate);
+      setSelectedTemplateData(template);
+      
+      // Initialiser les valeurs par défaut des custom fields
+      if (template?.customFields) {
+        const defaults = {};
+        template.customFields.forEach(field => {
+          if (field.defaultValue) {
+            defaults[field.key] = field.defaultValue;
+          } else if (field.type === 'date' && field.key === 'dateNotification') {
+            defaults[field.key] = new Date().toISOString().split('T')[0];
+          }
+        });
+        setCustomFieldsData(defaults);
+      }
+    }
+    
+    // Validation des champs personnalisés avant d'aller à step 4
+    if (step === 3 && selectedTemplateData?.customFields) {
+      for (const field of selectedTemplateData.customFields) {
+        if (field.required && !customFieldsData[field.key]) {
+          toast.error(`Le champ "${field.label}" est obligatoire`);
+          return;
+        }
+      }
+    }
+    
     setStep(step + 1);
   };
 
@@ -78,7 +110,8 @@ export default function DocumentGenerationWizard({ open, onOpenChange, employee,
 
       const response = await base44.functions.invoke('generateContractPdf', {
         templateId: templateId,
-        employeeId: employee.id
+        employeeId: employee.id,
+        customData: customFieldsData
       });
 
       if (response.data.success) {
@@ -88,8 +121,8 @@ export default function DocumentGenerationWizard({ open, onOpenChange, employee,
           contractType: documentType,
           employeeName: `${employee.last_name}_${employee.first_name}`
         });
-        setStep(5);
-        toast.success('Contrat généré avec succès');
+        setStep(6);
+        toast.success('Document généré avec succès');
       } else {
         toast.error('Erreur lors de la génération');
       }
@@ -246,6 +279,8 @@ export default function DocumentGenerationWizard({ open, onOpenChange, employee,
     setStep(1);
     setDocumentType('');
     setSelectedTemplate('');
+    setSelectedTemplateData(null);
+    setCustomFieldsData({});
     setEditData({});
     setGeneratedDocument(null);
     setShowPDFDownload(false);
@@ -262,7 +297,7 @@ export default function DocumentGenerationWizard({ open, onOpenChange, employee,
               Créer un document RH
             </DialogTitle>
             <DialogDescription className="text-gray-600">
-              Étape {step} / 5 - {['Type de document', 'Choix du template', 'Vérification', 'Génération', 'Téléchargement'][step - 1]}
+              Étape {step} / 6 - {['Type de document', 'Choix du template', 'Données spécifiques', 'Vérification', 'Génération', 'Téléchargement'][step - 1]}
             </DialogDescription>
           </DialogHeader>
 
@@ -308,8 +343,99 @@ export default function DocumentGenerationWizard({ open, onOpenChange, employee,
             </div>
           )}
 
-          {/* STEP 3: Vérification des données */}
-          {step === 3 && (
+          {/* STEP 3: Données spécifiques du document */}
+          {step === 3 && selectedTemplateData?.customFields && selectedTemplateData.customFields.length > 0 && (
+            <div className="space-y-4 py-4">
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 flex gap-2">
+                <AlertCircle className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
+                <div className="text-sm text-blue-800">
+                  Remplissez les informations spécifiques à ce document.
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                {selectedTemplateData.customFields.map((field) => (
+                  <div key={field.key} className="space-y-2">
+                    <Label className="text-gray-900 font-semibold">
+                      {field.label}
+                      {field.required && <span className="text-red-600 ml-1">*</span>}
+                    </Label>
+                    
+                    {field.type === 'text' && (
+                      <Input
+                        placeholder={field.placeholder || ''}
+                        value={customFieldsData[field.key] || ''}
+                        onChange={(e) => setCustomFieldsData({...customFieldsData, [field.key]: e.target.value})}
+                        className="border-gray-300"
+                        required={field.required}
+                      />
+                    )}
+                    
+                    {field.type === 'textarea' && (
+                      <div className="space-y-2">
+                        <textarea
+                          placeholder={field.placeholder || ''}
+                          value={customFieldsData[field.key] || ''}
+                          onChange={(e) => setCustomFieldsData({...customFieldsData, [field.key]: e.target.value})}
+                          className="w-full min-h-[120px] p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
+                          required={field.required}
+                          maxLength={field.maxLength || 2000}
+                        />
+                        {field.helpText && (
+                          <p className="text-xs text-gray-600">{field.helpText}</p>
+                        )}
+                        {field.maxLength && (
+                          <p className="text-xs text-gray-500 text-right">
+                            {(customFieldsData[field.key] || '').length} / {field.maxLength} caractères
+                          </p>
+                        )}
+                      </div>
+                    )}
+                    
+                    {field.type === 'date' && (
+                      <Input
+                        type="date"
+                        value={customFieldsData[field.key] || ''}
+                        onChange={(e) => setCustomFieldsData({...customFieldsData, [field.key]: e.target.value})}
+                        className="border-gray-300"
+                        required={field.required}
+                      />
+                    )}
+                    
+                    {field.type === 'number' && (
+                      <Input
+                        type="number"
+                        placeholder={field.placeholder || ''}
+                        value={customFieldsData[field.key] || ''}
+                        onChange={(e) => setCustomFieldsData({...customFieldsData, [field.key]: e.target.value})}
+                        className="border-gray-300"
+                        required={field.required}
+                      />
+                    )}
+                    
+                    {field.type === 'select' && field.options && (
+                      <Select 
+                        value={customFieldsData[field.key] || ''} 
+                        onValueChange={(value) => setCustomFieldsData({...customFieldsData, [field.key]: value})}
+                      >
+                        <SelectTrigger className="border-gray-300">
+                          <SelectValue placeholder={field.placeholder || 'Sélectionner...'} />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {field.options.map(opt => (
+                            <SelectItem key={opt} value={opt}>{opt}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* STEP 4: Vérification des données */}
+          {step === 4 && (
             <div className="space-y-4 py-4">
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 flex gap-2">
                 <AlertCircle className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
@@ -399,8 +525,8 @@ export default function DocumentGenerationWizard({ open, onOpenChange, employee,
             </div>
           )}
 
-          {/* STEP 4: Résumé & Génération */}
-          {step === 4 && (
+          {/* STEP 5: Résumé & Génération */}
+          {step === 5 && (
             <div className="space-y-4 py-4">
               <div className="bg-green-50 border border-green-200 rounded-lg p-3">
                 <p className="text-sm text-green-800">
@@ -414,8 +540,8 @@ export default function DocumentGenerationWizard({ open, onOpenChange, employee,
             </div>
           )}
 
-          {/* STEP 5: Téléchargement */}
-          {step === 5 && generatedDocument && (
+          {/* STEP 6: Téléchargement */}
+          {step === 6 && generatedDocument && (
             <div className="space-y-4 py-4">
               <div className="bg-green-50 border border-green-200 rounded-lg p-4 flex items-start gap-3">
                 <CheckCircle className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
@@ -439,7 +565,7 @@ export default function DocumentGenerationWizard({ open, onOpenChange, employee,
           <div className="flex gap-2 justify-between pt-4 border-t border-gray-200">
             <Button
               onClick={handlePrevStep}
-              disabled={step === 1 || step === 5}
+              disabled={step === 1 || step === 6}
               variant="outline"
               className="border-gray-300"
             >
@@ -453,10 +579,10 @@ export default function DocumentGenerationWizard({ open, onOpenChange, employee,
                 variant="outline"
                 className="border-gray-300"
               >
-                {step === 5 ? 'Fermer' : 'Annuler'}
+                {step === 6 ? 'Fermer' : 'Annuler'}
               </Button>
 
-              {step < 4 ? (
+              {step < 5 ? (
                 <Button
                   onClick={handleNextStep}
                   className="bg-orange-600 hover:bg-orange-700"
@@ -464,7 +590,7 @@ export default function DocumentGenerationWizard({ open, onOpenChange, employee,
                   Suivant
                   <ChevronRight className="w-4 h-4 ml-1" />
                 </Button>
-              ) : step === 4 ? (
+              ) : step === 5 ? (
                 <Button
                   onClick={handleGenerate}
                   disabled={isGenerating}

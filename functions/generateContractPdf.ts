@@ -174,7 +174,7 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { templateId, employeeId, options = {} } = await req.json();
+    const { templateId, employeeId, options = {}, customData = {} } = await req.json();
 
     if (!templateId || !employeeId) {
       return Response.json({ error: 'templateId and employeeId required' }, { status: 400 });
@@ -302,8 +302,15 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Construire l'objet variables (communes + spécifiques selon type)
+    // Injecter les données personnalisées du template (customData)
+    const customVariables = {};
+    Object.keys(customData).forEach(key => {
+      customVariables[key] = customData[key];
+    });
+
+    // Construire l'objet variables (communes + spécifiques selon type + customData)
     const variables = {
+      ...customVariables,
       // Variables communes
       etablissementNom: establishment.name || '',
       etablissementSiret: establishment.siret || '',
@@ -391,6 +398,7 @@ Deno.serve(async (req) => {
       categorieDocument: template.categorieDocument || 'A_CONTRACTUEL',
       titre: `${template.typeDocument}_${employee.last_name}_${employee.first_name}_${new Date().toISOString().split('T')[0]}`,
       payloadSnapshot: variables,
+      customData: customData,
       statusSignature: 'non_signe',
       generatedAt: new Date().toISOString(),
       generatedBy: user.email,
