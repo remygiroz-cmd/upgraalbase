@@ -205,6 +205,18 @@ Deno.serve(async (req) => {
     const establishments = await base44.entities.Establishment.list();
     const establishment = establishments?.[0] || {};
 
+    // Vérifications établissement (données critiques)
+    if (!establishment.name) {
+      return Response.json({ 
+        error: 'Données établissement manquantes. Veuillez configurer votre établissement dans Paramètres > Établissement.' 
+      }, { status: 400 });
+    }
+    if (!establishment.siret) {
+      return Response.json({ 
+        error: 'Numéro SIRET manquant. Veuillez le renseigner dans Paramètres > Établissement.' 
+      }, { status: 400 });
+    }
+
     // Charger les tâches du poste (JobRoles)
     const jobRoles = await base44.entities.JobRoles.filter({ label: employee.position });
     const jobTasksText = jobRoles?.[0]?.tasksText || 'Tâches à définir';
@@ -265,8 +277,20 @@ Deno.serve(async (req) => {
       motifCDD = `Le présent CDD est conclu en vertu de l'article L.1242-2 du Code du travail pour le motif suivant : <strong>${reasonText}</strong>. Ce motif justifie le recours à un contrat à durée déterminée conformément à la convention collective de la restauration rapide.`;
     }
 
+    // Récupérer le responsable principal (premier de la liste)
+    const mainManager = establishment.managers?.[0] || {};
+
     // Construire l'objet variables
     const variables = {
+      etablissementNom: establishment.name || '',
+      etablissementSiret: establishment.siret || '',
+      etablissementEmail: establishment.contact_email || '',
+      etablissementSite: establishment.website || '',
+      etablissementAdresse: establishment.postal_address || '',
+      etablissementAdresseLivraison: establishment.delivery_address || establishment.postal_address || '',
+      responsableNom: mainManager.name || '',
+      responsableTel: mainManager.phone || '',
+      responsableEmail: mainManager.email || '',
       prenom: employee.first_name || '',
       nom: employee.last_name || '',
       naissance: formatDateFR(employee.birth_date),

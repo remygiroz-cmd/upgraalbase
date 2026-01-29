@@ -18,6 +18,17 @@ import { validateTemplate, getCreationGuide, REQUIRED_VARIABLES_BY_TYPE, FORBIDD
 
 // Variables disponibles pour insertion
 const VARIABLES = {
+  'Données de l\'établissement': [
+    { label: 'Nom de l\'établissement', value: '{{etablissementNom}}' },
+    { label: 'Numéro de SIRET', value: '{{etablissementSiret}}' },
+    { label: 'Email de contact', value: '{{etablissementEmail}}' },
+    { label: 'Site internet', value: '{{etablissementSite}}' },
+    { label: 'Adresse postale', value: '{{etablissementAdresse}}' },
+    { label: 'Adresse de livraison', value: '{{etablissementAdresseLivraison}}' },
+    { label: 'Nom du responsable principal', value: '{{responsableNom}}' },
+    { label: 'Téléphone du responsable', value: '{{responsableTel}}' },
+    { label: 'Email du responsable', value: '{{responsableEmail}}' },
+  ],
   'Identité du salarié': [
     { label: 'Prénom', value: '{{prenom}}' },
     { label: 'Nom', value: '{{nom}}' },
@@ -53,6 +64,15 @@ const VARIABLES = {
 
 // Données mock pour l'aperçu
 const MOCK_DATA = {
+  etablissementNom: 'Frenchy Sushi',
+  etablissementSiret: '79514367600034',
+  etablissementEmail: 'contact@frenchysushi.fr',
+  etablissementSite: 'www.frenchysushi.fr',
+  etablissementAdresse: 'Quartier Souque Nègre, Centre Commercial LIDL, 13112 La Destrousse',
+  etablissementAdresseLivraison: 'Quartier Souque Nègre, Centre Commercial LIDL, 13112 La Destrousse',
+  responsableNom: 'Giroz Rémy',
+  responsableTel: '06 46 77 14 35',
+  responsableEmail: 'remy.giroz@gmail.com',
   prenom: 'Jean',
   nom: 'DUPONT',
   naissance: '15/06/1995',

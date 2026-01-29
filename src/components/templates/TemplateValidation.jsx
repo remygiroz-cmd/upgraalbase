@@ -10,6 +10,8 @@ export const REQUIRED_VARIABLES_BY_TYPE = {
     { var: '{{poste}}', label: 'Intitulé du poste' },
     { var: '{{heures}}', label: 'Nombre d\'heures' },
     { var: '{{taux}}', label: 'Taux horaire' },
+    { var: '{{etablissementNom}}', label: 'Nom de l\'établissement' },
+    { var: '{{etablissementSiret}}', label: 'SIRET de l\'établissement' },
   ],
   CDI: [
     { var: '{{debut}}', label: 'Date de début du contrat' },
@@ -18,10 +20,13 @@ export const REQUIRED_VARIABLES_BY_TYPE = {
     { var: '{{poste}}', label: 'Intitulé du poste' },
     { var: '{{heures}}', label: 'Nombre d\'heures' },
     { var: '{{taux}}', label: 'Taux horaire' },
+    { var: '{{etablissementNom}}', label: 'Nom de l\'établissement' },
+    { var: '{{etablissementSiret}}', label: 'SIRET de l\'établissement' },
   ],
   AVENANT: [
     { var: '{{prenom}}', label: 'Prénom du salarié' },
     { var: '{{nom}}', label: 'Nom du salarié' },
+    { var: '{{etablissementNom}}', label: 'Nom de l\'établissement' },
   ]
 };
 
