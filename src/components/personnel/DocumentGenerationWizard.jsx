@@ -27,8 +27,11 @@ export default function DocumentGenerationWizard({ open, onOpenChange, employee,
   });
 
   const documentTypes = [
-    { value: 'CDD', label: 'Contrat CDD' },
-    { value: 'CDI', label: 'Contrat CDI' }
+    { category: 'A_CONTRACTUEL', value: 'CDD', label: '🔒 Contrat CDD' },
+    { category: 'A_CONTRACTUEL', value: 'CDI', label: '🔒 Contrat CDI' },
+    { category: 'A_CONTRACTUEL', value: 'AVENANT', label: '🔒 Avenant contractuel' },
+    { category: 'B_DISCIPLINAIRE', value: 'AVERTISSEMENT', label: '⚠️ Lettre d\'avertissement' },
+    { category: 'D_ADMINISTRATIF', value: 'ATTESTATION', label: '📄 Attestation employeur' }
   ];
 
   // Filtrer les templates en fonction du type de document sélectionné
@@ -256,10 +259,10 @@ export default function DocumentGenerationWizard({ open, onOpenChange, employee,
           <DialogHeader>
             <DialogTitle className="text-gray-900 flex items-center gap-2">
               <FileText className="w-5 h-5 text-orange-600" />
-              Générer un document RH
+              Créer un document RH
             </DialogTitle>
             <DialogDescription className="text-gray-600">
-              Étape {step} / 5 - {['Choix du type', 'Choix du template', 'Vérification', 'Génération', 'Téléchargement'][step - 1]}
+              Étape {step} / 5 - {['Type de document', 'Choix du template', 'Vérification', 'Génération', 'Téléchargement'][step - 1]}
             </DialogDescription>
           </DialogHeader>
 

@@ -14,52 +14,27 @@ import { FileText, Save, AlertCircle, Plus, Eye, Sparkles, Lock, Copy, CheckCirc
 import { toast } from 'sonner';
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
-import { validateTemplate, getCreationGuide, REQUIRED_VARIABLES_BY_TYPE, FORBIDDEN_VARIABLES_BY_TYPE } from './TemplateValidation';
+import { validateTemplateV2, getCreationGuideV2, REQUIRED_VARIABLES_BY_TYPE, FORBIDDEN_VARIABLES_BY_TYPE, CATEGORIES, VARIABLES_BY_CATEGORY } from './TemplateValidationV2';
 
-// Variables disponibles pour insertion
-const VARIABLES = {
-  'Données de l\'établissement': [
-    { label: 'Nom de l\'établissement', value: '{{etablissementNom}}' },
-    { label: 'Numéro de SIRET', value: '{{etablissementSiret}}' },
-    { label: 'Email de contact', value: '{{etablissementEmail}}' },
-    { label: 'Site internet', value: '{{etablissementSite}}' },
-    { label: 'Adresse postale', value: '{{etablissementAdresse}}' },
-    { label: 'Adresse de livraison', value: '{{etablissementAdresseLivraison}}' },
-    { label: 'Nom du responsable principal', value: '{{responsableNom}}' },
-    { label: 'Téléphone du responsable', value: '{{responsableTel}}' },
-    { label: 'Email du responsable', value: '{{responsableEmail}}' },
-  ],
-  'Identité du salarié': [
-    { label: 'Prénom', value: '{{prenom}}' },
-    { label: 'Nom', value: '{{nom}}' },
-    { label: 'Date de naissance', value: '{{naissance}}' },
-    { label: 'Lieu de naissance', value: '{{lieuNaissance}}' },
-    { label: 'Adresse', value: '{{adresse}}' },
-    { label: 'Nationalité', value: '{{nationalite}}' },
-    { label: 'Numéro de sécurité sociale', value: '{{secu}}' },
-  ],
-  'Poste et missions': [
-    { label: 'Intitulé du poste', value: '{{poste}}' },
-    { label: 'Description des tâches', value: '{{taches}}' },
-  ],
-  'Durée du contrat': [
-    { label: 'Date de début', value: '{{debut}}' },
-    { label: 'Date de fin (CDD uniquement)', value: '{{fin}}', cddOnly: true },
-    { label: 'Motif du CDD (CDD uniquement)', value: '{{motifCDD}}', cddOnly: true },
-  ],
-  'Horaires et rémunération': [
-    { label: 'Nombre d\'heures hebdomadaires', value: '{{heures}}' },
-    { label: 'Nombre d\'heures mensuelles (texte)', value: '{{heuresTexte}}' },
-    { label: 'Taux horaire brut', value: '{{taux}}' },
-    { label: 'Salaire brut mensuel', value: '{{salaireBrut}}' },
-  ],
-  'Période d\'essai': [
-    { label: 'Durée de la période d\'essai (texte)', value: '{{periodeEssaiTexte}}' },
-    { label: 'Date de fin de période d\'essai', value: '{{finEssai}}' },
-  ],
-  'Autres': [
-    { label: 'Date de signature', value: '{{signature}}' },
-  ]
+// Variables disponibles - dynamiques selon la catégorie
+const getAvailableVariables = (categorieDocument) => {
+  const common = VARIABLES_BY_CATEGORY.COMMON || [];
+  
+  let specific = [];
+  if (categorieDocument === 'A_CONTRACTUEL') {
+    specific = [...(VARIABLES_BY_CATEGORY.CONTRACTUEL || []), ...(VARIABLES_BY_CATEGORY.AVENANT || [])];
+  } else if (categorieDocument === 'B_DISCIPLINAIRE') {
+    specific = VARIABLES_BY_CATEGORY.DISCIPLINAIRE || [];
+  } else if (categorieDocument === 'C_RUPTURE') {
+    specific = VARIABLES_BY_CATEGORY.RUPTURE || [];
+  } else if (categorieDocument === 'D_ADMINISTRATIF') {
+    specific = VARIABLES_BY_CATEGORY.ADMINISTRATIF || [];
+  }
+  
+  return {
+    'Données communes': common,
+    'Données spécifiques': specific
+  };
 };
 
 // Données mock pour l'aperçu
@@ -98,6 +73,7 @@ export default function TemplateBuilderModalV15({ open, onOpenChange, template, 
   const [formData, setFormData] = useState({
     name: '',
     typeDocument: 'CDD',
+    categorieDocument: 'A_CONTRACTUEL',
     sousType: '',
     description: '',
     version: '',
@@ -122,6 +98,7 @@ export default function TemplateBuilderModalV15({ open, onOpenChange, template, 
         setFormData({
           name: `${template.name} (Copie)`,
           typeDocument: template.typeDocument || 'CDD',
+          categorieDocument: template.categorieDocument || 'A_CONTRACTUEL',
           sousType: template.sousType || '',
           description: template.description || '',
           version: `${template.version}_copie`,
@@ -135,6 +112,7 @@ export default function TemplateBuilderModalV15({ open, onOpenChange, template, 
         setFormData({
           name: template.name || '',
           typeDocument: template.typeDocument || 'CDD',
+          categorieDocument: template.categorieDocument || 'A_CONTRACTUEL',
           sousType: template.sousType || '',
           description: template.description || '',
           version: template.version || '',
@@ -149,6 +127,7 @@ export default function TemplateBuilderModalV15({ open, onOpenChange, template, 
       setFormData({
         name: '',
         typeDocument: 'CDD',
+        categorieDocument: 'A_CONTRACTUEL',
         sousType: '',
         description: '',
         version: 'v1.0',
@@ -164,11 +143,11 @@ export default function TemplateBuilderModalV15({ open, onOpenChange, template, 
 
   // Validation en temps réel
   useEffect(() => {
-    if (formData.htmlContent && formData.typeDocument) {
-      const result = validateTemplate(formData.htmlContent, formData.typeDocument);
+    if (formData.htmlContent && formData.typeDocument && formData.categorieDocument) {
+      const result = validateTemplateV2(formData.htmlContent, formData.typeDocument, formData.categorieDocument);
       setValidationResult(result);
     }
-  }, [formData.htmlContent, formData.typeDocument]);
+  }, [formData.htmlContent, formData.typeDocument, formData.categorieDocument]);
 
   // Aperçu avec données mock
   const previewHtml = useMemo(() => {
@@ -237,6 +216,7 @@ export default function TemplateBuilderModalV15({ open, onOpenChange, template, 
     updateMutation.mutate({
       name: formData.name,
       typeDocument: formData.typeDocument,
+      categorieDocument: formData.categorieDocument,
       sousType: formData.sousType,
       description: formData.description,
       version: formData.version,
@@ -269,7 +249,8 @@ export default function TemplateBuilderModalV15({ open, onOpenChange, template, 
     ]
   };
 
-  const guide = getCreationGuide(formData.typeDocument);
+  const guide = getCreationGuideV2(formData.typeDocument, formData.categorieDocument);
+  const availableVariables = getAvailableVariables(formData.categorieDocument);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -348,17 +329,76 @@ export default function TemplateBuilderModalV15({ open, onOpenChange, template, 
               </div>
             </div>
 
+            <div className="space-y-2">
+              <Label className="text-gray-900 font-semibold">Catégorie de document RH</Label>
+              <Select 
+                value={formData.categorieDocument} 
+                onValueChange={(value) => {
+                  // Auto-sélection du type selon la catégorie
+                  let defaultType = 'CDD';
+                  if (value === 'A_CONTRACTUEL') defaultType = 'CDD';
+                  else if (value === 'B_DISCIPLINAIRE') defaultType = 'AVERTISSEMENT';
+                  else if (value === 'C_RUPTURE') defaultType = 'LICENCIEMENT';
+                  else if (value === 'D_ADMINISTRATIF') defaultType = 'ATTESTATION';
+                  else if (value === 'E_LIBRE') defaultType = 'LETTRE_LIBRE';
+                  
+                  setFormData({ ...formData, categorieDocument: value, typeDocument: defaultType });
+                }}
+              >
+                <SelectTrigger className="border-gray-300">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {Object.entries(CATEGORIES).map(([key, cat]) => (
+                    <SelectItem key={key} value={key}>
+                      {cat.icon} {cat.label} - {cat.description}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label className="text-gray-900 font-semibold">Type de contrat</Label>
+                <Label className="text-gray-900 font-semibold">Type de document</Label>
                 <Select value={formData.typeDocument} onValueChange={(value) => setFormData({ ...formData, typeDocument: value })}>
                   <SelectTrigger className="border-gray-300">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="CDD">CDD (Contrat à Durée Déterminée)</SelectItem>
-                    <SelectItem value="CDI">CDI (Contrat à Durée Indéterminée)</SelectItem>
-                    <SelectItem value="AVENANT">AVENANT</SelectItem>
+                    {formData.categorieDocument === 'A_CONTRACTUEL' && (
+                      <>
+                        <SelectItem value="CDD">CDD</SelectItem>
+                        <SelectItem value="CDI">CDI</SelectItem>
+                        <SelectItem value="AVENANT">Avenant</SelectItem>
+                      </>
+                    )}
+                    {formData.categorieDocument === 'B_DISCIPLINAIRE' && (
+                      <>
+                        <SelectItem value="AVERTISSEMENT">Avertissement</SelectItem>
+                        <SelectItem value="CONVOCATION">Convocation</SelectItem>
+                        <SelectItem value="SANCTION">Sanction</SelectItem>
+                      </>
+                    )}
+                    {formData.categorieDocument === 'C_RUPTURE' && (
+                      <>
+                        <SelectItem value="LICENCIEMENT">Licenciement</SelectItem>
+                        <SelectItem value="FIN_CDD">Fin de CDD</SelectItem>
+                        <SelectItem value="RUPTURE_ESSAI">Rupture période d'essai</SelectItem>
+                      </>
+                    )}
+                    {formData.categorieDocument === 'D_ADMINISTRATIF' && (
+                      <>
+                        <SelectItem value="ATTESTATION">Attestation</SelectItem>
+                        <SelectItem value="COURRIER_RH">Courrier RH</SelectItem>
+                      </>
+                    )}
+                    {formData.categorieDocument === 'E_LIBRE' && (
+                      <>
+                        <SelectItem value="LETTRE_LIBRE">Lettre libre</SelectItem>
+                        <SelectItem value="NOTE_INTERNE">Note interne</SelectItem>
+                      </>
+                    )}
                   </SelectContent>
                 </Select>
               </div>
@@ -544,18 +584,18 @@ export default function TemplateBuilderModalV15({ open, onOpenChange, template, 
             {/* Menu de variables avec conditionnement */}
             {showVariableMenu && (
               <div className="bg-white border border-gray-300 rounded-lg p-4 max-h-64 overflow-y-auto">
-                {Object.entries(VARIABLES).map(([category, vars]) => (
+                {Object.entries(availableVariables).map(([category, vars]) => (
                   <div key={category} className="mb-4">
                     <h4 className="font-semibold text-gray-700 text-xs uppercase mb-2">{category}</h4>
                     <div className="grid grid-cols-2 gap-2">
                       {vars.map((v) => {
                         const isForbidden = (FORBIDDEN_VARIABLES_BY_TYPE[formData.typeDocument] || [])
-                          .some(f => f.var === v.value);
+                          .some(f => f.var === v.var);
                         
                         return (
                           <button
-                            key={v.value}
-                            onClick={() => !isForbidden && insertVariable(v.value)}
+                            key={v.var}
+                            onClick={() => !isForbidden && insertVariable(v.var)}
                             disabled={isForbidden}
                             className={`text-left px-3 py-2 text-sm rounded border transition-colors ${
                               isForbidden 

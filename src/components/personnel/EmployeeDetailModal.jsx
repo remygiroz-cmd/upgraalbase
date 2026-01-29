@@ -157,7 +157,7 @@ export default function EmployeeDetailModal({ employee, open, onOpenChange, onEd
                   className="bg-blue-600 hover:bg-blue-700"
                 >
                   <FileText className="w-4 h-4 mr-2" />
-                  Générer document
+                  Créer un document RH
                 </Button>
               )}
               <Button
