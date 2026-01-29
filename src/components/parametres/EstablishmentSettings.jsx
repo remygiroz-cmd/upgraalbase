@@ -22,6 +22,7 @@ export default function EstablishmentSettings() {
   const [formData, setFormData] = useState({
     name: '',
     postal_address: '',
+    city: '',
     delivery_address: '',
     siret: '',
     website: '',
@@ -34,6 +35,7 @@ export default function EstablishmentSettings() {
       setFormData({
         name: establishment.name || '',
         postal_address: establishment.postal_address || '',
+        city: establishment.city || '',
         delivery_address: establishment.delivery_address || '',
         siret: establishment.siret || '',
         website: establishment.website || '',
@@ -193,6 +195,18 @@ export default function EstablishmentSettings() {
               className="mt-2"
             />
           </div>
+        </div>
+
+        {/* Ville */}
+        <div>
+          <Label htmlFor="city">Ville</Label>
+          <Input
+            id="city"
+            value={formData.city}
+            onChange={(e) => setFormData({ ...formData, city: e.target.value })}
+            placeholder="Paris"
+            className="mt-2"
+          />
         </div>
 
         {/* Responsables */}
