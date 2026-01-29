@@ -73,6 +73,7 @@ export default function Layout({ children, currentPageName }) {
   const gestionLinks = [
     { name: 'Equipe', label: 'Équipe & Shifts', icon: Users, module: 'equipe' },
     { name: 'RegistrePersonnel', label: 'Registre du Personnel', icon: FileText, module: 'registre_personnel' },
+    { name: 'GestionPostes', label: 'Postes & Tâches', icon: Users, module: 'equipe' },
     { name: 'Pertes', label: 'Invendus & Pertes', icon: PackageMinus, module: 'pertes' },
     { name: 'Stocks', label: 'Inventaires', icon: Package, module: 'stocks' },
     { name: 'TemplatesRH', label: 'Templates RH', icon: File, module: 'equipe' },

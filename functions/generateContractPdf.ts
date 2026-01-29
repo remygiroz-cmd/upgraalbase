@@ -280,6 +280,28 @@ Deno.serve(async (req) => {
     // Récupérer le responsable principal (premier de la liste)
     const mainManager = establishment.managers?.[0] || {};
 
+    // Récupérer les tâches du poste depuis JobRoles
+    let jobTasksText = employee.position || '';
+    if (employee.position) {
+      const jobRoles = await base44.entities.JobRoles.filter({ 
+        label: employee.position,
+        isActive: true 
+      });
+
+      // Si pas de correspondance exacte, chercher dans les alias
+      if (!jobRoles || jobRoles.length === 0) {
+        const allRoles = await base44.entities.JobRoles.filter({ isActive: true });
+        const matchedRole = allRoles.find(role => 
+          role.posteAlias && role.posteAlias.includes(employee.position)
+        );
+        if (matchedRole) {
+          jobTasksText = matchedRole.tasksText || employee.position;
+        }
+      } else {
+        jobTasksText = jobRoles[0].tasksText || employee.position;
+      }
+    }
+
     // Construire l'objet variables
     const variables = {
       etablissementNom: establishment.name || '',
