@@ -302,22 +302,8 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Injecter les données personnalisées du template (customData)
-    const customVariables = {};
-    Object.keys(customData).forEach(key => {
-      let value = customData[key];
-
-      // Formater les dates au format français si c'est une date ISO
-      if (value && typeof value === 'string' && /^\d{4}-\d{2}-\d{2}/.test(value)) {
-        value = formatDateFR(value);
-      }
-
-      customVariables[key] = value;
-    });
-
-    // Construire l'objet variables (communes + spécifiques selon type + customData)
+    // Construire l'objet variables (communes + spécifiques selon type)
     const variables = {
-      ...customVariables,
       // Variables communes
       etablissementNom: establishment.name || '',
       etablissementSiret: establishment.siret || '',
@@ -379,6 +365,18 @@ Deno.serve(async (req) => {
       periodeAttestation: options.periodeAttestation || `du ${formatDateFR(startDate)} à ce jour`,
       natureAttestation: options.natureAttestation || 'Attestation d\'emploi'
     };
+
+    // Fusionner les données personnalisées du template (customData) - écrase les valeurs par défaut
+    Object.keys(customData).forEach(key => {
+      let value = customData[key];
+
+      // Formater les dates au format français si c'est une date ISO
+      if (value && typeof value === 'string' && /^\d{4}-\d{2}-\d{2}/.test(value)) {
+        value = formatDateFR(value);
+      }
+
+      variables[key] = value;
+    });
 
     // Utiliser le HTML du template stocké dans la DB
     let htmlContent = template.htmlContent;
