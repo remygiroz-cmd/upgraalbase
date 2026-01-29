@@ -75,8 +75,11 @@ export default function Layout({ children, currentPageName }) {
     { name: 'Equipe', label: 'Équipe & Shifts', icon: Users, module: 'equipe' },
     { name: 'RegistrePersonnel', label: 'Registre du Personnel', icon: FileText, module: 'registre_personnel' },
     { name: 'GestionPostes', label: 'Postes & Tâches', icon: Users, module: 'equipe' },
-    { name: 'Pertes', label: 'Invendus & Pertes', icon: PackageMinus, module: 'pertes' },
     { name: 'TemplatesRH', label: 'Templates RH', icon: File, module: 'equipe' },
+  ].filter(link => hasPermission(link.module));
+
+  const caisseLinks = [
+    { name: 'Pertes', label: 'Invendus & Pertes', icon: PackageMinus, module: 'pertes' },
   ].filter(link => hasPermission(link.module));
 
   const NavLink = ({ to, icon: Icon, label, active }) => (
@@ -290,6 +293,29 @@ export default function Layout({ children, currentPageName }) {
                 ))}
               </div>
             </div>
+
+            {/* Caisse */}
+            {caisseLinks.length > 0 && (
+              <div>
+                <h2 className={cn(
+                  "px-4 text-[10px] font-semibold uppercase tracking-widest mb-2",
+                  currentTheme.sectionTitle
+                )}>
+                  Caisse
+                </h2>
+                <div className="space-y-0.5">
+                  {caisseLinks.map((link) => (
+                    <NavLink
+                      key={link.name}
+                      to={link.name}
+                      icon={link.icon}
+                      label={link.label}
+                      active={currentPageName === link.name}
+                    />
+                  ))}
+                </div>
+              </div>
+            )}
           </nav>
 
           {/* Footer */}
