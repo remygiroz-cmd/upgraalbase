@@ -153,7 +153,7 @@ export default function EmployeeList() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {filteredEmployees.map(emp => {
-            const userInfo = isManager ? allUsers.find(u => u.email === emp.email) : null;
+            const userInfo = isManager ? allUsers.find(u => u.id === emp.user_id || u.email === emp.email) : null;
             return (
               <EmployeeCard
                 key={emp.id}
