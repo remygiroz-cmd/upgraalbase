@@ -317,6 +317,7 @@ Deno.serve(async (req) => {
       etablissementEmail: establishment.contact_email || '',
       etablissementSite: establishment.website || '',
       etablissementAdresse: establishment.postal_address || '',
+      villeEtablissement: establishment.city || '',
       etablissementAdresseLivraison: establishment.delivery_address || establishment.postal_address || '',
       responsableNom: mainManager.name || '',
       responsableTel: mainManager.phone || '',
