@@ -33,13 +33,6 @@ export default function EmployeeList() {
     queryFn: () => base44.entities.Employee.list('last_name')
   });
 
-  const { data: allUsers = [] } = useQuery({
-    queryKey: ['allUsers'],
-    queryFn: () => base44.asServiceRole.entities.User.list(),
-    enabled: isManager,
-    refetchInterval: 30000 // Refresh every 30 seconds
-  });
-
   // Check if current user is a manager/admin
   const isManager = React.useMemo(() => {
     if (!currentUser) return false;
@@ -50,6 +43,13 @@ export default function EmployeeList() {
     
     return establishment.managers.some(m => m.email?.toLowerCase() === currentUser.email?.toLowerCase());
   }, [currentUser, establishments]);
+
+  const { data: allUsers = [] } = useQuery({
+    queryKey: ['allUsers'],
+    queryFn: () => base44.asServiceRole.entities.User.list(),
+    enabled: isManager,
+    refetchInterval: 30000 // Refresh every 30 seconds
+  });
 
   const filteredEmployees = employees.filter(emp => {
     // Filter by active/archived status
