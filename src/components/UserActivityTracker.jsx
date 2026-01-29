@@ -24,9 +24,9 @@ export default function UserActivityTracker() {
       }
     };
 
-    // Update activity every 2 minutes
-    updateActivity(); // Initial update
-    intervalRef.current = setInterval(updateActivity, 120000);
+    // Update activity immediately on mount, then every 60 seconds
+    updateActivity();
+    intervalRef.current = setInterval(updateActivity, 60000);
 
     // Handle visibility change
     const handleVisibilityChange = () => {

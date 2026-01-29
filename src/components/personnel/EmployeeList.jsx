@@ -48,7 +48,7 @@ export default function EmployeeList() {
     queryKey: ['allUsers'],
     queryFn: () => base44.asServiceRole.entities.User.list(),
     enabled: isManager,
-    refetchInterval: 30000 // Refresh every 30 seconds
+    refetchInterval: 10000 // Refresh every 10 seconds
   });
 
   const filteredEmployees = employees.filter(emp => {
