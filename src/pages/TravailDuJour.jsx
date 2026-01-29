@@ -24,6 +24,7 @@ export default function TravailDuJour() {
   const dayOfWeek = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'][new Date().getDay()];
   const [showCompletionModal, setShowCompletionModal] = useState(false);
   const [confirmDialog, setConfirmDialog] = useState({ open: false, title: '', description: '', onConfirm: null });
+  const [hideCompleted, setHideCompleted] = useState(false);
 
   const { data: activeSession, isLoading } = useQuery({
     queryKey: ['workSessions', 'active', today],
@@ -208,6 +209,9 @@ export default function TravailDuJour() {
   // Group tasks by category
   const tasksByCategory = {};
   activeSession.tasks?.forEach((task, index) => {
+    // Skip completed tasks if hideCompleted is true
+    if (hideCompleted && task.is_completed) return;
+    
     const catId = task.category_id || 'uncategorized';
     if (!tasksByCategory[catId]) {
       tasksByCategory[catId] = [];
@@ -277,6 +281,18 @@ export default function TravailDuJour() {
           </div>
         </div>
         <div className="flex flex-col gap-2 mt-3">
+          <Button
+            onClick={() => setHideCompleted(!hideCompleted)}
+            variant="outline"
+            className={cn(
+              "w-full min-h-[44px] transition-colors",
+              hideCompleted 
+                ? "border-orange-600 text-orange-600 bg-orange-50 hover:bg-orange-100" 
+                : "border-gray-300 text-gray-700 hover:bg-gray-50"
+            )}
+          >
+            {hideCompleted ? 'Afficher tout' : 'Masquer terminées'}
+          </Button>
           <Button
             onClick={handleDeleteSession}
             variant="outline"
