@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Plus, FileText, Edit, Trash2, Copy } from 'lucide-react';
 import { toast } from 'sonner';
-import TemplateBuilderModal from '@/components/templates/TemplateBuilderModal';
+import TemplateBuilderModalV15 from '@/components/templates/TemplateBuilderModalV15';
 import { cn } from '@/lib/utils';
 
 export default function TemplatesRH() {
@@ -112,6 +112,16 @@ export default function TemplatesRH() {
                     <span className={cn('text-xs px-2 py-1 rounded-full font-semibold', typeBadges[template.typeDocument])}>
                       {template.typeDocument}
                     </span>
+                    {template.isOfficial && (
+                      <span className="text-xs px-2 py-1 rounded-full font-semibold bg-purple-100 text-purple-800 flex items-center gap-1">
+                        <span>🛡️</span> Officiel
+                      </span>
+                    )}
+                    {template.parentTemplateId && (
+                      <span className="text-xs px-2 py-1 rounded-full font-semibold bg-gray-100 text-gray-600">
+                        Copie personnalisée
+                      </span>
+                    )}
                   </div>
                   {template.description && (
                     <p className="text-sm text-gray-600 mb-2">{template.description}</p>
@@ -163,7 +173,7 @@ export default function TemplatesRH() {
         </div>
       )}
 
-      <TemplateBuilderModal
+      <TemplateBuilderModalV15
         open={showEditor}
         onOpenChange={handleClose}
         template={selectedTemplate}
