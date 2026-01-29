@@ -181,7 +181,7 @@ Deno.serve(async (req) => {
     }
 
     // Charger le template
-    const templates = await base44.entities.TemplatesRH.filter({ id: templateId });
+    const templates = await base44.asServiceRole.entities.TemplatesRH.filter({ id: templateId });
     if (!templates || templates.length === 0) {
       return Response.json({ error: 'Template not found' }, { status: 404 });
     }
@@ -195,14 +195,14 @@ Deno.serve(async (req) => {
     }
 
     // Charger l'employé
-    const employees = await base44.entities.Employee.filter({ id: employeeId });
+    const employees = await base44.asServiceRole.entities.Employee.filter({ id: employeeId });
     if (!employees || employees.length === 0) {
       return Response.json({ error: 'Employee not found' }, { status: 404 });
     }
     const employee = employees[0];
 
     // Charger l'établissement (par défaut le premier)
-    const establishments = await base44.entities.Establishment.list();
+    const establishments = await base44.asServiceRole.entities.Establishment.list();
     const establishment = establishments?.[0] || {};
 
     // Vérifications établissement (données critiques)
@@ -218,7 +218,7 @@ Deno.serve(async (req) => {
     }
 
     // Charger les tâches du poste (JobRoles)
-    const jobRoles = await base44.entities.JobRoles.filter({ label: employee.position });
+    const jobRoles = await base44.asServiceRole.entities.JobRoles.filter({ label: employee.position });
     const jobTasksText = jobRoles?.[0]?.tasksText || 'Tâches à définir';
 
     // Déterminer le type de contrat
@@ -281,29 +281,30 @@ Deno.serve(async (req) => {
     const mainManager = establishment.managers?.[0] || {};
 
     // Récupérer les tâches du poste depuis JobRoles
-    let jobTasksText = employee.position || '';
+    let finalJobTasksText = employee.position || '';
     if (employee.position) {
-      const jobRoles = await base44.entities.JobRoles.filter({ 
+      const jobRoles = await base44.asServiceRole.entities.JobRoles.filter({ 
         label: employee.position,
         isActive: true 
       });
 
       // Si pas de correspondance exacte, chercher dans les alias
       if (!jobRoles || jobRoles.length === 0) {
-        const allRoles = await base44.entities.JobRoles.filter({ isActive: true });
+        const allRoles = await base44.asServiceRole.entities.JobRoles.filter({ isActive: true });
         const matchedRole = allRoles.find(role => 
           role.posteAlias && role.posteAlias.includes(employee.position)
         );
         if (matchedRole) {
-          jobTasksText = matchedRole.tasksText || employee.position;
+          finalJobTasksText = matchedRole.tasksText || employee.position;
         }
       } else {
-        jobTasksText = jobRoles[0].tasksText || employee.position;
+        finalJobTasksText = jobRoles[0].tasksText || employee.position;
       }
     }
 
-    // Construire l'objet variables
+    // Construire l'objet variables (communes + spécifiques selon type)
     const variables = {
+      // Variables communes
       etablissementNom: establishment.name || '',
       etablissementSiret: establishment.siret || '',
       etablissementEmail: establishment.contact_email || '',
@@ -315,23 +316,53 @@ Deno.serve(async (req) => {
       responsableEmail: mainManager.email || '',
       prenom: employee.first_name || '',
       nom: employee.last_name || '',
+      signature: formatDateFR(new Date()),
+
+      // Variables contractuelles
       naissance: formatDateFR(employee.birth_date),
       lieuNaissance: employee.birth_place || '',
       adresse: employee.address || '',
       nationalite: employee.nationality || '',
       secu: employee.social_security_number || '',
       poste: employee.position || '',
-      taches: jobTasksText,
+      taches: finalJobTasksText,
       debut: formatDateFR(startDate),
       fin: formatDateFR(endDate),
       heures: options.contractHours || employee.contract_hours_weekly || '35',
       heuresTexte: hoursToText((parseFloat(options.contractHours || employee.contract_hours_weekly || 35) * 4.33).toFixed(2)),
-      periodeEssaiTexte: periodeEssaiTexte,
+      periodeEssaiTexte: periodeEssaiTexte || '',
       finEssai: formatDateFR(finEssaiDate),
       taux: (options.hourlyRate || employee.gross_hourly_rate || 0).toFixed(2),
       salaireBrut: (options.grossSalary || employee.gross_salary || 0).toFixed(2),
       motifCDD: motifCDD,
-      signature: formatDateFR(new Date())
+
+      // Variables avenants
+      dateEffet: options.dateEffet || formatDateFR(new Date()),
+      ancienneValeur: options.ancienneValeur || '',
+      nouvelleValeur: options.nouvelleValeur || '',
+      motifModification: options.motifModification || '',
+
+      // Variables disciplinaires
+      dateFaits: options.dateFaits || formatDateFR(new Date()),
+      descriptionFaits: options.descriptionFaits || '',
+      dateIncident: options.dateIncident || formatDateFR(new Date()),
+      dateNotification: formatDateFR(new Date()),
+      dateConvocation: options.dateConvocation || '',
+      lieuConvocation: options.lieuConvocation || establishment.postal_address || '',
+      heureConvocation: options.heureConvocation || '',
+
+      // Variables rupture
+      dateRupture: options.dateRupture || formatDateFR(new Date()),
+      motifRupture: options.motifRupture || '',
+      dateFinContrat: options.dateFinContrat || formatDateFR(endDate),
+      indemnitePreavis: options.indemnitePreavis || '0',
+      indemniteRupture: options.indemniteRupture || '0',
+
+      // Variables administratives
+      dateDebutContrat: formatDateFR(startDate),
+      fonctionOccupee: employee.position || '',
+      periodeAttestation: options.periodeAttestation || `du ${formatDateFR(startDate)} à ce jour`,
+      natureAttestation: options.natureAttestation || 'Attestation d\'emploi'
     };
 
     // Utiliser le HTML du template stocké dans la DB
@@ -357,6 +388,7 @@ Deno.serve(async (req) => {
       templateName: template.name,
       templateVersion: template.version,
       typeDocument: template.typeDocument,
+      categorieDocument: template.categorieDocument || 'A_CONTRACTUEL',
       titre: `${template.typeDocument}_${employee.last_name}_${employee.first_name}_${new Date().toISOString().split('T')[0]}`,
       payloadSnapshot: variables,
       statusSignature: 'non_signe',
@@ -365,7 +397,7 @@ Deno.serve(async (req) => {
       notes: options.notes || ''
     };
 
-    const createdDocument = await base44.entities.DocumentsRH.create(documentRecord);
+    const createdDocument = await base44.asServiceRole.entities.DocumentsRH.create(documentRecord);
 
     return Response.json({
       success: true,
