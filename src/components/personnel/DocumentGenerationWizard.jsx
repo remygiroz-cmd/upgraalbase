@@ -130,6 +130,20 @@ export default function DocumentGenerationWizard({ open, onOpenChange, employee,
           return;
         }
       }
+      
+      // Validation juridique stricte pour avenants
+      const isAvenant = selectedTemplateData?.typeDocument === 'AVENANT';
+      if (isAvenant) {
+        const requiredFields = ['motifModification', 'ancienneValeur', 'nouvelleValeur', 'dateEffet'];
+        const missingFields = requiredFields.filter(key => !customFieldsData[key]?.trim());
+        
+        if (missingFields.length > 0) {
+          toast.error('📝 Un avenant doit obligatoirement préciser :\n• la modification contractuelle\n• l\'ancienne valeur\n• la nouvelle valeur\n• la date d\'effet', {
+            duration: 5000
+          });
+          return;
+        }
+      }
     }
     
     setStep(step + 1);
