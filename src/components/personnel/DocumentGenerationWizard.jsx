@@ -14,12 +14,10 @@ import { detectManualVariables } from './VariableDetector';
 
 export default function DocumentGenerationWizard({ open, onOpenChange, employee, establishment }) {
   const [step, setStep] = useState(1);
-  const [documentType, setDocumentType] = useState('');
   const [selectedTemplate, setSelectedTemplate] = useState('');
   const [selectedTemplateData, setSelectedTemplateData] = useState(null);
   const [detectedFields, setDetectedFields] = useState([]);
   const [customFieldsData, setCustomFieldsData] = useState({});
-  const [editData, setEditData] = useState({});
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatedDocument, setGeneratedDocument] = useState(null);
   const [showPDFDownload, setShowPDFDownload] = useState(false);
@@ -31,42 +29,38 @@ export default function DocumentGenerationWizard({ open, onOpenChange, employee,
     queryFn: () => base44.entities.TemplatesRH.filter({ isActive: true })
   });
 
-  const documentTypes = [
-    { category: 'A_CONTRACTUEL', value: 'CDD', label: '🔒 Contrat CDD' },
-    { category: 'A_CONTRACTUEL', value: 'CDI', label: '🔒 Contrat CDI' },
-    { category: 'A_CONTRACTUEL', value: 'AVENANT', label: '🔒 Avenant contractuel' },
-    { category: 'B_DISCIPLINAIRE', value: 'AVERTISSEMENT', label: '⚠️ Lettre d\'avertissement' },
-    { category: 'D_ADMINISTRATIF', value: 'ATTESTATION', label: '📄 Attestation employeur' }
-  ];
+  // Grouper les templates par catégorie
+  const templatesByCategory = React.useMemo(() => {
+    const categories = {
+      'A_CONTRACTUEL': { label: '📝 Documents contractuels', icon: '🔒', templates: [] },
+      'B_DISCIPLINAIRE': { label: '⚠️ Documents disciplinaires', icon: '⚖️', templates: [] },
+      'C_RUPTURE': { label: '🔚 Rupture / Fin de contrat', icon: '✂️', templates: [] },
+      'D_ADMINISTRATIF': { label: '📋 Documents administratifs', icon: '📄', templates: [] },
+      'E_LIBRE': { label: '✍️ Documents libres', icon: '📝', templates: [] }
+    };
 
-  // Filtrer les templates en fonction du type de document sélectionné
-  const getAvailableTemplates = () => {
-    if (!documentType) return [];
-    
-    return allTemplates
-      .filter(template => template.typeDocument === documentType)
-      .map(template => ({
-        id: template.id,
-        name: template.name,
-        type: template.typeDocument,
-        label: template.name
-      }));
-  };
+    allTemplates.forEach(template => {
+      const cat = template.categorieDocument || 'E_LIBRE';
+      if (categories[cat]) {
+        categories[cat].templates.push(template);
+      }
+    });
 
-  const filteredTemplates = getAvailableTemplates();
+    // Retourner uniquement les catégories qui ont des templates
+    return Object.entries(categories)
+      .filter(([_, data]) => data.templates.length > 0)
+      .map(([key, data]) => ({ key, ...data }));
+  }, [allTemplates]);
 
   const handleNextStep = async () => {
-    if (step === 1 && !documentType) {
-      toast.error('Veuillez choisir un type de document');
-      return;
-    }
-    if (step === 2 && !selectedTemplate) {
-      toast.error('Veuillez choisir un template');
+    // Validation template sélectionné
+    if (step === 1 && !selectedTemplate) {
+      toast.error('Veuillez choisir un document');
       return;
     }
     
-    // Charger les détails du template sélectionné pour step 3
-    if (step === 2 && selectedTemplate) {
+    // Charger les détails du template sélectionné
+    if (step === 1 && selectedTemplate) {
       const template = allTemplates.find(t => t.id === selectedTemplate);
       setSelectedTemplateData(template);
       
@@ -76,6 +70,12 @@ export default function DocumentGenerationWizard({ open, onOpenChange, employee,
         : detectManualVariables(template?.htmlContent, template?.customFields || []);
       
       setDetectedFields(fields);
+      
+      // Si pas de champs à saisir, passer directement à la vérification
+      if (fields.length === 0) {
+        setStep(3); // Aller à la vérification
+        return;
+      }
       
       // Initialiser les valeurs par défaut
       const defaults = {};
@@ -89,8 +89,8 @@ export default function DocumentGenerationWizard({ open, onOpenChange, employee,
       setCustomFieldsData(defaults);
     }
     
-    // Validation des champs personnalisés avant d'aller à step 4
-    if (step === 3 && detectedFields.length > 0) {
+    // Validation des champs personnalisés avant d'aller à la vérification
+    if (step === 2 && detectedFields.length > 0) {
       for (const field of detectedFields) {
         if (field.required && !customFieldsData[field.key]?.trim()) {
           toast.error(`Le champ "${field.label}" est obligatoire`);
@@ -134,10 +134,10 @@ export default function DocumentGenerationWizard({ open, onOpenChange, employee,
         setGeneratedDocument({
           id: response.data.documentId,
           html: response.data.html,
-          contractType: documentType,
+          contractType: selectedTemplateData?.typeDocument || 'DOCUMENT',
           employeeName: `${employee.last_name}_${employee.first_name}`
         });
-        setStep(6);
+        setStep(5);
         toast.success('Document généré avec succès');
       } else {
         toast.error('Erreur lors de la génération');
@@ -293,12 +293,10 @@ export default function DocumentGenerationWizard({ open, onOpenChange, employee,
 
   const handleClose = () => {
     setStep(1);
-    setDocumentType('');
     setSelectedTemplate('');
     setSelectedTemplateData(null);
     setDetectedFields([]);
     setCustomFieldsData({});
-    setEditData({});
     setGeneratedDocument(null);
     setShowPDFDownload(false);
     onOpenChange(false);
@@ -314,54 +312,67 @@ export default function DocumentGenerationWizard({ open, onOpenChange, employee,
               Créer un document RH
             </DialogTitle>
             <DialogDescription className="text-gray-600">
-              Étape {step} / 6 - {['Type de document', 'Choix du template', 'Données spécifiques', 'Vérification', 'Génération', 'Téléchargement'][step - 1]}
+              Étape {step} / 5 - {['Choix du document', 'Données spécifiques', 'Vérification', 'Génération', 'Téléchargement'][step - 1]}
             </DialogDescription>
           </DialogHeader>
 
-          {/* STEP 1: Choix du type */}
+          {/* STEP 1: Choix du document (template) */}
           {step === 1 && (
-            <div className="space-y-4 py-4">
-              <div className="grid grid-cols-1 gap-3">
-                {documentTypes.map(type => (
-                  <button
-                    key={type.value}
-                    onClick={() => setDocumentType(type.value)}
-                    className={`p-4 border-2 rounded-lg text-left transition-all ${
-                      documentType === type.value
-                        ? 'border-orange-600 bg-orange-50'
-                        : 'border-gray-300 hover:border-gray-400'
-                    }`}
-                  >
-                    <p className="font-semibold text-gray-900">{type.label}</p>
-                  </button>
-                ))}
+            <div className="space-y-6 py-4">
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 flex gap-2">
+                <AlertCircle className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
+                <div className="text-sm text-blue-800">
+                  Sélectionnez le type de document RH à générer
+                </div>
               </div>
-            </div>
-          )}
 
-          {/* STEP 2: Choix du template */}
-          {step === 2 && (
-            <div className="space-y-4 py-4">
-              <div>
-                <Label className="text-gray-900 mb-2 block">Choisir un template</Label>
-                <Select value={selectedTemplate} onValueChange={setSelectedTemplate}>
-                  <SelectTrigger className="border-gray-300">
-                    <SelectValue placeholder="Sélectionner un template..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {filteredTemplates.map(template => (
-                      <SelectItem key={template.id} value={template.id}>
-                        {template.label}
-                      </SelectItem>
+              {templatesByCategory.map(category => (
+                <div key={category.key} className="space-y-3">
+                  <h4 className="font-semibold text-gray-700 text-sm flex items-center gap-2 px-2">
+                    <span className="text-base">{category.icon}</span>
+                    {category.label}
+                  </h4>
+                  <div className="grid grid-cols-1 gap-2">
+                    {category.templates.map(template => (
+                      <button
+                        key={template.id}
+                        onClick={() => setSelectedTemplate(template.id)}
+                        className={`p-4 border-2 rounded-lg text-left transition-all hover:shadow-sm ${
+                          selectedTemplate === template.id
+                            ? 'border-orange-600 bg-orange-50'
+                            : 'border-gray-300 hover:border-gray-400'
+                        }`}
+                      >
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="flex-1">
+                            <p className="font-semibold text-gray-900">{template.name}</p>
+                            {template.description && (
+                              <p className="text-xs text-gray-600 mt-1">{template.description}</p>
+                            )}
+                          </div>
+                          {template.isOfficial && (
+                            <span className="px-2 py-1 bg-green-100 text-green-700 text-xs font-medium rounded">
+                              Officiel
+                            </span>
+                          )}
+                        </div>
+                      </button>
                     ))}
-                  </SelectContent>
-                </Select>
-              </div>
+                  </div>
+                </div>
+              ))}
+
+              {templatesByCategory.length === 0 && (
+                <div className="text-center py-8 text-gray-500">
+                  <p className="mb-2">Aucun template disponible</p>
+                  <p className="text-sm">Créez vos premiers templates RH dans la section Templates</p>
+                </div>
+              )}
             </div>
           )}
 
-          {/* STEP 3: Données spécifiques du document */}
-          {step === 3 && detectedFields.length > 0 && (
+          {/* STEP 2: Données spécifiques du document */}
+          {step === 2 && detectedFields.length > 0 && (
             <div className="space-y-4 py-4">
               <div className="bg-orange-50 border border-orange-200 rounded-lg p-4 flex gap-3">
                 <AlertCircle className="w-5 h-5 text-orange-600 flex-shrink-0 mt-0.5" />
@@ -467,8 +478,8 @@ export default function DocumentGenerationWizard({ open, onOpenChange, employee,
             </div>
           )}
 
-          {/* STEP 4: Vérification des données */}
-          {step === 4 && (
+          {/* STEP 3: Vérification des données */}
+          {step === 3 && (
             <div className="space-y-4 py-4">
               <div className="bg-green-50 border border-green-200 rounded-lg p-3 flex gap-2">
                 <CheckCircle className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
@@ -539,8 +550,8 @@ export default function DocumentGenerationWizard({ open, onOpenChange, employee,
                       <p className="text-gray-900">{employee?.position || '-'}</p>
                     </div>
                     <div>
-                      <p className="font-semibold text-gray-700">Type de contrat</p>
-                      <p className="text-gray-900">{documentType || '-'}</p>
+                      <p className="font-semibold text-gray-700">Type de document</p>
+                      <p className="text-gray-900">{selectedTemplateData?.name || '-'}</p>
                     </div>
                     <div>
                       <p className="font-semibold text-gray-700">Date d'embauche</p>
@@ -573,8 +584,8 @@ export default function DocumentGenerationWizard({ open, onOpenChange, employee,
             </div>
           )}
 
-          {/* STEP 5: Résumé & Génération */}
-          {step === 5 && (
+          {/* STEP 4: Résumé & Génération */}
+          {step === 4 && (
             <div className="space-y-4 py-4">
               <div className="bg-green-50 border border-green-200 rounded-lg p-3">
                 <p className="text-sm text-green-800">
@@ -582,14 +593,14 @@ export default function DocumentGenerationWizard({ open, onOpenChange, employee,
                 </p>
               </div>
               <div className="text-sm space-y-1 text-gray-700">
-                <p><strong>Type :</strong> {documentType}</p>
+                <p><strong>Document :</strong> {selectedTemplateData?.name}</p>
                 <p><strong>Employé :</strong> {employee?.first_name} {employee?.last_name}</p>
               </div>
             </div>
           )}
 
-          {/* STEP 6: Téléchargement */}
-          {step === 6 && generatedDocument && (
+          {/* STEP 5: Téléchargement */}
+          {step === 5 && generatedDocument && (
             <div className="space-y-4 py-4">
               <div className="bg-green-50 border border-green-200 rounded-lg p-4 flex items-start gap-3">
                 <CheckCircle className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
@@ -613,7 +624,7 @@ export default function DocumentGenerationWizard({ open, onOpenChange, employee,
           <div className="flex gap-2 justify-between pt-4 border-t border-gray-200">
             <Button
               onClick={handlePrevStep}
-              disabled={step === 1 || step === 6}
+              disabled={step === 1 || step === 5}
               variant="outline"
               className="border-gray-300"
             >
@@ -627,10 +638,10 @@ export default function DocumentGenerationWizard({ open, onOpenChange, employee,
                 variant="outline"
                 className="border-gray-300"
               >
-                {step === 6 ? 'Fermer' : 'Annuler'}
+                {step === 5 ? 'Fermer' : 'Annuler'}
               </Button>
 
-              {step < 5 ? (
+              {step < 4 ? (
                 <Button
                   onClick={handleNextStep}
                   className="bg-orange-600 hover:bg-orange-700"
@@ -638,7 +649,7 @@ export default function DocumentGenerationWizard({ open, onOpenChange, employee,
                   Suivant
                   <ChevronRight className="w-4 h-4 ml-1" />
                 </Button>
-              ) : step === 5 ? (
+              ) : step === 4 ? (
                 <Button
                   onClick={handleGenerate}
                   disabled={isGenerating}
