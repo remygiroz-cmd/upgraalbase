@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
-import { User, Plus, Search, Mail, Phone, MapPin, Archive, Lock, MessageSquare } from 'lucide-react';
+import { User, Plus, Search, Mail, Phone, MapPin, Archive, Lock, MessageSquare, Wifi, WifiOff, Clock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import EmptyState from '@/components/ui/EmptyState';
@@ -31,6 +31,13 @@ export default function EmployeeList() {
   const { data: employees = [], isLoading } = useQuery({
     queryKey: ['employees'],
     queryFn: () => base44.entities.Employee.list('last_name')
+  });
+
+  const { data: allUsers = [] } = useQuery({
+    queryKey: ['allUsers'],
+    queryFn: () => base44.asServiceRole.entities.User.list(),
+    enabled: isManager,
+    refetchInterval: 30000 // Refresh every 30 seconds
   });
 
   // Check if current user is a manager/admin
@@ -145,14 +152,19 @@ export default function EmployeeList() {
         />
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {filteredEmployees.map(emp => (
-            <EmployeeCard
-              key={emp.id}
-              employee={emp}
-              onClick={() => handleView(emp)}
-              canView={isManager || emp.email === currentUser?.email}
-            />
-          ))}
+          {filteredEmployees.map(emp => {
+            const userInfo = isManager ? allUsers.find(u => u.email === emp.email) : null;
+            return (
+              <EmployeeCard
+                key={emp.id}
+                employee={emp}
+                onClick={() => handleView(emp)}
+                canView={isManager || emp.email === currentUser?.email}
+                userInfo={userInfo}
+                isManager={isManager}
+              />
+            );
+          })}
         </div>
       )}
 
@@ -176,12 +188,30 @@ export default function EmployeeList() {
   );
 }
 
-function EmployeeCard({ employee, onClick, canView = true }) {
+function EmployeeCard({ employee, onClick, canView = true, userInfo, isManager }) {
         const isCDD = employee.contract_type === 'cdd';
         const endDate = isCDD && employee.end_date ? new Date(employee.end_date) : null;
         const today = new Date();
         const isEndingSoon = endDate && (endDate.getTime() - today.getTime()) < (30 * 24 * 60 * 60 * 1000) && endDate > today;
         const isExpired = endDate && endDate < today;
+
+        // Connection status logic (only for managers)
+        const isOnline = isManager && userInfo?.is_online;
+        const lastActiveAt = isManager && userInfo?.last_active_at ? new Date(userInfo.last_active_at) : null;
+        const formatLastActive = (date) => {
+          if (!date) return null;
+          const now = new Date();
+          const diffMs = now - date;
+          const diffMins = Math.floor(diffMs / 60000);
+          const diffHours = Math.floor(diffMs / 3600000);
+          const diffDays = Math.floor(diffMs / 86400000);
+          
+          if (diffMins < 1) return 'À l\'instant';
+          if (diffMins < 60) return `Il y a ${diffMins} min`;
+          if (diffHours < 24) return `Il y a ${diffHours}h`;
+          if (diffDays < 7) return `Il y a ${diffDays}j`;
+          return date.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' });
+        };
 
         return (
           <button
@@ -218,10 +248,32 @@ function EmployeeCard({ employee, onClick, canView = true }) {
                 </div>
               )}
               <div className="flex-1 min-w-0">
-                <h3 className="font-semibold text-gray-900 truncate flex items-center gap-2">
-                  {employee.first_name} {employee.last_name}
-                  {!canView && <Lock className="w-3 h-3 text-gray-400" />}
-                </h3>
+                <div className="flex items-center gap-2">
+                  <h3 className="font-semibold text-gray-900 truncate flex items-center gap-2">
+                    {employee.first_name} {employee.last_name}
+                    {!canView && <Lock className="w-3 h-3 text-gray-400" />}
+                  </h3>
+                  {isManager && (
+                    <div className="flex items-center gap-1 ml-auto flex-shrink-0">
+                      {isOnline ? (
+                        <div className="flex items-center gap-1 text-green-600" title="En ligne">
+                          <Wifi className="w-3 h-3" />
+                          <span className="text-[10px] font-semibold">En ligne</span>
+                        </div>
+                      ) : lastActiveAt ? (
+                        <div className="flex items-center gap-1 text-gray-500" title={`Dernière connexion: ${lastActiveAt.toLocaleString('fr-FR')}`}>
+                          <Clock className="w-3 h-3" />
+                          <span className="text-[10px]">{formatLastActive(lastActiveAt)}</span>
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-1 text-gray-400" title="Jamais connecté">
+                          <WifiOff className="w-3 h-3" />
+                          <span className="text-[10px]">Jamais</span>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
                 {employee.nickname && (
                   <p className="text-xs text-gray-500 italic truncate">"{employee.nickname}"</p>
                 )}

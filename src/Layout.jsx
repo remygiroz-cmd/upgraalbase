@@ -22,6 +22,7 @@ import {
       } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import UserAccessCheck from '@/components/UserAccessCheck';
+import UserActivityTracker from '@/components/UserActivityTracker';
 
 export default function Layout({ children, currentPageName }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -148,6 +149,7 @@ export default function Layout({ children, currentPageName }) {
 
   return (
     <UserAccessCheck>
+      <UserActivityTracker />
       <div className={cn("min-h-screen", currentTheme.bg, currentTheme.text)}>
         <style>{`
         :root {
