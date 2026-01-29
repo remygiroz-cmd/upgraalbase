@@ -1,15 +1,5 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
 
-const getTemplateHtml = (templateCode) => {
-  const templates = {
-    'CDD_TP_RESTAURATION_RAPIDE': getCDDTPTemplate(),
-    'CDD_TC_RESTAURATION_RAPIDE': getCDDTCTemplate(),
-    'CDI_TP_RESTAURATION_RAPIDE': getCDITPTemplate(),
-    'CDI_TC_RESTAURATION_RAPIDE': getCDITCTemplate()
-  };
-  return templates[templateCode] || null;
-};
-
 const getBaseStyles = () => `
   :root {
     --font: Arial, Helvetica, sans-serif;
@@ -522,6 +512,13 @@ Deno.serve(async (req) => {
     }
     const template = templates[0];
 
+    // Vérifier que le template a un contenu HTML
+    if (!template.htmlContent) {
+      return Response.json({ 
+        error: 'Template HTML content is missing. Please edit the template and add HTML content.' 
+      }, { status: 400 });
+    }
+
     // Charger l'employé
     const employees = await base44.entities.Employee.filter({ id: employeeId });
     if (!employees || employees.length === 0) {
@@ -616,16 +613,15 @@ Deno.serve(async (req) => {
       signature: formatDateFR(new Date())
     };
 
-    // Charger et injecter le HTML du template
-    let htmlTemplate = getTemplateHtml(template.templateCode);
-    if (!htmlTemplate) {
-      return Response.json({ 
-        error: 'Template HTML not found for: ' + template.templateCode 
-      }, { status: 500 });
+    // Utiliser le HTML du template stocké dans la DB
+    let htmlContent = template.htmlContent;
+    
+    // Injecter les styles si nécessaire (si le template contient le placeholder)
+    if (htmlContent.includes('{{STYLES}}')) {
+      htmlContent = htmlContent.replace('{{STYLES}}', getBaseStyles());
     }
-
+    
     // Injecter les variables dans le HTML
-    let htmlContent = htmlTemplate;
     Object.entries(variables).forEach(([key, value]) => {
       const placeholder = `{{${key}}}`;
       htmlContent = htmlContent.split(placeholder).join(String(value));
