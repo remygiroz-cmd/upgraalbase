@@ -310,6 +310,7 @@ Deno.serve(async (req) => {
       etablissementEmail: establishment.contact_email || '',
       etablissementSite: establishment.website || '',
       etablissementAdresse: establishment.postal_address || '',
+      codePostalEtablissement: establishment.postal_code || '',
       villeEtablissement: establishment.city || '',
       etablissementAdresseLivraison: establishment.delivery_address || establishment.postal_address || '',
       responsableNom: mainManager.name || '',

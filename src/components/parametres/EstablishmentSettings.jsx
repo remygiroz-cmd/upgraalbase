@@ -22,6 +22,7 @@ export default function EstablishmentSettings() {
   const [formData, setFormData] = useState({
     name: '',
     postal_address: '',
+    postal_code: '',
     city: '',
     delivery_address: '',
     siret: '',
@@ -35,6 +36,7 @@ export default function EstablishmentSettings() {
       setFormData({
         name: establishment.name || '',
         postal_address: establishment.postal_address || '',
+        postal_code: establishment.postal_code || '',
         city: establishment.city || '',
         delivery_address: establishment.delivery_address || '',
         siret: establishment.siret || '',
@@ -178,8 +180,8 @@ export default function EstablishmentSettings() {
               id="postal_address"
               value={formData.postal_address}
               onChange={(e) => setFormData({ ...formData, postal_address: e.target.value })}
-              placeholder="123 Rue de la Gastronomie&#10;75001 Paris"
-              rows={3}
+              placeholder="123 Rue de la Gastronomie"
+              rows={2}
               className="mt-2"
             />
           </div>
@@ -190,23 +192,36 @@ export default function EstablishmentSettings() {
               id="delivery_address"
               value={formData.delivery_address}
               onChange={(e) => setFormData({ ...formData, delivery_address: e.target.value })}
-              placeholder="456 Rue de la Cuisine&#10;75001 Paris"
-              rows={3}
+              placeholder="456 Rue de la Cuisine"
+              rows={2}
               className="mt-2"
             />
           </div>
         </div>
 
-        {/* Ville */}
-        <div>
-          <Label htmlFor="city">Ville</Label>
-          <Input
-            id="city"
-            value={formData.city}
-            onChange={(e) => setFormData({ ...formData, city: e.target.value })}
-            placeholder="Paris"
-            className="mt-2"
-          />
+        {/* Code postal et Ville */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <Label htmlFor="postal_code">Code postal</Label>
+            <Input
+              id="postal_code"
+              value={formData.postal_code}
+              onChange={(e) => setFormData({ ...formData, postal_code: e.target.value })}
+              placeholder="75001"
+              className="mt-2"
+            />
+          </div>
+          
+          <div>
+            <Label htmlFor="city">Ville</Label>
+            <Input
+              id="city"
+              value={formData.city}
+              onChange={(e) => setFormData({ ...formData, city: e.target.value })}
+              placeholder="Paris"
+              className="mt-2"
+            />
+          </div>
         </div>
 
         {/* Responsables */}
