@@ -74,30 +74,30 @@ export const validateTemplate = (content, typeDocument) => {
     }
   });
 
-  // Vérification des variables obligatoires
+  // Vérification des variables obligatoires (contextuel au type)
   const required = REQUIRED_VARIABLES_BY_TYPE[typeDocument] || [];
   required.forEach(({ var: variable, label }) => {
     if (!content.includes(variable)) {
-      missing.push(`⚠️ ${label} est obligatoire pour un ${typeDocument}`);
+      missing.push(`${label}`);
     }
   });
 
-  // Vérification des variables recommandées
+  // Vérification des variables recommandées (contextuel au type)
   const recommended = RECOMMENDED_VARIABLES[typeDocument] || [];
   recommended.forEach(({ var: variable, label }) => {
     if (!content.includes(variable)) {
-      warnings.push(`💡 ${label} est recommandé mais optionnel`);
+      warnings.push(`${label}`);
     }
   });
 
-  // Vérifications spécifiques CDD
+  // Vérifications spécifiques CDD (uniquement pour les CDD)
   if (typeDocument === 'CDD') {
     if (!contentLower.includes('durée déterminée') && !contentLower.includes('cdd')) {
       warnings.push('Le contrat ne mentionne pas explicitement "CDD" ou "durée déterminée"');
     }
   }
 
-  // Vérifications spécifiques CDI
+  // Vérifications spécifiques CDI (uniquement pour les CDI)
   if (typeDocument === 'CDI') {
     if (!contentLower.includes('durée indéterminée') && !contentLower.includes('cdi')) {
       warnings.push('Le contrat ne mentionne pas explicitement "CDI" ou "durée indéterminée"');

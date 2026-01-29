@@ -226,7 +226,10 @@ export default function TemplateBuilderModalV15({ open, onOpenChange, template, 
     // Warning pour les éléments recommandés
     if (validationResult.warnings.length > 0) {
       const proceed = confirm(
-        `⚠️ Attention :\n\n${validationResult.warnings.join('\n')}\n\nVoulez-vous continuer malgré ces avertissements ?`
+        `💡 Votre contrat ${formData.typeDocument} peut être amélioré\n\n` +
+        `Ces ${validationResult.warnings.length} éléments sont optionnels mais recommandés :\n\n` +
+        `${validationResult.warnings.map((w, i) => `${i + 1}. ${w}`).join('\n')}\n\n` +
+        `Voulez-vous sauvegarder malgré tout ?`
       );
       if (!proceed) return;
     }
@@ -468,10 +471,15 @@ export default function TemplateBuilderModalV15({ open, onOpenChange, template, 
                 <div className="flex gap-2">
                   <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
                   <div className="flex-1">
-                    <p className="font-semibold text-red-900 text-sm mb-1">⛔ Erreurs critiques (sauvegarde bloquée) :</p>
-                    <ul className="text-sm text-red-800 space-y-1">
+                    <p className="font-bold text-red-900 mb-2">
+                      ⛔ Impossible de sauvegarder : {validationResult.errors.length} {validationResult.errors.length > 1 ? 'erreurs critiques détectées' : 'erreur critique détectée'}
+                    </p>
+                    <p className="text-sm text-red-800 mb-2">
+                      Votre contrat de type <strong>{formData.typeDocument}</strong> contient des éléments incompatibles :
+                    </p>
+                    <ul className="text-sm text-red-800 space-y-1 ml-4">
                       {validationResult.errors.map((error, idx) => (
-                        <li key={idx}>{error}</li>
+                        <li key={idx} className="list-disc">{error}</li>
                       ))}
                     </ul>
                   </div>
@@ -484,10 +492,15 @@ export default function TemplateBuilderModalV15({ open, onOpenChange, template, 
                 <div className="flex gap-2">
                   <AlertCircle className="w-5 h-5 text-orange-600 flex-shrink-0 mt-0.5" />
                   <div className="flex-1">
-                    <p className="font-semibold text-orange-900 text-sm mb-1">⚠️ Éléments obligatoires manquants :</p>
-                    <ul className="text-sm text-orange-800 space-y-1">
+                    <p className="font-bold text-orange-900 mb-2">
+                      ⚠️ Il vous manque encore {validationResult.missing.length} {validationResult.missing.length > 1 ? 'informations' : 'information'} pour finaliser ce contrat {formData.typeDocument}
+                    </p>
+                    <p className="text-sm text-orange-800 mb-2">
+                      Pour qu'un contrat {formData.typeDocument} soit valide juridiquement, vous devez ajouter :
+                    </p>
+                    <ul className="text-sm text-orange-800 space-y-1 ml-4">
                       {validationResult.missing.map((missing, idx) => (
-                        <li key={idx}>{missing}</li>
+                        <li key={idx} className="list-disc">{missing}</li>
                       ))}
                     </ul>
                   </div>
@@ -500,10 +513,15 @@ export default function TemplateBuilderModalV15({ open, onOpenChange, template, 
                 <div className="flex gap-2">
                   <Info className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
                   <div className="flex-1">
-                    <p className="font-semibold text-blue-900 text-sm mb-1">💡 Recommandations :</p>
-                    <ul className="text-sm text-blue-800 space-y-1">
+                    <p className="font-bold text-blue-900 mb-2">
+                      💡 Votre contrat {formData.typeDocument} peut être amélioré
+                    </p>
+                    <p className="text-sm text-blue-800 mb-2">
+                      Ces éléments sont optionnels mais recommandés pour un contrat complet :
+                    </p>
+                    <ul className="text-sm text-blue-800 space-y-1 ml-4">
                       {validationResult.warnings.map((warning, idx) => (
-                        <li key={idx}>{warning}</li>
+                        <li key={idx} className="list-disc">{warning}</li>
                       ))}
                     </ul>
                   </div>
