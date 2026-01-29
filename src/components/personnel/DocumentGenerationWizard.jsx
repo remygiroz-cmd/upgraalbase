@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { base44 } from '@/api/base44Client';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
@@ -9,6 +10,7 @@ import { AlertCircle, FileText, ChevronRight, ChevronLeft, CheckCircle, Download
 import { toast } from 'sonner';
 import { useQuery } from '@tanstack/react-query';
 import PDFDownloadModal from './PDFDownloadModal';
+import { detectManualVariables } from './VariableDetector';
 
 export default function DocumentGenerationWizard({ open, onOpenChange, employee, establishment }) {
   const [step, setStep] = useState(1);
@@ -468,12 +470,27 @@ export default function DocumentGenerationWizard({ open, onOpenChange, employee,
           {/* STEP 4: Vérification des données */}
           {step === 4 && (
             <div className="space-y-4 py-4">
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 flex gap-2">
-                <AlertCircle className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
-                <div className="text-sm text-blue-800">
-                  Vérifiez les données avant génération.
+              <div className="bg-green-50 border border-green-200 rounded-lg p-3 flex gap-2">
+                <CheckCircle className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
+                <div className="text-sm text-green-800">
+                  Toutes les informations sont prêtes. Vérifiez le récapitulatif avant de générer le document.
                 </div>
               </div>
+
+              {/* Afficher les données saisies */}
+              {detectedFields.length > 0 && (
+                <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 space-y-3">
+                  <h4 className="font-semibold text-gray-900 text-sm">Données saisies :</h4>
+                  {detectedFields.map(field => (
+                    <div key={field.key} className="border-b border-gray-200 pb-2 last:border-b-0 last:pb-0">
+                      <p className="text-xs text-gray-600 mb-1">{field.label}</p>
+                      <p className="text-sm text-gray-900 font-medium whitespace-pre-wrap">
+                        {customFieldsData[field.key] || <span className="text-gray-400 italic">Non renseigné</span>}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              )}
 
               <Tabs defaultValue="employee" className="w-full">
                 <TabsList className="grid w-full grid-cols-3">
