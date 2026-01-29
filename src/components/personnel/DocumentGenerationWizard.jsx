@@ -15,6 +15,7 @@ export default function DocumentGenerationWizard({ open, onOpenChange, employee,
   const [documentType, setDocumentType] = useState('');
   const [selectedTemplate, setSelectedTemplate] = useState('');
   const [selectedTemplateData, setSelectedTemplateData] = useState(null);
+  const [detectedFields, setDetectedFields] = useState([]);
   const [customFieldsData, setCustomFieldsData] = useState({});
   const [editData, setEditData] = useState({});
   const [isGenerating, setIsGenerating] = useState(false);
@@ -67,26 +68,39 @@ export default function DocumentGenerationWizard({ open, onOpenChange, employee,
       const template = allTemplates.find(t => t.id === selectedTemplate);
       setSelectedTemplateData(template);
       
-      // Initialiser les valeurs par défaut des custom fields
-      if (template?.customFields) {
-        const defaults = {};
-        template.customFields.forEach(field => {
-          if (field.defaultValue) {
-            defaults[field.key] = field.defaultValue;
-          } else if (field.type === 'date' && field.key === 'dateNotification') {
-            defaults[field.key] = new Date().toISOString().split('T')[0];
-          }
-        });
-        setCustomFieldsData(defaults);
-      }
+      // Détecter les variables manuelles (customFields définis OU auto-détectés)
+      const fields = template?.customFields?.length > 0 
+        ? template.customFields 
+        : detectManualVariables(template?.htmlContent, template?.customFields || []);
+      
+      setDetectedFields(fields);
+      
+      // Initialiser les valeurs par défaut
+      const defaults = {};
+      fields.forEach(field => {
+        if (field.defaultValue) {
+          defaults[field.key] = field.defaultValue;
+        } else if (field.type === 'date' && (field.key === 'dateNotification' || field.key.toLowerCase().includes('date'))) {
+          defaults[field.key] = new Date().toISOString().split('T')[0];
+        }
+      });
+      setCustomFieldsData(defaults);
     }
     
     // Validation des champs personnalisés avant d'aller à step 4
-    if (step === 3 && selectedTemplateData?.customFields) {
-      for (const field of selectedTemplateData.customFields) {
-        if (field.required && !customFieldsData[field.key]) {
+    if (step === 3 && detectedFields.length > 0) {
+      for (const field of detectedFields) {
+        if (field.required && !customFieldsData[field.key]?.trim()) {
           toast.error(`Le champ "${field.label}" est obligatoire`);
           return;
+        }
+        
+        // Validation spéciale pour textarea (min 50 caractères si obligatoire)
+        if (field.type === 'textarea' && field.required && customFieldsData[field.key]) {
+          if (customFieldsData[field.key].trim().length < 50) {
+            toast.error(`"${field.label}" doit contenir au moins 50 caractères pour être exploitable juridiquement`);
+            return;
+          }
         }
       }
     }
@@ -280,6 +294,7 @@ export default function DocumentGenerationWizard({ open, onOpenChange, employee,
     setDocumentType('');
     setSelectedTemplate('');
     setSelectedTemplateData(null);
+    setDetectedFields([]);
     setCustomFieldsData({});
     setEditData({});
     setGeneratedDocument(null);
@@ -344,17 +359,21 @@ export default function DocumentGenerationWizard({ open, onOpenChange, employee,
           )}
 
           {/* STEP 3: Données spécifiques du document */}
-          {step === 3 && selectedTemplateData?.customFields && selectedTemplateData.customFields.length > 0 && (
+          {step === 3 && detectedFields.length > 0 && (
             <div className="space-y-4 py-4">
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 flex gap-2">
-                <AlertCircle className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
-                <div className="text-sm text-blue-800">
-                  Remplissez les informations spécifiques à ce document.
+              <div className="bg-orange-50 border border-orange-200 rounded-lg p-4 flex gap-3">
+                <AlertCircle className="w-5 h-5 text-orange-600 flex-shrink-0 mt-0.5" />
+                <div className="text-sm text-orange-900">
+                  <p className="font-semibold mb-1">📝 Informations à compléter manuellement</p>
+                  <p className="text-orange-800">
+                    Les champs marqués d'un <span className="text-red-600 font-bold">*</span> sont obligatoires 
+                    et doivent être remplis avant de générer le document.
+                  </p>
                 </div>
               </div>
 
-              <div className="space-y-4">
-                {selectedTemplateData.customFields.map((field) => (
+              <div className="space-y-5">
+                {detectedFields.map((field) => (
                   <div key={field.key} className="space-y-2">
                     <Label className="text-gray-900 font-semibold">
                       {field.label}
@@ -377,18 +396,30 @@ export default function DocumentGenerationWizard({ open, onOpenChange, employee,
                           placeholder={field.placeholder || ''}
                           value={customFieldsData[field.key] || ''}
                           onChange={(e) => setCustomFieldsData({...customFieldsData, [field.key]: e.target.value})}
-                          className="w-full min-h-[120px] p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
+                          className="w-full min-h-[150px] p-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 font-mono text-sm"
                           required={field.required}
                           maxLength={field.maxLength || 2000}
                         />
                         {field.helpText && (
-                          <p className="text-xs text-gray-600">{field.helpText}</p>
+                          <div className="bg-yellow-50 border border-yellow-200 rounded p-2 text-xs text-yellow-900">
+                            {field.helpText}
+                          </div>
                         )}
-                        {field.maxLength && (
-                          <p className="text-xs text-gray-500 text-right">
-                            {(customFieldsData[field.key] || '').length} / {field.maxLength} caractères
-                          </p>
-                        )}
+                        <div className="flex justify-between items-center text-xs">
+                          <span className={`font-medium ${
+                            (customFieldsData[field.key] || '').length < 50 ? 'text-red-600' : 
+                            (customFieldsData[field.key] || '').length < 300 ? 'text-orange-600' : 
+                            'text-green-600'
+                          }`}>
+                            {(customFieldsData[field.key] || '').length} caractères
+                            {field.required && (customFieldsData[field.key] || '').length < 50 && ' (minimum 50)'}
+                          </span>
+                          {field.maxLength && (
+                            <span className="text-gray-500">
+                              Maximum {field.maxLength}
+                            </span>
+                          )}
+                        </div>
                       </div>
                     )}
                     
