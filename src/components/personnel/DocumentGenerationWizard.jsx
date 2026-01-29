@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Label } from '@/components/ui/label';
 import { AlertCircle, FileText, ChevronRight, ChevronLeft, CheckCircle, Download, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
+import { useQuery } from '@tanstack/react-query';
 import PDFDownloadModal from './PDFDownloadModal';
 
 export default function DocumentGenerationWizard({ open, onOpenChange, employee, establishment }) {
@@ -19,37 +20,29 @@ export default function DocumentGenerationWizard({ open, onOpenChange, employee,
   const [showPDFDownload, setShowPDFDownload] = useState(false);
   const [isDownloadingPdf, setIsDownloadingPdf] = useState(false);
 
+  // Charger tous les templates actifs
+  const { data: allTemplates = [] } = useQuery({
+    queryKey: ['templatesRH'],
+    queryFn: () => base44.entities.TemplatesRH.filter({ isActive: true })
+  });
+
   const documentTypes = [
     { value: 'CDD', label: 'Contrat CDD' },
     { value: 'CDI', label: 'Contrat CDI' }
   ];
 
-  // Filtrer les templates en fonction du typeContrat et tempsTravail de l'employé
+  // Filtrer les templates en fonction du type de document sélectionné
   const getAvailableTemplates = () => {
     if (!documentType) return [];
     
-    const employeeWorkType = employee?.work_time_type === 'full_time' ? 'TEMPS_COMPLET' : 'TEMPS_PARTIEL';
-    
-    const templateCodes = {
-      CDD: {
-        TEMPS_COMPLET: 'CDD_TC_RESTAURATION_RAPIDE',
-        TEMPS_PARTIEL: 'CDD_TP_RESTAURATION_RAPIDE'
-      },
-      CDI: {
-        TEMPS_COMPLET: 'CDI_TC_RESTAURATION_RAPIDE',
-        TEMPS_PARTIEL: 'CDI_TP_RESTAURATION_RAPIDE'
-      }
-    };
-
-    const templateCode = templateCodes[documentType]?.[employeeWorkType];
-    
-    return templateCode ? [{ 
-      id: templateCode, 
-      type: documentType,
-      label: documentType === 'CDD' 
-        ? `CDD - ${employeeWorkType === 'TEMPS_COMPLET' ? 'Temps complet' : 'Temps partiel'}`
-        : `CDI - ${employeeWorkType === 'TEMPS_COMPLET' ? 'Temps complet' : 'Temps partiel'}`
-    }] : [];
+    return allTemplates
+      .filter(template => template.typeDocument === documentType)
+      .map(template => ({
+        id: template.id,
+        name: template.name,
+        type: template.typeDocument,
+        label: template.name
+      }));
   };
 
   const filteredTemplates = getAvailableTemplates();
@@ -78,18 +71,7 @@ export default function DocumentGenerationWizard({ open, onOpenChange, employee,
 
     setIsGenerating(true);
     try {
-      // Récupérer l'ID du template de la base de données
-      const templatesRH = await base44.entities.TemplatesRH.filter({ 
-        templateCode: selectedTemplate 
-      });
-      
-      if (!templatesRH || templatesRH.length === 0) {
-        toast.error('Template non trouvé');
-        setIsGenerating(false);
-        return;
-      }
-
-      const templateId = templatesRH[0].id;
+      const templateId = selectedTemplate;
 
       const response = await base44.functions.invoke('generateContractPdf', {
         templateId: templateId,
