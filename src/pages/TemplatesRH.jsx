@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Plus, FileText, Edit, Trash2, Copy } from 'lucide-react';
 import { toast } from 'sonner';
-import TemplateEditorModal from '@/components/templates/TemplateEditorModal';
+import TemplateBuilderModal from '@/components/templates/TemplateBuilderModal';
 import { cn } from '@/lib/utils';
 
 export default function TemplatesRH() {
@@ -71,8 +71,18 @@ export default function TemplatesRH() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Templates RH</h1>
-          <p className="text-gray-600 mt-1">Gérez les templates de contrats et avenants</p>
+          <p className="text-gray-600 mt-1">Créez et gérez vos contrats en mode no-code</p>
         </div>
+        <Button
+          onClick={() => {
+            setSelectedTemplate(null);
+            setShowEditor(true);
+          }}
+          className="bg-orange-600 hover:bg-orange-700"
+        >
+          <Plus className="w-4 h-4 mr-2" />
+          Nouveau template
+        </Button>
       </div>
 
       {isLoading ? (
@@ -153,7 +163,7 @@ export default function TemplatesRH() {
         </div>
       )}
 
-      <TemplateEditorModal
+      <TemplateBuilderModal
         open={showEditor}
         onOpenChange={handleClose}
         template={selectedTemplate}
