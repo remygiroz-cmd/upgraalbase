@@ -217,10 +217,6 @@ Deno.serve(async (req) => {
       }, { status: 400 });
     }
 
-    // Charger les tâches du poste (JobRoles)
-    const jobRoles = await base44.entities.JobRoles.filter({ label: employee.position });
-    const jobTasksText = jobRoles?.[0]?.tasksText || 'Tâches à définir';
-
     // Déterminer le type de contrat
     const typeDocument = template.typeDocument; // 'CDD' ou 'CDI'
 
@@ -281,26 +277,35 @@ Deno.serve(async (req) => {
     const mainManager = establishment.managers?.[0] || {};
 
     // Récupérer les tâches du poste depuis JobRoles
-    let jobTasksText = employee.position || '';
+    let jobTasksText = 'Tâches à définir';
     if (employee.position) {
       const jobRoles = await base44.entities.JobRoles.filter({ 
         label: employee.position,
         isActive: true 
       });
 
+      console.log('Employee position:', employee.position);
+      console.log('JobRoles found:', jobRoles);
+
       // Si pas de correspondance exacte, chercher dans les alias
       if (!jobRoles || jobRoles.length === 0) {
         const allRoles = await base44.entities.JobRoles.filter({ isActive: true });
+        console.log('All roles:', allRoles);
         const matchedRole = allRoles.find(role => 
-          role.posteAlias && role.posteAlias.includes(employee.position)
+          role.posteAlias && Array.isArray(role.posteAlias) && role.posteAlias.includes(employee.position)
         );
+        console.log('Matched role:', matchedRole);
         if (matchedRole) {
           jobTasksText = matchedRole.tasksText || employee.position;
+        } else {
+          jobTasksText = employee.position;
         }
       } else {
         jobTasksText = jobRoles[0].tasksText || employee.position;
       }
     }
+    
+    console.log('Final jobTasksText:', jobTasksText);
 
     // Construire l'objet variables
     const variables = {
