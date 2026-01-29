@@ -347,15 +347,16 @@ Deno.serve(async (req) => {
       // Variables disciplinaires
       dateFaits: options.dateFaits || formatDateFR(new Date()),
       descriptionFaits: options.descriptionFaits || '',
+      motifSanction: options.motifSanction || '',
       dateIncident: options.dateIncident || formatDateFR(new Date()),
       dateNotification: formatDateFR(new Date()),
       dateConvocation: options.dateConvocation || '',
       lieuConvocation: options.lieuConvocation || establishment.postal_address || '',
       heureConvocation: options.heureConvocation || '',
 
-      // Variables rupture
+      // Variables rupture (INTERDIT pour documents disciplinaires)
       dateRupture: options.dateRupture || formatDateFR(new Date()),
-      motifRupture: options.motifRupture || '',
+      motifRupture: template.categorieDocument === 'B_DISCIPLINAIRE' ? '' : (options.motifRupture || ''),
       dateFinContrat: options.dateFinContrat || formatDateFR(endDate),
       indemnitePreavis: options.indemnitePreavis || '0',
       indemniteRupture: options.indemniteRupture || '0',

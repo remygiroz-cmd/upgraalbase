@@ -91,18 +91,43 @@ export default function DocumentGenerationWizard({ open, onOpenChange, employee,
     
     // Validation des champs personnalisés avant d'aller à la vérification
     if (step === 2 && detectedFields.length > 0) {
+      // Validation spécifique documents disciplinaires
+      const isDisciplinary = selectedTemplateData?.categorieDocument === 'B_DISCIPLINAIRE';
+      
       for (const field of detectedFields) {
         if (field.required && !customFieldsData[field.key]?.trim()) {
           toast.error(`Le champ "${field.label}" est obligatoire`);
           return;
         }
         
-        // Validation spéciale pour textarea (min 50 caractères si obligatoire)
+        // Validation longueur minimale textarea
         if (field.type === 'textarea' && field.required && customFieldsData[field.key]) {
-          if (customFieldsData[field.key].trim().length < 50) {
-            toast.error(`"${field.label}" doit contenir au moins 50 caractères pour être exploitable juridiquement`);
+          const minLength = field.minLength || 50;
+          if (customFieldsData[field.key].trim().length < minLength) {
+            toast.error(`"${field.label}" doit contenir au moins ${minLength} caractères`);
             return;
           }
+        }
+      }
+      
+      // Validation juridique stricte pour documents disciplinaires
+      if (isDisciplinary) {
+        const hasDescriptionFaits = detectedFields.some(f => f.key === 'descriptionFaits') && customFieldsData.descriptionFaits?.trim();
+        const hasMotifSanction = detectedFields.some(f => f.key === 'motifSanction') && customFieldsData.motifSanction?.trim();
+        
+        if (!hasDescriptionFaits || !hasMotifSanction) {
+          toast.error('⚖️ Une sanction disciplinaire doit obligatoirement contenir :\n• la description factuelle des faits\n• le motif juridique de la sanction', {
+            duration: 5000
+          });
+          return;
+        }
+        
+        // Interdire motifRupture dans les documents disciplinaires
+        if (customFieldsData.motifRupture) {
+          toast.error('❌ ERREUR JURIDIQUE : Un document disciplinaire ne peut pas contenir de "motif de rupture".\nUtilisez "motif de la sanction" à la place.', {
+            duration: 6000
+          });
+          return;
         }
       }
     }
@@ -420,12 +445,12 @@ export default function DocumentGenerationWizard({ open, onOpenChange, employee,
                         )}
                         <div className="flex justify-between items-center text-xs">
                           <span className={`font-medium ${
-                            (customFieldsData[field.key] || '').length < 50 ? 'text-red-600' : 
+                            (customFieldsData[field.key] || '').length < (field.minLength || 50) ? 'text-red-600' : 
                             (customFieldsData[field.key] || '').length < 300 ? 'text-orange-600' : 
                             'text-green-600'
                           }`}>
                             {(customFieldsData[field.key] || '').length} caractères
-                            {field.required && (customFieldsData[field.key] || '').length < 50 && ' (minimum 50)'}
+                            {field.required && (customFieldsData[field.key] || '').length < (field.minLength || 50) && ` (minimum ${field.minLength || 50})`}
                           </span>
                           {field.maxLength && (
                             <span className="text-gray-500">
