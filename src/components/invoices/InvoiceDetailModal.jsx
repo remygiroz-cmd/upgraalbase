@@ -8,7 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { useQueryClient, useMutation } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { toast } from 'sonner';
-import { ExternalLink, Save, History, CheckCircle, X as XIcon } from 'lucide-react';
+import { ExternalLink, Save, History, CheckCircle, X as XIcon, Download, Maximize2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 
@@ -76,18 +76,38 @@ export default function InvoiceDetailModal({ open, onClose, invoice }) {
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="bg-white border-gray-200 max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="text-gray-900 flex items-center gap-2">
-            Détail de la facture
-            {invoice.file_url && (
-              <a
-                href={invoice.file_url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-blue-600 hover:text-blue-700"
-              >
-                <ExternalLink className="w-4 h-4" />
-              </a>
-            )}
+          <DialogTitle className="text-gray-900 flex items-center justify-between">
+            <span>Détail de la facture</span>
+            <div className="flex items-center gap-2">
+              {invoice.file_url && (
+                <>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => window.open(invoice.file_url, '_blank')}
+                    className="text-blue-600 hover:text-blue-700"
+                    title="Ouvrir dans un nouvel onglet"
+                  >
+                    <Maximize2 className="w-4 h-4" />
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => {
+                      const link = document.createElement('a');
+                      link.href = invoice.file_url;
+                      link.download = invoice.file_name || 'facture.pdf';
+                      link.click();
+                    }}
+                    className="text-gray-700 hover:text-gray-900"
+                    title="Télécharger"
+                  >
+                    <Download className="w-4 h-4 mr-1" />
+                    Télécharger
+                  </Button>
+                </>
+              )}
+            </div>
           </DialogTitle>
         </DialogHeader>
 
@@ -97,19 +117,29 @@ export default function InvoiceDetailModal({ open, onClose, invoice }) {
             <div>
               <Label className="text-gray-900 font-semibold mb-2 block">Aperçu du fichier</Label>
               {invoice.file_url && (
-                <div className="border border-gray-300 rounded-lg overflow-hidden bg-gray-50">
-                  {invoice.file_url.endsWith('.pdf') ? (
+                <div 
+                  className="border border-gray-300 rounded-lg overflow-hidden bg-gray-50 cursor-pointer hover:border-blue-400 transition-colors"
+                  onClick={() => window.open(invoice.file_url, '_blank')}
+                  title="Cliquer pour ouvrir en grand"
+                >
+                  {invoice.file_url.match(/\.(pdf)$/i) ? (
                     <iframe 
-                      src={invoice.file_url} 
-                      className="w-full h-96"
+                      src={`${invoice.file_url}#view=FitH`}
+                      className="w-full h-96 pointer-events-none"
                       title="Aperçu PDF"
                     />
-                  ) : (
+                  ) : invoice.file_url.match(/\.(jpg|jpeg|png|gif|webp)$/i) ? (
                     <img 
                       src={invoice.file_url} 
                       alt="Facture" 
                       className="w-full h-96 object-contain"
                     />
+                  ) : (
+                    <div className="w-full h-96 flex flex-col items-center justify-center text-gray-500">
+                      <ExternalLink className="w-12 h-12 mb-3" />
+                      <p className="font-medium">{invoice.file_name || 'Document'}</p>
+                      <p className="text-sm">Cliquer pour ouvrir</p>
+                    </div>
                   )}
                 </div>
               )}

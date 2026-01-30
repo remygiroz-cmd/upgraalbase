@@ -17,6 +17,7 @@ import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import InvoiceDetailModal from '@/components/invoices/InvoiceDetailModal';
 import InvoiceSettingsModal from '@/components/invoices/InvoiceSettingsModal';
+import SendInvoiceModal from '@/components/invoices/SendInvoiceModal';
 import { cn } from '@/lib/utils';
 
 export default function CoffreFactures() {
@@ -32,6 +33,7 @@ export default function CoffreFactures() {
   const [showFilters, setShowFilters] = useState(false);
   const [selectedInvoice, setSelectedInvoice] = useState(null);
   const [showSettings, setShowSettings] = useState(false);
+  const [sendingInvoice, setSendingInvoice] = useState(null);
   const [uploadingFiles, setUploadingFiles] = useState(false);
 
   const { data: invoices = [], isLoading } = useQuery({
@@ -430,8 +432,18 @@ export default function CoffreFactures() {
                           variant="ghost"
                           onClick={() => setSelectedInvoice(invoice)}
                           className="text-blue-600 hover:text-blue-700"
+                          title="Consulter"
                         >
                           <Eye className="w-4 h-4" />
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => setSendingInvoice(invoice)}
+                          className="text-green-600 hover:text-green-700"
+                          title="Envoyer"
+                        >
+                          <Send className="w-4 h-4" />
                         </Button>
                         <Button
                           size="sm"
@@ -442,6 +454,7 @@ export default function CoffreFactures() {
                             }
                           }}
                           className="text-red-600 hover:text-red-700"
+                          title="Supprimer"
                         >
                           <Trash2 className="w-4 h-4" />
                         </Button>
@@ -466,6 +479,12 @@ export default function CoffreFactures() {
         open={!!selectedInvoice}
         onClose={() => setSelectedInvoice(null)}
         invoice={selectedInvoice}
+      />
+
+      <SendInvoiceModal
+        open={!!sendingInvoice}
+        onClose={() => setSendingInvoice(null)}
+        invoice={sendingInvoice}
       />
 
       <InvoiceSettingsModal
