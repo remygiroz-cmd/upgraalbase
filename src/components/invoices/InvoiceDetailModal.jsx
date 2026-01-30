@@ -74,6 +74,31 @@ export default function InvoiceDetailModal({ open, onClose, invoice }) {
     }
   };
 
+  const handleDownload = async () => {
+    if (!invoice.file_bucket || !invoice.file_path) {
+      toast.error('Fichier manquant – réuploader nécessaire');
+      return;
+    }
+
+    setIsDownloading(true);
+    try {
+      const response = await base44.functions.invoke('getInvoiceDownloadUrl', { 
+        invoiceId: invoice.id 
+      });
+      
+      if (response.data?.url) {
+        window.open(response.data.url, '_blank');
+      } else {
+        toast.error('Impossible de générer le lien de téléchargement');
+      }
+    } catch (error) {
+      console.error('Download error:', error);
+      toast.error('Erreur lors du téléchargement');
+    } finally {
+      setIsDownloading(false);
+    }
+  };
+
   if (!invoice) return null;
 
   return (
