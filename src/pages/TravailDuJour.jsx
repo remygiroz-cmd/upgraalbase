@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
-import { ChefHat, Check, CheckCircle2, X, Clock, Trash2, Plus, Minus, RotateCcw } from 'lucide-react';
+import { ChefHat, Check, CheckCircle2, X, Clock, Trash2, Plus, Minus, RotateCcw, Timer, AlertCircle } from 'lucide-react';
 import ConfirmDialog from '@/components/ui/ConfirmDialog';
 import DailyNoteCard from '@/components/cuisine/DailyNoteCard';
+import TaskDurationModal from '@/components/cuisine/TaskDurationModal';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -25,6 +26,7 @@ export default function TravailDuJour() {
   const [showCompletionModal, setShowCompletionModal] = useState(false);
   const [confirmDialog, setConfirmDialog] = useState({ open: false, title: '', description: '', onConfirm: null });
   const [hideCompleted, setHideCompleted] = useState(true);
+  const [durationModal, setDurationModal] = useState({ open: false, task: null, taskIndex: null });
 
   const { data: activeSession, isLoading } = useQuery({
     queryKey: ['workSessions', 'active', today],
@@ -235,37 +237,71 @@ export default function TravailDuJour() {
   const totalCount = activeSession.tasks?.length || 0;
   const progressPercent = totalCount > 0 ? (completedCount / totalCount) * 100 : 0;
 
-  // Calculate time with quantity
+  // Calculate time with new duration system
   const calculateTimeForTask = (sessionTask) => {
     const task = tasks.find(t => t.id === sessionTask.task_id);
     if (!task) return 0;
-    const baseTime = (task.duration_minutes || 0) * 60 + (task.duration_seconds || 0);
     
-    // If we have both initial and current quantity, calculate proportional time
-    if (sessionTask.initial_quantity_to_produce && sessionTask.initial_quantity_to_produce > 0) {
-      const timePerUnit = baseTime / sessionTask.initial_quantity_to_produce;
-      return timePerUnit * (sessionTask.quantity_to_produce || 1);
+    const quantity = sessionTask.quantity_to_produce || 1;
+    
+    // New duration system
+    if (task.durationMode === 'FIXED' && task.estimatedMinutes) {
+      return task.estimatedMinutes * 60; // Convert to seconds
     }
     
-    // Otherwise use the base time * current quantity
-    const multiplier = sessionTask.quantity_to_produce || 1;
-    return baseTime * multiplier;
+    if (task.durationMode === 'PER_UNIT' && task.minutesPerUnit) {
+      return task.minutesPerUnit * quantity * 60; // Convert to seconds
+    }
+    
+    // Fallback to old system if new fields not set
+    const baseTime = (task.duration_minutes || 0) * 60 + (task.duration_seconds || 0);
+    if (baseTime > 0) {
+      if (sessionTask.initial_quantity_to_produce && sessionTask.initial_quantity_to_produce > 0) {
+        const timePerUnit = baseTime / sessionTask.initial_quantity_to_produce;
+        return timePerUnit * quantity;
+      }
+      return baseTime * quantity;
+    }
+    
+    return 0;
   };
 
-  const totalTimeSeconds = activeSession.tasks?.reduce((acc, sessionTask) => {
-    return acc + calculateTimeForTask(sessionTask);
+  const totalTimeMinutes = activeSession.tasks?.reduce((acc, sessionTask) => {
+    return acc + (calculateTimeForTask(sessionTask) / 60);
   }, 0) || 0;
 
-  const remainingTimeSeconds = activeSession.tasks?.reduce((acc, sessionTask) => {
+  const remainingTimeMinutes = activeSession.tasks?.reduce((acc, sessionTask) => {
     if (sessionTask.is_completed) return acc;
-    return acc + calculateTimeForTask(sessionTask);
+    return acc + (calculateTimeForTask(sessionTask) / 60);
   }, 0) || 0;
 
-  const formatTime = (seconds) => {
-    const hours = Math.floor(seconds / 3600);
-    const minutes = Math.floor((seconds % 3600) / 60);
-    if (hours > 0) return `${hours}h ${minutes}min`;
-    return `${minutes}min`;
+  const formatTime = (minutes) => {
+    if (minutes < 60) return `${Math.round(minutes)} min`;
+    const hours = Math.floor(minutes / 60);
+    const mins = Math.round(minutes % 60);
+    return mins > 0 ? `${hours}h${mins.toString().padStart(2, '0')}` : `${hours}h`;
+  };
+
+  const updateTaskMutation = useMutation({
+    mutationFn: ({ id, data }) => base44.entities.Task.update(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['tasks'] });
+    }
+  });
+
+  const handleSaveDuration = (durationData) => {
+    const { taskIndex } = durationModal;
+    if (taskIndex === null) return;
+    
+    const sessionTask = activeSession.tasks[taskIndex];
+    const task = tasks.find(t => t.id === sessionTask.task_id);
+    
+    if (task) {
+      updateTaskMutation.mutate({
+        id: task.id,
+        data: durationData
+      });
+    }
   };
 
   return (
@@ -352,14 +388,18 @@ export default function TravailDuJour() {
             )}
           </div>
         )}
-        <div className="flex flex-col gap-2 mb-3">
-          <div className="flex items-center gap-2 text-gray-700 font-medium text-sm">
-            <Clock className="w-4 h-4 flex-shrink-0" />
-            <span>Total: {formatTime(totalTimeSeconds)}</span>
+        <div className="space-y-2 mb-3">
+          <div className="p-3 rounded-lg bg-gray-50 border border-gray-200">
+            <div className="flex items-center justify-between">
+              <span className="text-xs text-gray-600 font-medium">Temps total estimé</span>
+              <span className="text-lg font-bold text-gray-900">{formatTime(totalTimeMinutes)}</span>
+            </div>
           </div>
-          <div className="flex items-center gap-2 text-orange-600 font-semibold text-sm">
-            <Clock className="w-4 h-4 flex-shrink-0" />
-            <span>Restant: {formatTime(remainingTimeSeconds)}</span>
+          <div className="p-3 rounded-lg bg-orange-50 border border-orange-200">
+            <div className="flex items-center justify-between">
+              <span className="text-xs text-orange-600 font-medium">Temps restant</span>
+              <span className="text-lg font-bold text-orange-600">{formatTime(remainingTimeMinutes)}</span>
+            </div>
           </div>
         </div>
         <Progress value={progressPercent} className="h-3 bg-gray-200" />
@@ -394,6 +434,10 @@ export default function TravailDuJour() {
                       onUncomplete={() => handleUncompleteTask(task.originalIndex)}
                       onRemove={() => handleRemoveTask(task.originalIndex)}
                       onUpdateQuantity={(newQuantity) => handleUpdateQuantity(task.originalIndex, newQuantity)}
+                      onEditDuration={() => {
+                        const taskEntity = tasks.find(t => t.id === task.task_id);
+                        setDurationModal({ open: true, task: taskEntity, taskIndex: task.originalIndex });
+                      }}
                       allTasks={tasks}
                       taskEntities={tasks}
                       dayOfWeek={dayOfWeek}
@@ -437,11 +481,19 @@ export default function TravailDuJour() {
         onConfirm={confirmDialog.onConfirm}
         variant={confirmDialog.title.includes('Supprimer') ? 'danger' : 'warning'}
       />
+
+      {/* Duration Modal */}
+      <TaskDurationModal
+        open={durationModal.open}
+        onOpenChange={(open) => setDurationModal({ ...durationModal, open })}
+        task={durationModal.task}
+        onSave={handleSaveDuration}
+      />
     </div>
   );
 }
 
-function WorkTaskCard({ task, onComplete, onUncomplete, onRemove, onUpdateQuantity }) {
+function WorkTaskCard({ task, onComplete, onUncomplete, onRemove, onUpdateQuantity, onEditDuration }) {
   const dayOfWeek = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'][new Date().getDay()];
   const [localQuantity, setLocalQuantity] = useState(task.quantity_to_produce || 1);
   const { data: tasks = [] } = useQuery({
@@ -511,12 +563,17 @@ function WorkTaskCard({ task, onComplete, onUncomplete, onRemove, onUpdateQuanti
               )}
             </div>
             
-            <div className="flex flex-wrap gap-2">
+            <div className="space-y-2">
+              {/* Duration Display */}
+              <DurationDisplay task={task} taskDetails={taskDetails} onEditDuration={onEditDuration} />
+              
               {task.current_stock !== undefined && task.target_quantity !== undefined && (
                 <div className="w-full px-2 py-1.5 rounded-lg bg-gray-100 text-gray-700 text-xs font-medium">
                   Stock restant : {task.current_stock} / {task.target_quantity}
                 </div>
               )}
+              
+              <div className="flex flex-wrap gap-2">
               {hasQuantity && !task.is_completed && (
                 <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-indigo-600/20">
                   <button
@@ -546,11 +603,12 @@ function WorkTaskCard({ task, onComplete, onUncomplete, onRemove, onUpdateQuanti
                   </button>
                 </div>
               )}
-              {hasQuantity && task.is_completed && (
-                <span className="px-2 py-1 rounded-lg bg-indigo-600/20 text-indigo-400 text-xs font-medium break-words">
-                  Quantité : {task.quantity_to_produce} {taskDetails?.unit || ''}
-                </span>
-              )}
+                {hasQuantity && task.is_completed && (
+                  <span className="px-2 py-1 rounded-lg bg-indigo-600/20 text-indigo-400 text-xs font-medium break-words">
+                    Quantité : {task.quantity_to_produce} {taskDetails?.unit || ''}
+                  </span>
+                )}
+              </div>
             </div>
             
             {task.ad_hoc_comment && (
@@ -609,5 +667,93 @@ function WorkTaskCard({ task, onComplete, onUncomplete, onRemove, onUpdateQuanti
         </div>
       </div>
     </motion.div>
+  );
+}
+
+function DurationDisplay({ task, taskDetails, onEditDuration }) {
+  const isAdHoc = !task.task_id;
+  
+  if (isAdHoc || !taskDetails) return null;
+
+  const { durationMode, estimatedMinutes, minutesPerUnit, unitLabel } = taskDetails;
+  const quantity = task.quantity_to_produce || 1;
+
+  const formatTime = (minutes) => {
+    if (minutes < 60) return `${Math.round(minutes)} min`;
+    const hours = Math.floor(minutes / 60);
+    const mins = Math.round(minutes % 60);
+    return mins > 0 ? `${hours}h${mins.toString().padStart(2, '0')}` : `${hours}h`;
+  };
+
+  let timeDisplay = null;
+  let hasValidDuration = false;
+
+  if (durationMode === 'FIXED' && estimatedMinutes > 0) {
+    hasValidDuration = true;
+    timeDisplay = (
+      <div className="flex items-center gap-2">
+        <Timer className="w-4 h-4 text-blue-600" />
+        <span className="text-sm font-medium text-blue-700">
+          ⏱ {formatTime(estimatedMinutes)}
+        </span>
+      </div>
+    );
+  } else if (durationMode === 'PER_UNIT' && minutesPerUnit > 0) {
+    hasValidDuration = true;
+    const totalMinutes = minutesPerUnit * quantity;
+    timeDisplay = (
+      <div className="flex flex-col gap-1">
+        <div className="flex items-center gap-2">
+          <Timer className="w-4 h-4 text-blue-600" />
+          <span className="text-sm font-medium text-blue-700">
+            ⏱ {formatTime(totalMinutes)}
+          </span>
+        </div>
+        <span className="text-xs text-gray-600 ml-6">
+          {minutesPerUnit} min/{unitLabel || 'unité'} × {quantity}
+        </span>
+      </div>
+    );
+  }
+
+  return (
+    <div className="w-full">
+      {hasValidDuration ? (
+        <div className="flex items-start justify-between p-2 rounded-lg bg-blue-50 border border-blue-200">
+          <div className="flex-1">
+            {timeDisplay}
+          </div>
+          {!task.is_completed && (
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={onEditDuration}
+              className="text-blue-600 hover:text-blue-700 hover:bg-blue-100 h-8 px-2"
+            >
+              <Clock className="w-4 h-4" />
+            </Button>
+          )}
+        </div>
+      ) : (
+        <div className="flex items-start justify-between p-2 rounded-lg bg-yellow-50 border border-yellow-200">
+          <div className="flex items-center gap-2 flex-1">
+            <AlertCircle className="w-4 h-4 text-yellow-600 flex-shrink-0" />
+            <span className="text-xs text-yellow-700 font-medium">
+              Durée à définir
+            </span>
+          </div>
+          {!task.is_completed && (
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={onEditDuration}
+              className="text-yellow-600 hover:text-yellow-700 hover:bg-yellow-100 h-8 px-2"
+            >
+              <Clock className="w-4 h-4" />
+            </Button>
+          )}
+        </div>
+      )}
+    </div>
   );
 }
