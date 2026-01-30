@@ -306,22 +306,42 @@ ${allowedVariables.map(v => `- ${v.var} : ${v.label}`).join('\n')}
 Tu ne dois utiliser QUE les variables listées ci-dessus.
 TOUTE variable qui n'est pas dans cette liste est STRICTEMENT INTERDITE.
 
-INSTRUCTIONS DE GÉNÉRATION :
-1. Génère un contenu HTML complet et structuré
-2. Utilise OBLIGATOIREMENT les variables entre doubles accolades {{variable}} pour toutes les données dynamiques
-3. N'utilise QUE les variables autorisées listées ci-dessus
-4. Si une information n'a pas de variable correspondante, écris du texte générique sans placeholder
-5. Structure le HTML avec <h3> pour les titres d'articles, <p> pour les paragraphes
-6. Utilise <strong> pour les éléments importants
-7. Reste TOTALEMENT NEUTRE et FACTUEL
-8. Ne jamais inventer de faits, ne jamais qualifier juridiquement sans données
+⚠️ RÈGLES DE GÉNÉRATION STRICTES :
 
-❌ INTERDICTIONS STRICTES :
-- N'utilise JAMAIS de variables qui ne sont pas dans la liste autorisée
-- N'invente JAMAIS de nouvelles variables
-- Si tu as un doute, n'utilise PAS de variable
+1. CONTENU UNIQUEMENT - PAS DE MISE EN PAGE
+   - Tu génères UNIQUEMENT le contenu textuel du document
+   - AUCUNE balise HTML structure (<html>, <body>, <head>, <!DOCTYPE>)
+   - AUCUN style inline ou CSS
+   - La mise en page sera appliquée AUTOMATIQUEMENT par le système
 
-GÉNÈRE UNIQUEMENT LE HTML, SANS PRÉAMBULE NI COMMENTAIRE.`;
+2. STRUCTURE SÉMANTIQUE AUTORISÉE
+   - Titres : <h1>, <h2>, <h3> pour la hiérarchie
+   - Paragraphes : <p>
+   - Emphase : <strong> pour les éléments importants
+   - Listes : <ul>, <ol>, <li> si nécessaire
+   - Séparateurs : <hr> si pertinent
+
+3. VARIABLES DYNAMIQUES
+   - Utilise OBLIGATOIREMENT les variables {{variable}} pour toutes les données
+   - N'utilise QUE les variables autorisées listées ci-dessus
+   - Si une info n'a pas de variable, écris du texte générique SANS placeholder
+
+4. NEUTRALITÉ JURIDIQUE
+   - Reste TOTALEMENT NEUTRE et FACTUEL
+   - Ne jamais inventer de faits
+   - Ne jamais qualifier juridiquement sans données
+
+❌ INTERDICTIONS ABSOLUES :
+- AUCUNE balise <html>, <body>, <head>, <!DOCTYPE>
+- AUCUN style CSS inline ou en bloc
+- AUCUNE variable non autorisée
+- AUCUN texte "about:blank" ou artefact technique
+
+✅ FORMAT ATTENDU :
+Commence directement par le titre principal (ex: <h1>CONTRAT DE TRAVAIL...</h1>)
+puis le contenu structuré avec les balises sémantiques autorisées.
+
+GÉNÈRE UNIQUEMENT LE CONTENU, SANS PRÉAMBULE.`;
 
       const response = await base44.integrations.Core.InvokeLLM({
         prompt: contextPrompt,

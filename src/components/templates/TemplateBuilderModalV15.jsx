@@ -218,6 +218,41 @@ export default function TemplateBuilderModalV15({ open, onOpenChange, template, 
     return [...new Set(matches)]; // Déduplique les variables
   }, [previewHtml]);
 
+  // Détection des artefacts HTML techniques (BLOQUANTS)
+  const htmlArtifacts = useMemo(() => {
+    const artifacts = [];
+    const content = formData.htmlContent.toLowerCase();
+    
+    // Détection des balises HTML structure interdites
+    if (content.includes('<!doctype') || content.includes('<!DOCTYPE')) {
+      artifacts.push({ type: 'DOCTYPE', message: 'Balise <!DOCTYPE> détectée' });
+    }
+    if (content.includes('<html')) {
+      artifacts.push({ type: 'HTML', message: 'Balise <html> détectée' });
+    }
+    if (content.includes('<head')) {
+      artifacts.push({ type: 'HEAD', message: 'Balise <head> détectée' });
+    }
+    if (content.includes('<body')) {
+      artifacts.push({ type: 'BODY', message: 'Balise <body> détectée' });
+    }
+    if (content.includes('about:blank')) {
+      artifacts.push({ type: 'ABOUT_BLANK', message: 'Texte "about:blank" détecté' });
+    }
+    
+    // Détection de styles inline (style="...")
+    if (content.includes('style="') || content.includes("style='")) {
+      artifacts.push({ type: 'INLINE_STYLE', message: 'Styles CSS inline détectés (style="...")' });
+    }
+    
+    // Détection de balises <style>
+    if (content.includes('<style')) {
+      artifacts.push({ type: 'STYLE_TAG', message: 'Balise <style> détectée' });
+    }
+    
+    return artifacts;
+  }, [formData.htmlContent]);
+
   const updateMutation = useMutation({
     mutationFn: (data) => {
       if (template?.id && !isDuplicating) {
@@ -267,6 +302,17 @@ export default function TemplateBuilderModalV15({ open, onOpenChange, template, 
         `⛔ Impossible de sauvegarder : ${unresolvedVariables.length} variable${unresolvedVariables.length > 1 ? 's' : ''} non résolue${unresolvedVariables.length > 1 ? 's' : ''} détectée${unresolvedVariables.length > 1 ? 's' : ''}\n\n` +
         `Variables concernées :\n${unresolvedVariables.map(v => `• {{${v}}}`).join('\n')}`,
         { duration: 6000 }
+      );
+      return;
+    }
+
+    // Blocage si artefacts HTML techniques détectés
+    if (htmlArtifacts.length > 0) {
+      toast.error(
+        `⛔ Impossible de sauvegarder : Artefacts HTML techniques détectés\n\n` +
+        `Le template contient des éléments interdits :\n${htmlArtifacts.map(a => `• ${a.message}`).join('\n')}\n\n` +
+        `👉 Ces éléments doivent être supprimés. La mise en page est appliquée automatiquement par le système.`,
+        { duration: 8000 }
       );
       return;
     }
@@ -574,6 +620,31 @@ export default function TemplateBuilderModalV15({ open, onOpenChange, template, 
 
           {/* Onglet Contenu */}
           <TabsContent value="contenu" className="space-y-4 py-4">
+            {/* Alerte artefacts HTML en tête */}
+            {htmlArtifacts.length > 0 && (
+              <Card className="bg-red-50 border-red-300 p-4">
+                <div className="flex gap-2">
+                  <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
+                  <div className="flex-1">
+                    <p className="font-bold text-red-900 mb-2">
+                      ⛔ Artefacts HTML techniques détectés
+                    </p>
+                    <p className="text-sm text-red-800 mb-2">
+                      {htmlArtifacts.length} élément{htmlArtifacts.length > 1 ? 's' : ''} interdit{htmlArtifacts.length > 1 ? 's' : ''} :
+                    </p>
+                    <ul className="text-sm text-red-800 space-y-1 ml-4">
+                      {htmlArtifacts.map((artifact, idx) => (
+                        <li key={idx} className="list-disc">{artifact.message}</li>
+                      ))}
+                    </ul>
+                    <p className="text-sm text-red-800 mt-3">
+                      👉 Supprimez ces éléments. La mise en page sera appliquée automatiquement.
+                    </p>
+                  </div>
+                </div>
+              </Card>
+            )}
+
             {/* Validation errors */}
             {validationResult.errors.length > 0 && (
               <Card className="bg-red-50 border-red-300 p-4">
@@ -755,13 +826,51 @@ export default function TemplateBuilderModalV15({ open, onOpenChange, template, 
               </Card>
             )}
 
-            {unresolvedVariables.length === 0 && (
+            {/* Alerte artefacts HTML */}
+            {htmlArtifacts.length > 0 && (
+              <Card className="bg-red-50 border-red-300 p-4">
+                <div className="flex gap-2">
+                  <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
+                  <div className="flex-1">
+                    <p className="font-bold text-red-900 mb-2">
+                      ⛔ Artefacts HTML techniques détectés
+                    </p>
+                    <p className="text-sm text-red-800 mb-2">
+                      Le template contient des éléments interdits qui empêchent la génération professionnelle :
+                    </p>
+                    <ul className="text-sm text-red-800 space-y-1 ml-4 mb-3">
+                      {htmlArtifacts.map((artifact, idx) => (
+                        <li key={idx} className="list-disc">
+                          {artifact.message}
+                        </li>
+                      ))}
+                    </ul>
+                    <div className="text-sm text-red-800 space-y-2 border-t border-red-200 pt-3">
+                      <p className="font-semibold">📌 Règles importantes :</p>
+                      <ul className="ml-4 space-y-1">
+                        <li>• Le contenu doit être pur (pas de balises HTML structure)</li>
+                        <li>• La mise en page est appliquée AUTOMATIQUEMENT par le système</li>
+                        <li>• Utilisez uniquement les balises sémantiques : &lt;h1&gt;, &lt;h2&gt;, &lt;h3&gt;, &lt;p&gt;, &lt;strong&gt;</li>
+                      </ul>
+                      <p className="font-semibold mt-3">✅ Solution :</p>
+                      <ul className="ml-4 space-y-1">
+                        <li>• Supprimez les balises &lt;html&gt;, &lt;body&gt;, &lt;head&gt;, &lt;!DOCTYPE&gt;</li>
+                        <li>• Supprimez tous les styles CSS inline ou en bloc</li>
+                        <li>• Commencez directement par votre titre principal (&lt;h1&gt;...&lt;/h1&gt;)</li>
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+              </Card>
+            )}
+
+            {unresolvedVariables.length === 0 && htmlArtifacts.length === 0 && (
               <Card className="bg-green-50 border-green-200 p-3">
                 <div className="flex gap-2">
                   <CheckCircle className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
                   <div className="text-sm text-green-800">
-                    <p className="font-semibold">✓ Toutes les variables sont correctement configurées</p>
-                    <p>Le template est prêt à être enregistré et utilisé pour la génération de documents.</p>
+                    <p className="font-semibold">✓ Template valide et prêt à l&apos;emploi</p>
+                    <p>Toutes les variables sont configurées et aucun artefact technique n&apos;a été détecté. Le layout professionnel sera appliqué automatiquement.</p>
                   </div>
                 </div>
               </Card>
@@ -850,7 +959,8 @@ export default function TemplateBuilderModalV15({ open, onOpenChange, template, 
               updateMutation.isPending || 
               validationResult.errors.length > 0 || 
               validationResult.missing.length > 0 ||
-              unresolvedVariables.length > 0
+              unresolvedVariables.length > 0 ||
+              htmlArtifacts.length > 0
             }
             className="bg-orange-600 hover:bg-orange-700 disabled:bg-gray-400"
           >
@@ -859,6 +969,7 @@ export default function TemplateBuilderModalV15({ open, onOpenChange, template, 
              validationResult.errors.length > 0 ? '⛔ Erreurs à corriger' :
              validationResult.missing.length > 0 ? '⚠️ Éléments manquants' :
              unresolvedVariables.length > 0 ? '⛔ Variables non résolues' :
+             htmlArtifacts.length > 0 ? '⛔ Artefacts HTML détectés' :
              'Sauvegarder'}
           </Button>
         </div>
