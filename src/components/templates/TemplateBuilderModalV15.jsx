@@ -18,10 +18,42 @@ import { validateTemplateV2, getCreationGuideV2, REQUIRED_VARIABLES_BY_TYPE, FOR
 import AITemplateGenerator from './AITemplateGenerator';
 import { getStaticEstablishmentVariables } from './EstablishmentVariablesGenerator';
 
-// Variables disponibles - dynamiques selon la catégorie
-// IMPORTANT : TOUTES les variables d'établissement sont toujours disponibles via COMMON
+// Fonction pour générer dynamiquement toutes les variables employé depuis le schéma
+const getEmployeeIdentityVariables = () => {
+  return [
+    { var: '{{prenom}}', label: 'Prénom', category: 'identity' },
+    { var: '{{nom}}', label: 'Nom', category: 'identity' },
+    { var: '{{naissance}}', label: 'Date de naissance', category: 'identity' },
+    { var: '{{lieuNaissance}}', label: 'Lieu de naissance', category: 'identity' },
+    { var: '{{adresse}}', label: 'Adresse personnelle', category: 'identity' },
+    { var: '{{nationalite}}', label: 'Nationalité', category: 'identity' },
+    { var: '{{secu}}', label: 'Numéro de sécurité sociale', category: 'identity' },
+    { var: '{{email}}', label: 'Email', category: 'identity' },
+    { var: '{{telephone}}', label: 'Téléphone', category: 'identity' }
+  ];
+};
+
+const getEmployeeContractVariables = () => {
+  return [
+    { var: '{{poste}}', label: 'Poste / Fonction', category: 'contract' },
+    { var: '{{taches}}', label: 'Description des tâches', category: 'contract' },
+    { var: '{{debut}}', label: 'Date de début', category: 'contract' },
+    { var: '{{fin}}', label: 'Date de fin', category: 'contract' },
+    { var: '{{heures}}', label: 'Heures par semaine', category: 'contract' },
+    { var: '{{heuresTexte}}', label: 'Heures mensuelles (texte)', category: 'contract' },
+    { var: '{{taux}}', label: 'Taux horaire', category: 'contract' },
+    { var: '{{salaireBrut}}', label: 'Salaire brut mensuel', category: 'contract' },
+    { var: '{{periodeEssaiTexte}}', label: 'Période d\'essai (texte)', category: 'contract' },
+    { var: '{{finEssai}}', label: 'Date de fin d\'essai', category: 'contract' },
+    { var: '{{motifCDD}}', label: 'Motif du CDD', category: 'contract' }
+  ];
+};
+
+// Variables disponibles - TOUTES les variables établissement + employé sont TOUJOURS disponibles
 const getAvailableVariables = (categorieDocument) => {
-  const common = VARIABLES_BY_CATEGORY.COMMON || [];
+  const establishment = getStaticEstablishmentVariables();
+  const employeeIdentity = getEmployeeIdentityVariables();
+  const employeeContract = getEmployeeContractVariables();
   
   let specific = [];
   if (categorieDocument === 'A_CONTRACTUEL') {
@@ -35,8 +67,10 @@ const getAvailableVariables = (categorieDocument) => {
   }
   
   return {
-    'Données établissement & employé': common,
-    'Données spécifiques du document': specific
+    '🏢 ÉTABLISSEMENT (toujours disponible)': establishment,
+    '👤 EMPLOYÉ – Identité (toujours disponible)': employeeIdentity,
+    '📋 EMPLOYÉ – Contrat & Rémunération (toujours disponible)': employeeContract,
+    '📄 Spécifique au document': specific
   };
 };
 
@@ -153,15 +187,23 @@ export default function TemplateBuilderModalV15({ open, onOpenChange, template, 
     }
   }, [formData.htmlContent, formData.typeDocument, formData.categorieDocument]);
 
-  // Aperçu avec données mock
+  // Aperçu avec données mock enrichies
+  const ENHANCED_MOCK_DATA = useMemo(() => ({
+    ...MOCK_DATA,
+    email: 'jean.dupont@email.fr',
+    telephone: '06 12 34 56 78',
+    codePostalEtablissement: '13112',
+    villeEtablissement: 'La Destrousse'
+  }), []);
+
   const previewHtml = useMemo(() => {
     let html = formData.htmlContent;
-    Object.entries(MOCK_DATA).forEach(([key, value]) => {
+    Object.entries(ENHANCED_MOCK_DATA).forEach(([key, value]) => {
       const regex = new RegExp(`{{${key}}}`, 'g');
       html = html.replace(regex, `<strong class="text-orange-600">${value}</strong>`);
     });
     return html;
-  }, [formData.htmlContent]);
+  }, [formData.htmlContent, ENHANCED_MOCK_DATA]);
 
   // Détection des variables non résolues dans l'aperçu
   const unresolvedVariables = useMemo(() => {
