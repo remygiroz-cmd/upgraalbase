@@ -199,7 +199,7 @@ function EmployeeCard({ employee, onClick, canView = true, userInfo, isManager }
         const isOnline = isManager && userInfo?.is_online;
         const lastActiveAt = isManager && userInfo?.last_active_at ? new Date(userInfo.last_active_at) : null;
         const formatLastActive = (date) => {
-          if (!date) return null;
+          if (!date) return 'Jamais';
           const now = new Date();
           const diffMs = now - date;
           const diffMins = Math.floor(diffMs / 60000);
