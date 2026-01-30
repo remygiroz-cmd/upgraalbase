@@ -2,11 +2,12 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
 
 Deno.serve(async (req) => {
   try {
-    const base44 = createClientFromRequest(req);
+    const appId = Deno.env.get("BASE44_APP_ID");
+    console.log('=== getInvoiceFile called ===');
+    console.log('App ID:', appId);
+    console.log('Request URL:', req.url);
     
-    // Log pour debug
-    console.log('getInvoiceFile called:', req.url);
-
+    const base44 = createClientFromRequest(req);
     const user = await base44.auth.me();
 
     if (!user) {

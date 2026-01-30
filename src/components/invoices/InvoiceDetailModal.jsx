@@ -48,9 +48,20 @@ export default function InvoiceDetailModal({ open, onClose, invoice }) {
       setSelectedCategories(invoice.categories || []);
 
       // Construire les URLs proxy pour preview et download
-      // Récupérer l'app_id depuis le pathname (premier segment après /)
-      const pathSegments = window.location.pathname.split('/').filter(Boolean);
-      const appId = pathSegments[0];
+      // Récupérer l'app_id de manière fiable
+      const hostname = window.location.hostname;
+      const pathname = window.location.pathname;
+      
+      // Extraire app_id selon le format d'URL Base44
+      let appId;
+      if (hostname.includes('.base44.app')) {
+        // Format: app--{app_id}.base44.app
+        const match = hostname.match(/app--([^.]+)/);
+        appId = match ? match[1] : pathname.split('/').filter(Boolean)[0];
+      } else {
+        // Format custom domain ou local: /{app_id}/...
+        appId = pathname.split('/').filter(Boolean)[0];
+      }
       
       // Format Base44: /api/apps/{app_id}/functions/{function_name}
       const functionBaseUrl = `${window.location.origin}/api/apps/${appId}/functions/getInvoiceFile`;
@@ -62,12 +73,20 @@ export default function InvoiceDetailModal({ open, onClose, invoice }) {
       setDownloadUrl(downloadUrlBuilt);
       setPreviewError(false);
       
-      // Logs pour debug
+      // Logs pour debug et test
       console.log('=== Invoice Preview URLs ===');
-      console.log('App ID:', appId);
+      console.log('Hostname:', hostname);
+      console.log('Pathname:', pathname);
+      console.log('Extracted App ID:', appId);
       console.log('Invoice ID:', invoice.id);
+      console.log('Invoice file_url:', invoice.file_url);
       console.log('Preview URL:', previewUrlBuilt);
       console.log('Download URL:', downloadUrlBuilt);
+      console.log('');
+      console.log('📋 TEST URLS:');
+      console.log('Copy/paste ces URLs dans un nouvel onglet pour tester:');
+      console.log('Preview:', previewUrlBuilt);
+      console.log('Download:', downloadUrlBuilt);
       console.log('===========================');
     }
   }, [invoice]);
