@@ -65,10 +65,13 @@ export default function DocumentGenerationWizard({ open, onOpenChange, employee,
       const template = allTemplates.find(t => t.id === selectedTemplate);
       setSelectedTemplateData(template);
       
-      // Détecter les variables manuelles (customFields définis OU auto-détectés)
-      const fields = template?.customFields?.length > 0 
-        ? template.customFields 
-        : detectManualVariables(template?.htmlContent, template?.customFields || []);
+      // Détecter TOUTES les variables manuelles avec forçage des champs obligatoires
+      const fields = detectManualVariables(
+        template?.htmlContent, 
+        template?.customFields || [],
+        template?.categorieDocument,
+        template?.typeDocument
+      );
       
       setDetectedFields(fields);
       
@@ -92,31 +95,41 @@ export default function DocumentGenerationWizard({ open, onOpenChange, employee,
     
     // Validation des champs personnalisés avant d'aller à la vérification
     if (step === 2 && detectedFields.length > 0) {
-      // Validation spécifique documents disciplinaires
-      const isDisciplinary = selectedTemplateData?.categorieDocument === 'B_DISCIPLINAIRE';
+      // Vérifier TOUS les champs obligatoires
+      const missingFields = [];
       
       for (const field of detectedFields) {
-        if (field.required && !customFieldsData[field.key]?.trim()) {
-          toast.error(`Le champ "${field.label}" est obligatoire`);
-          return;
+        if (field.required && (!customFieldsData[field.key] || !customFieldsData[field.key].toString().trim())) {
+          missingFields.push(field);
         }
       }
       
-      // Validation juridique stricte pour documents disciplinaires
+      if (missingFields.length > 0) {
+        const fieldsList = missingFields.map(f => `• ${f.label}`).join('\n');
+        toast.error(
+          `⛔ ${missingFields.length} champ${missingFields.length > 1 ? 's' : ''} obligatoire${missingFields.length > 1 ? 's' : ''} manquant${missingFields.length > 1 ? 's' : ''}\n\n${fieldsList}\n\n` +
+          (selectedTemplateData?.categorieDocument === 'B_DISCIPLINAIRE' 
+            ? '⚖️ Ces informations sont juridiquement obligatoires pour un document disciplinaire.' 
+            : 'Ces informations sont requises pour générer le document.'),
+          { duration: 6000 }
+        );
+        return;
+      }
+      
+      // Validation juridique stricte pour documents disciplinaires (contrôle supplémentaire)
+      const isDisciplinary = selectedTemplateData?.categorieDocument === 'B_DISCIPLINAIRE';
       if (isDisciplinary) {
-        const hasDescriptionFaits = detectedFields.some(f => f.key === 'descriptionFaits') && customFieldsData.descriptionFaits?.trim();
-        const hasMotifSanction = detectedFields.some(f => f.key === 'motifSanction') && customFieldsData.motifSanction?.trim();
-        
-        if (!hasDescriptionFaits || !hasMotifSanction) {
-          toast.error('⚖️ Une sanction disciplinaire doit obligatoirement contenir :\n• la description factuelle des faits\n• le motif juridique de la sanction', {
-            duration: 5000
+        // Vérifier que descriptionFaits et motifSanction sont bien présents et non vides
+        if (!customFieldsData.descriptionFaits?.trim() || !customFieldsData.motifSanction?.trim()) {
+          toast.error('⚖️ BLOCAGE JURIDIQUE\n\nUne sanction disciplinaire doit OBLIGATOIREMENT contenir :\n• La description factuelle des faits reprochés\n• Le motif juridique de la sanction\n\nCes éléments protègent juridiquement l\'employeur et le salarié.', {
+            duration: 7000
           });
           return;
         }
         
         // Interdire motifRupture dans les documents disciplinaires
         if (customFieldsData.motifRupture) {
-          toast.error('❌ ERREUR JURIDIQUE : Un document disciplinaire ne peut pas contenir de "motif de rupture".\nUtilisez "motif de la sanction" à la place.', {
+          toast.error('❌ ERREUR JURIDIQUE\n\nUn document disciplinaire ne peut pas contenir de "motif de rupture".\n\nUtilisez "motif de la sanction" à la place.', {
             duration: 6000
           });
           return;
@@ -126,12 +139,12 @@ export default function DocumentGenerationWizard({ open, onOpenChange, employee,
       // Validation juridique stricte pour avenants
       const isAvenant = selectedTemplateData?.typeDocument === 'AVENANT';
       if (isAvenant) {
-        const requiredFields = ['motifModification', 'ancienneValeur', 'nouvelleValeur', 'dateEffet'];
-        const missingFields = requiredFields.filter(key => !customFieldsData[key]?.trim());
+        const requiredAvenantFields = ['motifModification', 'ancienneValeur', 'nouvelleValeur', 'dateEffet'];
+        const missingAvenant = requiredAvenantFields.filter(key => !customFieldsData[key]?.toString().trim());
         
-        if (missingFields.length > 0) {
-          toast.error('📝 Un avenant doit obligatoirement préciser :\n• la modification contractuelle\n• l\'ancienne valeur\n• la nouvelle valeur\n• la date d\'effet', {
-            duration: 5000
+        if (missingAvenant.length > 0) {
+          toast.error('📝 AVENANT INCOMPLET\n\nUn avenant doit obligatoirement préciser :\n• La modification contractuelle\n• L\'ancienne valeur\n• La nouvelle valeur\n• La date d\'effet\n\nÉléments manquants : ' + missingAvenant.join(', '), {
+            duration: 6000
           });
           return;
         }
@@ -388,16 +401,31 @@ export default function DocumentGenerationWizard({ open, onOpenChange, employee,
           {/* STEP 2: Données spécifiques du document */}
           {step === 2 && detectedFields.length > 0 && (
             <div className="space-y-4 py-4">
-              <div className="bg-orange-50 border border-orange-200 rounded-lg p-4 flex gap-3">
-                <AlertCircle className="w-5 h-5 text-orange-600 flex-shrink-0 mt-0.5" />
-                <div className="text-sm text-orange-900">
-                  <p className="font-semibold mb-1">📝 Informations à compléter manuellement</p>
-                  <p className="text-orange-800">
-                    Les champs marqués d'un <span className="text-red-600 font-bold">*</span> sont obligatoires 
-                    et doivent être remplis avant de générer le document.
-                  </p>
+              {selectedTemplateData?.categorieDocument === 'B_DISCIPLINAIRE' ? (
+                <div className="bg-red-50 border-2 border-red-300 rounded-lg p-4 flex gap-3">
+                  <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
+                  <div className="text-sm text-red-900">
+                    <p className="font-bold mb-2">⚖️ DOCUMENT DISCIPLINAIRE - Exigences juridiques</p>
+                    <p className="text-red-800 mb-2">
+                      Les champs marqués d'un <span className="text-red-600 font-bold">*</span> sont <strong>OBLIGATOIRES</strong> pour la validité juridique du document.
+                    </p>
+                    <p className="text-red-700 text-xs">
+                      Tout document disciplinaire incomplet peut être contesté devant les Prud'hommes. Assurez-vous de remplir tous les champs requis.
+                    </p>
+                  </div>
                 </div>
-              </div>
+              ) : (
+                <div className="bg-orange-50 border border-orange-200 rounded-lg p-4 flex gap-3">
+                  <AlertCircle className="w-5 h-5 text-orange-600 flex-shrink-0 mt-0.5" />
+                  <div className="text-sm text-orange-900">
+                    <p className="font-semibold mb-1">📝 Informations à compléter manuellement</p>
+                    <p className="text-orange-800">
+                      Les champs marqués d'un <span className="text-red-600 font-bold">*</span> sont obligatoires 
+                      et doivent être remplis avant de générer le document.
+                    </p>
+                  </div>
+                </div>
+              )}
 
               <div className="space-y-5">
                 {detectedFields.map((field) => (
@@ -659,10 +687,23 @@ export default function DocumentGenerationWizard({ open, onOpenChange, employee,
               {step < 4 ? (
                 <Button
                   onClick={handleNextStep}
-                  className="bg-orange-600 hover:bg-orange-700"
+                  disabled={
+                    step === 2 && 
+                    detectedFields.some(f => f.required && (!customFieldsData[f.key] || !customFieldsData[f.key].toString().trim()))
+                  }
+                  className="bg-orange-600 hover:bg-orange-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
                 >
-                  Suivant
-                  <ChevronRight className="w-4 h-4 ml-1" />
+                  {step === 2 && detectedFields.some(f => f.required && (!customFieldsData[f.key] || !customFieldsData[f.key].toString().trim())) ? (
+                    <>
+                      <AlertCircle className="w-4 h-4 mr-1" />
+                      Champs obligatoires manquants
+                    </>
+                  ) : (
+                    <>
+                      Suivant
+                      <ChevronRight className="w-4 h-4 ml-1" />
+                    </>
+                  )}
                 </Button>
               ) : step === 4 ? (
                 <Button
