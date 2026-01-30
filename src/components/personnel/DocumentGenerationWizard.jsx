@@ -181,34 +181,80 @@ export default function DocumentGenerationWizard({ open, onOpenChange, employee,
     }
   };
 
-  const downloadPdf = () => {
+  const downloadPdf = async () => {
     if (!generatedDocument?.html) {
       toast.error('HTML non disponible');
       return;
     }
 
+    setIsDownloadingPdf(true);
+
     try {
-      // Ouvrir une nouvelle fenêtre
+      // Créer un blob du HTML
+      const blob = new Blob([generatedDocument.html], { type: 'text/html' });
+      const file = new File([blob], `document_${Date.now()}.html`, { type: 'text/html' });
+
+      // Upload automatique du fichier
+      const uploadResponse = await base44.integrations.Core.UploadFile({ file });
+      const fileUrl = uploadResponse.file_url;
+
+      if (!fileUrl) {
+        throw new Error('URL du fichier non disponible');
+      }
+
+      // Mapper la catégorie de document vers une catégorie employé
+      const categoryMapping = {
+        'A_CONTRACTUEL': 'Contrats',
+        'B_DISCIPLINAIRE': 'Disciplinaire',
+        'C_RUPTURE': 'Rupture',
+        'D_ADMINISTRATIF': 'Administratif',
+        'E_LIBRE': 'Courriers RH'
+      };
+
+      const documentCategory = categoryMapping[selectedTemplateData?.categorieDocument] || 'Documents RH';
+
+      // Construire le nouvel objet document
+      const newDocument = {
+        name: `${selectedTemplateData?.name || 'Document'}_${new Date().toISOString().split('T')[0]}`,
+        url: fileUrl,
+        category: documentCategory,
+        tags: [
+          selectedTemplateData?.typeDocument,
+          selectedTemplateData?.categorieDocument,
+          'généré_automatiquement'
+        ],
+        uploaded_at: new Date().toISOString(),
+        metadata: {
+          documentRhId: generatedDocument.id,
+          templateId: selectedTemplate,
+          templateName: selectedTemplateData?.name,
+          typeDocument: selectedTemplateData?.typeDocument,
+          categorieDocument: selectedTemplateData?.categorieDocument,
+          generatedBy: employee?.email || 'system'
+        }
+      };
+
+      // Récupérer les documents existants de l'employé
+      const existingDocuments = employee?.documents || [];
+
+      // Mettre à jour l'employé avec le nouveau document
+      await base44.entities.Employee.update(employee.id, {
+        documents: [...existingDocuments, newDocument]
+      });
+
+      toast.success('✅ Document enregistré automatiquement dans la fiche employé');
+
+      // Ouvrir la fenêtre d'impression
       const printWindow = window.open('', '', 'width=900,height=700');
       
-      // Injecter le HTML avec CSS print optimisé
       const fullHtml = `<!DOCTYPE html>
 <html lang="fr">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-    }
-    
-    html, body {
-      width: 100%;
-      height: 100%;
-    }
-    
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body { width: 100%; height: 100%; }
     body {
       font-family: 'Calibri', 'Arial', sans-serif;
       font-size: 11pt;
@@ -216,7 +262,6 @@ export default function DocumentGenerationWizard({ open, onOpenChange, employee,
       color: #000;
       background: #f5f5f5;
     }
-    
     .print-container {
       width: 210mm;
       height: 297mm;
@@ -224,79 +269,22 @@ export default function DocumentGenerationWizard({ open, onOpenChange, employee,
       background: white;
       box-shadow: 0 0 10px rgba(0,0,0,0.1);
     }
-    
     @media print {
-      @page {
-        size: A4;
-        margin: 18mm 16mm 18mm 16mm;
-      }
-      
-      body {
-        margin: 0;
-        padding: 0;
-        background: white;
-        -webkit-print-color-adjust: exact !important;
-        print-color-adjust: exact !important;
-        color-adjust: exact !important;
-      }
-      
-      .print-container {
-        width: 100%;
-        height: auto;
-        margin: 0;
-        box-shadow: none;
-        page-break-after: always;
-      }
-      
-      .no-print {
-        display: none !important;
-      }
-      
-      h1, h2, h3, h4 {
-        break-after: avoid;
-        page-break-after: avoid;
-      }
-      
-      p {
-        orphans: 3;
-        widows: 3;
-      }
-      
-      .article {
-        break-inside: avoid;
-        page-break-inside: avoid;
-      }
-      
-      .signature-section {
-        break-inside: avoid;
-        page-break-inside: avoid;
-        margin-top: 2em;
-      }
-      
-      .signature-block {
-        break-inside: avoid;
-        page-break-inside: avoid;
-        margin-top: 1.5em;
-      }
-      
-      hr {
-        border: none;
-        border-top: 1px solid #666;
-        margin: 1em 0;
-        page-break-after: avoid;
-      }
+      @page { size: A4; margin: 0mm; }
+      body { margin: 0; padding: 0; background: white; }
+      .print-container { width: 100%; height: auto; margin: 0; box-shadow: none; }
+      .no-print { display: none !important; }
+      h1, h2, h3, h4 { break-after: avoid; }
+      p { orphans: 3; widows: 3; }
+      .signature-block, .article { break-inside: avoid; }
     }
   </style>
 </head>
 <body>
-  <div class="print-container">
-    ${generatedDocument.html}
-  </div>
+  <div class="print-container">${generatedDocument.html}</div>
   <script>
     window.onload = function() {
-      setTimeout(function() {
-        window.print();
-      }, 250);
+      setTimeout(function() { window.print(); }, 250);
     };
   </script>
 </body>
@@ -305,20 +293,15 @@ export default function DocumentGenerationWizard({ open, onOpenChange, employee,
       printWindow.document.write(fullHtml);
       printWindow.document.close();
       
-      // Attendre que le document soit chargé avant d'afficher le message
-      printWindow.onload = function() {
-        setTimeout(() => {
-          toast.success('Fenêtre d\'impression ouverte.\n\n📋 Conseils :\n1. Décochez "En-têtes et pieds de page"\n2. Format : A4 Portrait\n3. Marges : défaut du navigateur\n4. Cliquez "Enregistrer en PDF"');
-        }, 100);
-      };
-      
-      // Fallback si onload ne se déclenche pas
       setTimeout(() => {
-        toast.success('Fenêtre d\'impression ouverte.\n\n📋 Conseils :\n1. Décochez "En-têtes et pieds de page"\n2. Format : A4 Portrait\n3. Marges : défaut du navigateur\n4. Cliquez "Enregistrer en PDF"');
+        toast.success('📋 Fenêtre d\'impression ouverte\n\nConseils :\n• Décochez "En-têtes et pieds de page"\n• Format : A4 Portrait\n• Enregistrer en PDF', { duration: 4000 });
       }, 500);
+
     } catch (error) {
       console.error('Erreur:', error);
-      toast.error('Erreur lors de l\'ouverture de la fenêtre d\'impression');
+      toast.error('Erreur lors de l\'enregistrement automatique : ' + error.message);
+    } finally {
+      setIsDownloadingPdf(false);
     }
   };
 
