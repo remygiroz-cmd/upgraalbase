@@ -19,6 +19,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
+import { getServiceDate } from '@/components/utils/serviceDate';
 
 export default function MiseEnPlace() {
   const queryClient = useQueryClient();
@@ -34,7 +35,7 @@ export default function MiseEnPlace() {
   const [showNoteModal, setShowNoteModal] = useState(false);
   const [showSuccessOverlay, setShowSuccessOverlay] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const today = format(new Date(), 'yyyy-MM-dd');
+  const today = getServiceDate(); // Utilise le jour de service au lieu de la date système
   const dayOfWeek = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'][new Date().getDay()];
 
   const { data: categories = [], isLoading: loadingCategories } = useQuery({
