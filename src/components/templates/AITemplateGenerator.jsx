@@ -5,6 +5,27 @@ import { Sparkles, Loader2, AlertCircle, CheckCircle, Copy } from 'lucide-react'
 import { toast } from 'sonner';
 import { base44 } from '@/api/base44Client';
 import { useQuery } from '@tanstack/react-query';
+import { VARIABLES_BY_CATEGORY } from './TemplateValidationV2';
+
+// Fonction pour obtenir les variables autorisées par type de document
+const getAllowedVariables = (categorieDocument) => {
+  const common = VARIABLES_BY_CATEGORY.COMMON || [];
+  
+  let specific = [];
+  if (categorieDocument === 'A_CONTRACTUEL') {
+    specific = [...(VARIABLES_BY_CATEGORY.CONTRACTUEL || []), ...(VARIABLES_BY_CATEGORY.AVENANT || [])];
+  } else if (categorieDocument === 'B_DISCIPLINAIRE') {
+    specific = VARIABLES_BY_CATEGORY.DISCIPLINAIRE || [];
+  } else if (categorieDocument === 'C_RUPTURE') {
+    specific = VARIABLES_BY_CATEGORY.RUPTURE || [];
+  } else if (categorieDocument === 'D_ADMINISTRATIF') {
+    specific = VARIABLES_BY_CATEGORY.ADMINISTRATIF || [];
+  } else if (categorieDocument === 'E_LIBRE') {
+    specific = [];
+  }
+  
+  return [...common, ...specific];
+};
 
 const PROMPTS_BY_CATEGORY = {
   'A_CONTRACTUEL': {
@@ -264,6 +285,10 @@ export default function AITemplateGenerator({ open, onOpenChange, templateType, 
         return;
       }
 
+      // Obtenir les variables autorisées pour ce type de document
+      const allowedVariables = getAllowedVariables(categorieDocument);
+      const variablesList = allowedVariables.map(v => v.var.replace(/[{}]/g, '')).join(', ');
+
       const contextPrompt = `${promptConfig}
 
 CONTEXTE DE L'ÉTABLISSEMENT :
@@ -274,17 +299,27 @@ CONTEXTE DE L'ÉTABLISSEMENT :
 - Responsable : ${establishment.managers?.[0]?.name || ''}
 - Email : ${establishment.contact_email || ''}
 
+VARIABLES AUTORISÉES POUR CE TYPE DE DOCUMENT (${templateType}) :
+${allowedVariables.map(v => `- ${v.var} : ${v.label}`).join('\n')}
+
+⚠️ RÈGLE ABSOLUE DE SÉCURITÉ :
+Tu ne dois utiliser QUE les variables listées ci-dessus.
+TOUTE variable qui n'est pas dans cette liste est STRICTEMENT INTERDITE.
+
 INSTRUCTIONS DE GÉNÉRATION :
 1. Génère un contenu HTML complet et structuré
 2. Utilise OBLIGATOIREMENT les variables entre doubles accolades {{variable}} pour toutes les données dynamiques
-3. Variables employé : {{prenom}}, {{nom}}, {{adresse}}, {{naissance}}, {{lieuNaissance}}, {{nationalite}}, {{secu}}
-4. Variables contrat : {{poste}}, {{debut}}, {{fin}}, {{heures}}, {{taux}}, {{salaireBrut}}, {{periodeEssaiTexte}}, {{finEssai}}
-5. Variables établissement : {{etablissementNom}}, {{etablissementAdresse}}, {{responsableNom}}
-6. Variables spécifiques selon le document : {{descriptionFaits}}, {{motifSanction}}, {{motifRupture}}, {{motifModification}}, etc.
-7. Structure le HTML avec <h3> pour les titres d'articles, <p> pour les paragraphes
-8. Utilise <strong> pour les éléments importants
-9. Reste TOTALEMENT NEUTRE et FACTUEL
-10. Ne jamais inventer de faits, ne jamais qualifier juridiquement sans données
+3. N'utilise QUE les variables autorisées listées ci-dessus
+4. Si une information n'a pas de variable correspondante, écris du texte générique sans placeholder
+5. Structure le HTML avec <h3> pour les titres d'articles, <p> pour les paragraphes
+6. Utilise <strong> pour les éléments importants
+7. Reste TOTALEMENT NEUTRE et FACTUEL
+8. Ne jamais inventer de faits, ne jamais qualifier juridiquement sans données
+
+❌ INTERDICTIONS STRICTES :
+- N'utilise JAMAIS de variables qui ne sont pas dans la liste autorisée
+- N'invente JAMAIS de nouvelles variables
+- Si tu as un doute, n'utilise PAS de variable
 
 GÉNÈRE UNIQUEMENT LE HTML, SANS PRÉAMBULE NI COMMENTAIRE.`;
 
