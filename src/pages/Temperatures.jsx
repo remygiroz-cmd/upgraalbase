@@ -453,9 +453,9 @@ function TemperatureCard({ equipment, temperature, onSave, isSaving }) {
 function EquipmentListModal({ open, onClose, equipment, onAdd, onEdit, onDelete, isAdmin }) {
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="bg-slate-800 border-slate-700 max-w-2xl">
+      <DialogContent className="bg-white border-gray-200 max-w-2xl">
         <DialogHeader>
-          <DialogTitle>Gestion des équipements</DialogTitle>
+          <DialogTitle className="text-gray-900">Gestion des équipements</DialogTitle>
         </DialogHeader>
 
         {equipment.length === 0 ? (
@@ -469,10 +469,10 @@ function EquipmentListModal({ open, onClose, equipment, onAdd, onEdit, onDelete,
             {equipment.map((eq) => (
               <div
                 key={eq.id}
-                className="flex items-center justify-between p-4 bg-slate-900 rounded-lg border border-slate-700"
+                className="flex items-center justify-between p-4 bg-gray-50 rounded-lg border border-gray-200"
               >
                 <div className="flex-1">
-                  <h4 className="font-semibold text-white">{eq.name}</h4>
+                  <h4 className="font-semibold text-gray-900">{eq.name}</h4>
                   <div className="flex items-center gap-3 mt-1">
                     <Badge
                       variant="outline"
@@ -484,11 +484,11 @@ function EquipmentListModal({ open, onClose, equipment, onAdd, onEdit, onDelete,
                     >
                       {eq.type === 'positive' ? 'Positif' : 'Négatif'}
                     </Badge>
-                    <span className="text-xs text-slate-400">
+                    <span className="text-xs text-gray-600">
                       {eq.target_min}°C à {eq.target_max}°C
                     </span>
                     {eq.location && (
-                      <span className="text-xs text-slate-400">• {eq.location}</span>
+                      <span className="text-xs text-gray-600">• {eq.location}</span>
                     )}
                   </div>
                 </div>
@@ -498,7 +498,7 @@ function EquipmentListModal({ open, onClose, equipment, onAdd, onEdit, onDelete,
                       variant="ghost"
                       size="icon"
                       onClick={() => onEdit(eq)}
-                      className="text-slate-400 hover:text-white hover:bg-slate-700"
+                      className="text-gray-600 hover:text-gray-900 hover:bg-gray-100"
                     >
                       <Edit className="w-4 h-4" />
                     </Button>
@@ -517,7 +517,7 @@ function EquipmentListModal({ open, onClose, equipment, onAdd, onEdit, onDelete,
           </div>
         )}
 
-        <div className="flex justify-between pt-4 border-t border-slate-700">
+        <div className="flex justify-between pt-4 border-t border-gray-200">
           <Button
             onClick={onAdd}
             className="bg-orange-600 hover:bg-orange-700"
@@ -528,7 +528,7 @@ function EquipmentListModal({ open, onClose, equipment, onAdd, onEdit, onDelete,
           <Button
             variant="outline"
             onClick={onClose}
-            className="border-slate-600 text-slate-900 hover:text-slate-100 hover:bg-slate-700"
+            className="border-gray-300 text-gray-900 hover:bg-gray-50"
           >
             Fermer
           </Button>
@@ -574,9 +574,9 @@ function EquipmentFormModal({ open, onClose, equipment, onSave, isSaving }) {
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="bg-slate-800 border-slate-700">
+      <DialogContent className="bg-white border-gray-200">
         <DialogHeader>
-          <DialogTitle>{equipment ? 'Modifier' : 'Nouvel'} équipement</DialogTitle>
+          <DialogTitle className="text-gray-900">{equipment ? 'Modifier' : 'Nouvel'} équipement</DialogTitle>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -587,7 +587,7 @@ function EquipmentFormModal({ open, onClose, equipment, onSave, isSaving }) {
               value={form.name}
               onChange={(e) => setForm(prev => ({ ...prev, name: e.target.value }))}
               placeholder="Ex: Frigo 1"
-              className="bg-slate-700 border-slate-600 mt-1"
+              className="bg-white border-gray-300 text-gray-900 mt-1"
               required
             />
           </div>
@@ -603,10 +603,10 @@ function EquipmentFormModal({ open, onClose, equipment, onSave, isSaving }) {
                 setForm(prev => ({ ...prev, type: value, ...defaults }));
               }}
             >
-              <SelectTrigger className="bg-slate-700 border-slate-600 mt-1">
+              <SelectTrigger className="bg-white border-gray-300 text-gray-900 mt-1">
                 <SelectValue />
               </SelectTrigger>
-              <SelectContent className="bg-slate-700 border-slate-600">
+              <SelectContent>
                 <SelectItem value="positive">Positif (Frigo)</SelectItem>
                 <SelectItem value="negative">Négatif (Congélateur)</SelectItem>
               </SelectContent>
@@ -622,7 +622,7 @@ function EquipmentFormModal({ open, onClose, equipment, onSave, isSaving }) {
                 step="0.1"
                 value={form.target_min}
                 onChange={(e) => setForm(prev => ({ ...prev, target_min: parseFloat(e.target.value) }))}
-                className="bg-slate-700 border-slate-600 mt-1"
+                className="bg-white border-gray-300 text-gray-900 mt-1"
               />
             </div>
             <div>
@@ -633,7 +633,7 @@ function EquipmentFormModal({ open, onClose, equipment, onSave, isSaving }) {
                 step="0.1"
                 value={form.target_max}
                 onChange={(e) => setForm(prev => ({ ...prev, target_max: parseFloat(e.target.value) }))}
-                className="bg-slate-700 border-slate-600 mt-1"
+                className="bg-white border-gray-300 text-gray-900 mt-1"
               />
             </div>
           </div>
@@ -645,12 +645,12 @@ function EquipmentFormModal({ open, onClose, equipment, onSave, isSaving }) {
               value={form.location}
               onChange={(e) => setForm(prev => ({ ...prev, location: e.target.value }))}
               placeholder="Ex: Cuisine principale"
-              className="bg-slate-700 border-slate-600 mt-1"
+              className="bg-white border-gray-300 text-gray-900 mt-1"
             />
           </div>
 
           <div className="flex justify-end gap-3 pt-4">
-            <Button type="button" variant="outline" onClick={onClose} className="border-slate-600 text-slate-900 hover:text-slate-100 hover:bg-slate-700">
+            <Button type="button" variant="outline" onClick={onClose} className="border-gray-300 text-gray-900 hover:bg-gray-50">
               Annuler
             </Button>
             <Button type="submit" disabled={isSaving} className="bg-orange-600 hover:bg-orange-700">
@@ -691,9 +691,9 @@ function HistoryModal({ open, onClose }) {
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="bg-slate-800 border-slate-700 max-w-4xl max-h-[80vh] overflow-hidden flex flex-col">
+      <DialogContent className="bg-white border-gray-200 max-w-4xl max-h-[80vh] overflow-hidden flex flex-col">
         <DialogHeader>
-          <DialogTitle>Historique des températures HACCP</DialogTitle>
+          <DialogTitle className="text-gray-900">Historique des températures HACCP</DialogTitle>
         </DialogHeader>
 
         {isLoading ? (
@@ -707,29 +707,29 @@ function HistoryModal({ open, onClose }) {
         ) : (
           <div className="space-y-4 overflow-y-auto pr-2">
             {snapshots.map((snapshot) => (
-              <div key={snapshot.id} className="bg-slate-900 rounded-xl p-4 border border-slate-700">
+              <div key={snapshot.id} className="bg-gray-50 rounded-xl p-4 border border-gray-200">
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex-1">
-                    <h4 className="font-semibold text-white">
+                    <h4 className="font-semibold text-gray-900">
                       {format(new Date(snapshot.date), "EEEE d MMMM yyyy", { locale: fr })}
                     </h4>
-                    <p className="text-xs text-slate-400 mt-1">
+                    <p className="text-xs text-gray-600 mt-1">
                       Par {snapshot.recorded_by_name} • {format(new Date(snapshot.recorded_at), "dd/MM/yyyy à HH:mm")}
                     </p>
                   </div>
                   <div className="flex items-center gap-3">
                     <div className="text-right">
-                      <p className="text-sm text-slate-300">
+                      <p className="text-sm text-gray-700">
                         {snapshot.snapshot.filter(s => s.is_compliant).length}/{snapshot.snapshot.length}
                       </p>
-                      <p className="text-xs text-slate-400">conformes</p>
+                      <p className="text-xs text-gray-600">conformes</p>
                     </div>
                     {isAdmin && (
                       <Button
                         variant="ghost"
                         size="icon"
                         onClick={() => setConfirmDelete(snapshot.id)}
-                        className="text-red-400 hover:text-red-300 hover:bg-red-950/30"
+                        className="text-red-600 hover:text-red-700 hover:bg-red-100"
                       >
                         <Trash2 className="w-4 h-4" />
                       </Button>
@@ -741,46 +741,46 @@ function HistoryModal({ open, onClose }) {
                   {snapshot.snapshot.map((item, idx) => (
                     <div
                       key={idx}
-                      className="p-3 rounded-lg border bg-slate-800 border-slate-700"
+                      className="p-3 rounded-lg border bg-white border-gray-200"
                     >
                       <div className="flex items-start justify-between mb-2">
                         <div className="flex-1 min-w-0">
-                          <p className="font-medium text-white text-sm truncate">{item.equipment_name}</p>
-                          <p className="text-xs text-slate-400">
+                          <p className="font-medium text-gray-900 text-sm truncate">{item.equipment_name}</p>
+                          <p className="text-xs text-gray-600">
                             Cible: {item.target_min}°C à {item.target_max}°C
                           </p>
                         </div>
                       </div>
                       
                       <div className="space-y-2 mt-2">
-                        <div className="flex items-center justify-between p-2 rounded bg-slate-900/50">
+                        <div className="flex items-center justify-between p-2 rounded bg-gray-100">
                           <div>
-                            <p className="text-xs text-slate-400">Matin</p>
-                            <p className="text-base font-bold text-white">
+                            <p className="text-xs text-gray-600">Matin</p>
+                            <p className="text-base font-bold text-gray-900">
                               {item.morning_temp !== undefined ? `${item.morning_temp}°C` : 'N/A'}
                             </p>
                           </div>
                           {item.morning_temp !== undefined && (
                             item.morning_compliant ? (
-                              <CheckCircle2 className="w-4 h-4 text-green-400" />
+                              <CheckCircle2 className="w-4 h-4 text-green-600" />
                             ) : (
-                              <AlertTriangle className="w-4 h-4 text-red-400" />
+                              <AlertTriangle className="w-4 h-4 text-red-600" />
                             )
                           )}
                         </div>
 
-                        <div className="flex items-center justify-between p-2 rounded bg-slate-900/50">
+                        <div className="flex items-center justify-between p-2 rounded bg-gray-100">
                           <div>
-                            <p className="text-xs text-slate-400">Soir</p>
-                            <p className="text-base font-bold text-white">
+                            <p className="text-xs text-gray-600">Soir</p>
+                            <p className="text-base font-bold text-gray-900">
                               {item.evening_temp !== undefined ? `${item.evening_temp}°C` : 'N/A'}
                             </p>
                           </div>
                           {item.evening_temp !== undefined && (
                             item.evening_compliant ? (
-                              <CheckCircle2 className="w-4 h-4 text-green-400" />
+                              <CheckCircle2 className="w-4 h-4 text-green-600" />
                             ) : (
-                              <AlertTriangle className="w-4 h-4 text-red-400" />
+                              <AlertTriangle className="w-4 h-4 text-red-600" />
                             )
                           )}
                         </div>
@@ -793,8 +793,8 @@ function HistoryModal({ open, onClose }) {
           </div>
         )}
 
-        <div className="flex justify-end pt-4 border-t border-slate-700 mt-4">
-          <Button variant="outline" onClick={onClose} className="border-slate-600 text-slate-900 hover:text-slate-100 hover:bg-slate-700">
+        <div className="flex justify-end pt-4 border-t border-gray-200 mt-4">
+          <Button variant="outline" onClick={onClose} className="border-gray-300 text-gray-900 hover:bg-gray-50">
             Fermer
           </Button>
         </div>

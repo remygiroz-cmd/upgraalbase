@@ -336,43 +336,43 @@ function DayDetailModal({ day, onClose }) {
 
   return (
     <Dialog open={true} onOpenChange={onClose}>
-      <DialogContent className="bg-slate-800 border-slate-700 max-w-3xl max-h-[80vh] overflow-y-auto">
+      <DialogContent className="bg-white border-gray-200 max-w-3xl max-h-[80vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>
+          <DialogTitle className="text-gray-900">
             {format(new Date(day.date), 'EEEE d MMMM yyyy', { locale: fr })}
           </DialogTitle>
         </DialogHeader>
 
         <div className="space-y-6">
           {/* Session Info */}
-          <div className="p-3 bg-slate-700/30 rounded-lg">
+          <div className="p-3 bg-gray-50 rounded-lg border border-gray-200">
             <div className="flex flex-col gap-2 text-sm">
               {day.started_by_name &&
               <div className="flex justify-between">
-                  <span className="text-slate-400">Démarré par :</span>
-                  <span className="text-slate-200">{day.started_by_name}</span>
+                  <span className="text-gray-600">Démarré par :</span>
+                  <span className="text-gray-900">{day.started_by_name}</span>
                 </div>
               }
               {day.started_at &&
               <div className="flex justify-between">
-                  <span className="text-slate-400">Heure de début :</span>
-                  <span className="text-slate-200">{format(new Date(day.started_at), 'HH:mm')}</span>
+                  <span className="text-gray-600">Heure de début :</span>
+                  <span className="text-gray-900">{format(new Date(day.started_at), 'HH:mm')}</span>
                 </div>
               }
               {day.completed_at &&
               <div className="flex justify-between">
-                  <span className="text-slate-400">Heure de fin :</span>
-                  <span className="text-slate-200">{format(new Date(day.completed_at), 'HH:mm')}</span>
+                  <span className="text-gray-600">Heure de fin :</span>
+                  <span className="text-gray-900">{format(new Date(day.completed_at), 'HH:mm')}</span>
                 </div>
               }
               {totalSeconds > 0 &&
               <>
                   <div className="flex justify-between">
-                    <span className="text-slate-400">Temps total :</span>
+                    <span className="text-gray-600">Temps total :</span>
                     <span className="text-slate-200 font-medium">{formatTime(totalSeconds)}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-slate-400">Temps restant :</span>
+                    <span className="text-gray-600">Temps restant :</span>
                     <span className="text-slate-200 font-medium">{formatTime(remainingSeconds)}</span>
                   </div>
                 </>
@@ -383,19 +383,19 @@ function DayDetailModal({ day, onClose }) {
           {/* Filters */}
           <div className="space-y-3">
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
               <Input
                 placeholder="Rechercher une tâche..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10 bg-slate-700/30 border-slate-600 text-slate-200"
+                className="pl-10 bg-white border-gray-300 text-gray-900"
               />
             </div>
             
             <div className="flex items-center gap-2">
-              <User className="w-4 h-4 text-slate-400 flex-shrink-0" />
+              <User className="w-4 h-4 text-gray-400 flex-shrink-0" />
               <Select value={selectedUser} onValueChange={setSelectedUser}>
-                <SelectTrigger className="bg-slate-700/30 border-slate-600 text-slate-200">
+                <SelectTrigger className="bg-white border-gray-300 text-gray-900">
                   <SelectValue placeholder="Tous les utilisateurs" />
                 </SelectTrigger>
                 <SelectContent>
@@ -411,19 +411,19 @@ function DayDetailModal({ day, onClose }) {
 
           {/* Tasks by Category */}
           <div>
-            <h3 className="font-semibold mb-3 flex items-center gap-2">
-              <ClipboardList className="w-5 h-5 text-orange-400" />
+            <h3 className="font-semibold mb-3 flex items-center gap-2 text-gray-900">
+              <ClipboardList className="w-5 h-5 text-orange-600" />
               Tâches ({filteredTasks.length} / {day.tasks?.length || 0})
             </h3>
             {filteredTasks.length === 0 ? (
-              <div className="text-center py-8 text-slate-400">
+              <div className="text-center py-8 text-gray-600">
                 Aucune tâche trouvée
               </div>
             ) : (
             <div className="space-y-4">
               {Object.entries(tasksByCategory).map(([catId, categoryData]) =>
               <div key={catId}>
-                  <h4 className="text-sm font-medium text-slate-300 mb-2">{categoryData.name}</h4>
+                  <h4 className="text-sm font-medium text-gray-700 mb-2">{categoryData.name}</h4>
                   <div className="space-y-2">
                     {categoryData.tasks.map((task, idx) =>
                   <div
@@ -431,29 +431,29 @@ function DayDetailModal({ day, onClose }) {
                     className={cn(
                       "p-3 rounded-lg border",
                       task.is_completed ?
-                      "bg-orange-900/20 border-orange-600/30" :
-                      "bg-slate-700/30 border-slate-600/30"
+                      "bg-orange-50 border-orange-200" :
+                      "bg-gray-50 border-gray-200"
                     )}>
 
                         <div className="flex items-start justify-between">
                           <div className="flex-1">
                             <h5 className={cn(
-                          "font-medium",
-                          task.is_completed && "line-through text-slate-500"
+                          "font-medium text-gray-900",
+                          task.is_completed && "line-through text-gray-500"
                         )}>
                               {task.task_name}
                             </h5>
                             {task.added_at &&
-                        <p className="text-xs text-slate-500 mt-1">
+                        <p className="text-xs text-gray-500 mt-1">
                                 Ajouté à {format(new Date(task.added_at), 'HH:mm')}
                               </p>
                         }
                           </div>
                           {task.is_completed &&
                       <div className="flex items-center gap-2 ml-4">
-                              <Check className="w-5 h-5 text-orange-400" />
+                              <Check className="w-5 h-5 text-orange-600" />
                               <div className="text-right">
-                                <p className="text-sm text-slate-300">{task.completed_by_name}</p>
+                                <p className="text-sm text-gray-700">{task.completed_by_name}</p>
                                 {task.completed_at &&
                           <p className="text-xs text-slate-500">
                                     {format(new Date(task.completed_at), 'HH:mm')}
@@ -474,7 +474,7 @@ function DayDetailModal({ day, onClose }) {
         </div>
 
         <div className="flex justify-end pt-4">
-          <Button onClick={onClose} className="bg-slate-600 hover:bg-slate-500 text-slate-100">
+          <Button onClick={onClose} className="bg-gray-600 hover:bg-gray-700 text-white">
             Fermer
           </Button>
         </div>
