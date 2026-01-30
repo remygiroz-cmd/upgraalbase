@@ -37,25 +37,38 @@ export default function ConfirmDialog({
     info: "text-blue-400"
   };
 
+  const iconColorMap = {
+    warning: "text-yellow-600",
+    danger: "text-red-600",
+    info: "text-blue-600"
+  };
+
+  const bgColorMap = {
+    warning: "bg-yellow-100",
+    danger: "bg-red-100",
+    info: "bg-blue-100"
+  };
+
+  const buttonColorMap = {
+    warning: "bg-yellow-600 hover:bg-yellow-700",
+    danger: "bg-red-600 hover:bg-red-700",
+    info: "bg-blue-600 hover:bg-blue-700"
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="bg-slate-800 border-slate-700 w-[calc(100vw-2rem)] max-w-md">
-        <div className={cn(
-          "absolute inset-0 rounded-lg border-2 pointer-events-none",
-          variantStyles[variant]
-        )} />
-
+      <DialogContent className="bg-white border-gray-200 w-[calc(100vw-2rem)] max-w-md">
         <DialogHeader>
           <div className="flex items-start gap-3 sm:gap-4">
             <div className={cn(
-              "w-10 h-10 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center flex-shrink-0",
-              variantStyles[variant]
+              "w-10 h-10 sm:w-12 sm:h-12 rounded-full flex items-center justify-center flex-shrink-0",
+              bgColorMap[variant]
             )}>
-              <AlertTriangle className={cn("w-5 h-5 sm:w-6 sm:h-6", iconColors[variant])} />
+              <AlertTriangle className={cn("w-5 h-5 sm:w-6 sm:h-6", iconColorMap[variant])} />
             </div>
             <div className="flex-1 min-w-0">
-              <DialogTitle className="text-base sm:text-lg mb-2 break-words">{title}</DialogTitle>
-              <DialogDescription className="text-slate-300 text-xs sm:text-sm leading-relaxed break-words">
+              <DialogTitle className="text-base sm:text-lg mb-2 break-words text-gray-900">{title}</DialogTitle>
+              <DialogDescription className="text-gray-600 text-xs sm:text-sm leading-relaxed break-words">
                 {description}
               </DialogDescription>
             </div>
@@ -66,15 +79,15 @@ export default function ConfirmDialog({
           <Button
             variant="outline"
             onClick={handleCancel}
-            className="border-slate-600 text-slate-900 hover:text-slate-100 hover:bg-slate-700 w-full sm:w-auto min-h-[44px]"
+            className="bg-white border-gray-300 text-gray-700 hover:bg-gray-50 w-full sm:w-auto min-h-[44px]"
           >
             {cancelText}
           </Button>
           <Button
             onClick={handleConfirm}
             className={cn(
-              "w-full sm:w-auto min-h-[44px]",
-              variant === "danger" ? "bg-red-600 hover:bg-red-700" : "bg-orange-600 hover:bg-orange-700"
+              "w-full sm:w-auto min-h-[44px] text-white",
+              buttonColorMap[variant]
             )}
           >
             {confirmText}
