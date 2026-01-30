@@ -8,7 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { useQueryClient, useMutation, useQuery } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { toast } from 'sonner';
-import { ExternalLink, Save, History, CheckCircle, X as XIcon, Download, Printer, AlertCircle } from 'lucide-react';
+import { FileText, Save, History, CheckCircle, X as XIcon, Download } from 'lucide-react';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 
@@ -32,9 +32,7 @@ export default function InvoiceDetailModal({ open, onClose, invoice }) {
   });
   const [form, setForm] = useState({});
   const [selectedCategories, setSelectedCategories] = useState([]);
-  const [previewUrl, setPreviewUrl] = useState('');
-  const [downloadUrl, setDownloadUrl] = useState('');
-  const [previewError, setPreviewError] = useState(false);
+  const [isDownloading, setIsDownloading] = useState(false);
 
   useEffect(() => {
     if (invoice && open) {
@@ -50,34 +48,7 @@ export default function InvoiceDetailModal({ open, onClose, invoice }) {
         internal_comments: invoice.internal_comments || ''
       });
       setSelectedCategories(invoice.categories || []);
-
-      const hostname = window.location.hostname;
-      const pathname = window.location.pathname;
-      
-      let appId;
-      if (hostname.includes('.base44.app')) {
-        const match = hostname.match(/app--([^.]+)/);
-        appId = match ? match[1] : pathname.split('/').filter(Boolean)[0];
-      } else {
-        appId = pathname.split('/').filter(Boolean)[0];
-      }
-      
-      const previewUrlBuilt = `${window.location.origin}/api/apps/${appId}/functions/previewInvoice?id=${invoice.id}`;
-      const downloadUrlBuilt = `${window.location.origin}/api/apps/${appId}/functions/downloadInvoice?id=${invoice.id}`;
-      
-      setPreviewUrl(previewUrlBuilt);
-      setDownloadUrl(downloadUrlBuilt);
-      setPreviewError(false);
-      
-      console.log('=== Invoice URLs ===');
-      console.log('Invoice ID:', invoice.id);
-      console.log('Bucket:', invoice.file_bucket || '❌ N/A');
-      console.log('Path:', invoice.file_path || '❌ N/A');
-      console.log('');
-      console.log('📋 TEST (open in new tab):');
-      console.log('Preview:', previewUrlBuilt);
-      console.log('Download:', downloadUrlBuilt);
-      console.log('==================');
+      setIsDownloading(false);
     }
   }, [invoice, open]);
 
@@ -121,100 +92,35 @@ export default function InvoiceDetailModal({ open, onClose, invoice }) {
         <DialogHeader>
           <DialogTitle className="text-gray-900 flex items-center justify-between">
             <span>Détail de la facture</span>
-            <div className="flex items-center gap-2">
-              {invoice.file_url && previewUrl && (
-                <>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={handlePrint}
-                    disabled={previewError}
-                    className="text-gray-700 hover:text-gray-900 border-gray-300"
-                    title="Imprimer"
-                  >
-                    <Printer className="w-4 h-4 mr-1" />
-                    Imprimer
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => window.open(downloadUrl, '_blank')}
-                    className="text-gray-700 hover:text-gray-900 border-gray-300"
-                    title="Télécharger le fichier"
-                  >
-                    <Download className="w-4 h-4 mr-1" />
-                    Télécharger
-                  </Button>
-                </>
-              )}
-            </div>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={handleDownload}
+              disabled={isDownloading || !invoice.file_bucket || !invoice.file_path}
+              className="text-gray-700 hover:text-gray-900 border-gray-300"
+              title="Télécharger le fichier"
+            >
+              <Download className="w-4 h-4 mr-1" />
+              {isDownloading ? 'Téléchargement...' : 'Télécharger'}
+            </Button>
           </DialogTitle>
         </DialogHeader>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {/* Aperçu */}
+          {/* Fichier */}
           <div className="space-y-4">
-            <div>
-              <Label className="text-gray-900 font-semibold mb-2 block">
-                Aperçu du fichier
-              </Label>
-              {previewUrl ? (
-                <div className="border border-gray-300 rounded-lg overflow-hidden bg-gray-50 relative">
-                  {previewError ? (
-                    <div className="w-full h-96 flex flex-col items-center justify-center text-gray-500">
-                      <AlertCircle className="w-12 h-12 mb-3 text-orange-500" />
-                      <p className="font-medium">Aperçu indisponible</p>
-                      <p className="text-sm">Le fichier ne peut pas être affiché</p>
-                      <p className="text-xs mt-2 text-gray-400">Utilisez le bouton Télécharger</p>
-                    </div>
-                  ) : (invoice.file_name || '').match(/\.(pdf)$/i) ? (
-                    <>
-                      <iframe 
-                        src={previewUrl}
-                        className="w-full h-96"
-                        title="Aperçu PDF"
-                        onLoad={(e) => {
-                          // Vérifier si l'iframe a chargé du JSON au lieu du PDF
-                          try {
-                            const iframeDoc = e.target.contentDocument || e.target.contentWindow.document;
-                            const text = iframeDoc.body.innerText;
-                            if (text.includes('App not found') || text.includes('error')) {
-                              console.error('Preview error:', text);
-                              setPreviewError(true);
-                            }
-                          } catch (err) {
-                            // Cross-origin, assume it's OK
-                            console.log('Preview loaded (cross-origin)');
-                          }
-                        }}
-                        onError={() => {
-                          console.error('Preview iframe error');
-                          setPreviewError(true);
-                        }}
-                      />
-                    </>
-                  ) : (invoice.file_name || '').match(/\.(jpg|jpeg|png|gif|webp)$/i) ? (
-                    <img 
-                      src={previewUrl}
-                      alt="Facture" 
-                      className="w-full h-96 object-contain"
-                      onError={() => {
-                        console.error('Preview image error');
-                        setPreviewError(true);
-                      }}
-                    />
-                  ) : (
-                    <div className="w-full h-96 flex flex-col items-center justify-center text-gray-500">
-                      <ExternalLink className="w-12 h-12 mb-3" />
-                      <p className="font-medium">{invoice.file_name || 'Document'}</p>
-                      <p className="text-sm">Format non prévisualisable</p>
-                    </div>
+            <div className="border border-gray-300 rounded-lg p-4 bg-gray-50">
+              <Label className="text-gray-900 font-semibold mb-2 block">Fichier</Label>
+              {invoice.file_name ? (
+                <div className="flex items-center gap-2 text-gray-700">
+                  <FileText className="w-5 h-5 text-blue-500" />
+                  <span>{invoice.file_name}</span>
+                  {invoice.file_size && (
+                    <span className="text-xs text-gray-500">({(invoice.file_size / 1024).toFixed(1)} KB)</span>
                   )}
                 </div>
               ) : (
-                <div className="border border-gray-300 rounded-lg overflow-hidden bg-gray-50 w-full h-96 flex items-center justify-center">
-                  <p className="text-gray-500">Chargement...</p>
-                </div>
+                <p className="text-gray-500">Aucun fichier associé</p>
               )}
             </div>
 
@@ -253,22 +159,6 @@ export default function InvoiceDetailModal({ open, onClose, invoice }) {
                       )}
                     </div>
                   ))}
-                </div>
-              </div>
-            )}
-
-            {/* Debug info (admin only) */}
-            {currentUser?.role === 'admin' && (
-              <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded text-xs">
-                <p className="font-semibold text-blue-900 mb-2">🔧 Debug Info (Admin)</p>
-                <div className="space-y-1 text-blue-800 font-mono">
-                  <p><strong>Bucket:</strong> {invoice.file_bucket || '❌ N/A'}</p>
-                  <p><strong>Path:</strong> {invoice.file_path || '❌ N/A'}</p>
-                  <p><strong>File Name:</strong> {invoice.file_name || 'N/A'}</p>
-                  <p><strong>MIME:</strong> {invoice.file_mime || 'N/A'}</p>
-                  <p><strong>Size:</strong> {invoice.file_size ? `${(invoice.file_size / 1024).toFixed(1)} KB` : 'N/A'}</p>
-                  <p className="pt-2"><strong>Preview URL:</strong> <a href={previewUrl} target="_blank" rel="noopener" className="underline break-all text-blue-600">{previewUrl}</a></p>
-                  <p><strong>Download URL:</strong> <a href={downloadUrl} target="_blank" rel="noopener" className="underline break-all text-blue-600">{downloadUrl}</a></p>
                 </div>
               </div>
             )}
