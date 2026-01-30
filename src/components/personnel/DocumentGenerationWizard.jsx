@@ -11,6 +11,7 @@ import { toast } from 'sonner';
 import { useQuery } from '@tanstack/react-query';
 import PDFDownloadModal from './PDFDownloadModal';
 import { detectManualVariables } from './VariableDetector';
+import AIWritingAssistant from './AIWritingAssistant';
 
 export default function DocumentGenerationWizard({ open, onOpenChange, employee, establishment }) {
   const [step, setStep] = useState(1);
@@ -418,11 +419,20 @@ export default function DocumentGenerationWizard({ open, onOpenChange, employee,
               <div className="space-y-5">
                 {detectedFields.map((field) => (
                   <div key={field.key} className="space-y-2">
-                    <Label className="text-gray-900 font-semibold">
-                      {field.label}
-                      {field.required && <span className="text-red-600 ml-1">*</span>}
-                    </Label>
-                    
+                    <div className="flex items-center justify-between">
+                      <Label className="text-gray-900 font-semibold">
+                        {field.label}
+                        {field.required && <span className="text-red-600 ml-1">*</span>}
+                      </Label>
+                      {(field.type === 'textarea' || field.type === 'text') && (
+                        <AIWritingAssistant
+                          fieldKey={field.key}
+                          fieldLabel={field.label}
+                          onInsert={(text) => setCustomFieldsData({...customFieldsData, [field.key]: text})}
+                        />
+                      )}
+                    </div>
+
                     {field.type === 'text' && (
                       <Input
                         placeholder={field.placeholder || ''}
@@ -432,7 +442,7 @@ export default function DocumentGenerationWizard({ open, onOpenChange, employee,
                         required={field.required}
                       />
                     )}
-                    
+
                     {field.type === 'textarea' && (
                       <div className="space-y-2">
                         <textarea
