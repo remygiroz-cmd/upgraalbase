@@ -282,14 +282,69 @@ export default function DocumentGenerationWizard({ open, onOpenChange, employee,
       background: white;
       box-shadow: 0 0 10px rgba(0,0,0,0.1);
     }
+    
+    /* === GESTION STRICTE DES COUPURES DE PAGE === */
+    .no-break, .block, .section, .article, .article-content,
+    .signature-block, .signature-row, .signature-col,
+    .employee-block, .employer-block,
+    .identification-parties, .entre-et-block, .preambule,
+    .clauses-block {
+      break-inside: avoid;
+      page-break-inside: avoid;
+    }
+    
     @media print {
-      @page { size: A4; margin: 0mm; }
+      @page { 
+        size: A4; 
+        margin: 2.5cm 2cm 2cm 2cm; 
+      }
       body { margin: 0; padding: 0; background: white; }
-      .print-container { width: 100%; height: auto; margin: 0; box-shadow: none; }
+      .print-container { width: 100%; height: auto; margin: 0; box-shadow: none; padding: 0; }
       .no-print { display: none !important; }
-      h1, h2, h3, h4 { break-after: avoid; }
+      
+      /* Titres: toujours avec contenu qui suit */
+      h1, h2, h3, h4, h5, h6 { 
+        break-after: avoid; 
+        page-break-after: avoid;
+        break-inside: avoid;
+        page-break-inside: avoid;
+      }
+      
+      /* Paragraphes: orphelines et veuves */
       p { orphans: 3; widows: 3; }
-      .signature-block, .article { break-inside: avoid; }
+      
+      /* Blocs logiques: JAMAIS de coupure */
+      .no-break, .block, .section, .article, .article-content,
+      .signature-block, .signature-row, .signature-col,
+      .employee-block, .employer-block,
+      .identification-parties, .entre-et-block, .preambule,
+      .clauses-block {
+        break-inside: avoid;
+        page-break-inside: avoid;
+      }
+      
+      /* Tableaux */
+      table, tr { 
+        break-inside: avoid; 
+        page-break-inside: avoid; 
+      }
+      thead { 
+        break-after: avoid; 
+        page-break-after: avoid; 
+      }
+      
+      /* Signatures: toujours ensemble */
+      .signature-block {
+        margin-top: 40px;
+        min-height: 120px;
+      }
+      
+      /* Couleurs exactes */
+      body {
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+        color-adjust: exact;
+      }
     }
   </style>
 </head>

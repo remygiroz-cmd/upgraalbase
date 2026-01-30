@@ -106,6 +106,8 @@ const getBaseStyles = () => `
     color: #2c3e50;
     border-bottom: 2px solid #ecf0f1;
     padding-bottom: 5px;
+    break-after: avoid-page;
+    page-break-after: avoid;
   }
 
   h3 {
@@ -113,6 +115,13 @@ const getBaseStyles = () => `
     font-weight: bold;
     margin: 20px 0 12px 0;
     color: #34495e;
+    break-after: avoid-page;
+    page-break-after: avoid;
+  }
+
+  h4, h5, h6 {
+    break-after: avoid-page;
+    page-break-after: avoid;
   }
 
   /* === SECTIONS === */
@@ -129,6 +138,13 @@ const getBaseStyles = () => `
     color: #2c3e50;
   }
 
+  /* === BLOCS LOGIQUES À NE PAS COUPER === */
+  .block, .no-break, .article, .identification-parties, .preambule, 
+  .article-content, .clauses-block, .entre-et-block {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
   /* === PARAGRAPHES === */
   p {
     margin-bottom: 15px;
@@ -143,6 +159,13 @@ const getBaseStyles = () => `
     padding: 15px 20px;
     margin: 25px 0;
     break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  /* === BLOC EMPLOYEUR === */
+  .employer-block {
+    break-inside: avoid;
+    page-break-inside: avoid;
   }
 
   /* === ÉLÉMENTS IMPORTANTS === */
@@ -244,25 +267,66 @@ const getBaseStyles = () => `
       margin-footer: 0mm;
     }
 
-    /* Éviter les coupures malheureuses */
-    h1, h2, h3, .section-title {
+    /* === GESTION STRICTE DES COUPURES DE PAGE === */
+    
+    /* Titres: toujours avec au moins une ligne de texte qui suit */
+    h1, h2, h3, h4, h5, h6, .section-title {
       break-after: avoid-page;
       page-break-after: avoid;
+      break-inside: avoid;
+      page-break-inside: avoid;
     }
 
+    /* Éviter les orphelines et veuves dans les paragraphes */
     p, li {
       orphans: 3;
       widows: 3;
     }
 
-    .signature-block, .signature-row, .signature-col, .employee-block {
+    /* Blocs logiques: JAMAIS de coupure à l'intérieur */
+    .no-break, .block, .section, .article, .article-content,
+    .signature-block, .signature-row, .signature-col,
+    .employee-block, .employer-block,
+    .identification-parties, .entre-et-block, .preambule,
+    .clauses-block {
       break-inside: avoid;
       page-break-inside: avoid;
     }
 
+    /* Séparateurs: toujours suivi de contenu */
     hr {
       break-after: avoid;
       page-break-after: avoid;
+    }
+
+    /* Tableaux: conserver l'en-tête avec au moins une ligne */
+    table {
+      break-inside: avoid;
+      page-break-inside: avoid;
+    }
+
+    thead {
+      break-after: avoid;
+      page-break-after: avoid;
+    }
+
+    tr {
+      break-inside: avoid;
+      page-break-inside: avoid;
+    }
+
+    /* Forcer les sauts de page pour les sections majeures si nécessaire */
+    .page-break {
+      page-break-before: always;
+      break-before: page;
+    }
+
+    /* Signatures: toujours ensemble sur la même page */
+    .signature-block {
+      break-before: auto;
+      page-break-before: auto;
+      margin-top: 40px;
+      min-height: 120px;
     }
 
     /* Masquer les éléments non imprimables */
