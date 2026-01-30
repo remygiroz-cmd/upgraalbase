@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
-import { useQueryClient, useMutation, useQuery } from '@tanstack/react-query';
+import { useQueryClient, useMutation } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { toast } from 'sonner';
 import { FileText, Save, History, CheckCircle, X as XIcon, Download } from 'lucide-react';
@@ -26,10 +26,6 @@ const CATEGORIES = [
 
 export default function InvoiceDetailModal({ open, onClose, invoice }) {
   const queryClient = useQueryClient();
-  const { data: currentUser } = useQuery({
-    queryKey: ['currentUser'],
-    queryFn: () => base44.auth.me()
-  });
   const [form, setForm] = useState({});
   const [selectedCategories, setSelectedCategories] = useState([]);
   const [isDownloading, setIsDownloading] = useState(false);
@@ -52,13 +48,7 @@ export default function InvoiceDetailModal({ open, onClose, invoice }) {
     }
   }, [invoice, open]);
 
-  const handlePrint = () => {
-    if (!previewUrl || previewError) {
-      toast.error("Aperçu indisponible pour l'impression");
-      return;
-    }
-    window.open(previewUrl, '_blank');
-  };
+
 
   const updateMutation = useMutation({
     mutationFn: (data) => base44.entities.Invoice.update(invoice.id, data),
