@@ -38,11 +38,12 @@ const mapEstablishmentToVariables = (establishment) => {
   return variables;
 };
 
+// Styles CSS professionnels harmonisés pour tous les documents RH
 const getBaseStyles = () => `
-  :root {
-    --font: Arial, Helvetica, sans-serif;
-    --text: 11pt;
-    --lh: 1.3;
+  /* === CHARTE GRAPHIQUE RH === */
+  @page {
+    size: A4;
+    margin: 2.5cm 2cm 2cm 2cm;
   }
 
   * {
@@ -51,100 +52,202 @@ const getBaseStyles = () => `
     box-sizing: border-box;
   }
 
+  /* === TYPOGRAPHIE GLOBALE === */
   body {
-    font-family: var(--font);
-    font-size: var(--text);
-    line-height: var(--lh);
-    color: #000;
-    background: #fff;
+    font-family: 'Calibri', 'Arial', 'Helvetica', sans-serif;
+    font-size: 11pt;
+    line-height: 1.8;
+    color: #1a1a1a;
+    background: white;
+    max-width: 21cm;
+    margin: 0 auto;
+    padding: 2.5cm 2cm;
   }
 
-  h1 {
+  /* === EN-TÊTE EMPLOYEUR === */
+  .header-employer {
+    border-bottom: 2px solid #2c3e50;
+    padding-bottom: 15px;
+    margin-bottom: 30px;
+  }
+
+  .header-employer .company-name {
     font-size: 14pt;
-    font-weight: 700;
-    margin: 0 0 10px 0;
+    font-weight: bold;
+    color: #2c3e50;
+    margin-bottom: 5px;
   }
 
+  .header-employer .company-details {
+    font-size: 9pt;
+    color: #555;
+    line-height: 1.4;
+  }
+
+  /* === TITRE PRINCIPAL === */
+  h1 {
+    font-size: 16pt;
+    font-weight: bold;
+    text-align: center;
+    margin: 30px 0;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    color: #2c3e50;
+    border-top: 1px solid #ddd;
+    border-bottom: 1px solid #ddd;
+    padding: 15px 0;
+  }
+
+  /* === HIÉRARCHIE DES TITRES === */
   h2 {
+    font-size: 13pt;
+    font-weight: bold;
+    margin: 30px 0 15px 0;
+    color: #2c3e50;
+    border-bottom: 2px solid #ecf0f1;
+    padding-bottom: 5px;
+  }
+
+  h3 {
     font-size: 11.5pt;
-    font-weight: 700;
-    margin: 14px 0 6px 0;
+    font-weight: bold;
+    margin: 20px 0 12px 0;
+    color: #34495e;
+  }
+
+  /* === SECTIONS === */
+  .section {
+    margin: 25px 0;
+    break-inside: avoid;
+    page-break-inside: avoid;
   }
 
   .section-title {
-    font-weight: 700;
-    text-transform: uppercase;
-    margin: 14px 0 6px 0;
+    font-weight: bold;
+    text-decoration: underline;
+    margin: 20px 0 10px 0;
+    color: #2c3e50;
   }
 
-  hr {
-    border: none;
-    border-top: 1px solid #333;
-    margin: 10px 0 12px;
-  }
-
+  /* === PARAGRAPHES === */
   p {
-    margin: 0 0 8px 0;
+    margin-bottom: 15px;
+    text-align: justify;
+    text-justify: inter-word;
   }
 
-  .small-gap {
-    margin-top: 6px;
-  }
-
-  .block {
-    margin-top: 10px;
-  }
-
-  .section {
-    margin: 12px 0;
-    break-inside: avoid;
-    page-break-inside: avoid;
-  }
-
-  .signature-block {
-    margin-top: 18px;
-    break-inside: avoid;
-    page-break-inside: avoid;
-  }
-
-  .signature-row {
-    display: flex;
-    gap: 24px;
-    margin-top: 10px;
-  }
-
-  .signature-col {
-    flex: 1;
+  /* === IDENTIFICATION SALARIÉ === */
+  .employee-block {
+    background: #f8f9fa;
+    border-left: 4px solid #3498db;
+    padding: 15px 20px;
+    margin: 25px 0;
     break-inside: avoid;
   }
 
-  .signature-box {
-    border-top: 1px solid #000;
-    height: 90px;
-    margin-top: 10px;
-  }
-
+  /* === ÉLÉMENTS IMPORTANTS === */
   strong {
     font-weight: bold;
+    color: #2c3e50;
   }
 
   em {
     font-style: italic;
   }
 
+  /* === LISTES === */
+  ul, ol {
+    margin: 15px 0 15px 40px;
+  }
+
+  li {
+    margin-bottom: 10px;
+    line-height: 1.7;
+  }
+
+  /* === SÉPARATEURS === */
+  hr {
+    border: none;
+    border-top: 1px solid #ddd;
+    margin: 20px 0;
+  }
+
+  /* === BLOC SIGNATURE PROFESSIONNEL === */
+  .signature-block {
+    margin-top: 60px;
+    padding-top: 30px;
+    border-top: 1px solid #ddd;
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  .signature-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 30px;
+    margin-top: 10px;
+  }
+
+  .signature-col {
+    text-align: center;
+    break-inside: avoid;
+  }
+
+  .signature-label {
+    font-weight: bold;
+    margin-bottom: 10px;
+    color: #2c3e50;
+  }
+
+  .signature-date {
+    font-size: 10pt;
+    color: #666;
+    margin-bottom: 15px;
+  }
+
+  .signature-box {
+    border-top: 1px solid #000;
+    height: 80px;
+    margin-top: 40px;
+    padding-top: 5px;
+  }
+
+  /* === TABLEAUX === */
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 20px 0;
+  }
+
+  th, td {
+    padding: 10px;
+    border: 1px solid #ddd;
+    text-align: left;
+  }
+
+  th {
+    background: #f8f9fa;
+    font-weight: bold;
+    color: #2c3e50;
+  }
+
+  /* === IMPRESSION === */
   @media print {
-    @page {
-      size: A4;
-      margin: 18mm 16mm 18mm 16mm;
-    }
-
     body {
-      -webkit-print-color-adjust: exact;
-      print-color-adjust: exact;
+      padding: 0;
     }
 
-    h1, h2, .section-title {
+    @page {
+      margin: 2.5cm 2cm 2cm 2cm;
+      /* Suppression des en-têtes/pieds de page navigateur */
+      margin-header: 0mm;
+      margin-footer: 0mm;
+    }
+
+    /* Éviter les coupures malheureuses */
+    h1, h2, h3, .section-title {
       break-after: avoid-page;
+      page-break-after: avoid;
     }
 
     p, li {
@@ -152,16 +255,26 @@ const getBaseStyles = () => `
       widows: 3;
     }
 
-    .signature-block, .signature-row, .signature-col {
+    .signature-block, .signature-row, .signature-col, .employee-block {
       break-inside: avoid;
+      page-break-inside: avoid;
     }
 
     hr {
       break-after: avoid;
+      page-break-after: avoid;
     }
 
+    /* Masquer les éléments non imprimables */
     .no-print {
       display: none !important;
+    }
+
+    /* Couleurs exactes en impression */
+    body {
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+      color-adjust: exact;
     }
   }
 `;
@@ -415,19 +528,58 @@ Deno.serve(async (req) => {
     // Utiliser le HTML du template stocké dans la DB
     let htmlContent = template.htmlContent;
     
-    // Injecter les styles si nécessaire (si le template contient le placeholder)
-    if (htmlContent.includes('{{STYLES}}')) {
-      htmlContent = htmlContent.replace('{{STYLES}}', getBaseStyles());
-    }
-    
     // Injecter les variables dans le HTML
     Object.entries(variables).forEach(([key, value]) => {
       const placeholder = `{{${key}}}`;
       htmlContent = htmlContent.split(placeholder).join(String(value));
     });
 
-    // Retourner le HTML pour que le client génère le PDF côté client
-    // via html2pdf.js ou une autre solution
+    // Structure HTML finale avec mise en page professionnelle automatique
+    const structuredHtml = `
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${template.name} - ${employee.first_name} ${employee.last_name}</title>
+  <style>${getBaseStyles()}</style>
+</head>
+<body>
+  <!-- EN-TÊTE EMPLOYEUR AUTOMATIQUE -->
+  <div class="header-employer">
+    <div class="company-name">${variables.etablissementNom || 'Établissement'}</div>
+    <div class="company-details">
+      ${variables.etablissementAdresse || ''}<br>
+      ${variables.etablissementSiret ? `SIRET : ${variables.etablissementSiret}` : ''}<br>
+      ${variables.etablissementEmail ? `Email : ${variables.etablissementEmail}` : ''}
+    </div>
+  </div>
+  
+  <!-- CONTENU PRINCIPAL -->
+  <div class="document-content">
+    ${htmlContent}
+  </div>
+  
+  <!-- BLOC SIGNATURE AUTOMATIQUE (si non présent) -->
+  ${!htmlContent.includes('signature') ? `
+  <div class="signature-block">
+    <div class="signature-row">
+      <div class="signature-col">
+        <div class="signature-label">L'Employeur</div>
+        <div class="signature-date">Fait le ${variables.signature || formatDateFR(new Date())}</div>
+        <div class="signature-box"></div>
+      </div>
+      <div class="signature-col">
+        <div class="signature-label">Le Salarié</div>
+        <div class="signature-date">Fait le ${variables.signature || formatDateFR(new Date())}</div>
+        <div class="signature-box">Lu et approuvé</div>
+      </div>
+    </div>
+  </div>
+  ` : ''}
+</body>
+</html>
+    `.trim();
     const documentRecord = {
       employee_id: employeeId,
       establishment_id: establishment.id,
@@ -450,8 +602,8 @@ Deno.serve(async (req) => {
     return Response.json({
       success: true,
       documentId: createdDocument.id,
-      html: htmlContent,
-      message: 'Contract HTML generated. PDF generation on client-side.',
+      html: structuredHtml,
+      message: 'Contract HTML generated with professional layout. PDF generation on client-side.',
       payload: variables
     });
 
