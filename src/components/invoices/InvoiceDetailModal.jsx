@@ -310,26 +310,17 @@ export default function InvoiceDetailModal({ open, onClose, invoice }) {
             )}
 
             {/* Debug info (admin only) */}
-            {currentUser?.role === 'admin' && invoice.file_url && (
+            {currentUser?.role === 'admin' && (
               <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded text-xs">
-                <p className="font-semibold text-blue-900 mb-2">Debug Info (Admin)</p>
+                <p className="font-semibold text-blue-900 mb-2">🔧 Debug Info (Admin)</p>
                 <div className="space-y-1 text-blue-800 font-mono">
-                  <p><strong>Bucket/Path:</strong> {(() => {
-                    try {
-                      const url = new URL(invoice.file_url);
-                      const parts = url.pathname.split('/');
-                      const objIdx = parts.indexOf('object');
-                      if (objIdx !== -1) {
-                        const bucket = parts[objIdx + 2];
-                        const path = parts.slice(objIdx + 3).join('/');
-                        return `${bucket}/${path}`;
-                      }
-                      return 'N/A';
-                    } catch { return 'N/A'; }
-                  })()}</p>
+                  <p><strong>Bucket:</strong> {invoice.file_bucket || '❌ N/A'}</p>
+                  <p><strong>Path:</strong> {invoice.file_path || '❌ N/A'}</p>
                   <p><strong>File Name:</strong> {invoice.file_name || 'N/A'}</p>
-                  <p><strong>Supabase URL:</strong> <a href={invoice.file_url} target="_blank" rel="noopener" className="underline break-all">{invoice.file_url}</a></p>
-                  <p><strong>Preview URL:</strong> <a href={previewUrl} target="_blank" rel="noopener" className="underline break-all">{previewUrl}</a></p>
+                  <p><strong>MIME:</strong> {invoice.file_mime || 'N/A'}</p>
+                  <p><strong>Size:</strong> {invoice.file_size ? `${(invoice.file_size / 1024).toFixed(1)} KB` : 'N/A'}</p>
+                  <p className="pt-2"><strong>Preview URL:</strong> <a href={previewUrl} target="_blank" rel="noopener" className="underline break-all text-blue-600">{previewUrl}</a></p>
+                  <p><strong>Download URL:</strong> <a href={downloadUrl} target="_blank" rel="noopener" className="underline break-all text-blue-600">{downloadUrl}</a></p>
                 </div>
               </div>
             )}
