@@ -123,13 +123,13 @@ export default function CategoryManager({ onClose }) {
                       ref={provided.innerRef}
                       {...provided.draggableProps}
                       className={cn(
-                        "flex items-center gap-2 p-3 bg-slate-700/50 rounded-lg transition-all",
-                        snapshot.isDragging && "bg-slate-600 shadow-xl ring-2 ring-orange-500/50 scale-105"
+                        "flex items-center gap-2 p-3 bg-gray-50 border border-gray-200 rounded-lg transition-all",
+                        snapshot.isDragging && "bg-gray-100 shadow-xl ring-2 ring-orange-500/50 scale-105"
                       )}
                     >
                       <div 
                         {...provided.dragHandleProps}
-                        className="cursor-grab active:cursor-grabbing touch-none p-2 hover:bg-slate-600/50 rounded-lg transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center"
+                        className="cursor-grab active:cursor-grabbing touch-none p-2 hover:bg-gray-200 rounded-lg transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center"
                       >
                         <GripVertical className="w-6 h-6 text-orange-500" />
                       </div>
@@ -139,7 +139,7 @@ export default function CategoryManager({ onClose }) {
                           <Input
                             value={editName}
                             onChange={(e) => setEditName(e.target.value)}
-                            className="flex-1 bg-slate-600 border-slate-500 h-9 text-sm"
+                            className="flex-1 bg-white border-gray-300 text-gray-900 h-9 text-sm"
                             onKeyDown={(e) => {
                               if (e.key === 'Enter') handleSaveEdit(e);
                               if (e.key === 'Escape') handleCancelEdit(e);
@@ -166,14 +166,14 @@ export default function CategoryManager({ onClose }) {
                           </div>
                           <button
                             onClick={handleSaveEdit}
-                            className="p-2 rounded-lg hover:bg-green-600/20 text-green-400 hover:text-green-300 transition-colors flex-shrink-0"
+                            className="p-2 rounded-lg hover:bg-green-100 text-green-600 hover:text-green-700 transition-colors flex-shrink-0"
                             type="button"
                           >
                             <Check className="w-4 h-4" />
                           </button>
                           <button
                             onClick={handleCancelEdit}
-                            className="p-2 rounded-lg hover:bg-slate-600 text-slate-400 hover:text-slate-300 transition-colors flex-shrink-0"
+                            className="p-2 rounded-lg hover:bg-gray-200 text-gray-600 hover:text-gray-700 transition-colors flex-shrink-0"
                             type="button"
                           >
                             <X className="w-4 h-4" />
@@ -182,13 +182,13 @@ export default function CategoryManager({ onClose }) {
                       ) : (
                         <>
                           <div
-                            className="w-5 h-5 rounded-full flex-shrink-0 border-2 border-slate-600"
+                            className="w-5 h-5 rounded-full flex-shrink-0 border-2 border-gray-300"
                             style={{ backgroundColor: cat.color || '#10b981' }}
                           />
-                          <span className="flex-1 truncate font-medium">{cat.name}</span>
+                          <span className="flex-1 truncate font-medium text-gray-900">{cat.name}</span>
                           <button
                             onClick={(e) => handleStartEdit(cat, e)}
-                            className="p-2.5 rounded-lg bg-slate-600/50 hover:bg-orange-600/30 text-slate-300 hover:text-orange-400 transition-colors flex-shrink-0 min-w-[44px] min-h-[44px] flex items-center justify-center"
+                            className="p-2.5 rounded-lg bg-gray-100 hover:bg-orange-100 text-gray-700 hover:text-orange-600 transition-colors flex-shrink-0 min-w-[44px] min-h-[44px] flex items-center justify-center"
                             type="button"
                             title="Modifier"
                           >
@@ -196,7 +196,7 @@ export default function CategoryManager({ onClose }) {
                           </button>
                           <button
                             onClick={(e) => handleDelete(cat.id, e)}
-                            className="p-2.5 rounded-lg bg-slate-600/50 hover:bg-red-600/30 text-slate-300 hover:text-red-400 transition-colors flex-shrink-0 min-w-[44px] min-h-[44px] flex items-center justify-center"
+                            className="p-2.5 rounded-lg bg-gray-100 hover:bg-red-100 text-gray-700 hover:text-red-600 transition-colors flex-shrink-0 min-w-[44px] min-h-[44px] flex items-center justify-center"
                             type="button"
                             title="Supprimer"
                           >
@@ -211,7 +211,7 @@ export default function CategoryManager({ onClose }) {
               {provided.placeholder}
               
               {categories.length === 0 && (
-                <p className="text-center text-slate-500 py-8 text-sm">
+                <p className="text-center text-gray-500 py-8 text-sm">
                   Aucune catégorie créée
                 </p>
               )}
@@ -221,13 +221,13 @@ export default function CategoryManager({ onClose }) {
       </DragDropContext>
 
       {/* New category form */}
-      <div className="pt-4 border-t border-slate-700 space-y-3">
+      <div className="pt-4 border-t border-gray-200 space-y-3">
         <div className="flex gap-2">
           <Input
             value={newName}
             onChange={(e) => setNewName(e.target.value)}
             placeholder="Nom de la catégorie"
-            className="bg-slate-700 border-slate-600 text-sm"
+            className="bg-white border-gray-300 text-gray-900 text-sm"
             onKeyDown={(e) => e.key === 'Enter' && handleCreate(e)}
           />
           <Button
@@ -246,7 +246,7 @@ export default function CategoryManager({ onClose }) {
               onClick={() => setNewColor(color)}
               className={cn(
                 "w-8 h-8 rounded-lg transition-all",
-                newColor === color && "ring-2 ring-white ring-offset-2 ring-offset-slate-800 scale-110"
+                newColor === color && "ring-2 ring-gray-900 ring-offset-2 ring-offset-white scale-110"
               )}
               style={{ backgroundColor: color }}
               type="button"
@@ -259,7 +259,7 @@ export default function CategoryManager({ onClose }) {
         <Button 
           variant="outline" 
           onClick={onClose} 
-          className="border-slate-600 text-slate-900 hover:text-slate-100 hover:bg-slate-700"
+          className="border-gray-300 text-gray-900 hover:bg-gray-50"
         >
           Fermer
         </Button>

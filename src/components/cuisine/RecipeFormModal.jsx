@@ -137,9 +137,9 @@ export default function RecipeFormModal({ open, onClose, recipe, currentSection 
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="bg-slate-800 border-slate-700 max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="bg-white border-gray-200 max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>{recipe ? 'Modifier la recette' : 'Nouvelle recette'}</DialogTitle>
+          <DialogTitle className="text-gray-900">{recipe ? 'Modifier la recette' : 'Nouvelle recette'}</DialogTitle>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-6">
@@ -152,7 +152,7 @@ export default function RecipeFormModal({ open, onClose, recipe, currentSection 
                 value={form.name}
                 onChange={(e) => setForm(prev => ({ ...prev, name: e.target.value }))}
                 placeholder="Ex: Risotto aux champignons"
-                className="bg-slate-700 border-slate-600 mt-1"
+                className="bg-white border-gray-300 text-gray-900 mt-1"
                 required
               />
             </div>
@@ -166,7 +166,7 @@ export default function RecipeFormModal({ open, onClose, recipe, currentSection 
                 <SelectTrigger className="bg-slate-700 border-slate-600 mt-1">
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent className="bg-slate-700 border-slate-600">
+                <SelectContent>
                   {SECTIONS.map(s => (
                     <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
                   ))}
@@ -180,7 +180,7 @@ export default function RecipeFormModal({ open, onClose, recipe, currentSection 
             <Label>Image</Label>
             <div className="mt-2 space-y-3">
               {form.image_url && (
-                <div className="relative w-full aspect-video rounded-xl overflow-hidden border border-slate-600">
+                <div className="relative w-full aspect-video rounded-xl overflow-hidden border border-gray-300">
                   <img 
                     src={form.image_url} 
                     alt="Preview" 
@@ -195,7 +195,7 @@ export default function RecipeFormModal({ open, onClose, recipe, currentSection 
                   variant="outline"
                   onClick={handleGenerateImage}
                   disabled={generating || !form.name}
-                  className="border-slate-600 text-slate-900 hover:text-slate-100 hover:bg-slate-700"
+                  className="border-gray-300 text-gray-900 hover:bg-gray-50"
                 >
                   {generating ? (
                     <Loader2 className="w-4 h-4 mr-2 animate-spin" />
@@ -208,7 +208,7 @@ export default function RecipeFormModal({ open, onClose, recipe, currentSection 
                 <Button
                   type="button"
                   variant="outline"
-                  className="border-slate-600 text-slate-900 hover:text-slate-100 hover:bg-slate-700"
+                  className="border-gray-300 text-gray-900 hover:bg-gray-50"
                   disabled={uploading}
                   onClick={() => document.getElementById('recipe-image-upload').click()}
                 >
@@ -237,7 +237,7 @@ export default function RecipeFormModal({ open, onClose, recipe, currentSection 
                   value={form.image_url}
                   onChange={(e) => setForm(prev => ({ ...prev, image_url: e.target.value }))}
                   placeholder="https://..."
-                  className="bg-slate-700 border-slate-600 mt-1 text-sm"
+                  className="bg-white border-gray-300 text-gray-900 mt-1 text-sm"
                 />
               </div>
             </div>
@@ -266,13 +266,13 @@ export default function RecipeFormModal({ open, onClose, recipe, currentSection 
                     value={ing.name}
                     onChange={(e) => updateIngredient(index, 'name', e.target.value)}
                     placeholder="Ingrédient"
-                    className="bg-slate-700 border-slate-600 flex-1"
+                    className="bg-white border-gray-300 text-gray-900 flex-1"
                   />
                   <Input
                     value={ing.quantity}
                     onChange={(e) => updateIngredient(index, 'quantity', e.target.value)}
                     placeholder="Quantité"
-                    className="bg-slate-700 border-slate-600 w-28"
+                    className="bg-white border-gray-300 text-gray-900 w-28"
                   />
                   <Button
                     type="button"
@@ -302,16 +302,16 @@ export default function RecipeFormModal({ open, onClose, recipe, currentSection 
               value={form.steps}
               onChange={(e) => setForm(prev => ({ ...prev, steps: e.target.value }))}
               placeholder="1. Première étape...&#10;2. Deuxième étape..."
-              className="bg-slate-700 border-slate-600 mt-1 min-h-[200px]"
+              className="bg-white border-gray-300 text-gray-900 mt-1 min-h-[200px]"
             />
-            <p className="text-xs text-slate-500 mt-1">
+            <p className="text-xs text-gray-500 mt-1">
               Vous pouvez utiliser le format Markdown pour la mise en forme
             </p>
           </div>
 
           {/* Actions */}
-          <div className="flex justify-end gap-3 pt-4 border-t border-slate-700">
-            <Button type="button" variant="outline" onClick={onClose} className="border-slate-600 text-slate-900 hover:text-slate-100 hover:bg-slate-700">
+          <div className="flex justify-end gap-3 pt-4 border-t border-gray-200">
+            <Button type="button" variant="outline" onClick={onClose} className="border-gray-300 text-gray-900 hover:bg-gray-50">
               Annuler
             </Button>
             <Button 
