@@ -15,6 +15,7 @@ import { toast } from 'sonner';
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
 import { validateTemplateV2, getCreationGuideV2, REQUIRED_VARIABLES_BY_TYPE, FORBIDDEN_VARIABLES_BY_TYPE, CATEGORIES, VARIABLES_BY_CATEGORY } from './TemplateValidationV2';
+import AITemplateGenerator from './AITemplateGenerator';
 
 // Variables disponibles - dynamiques selon la catégorie
 const getAvailableVariables = (categorieDocument) => {
@@ -86,6 +87,7 @@ export default function TemplateBuilderModalV15({ open, onOpenChange, template, 
 
   const [showVariableMenu, setShowVariableMenu] = useState(false);
   const [showGuide, setShowGuide] = useState(false);
+  const [showAIGenerator, setShowAIGenerator] = useState(false);
   const [validationResult, setValidationResult] = useState({ errors: [], warnings: [], missing: [] });
   const [isDuplicating, setIsDuplicating] = useState(false);
   const quillRef = React.useRef(null);
@@ -572,6 +574,14 @@ export default function TemplateBuilderModalV15({ open, onOpenChange, template, 
             <div className="flex gap-2 mb-2">
               <Button
                 type="button"
+                onClick={() => setShowAIGenerator(true)}
+                className="bg-violet-600 hover:bg-violet-700"
+              >
+                <Sparkles className="w-4 h-4 mr-2" />
+                Générer le contenu avec l'IA
+              </Button>
+              <Button
+                type="button"
                 onClick={() => setShowVariableMenu(!showVariableMenu)}
                 variant="outline"
                 className="border-orange-300 text-orange-700 hover:bg-orange-50"
@@ -674,6 +684,18 @@ export default function TemplateBuilderModalV15({ open, onOpenChange, template, 
              'Sauvegarder'}
           </Button>
         </div>
+
+        {/* AI Template Generator */}
+        <AITemplateGenerator
+          open={showAIGenerator}
+          onOpenChange={setShowAIGenerator}
+          templateType={formData.typeDocument}
+          categorieDocument={formData.categorieDocument}
+          onInsertContent={(content) => {
+            setFormData({ ...formData, htmlContent: content });
+            setShowAIGenerator(false);
+          }}
+        />
       </DialogContent>
     </Dialog>
   );
