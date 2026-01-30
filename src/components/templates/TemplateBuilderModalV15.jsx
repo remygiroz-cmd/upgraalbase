@@ -16,8 +16,10 @@ import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
 import { validateTemplateV2, getCreationGuideV2, REQUIRED_VARIABLES_BY_TYPE, FORBIDDEN_VARIABLES_BY_TYPE, CATEGORIES, VARIABLES_BY_CATEGORY } from './TemplateValidationV2';
 import AITemplateGenerator from './AITemplateGenerator';
+import { getStaticEstablishmentVariables } from './EstablishmentVariablesGenerator';
 
 // Variables disponibles - dynamiques selon la catégorie
+// IMPORTANT : TOUTES les variables d'établissement sont toujours disponibles via COMMON
 const getAvailableVariables = (categorieDocument) => {
   const common = VARIABLES_BY_CATEGORY.COMMON || [];
   
@@ -33,8 +35,8 @@ const getAvailableVariables = (categorieDocument) => {
   }
   
   return {
-    'Données communes': common,
-    'Données spécifiques': specific
+    'Données établissement & employé': common,
+    'Données spécifiques du document': specific
   };
 };
 
