@@ -163,6 +163,19 @@ export default function TemplateBuilderModalV15({ open, onOpenChange, template, 
     return html;
   }, [formData.htmlContent]);
 
+  // Détection des variables non résolues dans l'aperçu
+  const unresolvedVariables = useMemo(() => {
+    const regex = /{{([^}]+)}}/g;
+    const matches = [];
+    let match;
+    
+    while ((match = regex.exec(previewHtml)) !== null) {
+      matches.push(match[1]);
+    }
+    
+    return [...new Set(matches)]; // Déduplique les variables
+  }, [previewHtml]);
+
   const updateMutation = useMutation({
     mutationFn: (data) => {
       if (template?.id && !isDuplicating) {
@@ -203,6 +216,16 @@ export default function TemplateBuilderModalV15({ open, onOpenChange, template, 
     // Blocage si éléments obligatoires manquants
     if (validationResult.missing.length > 0) {
       toast.error('⛔ Impossible de sauvegarder : des éléments obligatoires sont manquants');
+      return;
+    }
+
+    // Blocage si variables non résolues dans l'aperçu
+    if (unresolvedVariables.length > 0) {
+      toast.error(
+        `⛔ Impossible de sauvegarder : ${unresolvedVariables.length} variable${unresolvedVariables.length > 1 ? 's' : ''} non résolue${unresolvedVariables.length > 1 ? 's' : ''} détectée${unresolvedVariables.length > 1 ? 's' : ''}\n\n` +
+        `Variables concernées :\n${unresolvedVariables.map(v => `• {{${v}}}`).join('\n')}`,
+        { duration: 6000 }
+      );
       return;
     }
 
@@ -652,6 +675,56 @@ export default function TemplateBuilderModalV15({ open, onOpenChange, template, 
               </div>
             </Card>
 
+            {/* Alerte variables non résolues */}
+            {unresolvedVariables.length > 0 && (
+              <Card className="bg-red-50 border-red-300 p-4">
+                <div className="flex gap-2">
+                  <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
+                  <div className="flex-1">
+                    <p className="font-bold text-red-900 mb-2">
+                      ⛔ Impossible d&apos;enregistrer le template
+                    </p>
+                    <p className="text-sm text-red-800 mb-2">
+                      {unresolvedVariables.length} variable{unresolvedVariables.length > 1 ? 's' : ''} ne {unresolvedVariables.length > 1 ? 'sont' : 'est'} pas correctement configurée{unresolvedVariables.length > 1 ? 's' : ''} :
+                    </p>
+                    <ul className="text-sm text-red-800 space-y-1 ml-4 mb-3">
+                      {unresolvedVariables.map((variable, idx) => (
+                        <li key={idx} className="list-disc font-mono">
+                          {`{{${variable}}}`}
+                        </li>
+                      ))}
+                    </ul>
+                    <div className="text-sm text-red-800 space-y-2 border-t border-red-200 pt-3">
+                      <p className="font-semibold">👉 Causes possibles :</p>
+                      <ul className="ml-4 space-y-1">
+                        <li>• La variable n&apos;est pas définie dans les données de test</li>
+                        <li>• Elle nécessite une saisie manuelle lors de la génération</li>
+                        <li>• Le nom de la variable ne correspond à aucune métadonnée</li>
+                      </ul>
+                      <p className="font-semibold mt-3">✅ Actions possibles :</p>
+                      <ul className="ml-4 space-y-1">
+                        <li>• Vérifier l&apos;orthographe de la variable</li>
+                        <li>• Supprimer la variable si elle n&apos;est pas nécessaire</li>
+                        <li>• Utiliser une variable existante disponible dans &quot;Insérer une donnée&quot;</li>
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+              </Card>
+            )}
+
+            {unresolvedVariables.length === 0 && (
+              <Card className="bg-green-50 border-green-200 p-3">
+                <div className="flex gap-2">
+                  <CheckCircle className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
+                  <div className="text-sm text-green-800">
+                    <p className="font-semibold">✓ Toutes les variables sont correctement configurées</p>
+                    <p>Le template est prêt à être enregistré et utilisé pour la génération de documents.</p>
+                  </div>
+                </div>
+              </Card>
+            )}
+
             <div className="bg-white border border-gray-300 rounded-lg p-8 max-h-[600px] overflow-auto shadow-inner">
               <div 
                 className="prose prose-sm max-w-none"
@@ -675,7 +748,8 @@ export default function TemplateBuilderModalV15({ open, onOpenChange, template, 
             disabled={
               updateMutation.isPending || 
               validationResult.errors.length > 0 || 
-              validationResult.missing.length > 0
+              validationResult.missing.length > 0 ||
+              unresolvedVariables.length > 0
             }
             className="bg-orange-600 hover:bg-orange-700 disabled:bg-gray-400"
           >
@@ -683,6 +757,7 @@ export default function TemplateBuilderModalV15({ open, onOpenChange, template, 
             {updateMutation.isPending ? 'Sauvegarde...' : 
              validationResult.errors.length > 0 ? '⛔ Erreurs à corriger' :
              validationResult.missing.length > 0 ? '⚠️ Éléments manquants' :
+             unresolvedVariables.length > 0 ? '⛔ Variables non résolues' :
              'Sauvegarder'}
           </Button>
         </div>
