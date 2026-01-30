@@ -205,14 +205,33 @@ export default function TemplateBuilderModalV15({ open, onOpenChange, template, 
     return html;
   }, [formData.htmlContent, ENHANCED_MOCK_DATA]);
 
-  // Détection des variables non résolues dans l'aperçu
+  // Variables manuelles autorisées (saisie libre lors de la génération - NE DOIVENT PAS BLOQUER le template)
+  const MANUAL_VARIABLES = new Set([
+    // Disciplinaires
+    'dateFaits', 'descriptionFaits', 'motifSanction', 'typeSanction', 'dateIncident',
+    'dateNotification', 'dateConvocation', 'heureConvocation', 'lieuConvocation',
+    // Avenants
+    'motifModification', 'ancienneValeur', 'nouvelleValeur', 'dateEffet',
+    // Ruptures
+    'dateRupture', 'motifRupture', 'dateFinContrat', 'indemnitePreavis', 'indemniteRupture',
+    // Administratifs
+    'periodeAttestation', 'natureAttestation', 'objetCourrier', 'contenuCourrier',
+    // Autres variables contextuelles
+    'remarques', 'observations', 'clauseParticuliere', 'mentionSpeciale'
+  ]);
+
+  // Détection des variables non résolues dans l'aperçu (UNIQUEMENT les variables automatiques)
   const unresolvedVariables = useMemo(() => {
     const regex = /{{([^}]+)}}/g;
     const matches = [];
     let match;
     
     while ((match = regex.exec(previewHtml)) !== null) {
-      matches.push(match[1]);
+      const varName = match[1];
+      // IGNORER les variables manuelles attendues (saisie libre lors de la génération)
+      if (!MANUAL_VARIABLES.has(varName)) {
+        matches.push(varName);
+      }
     }
     
     return [...new Set(matches)]; // Déduplique les variables
@@ -296,12 +315,16 @@ export default function TemplateBuilderModalV15({ open, onOpenChange, template, 
       return;
     }
 
-    // Blocage si variables non résolues dans l'aperçu
+    // Blocage si variables AUTOMATIQUES non résolues dans l'aperçu
+    // Note : les variables manuelles (saisie libre) sont autorisées
     if (unresolvedVariables.length > 0) {
       toast.error(
-        `⛔ Impossible de sauvegarder : ${unresolvedVariables.length} variable${unresolvedVariables.length > 1 ? 's' : ''} non résolue${unresolvedVariables.length > 1 ? 's' : ''} détectée${unresolvedVariables.length > 1 ? 's' : ''}\n\n` +
-        `Variables concernées :\n${unresolvedVariables.map(v => `• {{${v}}}`).join('\n')}`,
-        { duration: 6000 }
+        `⛔ Variables automatiques non configurées\n\n` +
+        `${unresolvedVariables.length} variable${unresolvedVariables.length > 1 ? 's' : ''} automatique${unresolvedVariables.length > 1 ? 's' : ''} (employé/établissement) non résolue${unresolvedVariables.length > 1 ? 's' : ''} :\n\n` +
+        `${unresolvedVariables.map(v => `• {{${v}}}`).join('\n')}\n\n` +
+        `💡 Ces variables doivent avoir des valeurs de test dans l'aperçu.\n` +
+        `Les variables de saisie libre (ex: descriptionFaits, motifSanction) sont autorisées.`,
+        { duration: 7000 }
       );
       return;
     }
@@ -788,17 +811,17 @@ export default function TemplateBuilderModalV15({ open, onOpenChange, template, 
               </div>
             </Card>
 
-            {/* Alerte variables non résolues */}
+            {/* Alerte variables automatiques non résolues */}
             {unresolvedVariables.length > 0 && (
               <Card className="bg-red-50 border-red-300 p-4">
                 <div className="flex gap-2">
                   <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
                   <div className="flex-1">
                     <p className="font-bold text-red-900 mb-2">
-                      ⛔ Impossible d&apos;enregistrer le template
+                      ⛔ Variables automatiques non configurées
                     </p>
                     <p className="text-sm text-red-800 mb-2">
-                      {unresolvedVariables.length} variable{unresolvedVariables.length > 1 ? 's' : ''} ne {unresolvedVariables.length > 1 ? 'sont' : 'est'} pas correctement configurée{unresolvedVariables.length > 1 ? 's' : ''} :
+                      {unresolvedVariables.length} variable{unresolvedVariables.length > 1 ? 's' : ''} automatique{unresolvedVariables.length > 1 ? 's' : ''} (employé/établissement) non résolue{unresolvedVariables.length > 1 ? 's' : ''} :
                     </p>
                     <ul className="text-sm text-red-800 space-y-1 ml-4 mb-3">
                       {unresolvedVariables.map((variable, idx) => (
@@ -808,17 +831,16 @@ export default function TemplateBuilderModalV15({ open, onOpenChange, template, 
                       ))}
                     </ul>
                     <div className="text-sm text-red-800 space-y-2 border-t border-red-200 pt-3">
-                      <p className="font-semibold">👉 Causes possibles :</p>
+                      <p className="font-semibold">💡 Distinction importante :</p>
                       <ul className="ml-4 space-y-1">
-                        <li>• La variable n&apos;est pas définie dans les données de test</li>
-                        <li>• Elle nécessite une saisie manuelle lors de la génération</li>
-                        <li>• Le nom de la variable ne correspond à aucune métadonnée</li>
+                        <li>• <strong>Variables automatiques</strong> (employé, établissement) : doivent être résolues dans l&apos;aperçu</li>
+                        <li>• <strong>Variables manuelles</strong> (descriptionFaits, motifSanction, etc.) : saisie libre lors de la génération ✅</li>
                       </ul>
-                      <p className="font-semibold mt-3">✅ Actions possibles :</p>
+                      <p className="font-semibold mt-3">✅ Solution :</p>
                       <ul className="ml-4 space-y-1">
-                        <li>• Vérifier l&apos;orthographe de la variable</li>
-                        <li>• Supprimer la variable si elle n&apos;est pas nécessaire</li>
-                        <li>• Utiliser une variable existante disponible dans &quot;Insérer une donnée&quot;</li>
+                        <li>• Vérifiez que ces variables correspondent à des métadonnées employé/établissement</li>
+                        <li>• Utilisez les variables disponibles dans &quot;Insérer une donnée&quot;</li>
+                        <li>• Corrigez l&apos;orthographe si nécessaire</li>
                       </ul>
                     </div>
                   </div>
