@@ -228,7 +228,7 @@ export default function SupplierFormModal({ open, onClose, onSave, isSaving, sup
               placeholder="email1@test.com, email2@test.com"
               value={form.cc_emails}
               onChange={(e) => setForm(prev => ({ ...prev, cc_emails: e.target.value }))}
-              className="bg-slate-700 border-slate-600 mt-1"
+              className="bg-white border-gray-300 text-gray-900 mt-1"
             />
           </div>
 
@@ -240,7 +240,7 @@ export default function SupplierFormModal({ open, onClose, onSave, isSaving, sup
               placeholder="Commande du jour"
               value={form.email_subject}
               onChange={(e) => setForm(prev => ({ ...prev, email_subject: e.target.value }))}
-              className="bg-slate-700 border-slate-600 mt-1"
+              className="bg-white border-gray-300 text-gray-900 mt-1"
             />
           </div>
 
@@ -252,7 +252,7 @@ export default function SupplierFormModal({ open, onClose, onSave, isSaving, sup
               placeholder="Bonjour,\nVeuillez trouver ci-joint notre commande pour livraison demain.\nCordialement,"
               value={form.custom_message}
               onChange={(e) => setForm(prev => ({ ...prev, custom_message: e.target.value }))}
-              className="bg-slate-700 border-slate-600 mt-1 h-24"
+              className="bg-white border-gray-300 text-gray-900 mt-1 h-24"
             />
           </div>
 

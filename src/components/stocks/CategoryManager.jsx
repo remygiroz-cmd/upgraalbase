@@ -68,25 +68,25 @@ export default function CategoryManager({ categories }) {
       </button>
 
       <Dialog open={showForm} onOpenChange={setShowForm}>
-        <DialogContent className="bg-slate-800 border-slate-700 max-w-2xl">
+        <DialogContent className="bg-white border-gray-200 max-w-2xl">
           <DialogHeader>
-            <DialogTitle>{editingCategory ? 'Modifier la catégorie' : 'Nouvelle catégorie'}</DialogTitle>
+            <DialogTitle className="text-gray-900">{editingCategory ? 'Modifier la catégorie' : 'Nouvelle catégorie'}</DialogTitle>
           </DialogHeader>
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="text-sm font-medium block mb-2">Nom *</label>
+              <label className="text-sm font-medium text-gray-900 block mb-2">Nom *</label>
               <Input
                 value={form.name}
                 onChange={(e) => setForm(prev => ({ ...prev, name: e.target.value }))}
                 placeholder="Ex: Fruits, Viandes..."
-                className="bg-slate-700 border-slate-600"
+                className="bg-white border-gray-300 text-gray-900"
                 required
               />
             </div>
 
             <div>
-              <label className="text-sm font-medium block mb-3">Couleur</label>
+              <label className="text-sm font-medium text-gray-900 block mb-3">Couleur</label>
               <div className="flex gap-2 flex-wrap">
                 {DEFAULT_COLORS.map(color => (
                   <button
@@ -94,7 +94,7 @@ export default function CategoryManager({ categories }) {
                     type="button"
                     onClick={() => setForm(prev => ({ ...prev, color }))}
                     className={`w-8 h-8 rounded transition-all ${
-                      form.color === color ? 'ring-2 ring-offset-2 ring-white' : ''
+                      form.color === color ? 'ring-2 ring-offset-2 ring-gray-900' : ''
                     }`}
                     style={{ backgroundColor: color }}
                   />
@@ -103,7 +103,7 @@ export default function CategoryManager({ categories }) {
             </div>
 
             <div className="flex justify-end gap-3 pt-4">
-              <Button type="button" variant="outline" onClick={() => setShowForm(false)} className="border-slate-600">
+              <Button type="button" variant="outline" onClick={() => setShowForm(false)} className="border-gray-300 text-gray-900 hover:bg-gray-50">
                 Annuler
               </Button>
               <Button type="submit" disabled={saveCategoryMutation.isPending} className="bg-orange-600 hover:bg-orange-700">
@@ -114,22 +114,22 @@ export default function CategoryManager({ categories }) {
 
           {/* Catégories existantes */}
           {categories.length > 0 && (
-            <div className="pt-6 border-t border-slate-700">
-              <h3 className="text-sm font-semibold mb-3">Catégories existantes</h3>
+            <div className="pt-6 border-t border-gray-200">
+              <h3 className="text-sm font-semibold text-gray-900 mb-3">Catégories existantes</h3>
               <div className="space-y-2 max-h-64 overflow-y-auto">
                 {categories.map(cat => (
-                  <div key={cat.id} className="flex items-center justify-between bg-slate-700 p-2 rounded">
+                  <div key={cat.id} className="flex items-center justify-between bg-gray-50 border border-gray-200 p-2 rounded">
                     <div className="flex items-center gap-2">
                       <div
                         className="w-4 h-4 rounded"
                         style={{ backgroundColor: cat.color || '#2563eb' }}
                       />
-                      <span className="text-sm">{cat.name}</span>
+                      <span className="text-sm text-gray-900">{cat.name}</span>
                     </div>
                     <div className="flex gap-1">
                       <button
                         onClick={() => handleEdit(cat)}
-                        className="p-1 text-slate-400 hover:text-blue-400 transition-colors"
+                        className="p-1 text-gray-600 hover:text-blue-600 transition-colors"
                       >
                         <Edit2 className="w-4 h-4" />
                       </button>
@@ -139,7 +139,7 @@ export default function CategoryManager({ categories }) {
                             deleteCategoryMutation.mutate(cat.id);
                           }
                         }}
-                        className="p-1 text-slate-400 hover:text-red-400 transition-colors"
+                        className="p-1 text-gray-600 hover:text-red-600 transition-colors"
                       >
                         <Trash2 className="w-4 h-4" />
                       </button>

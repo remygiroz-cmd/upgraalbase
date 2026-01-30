@@ -783,9 +783,9 @@ export default function Pertes() {
 
       {/* Share Modal */}
       <Dialog open={showShareModal} onOpenChange={setShowShareModal}>
-        <DialogContent className="bg-slate-800 border-slate-700">
+        <DialogContent className="bg-white border-gray-200">
           <DialogHeader>
-            <DialogTitle>Partager le récapitulatif</DialogTitle>
+            <DialogTitle className="text-gray-900">Partager le récapitulatif</DialogTitle>
           </DialogHeader>
 
           <div className="space-y-4">
@@ -793,32 +793,32 @@ export default function Pertes() {
               <div className="grid grid-cols-1 gap-3">
                 <button
                   onClick={() => setShareMode('email')}
-                  className="p-4 bg-slate-700 hover:bg-slate-600 rounded-xl flex items-center gap-3 transition-colors"
+                  className="p-4 bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-xl flex items-center gap-3 transition-colors"
                 >
-                  <Mail className="w-6 h-6 text-orange-400" />
+                  <Mail className="w-6 h-6 text-orange-600" />
                   <div className="text-left">
-                    <p className="font-medium">Email</p>
-                    <p className="text-xs text-slate-400">Envoyer par email</p>
+                    <p className="font-medium text-gray-900">Email</p>
+                    <p className="text-xs text-gray-600">Envoyer par email</p>
                   </div>
                 </button>
                 <button
                   onClick={() => setShareMode('whatsapp')}
-                  className="p-4 bg-slate-700 hover:bg-slate-600 rounded-xl flex items-center gap-3 transition-colors"
+                  className="p-4 bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-xl flex items-center gap-3 transition-colors"
                 >
-                  <MessageSquare className="w-6 h-6 text-green-400" />
+                  <MessageSquare className="w-6 h-6 text-green-600" />
                   <div className="text-left">
-                    <p className="font-medium">WhatsApp</p>
-                    <p className="text-xs text-slate-400">Partager via WhatsApp</p>
+                    <p className="font-medium text-gray-900">WhatsApp</p>
+                    <p className="text-xs text-gray-600">Partager via WhatsApp</p>
                   </div>
                 </button>
                 <button
                   onClick={() => setShareMode('sms')}
-                  className="p-4 bg-slate-700 hover:bg-slate-600 rounded-xl flex items-center gap-3 transition-colors"
+                  className="p-4 bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-xl flex items-center gap-3 transition-colors"
                 >
-                  <Send className="w-6 h-6 text-blue-400" />
+                  <Send className="w-6 h-6 text-blue-600" />
                   <div className="text-left">
-                    <p className="font-medium">SMS</p>
-                    <p className="text-xs text-slate-400">Envoyer par SMS</p>
+                    <p className="font-medium text-gray-900">SMS</p>
+                    <p className="text-xs text-gray-600">Envoyer par SMS</p>
                   </div>
                 </button>
               </div>
@@ -834,7 +834,7 @@ export default function Pertes() {
                     value={shareDestination}
                     onChange={(e) => setShareDestination(e.target.value)}
                     placeholder={shareMode === 'email' ? 'exemple@email.com' : '+33612345678'}
-                    className="bg-slate-700 border-slate-600 mt-1"
+                    className="bg-white border-gray-300 text-gray-900 mt-1"
                   />
                 </div>
                 <div className="flex gap-2">
@@ -844,7 +844,7 @@ export default function Pertes() {
                       setShareMode('');
                       setShareDestination('');
                     }}
-                    className="border-slate-600 text-slate-900 hover:text-slate-100 hover:bg-slate-700"
+                    className="border-gray-300 text-gray-900 hover:bg-gray-50"
                   >
                     Retour
                   </Button>
@@ -946,9 +946,9 @@ function ProductFormModal({ open, onClose, onSave, isSaving, product }) {
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="bg-slate-800 border-slate-700 max-h-[90vh] overflow-y-auto">
+      <DialogContent className="bg-white border-gray-200 max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>{product ? 'Modifier le produit' : 'Nouveau produit'}</DialogTitle>
+          <DialogTitle className="text-gray-900">{product ? 'Modifier le produit' : 'Nouveau produit'}</DialogTitle>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -958,7 +958,7 @@ function ProductFormModal({ open, onClose, onSave, isSaving, product }) {
               id="name"
               value={form.name}
               onChange={(e) => setForm(prev => ({ ...prev, name: e.target.value }))}
-              className="bg-slate-700 border-slate-600 mt-1"
+              className="bg-white border-gray-300 text-gray-900 mt-1"
               required
             />
           </div>
@@ -970,7 +970,7 @@ function ProductFormModal({ open, onClose, onSave, isSaving, product }) {
                 id="unit"
                 value={form.unit}
                 onChange={(e) => setForm(prev => ({ ...prev, unit: e.target.value }))}
-                className="bg-slate-700 border-slate-600 mt-1"
+                className="bg-white border-gray-300 text-gray-900 mt-1"
               />
             </div>
             <div>
@@ -981,7 +981,7 @@ function ProductFormModal({ open, onClose, onSave, isSaving, product }) {
                 step="0.01"
                 value={form.unit_price}
                 onChange={(e) => setForm(prev => ({ ...prev, unit_price: parseFloat(e.target.value) || 0 }))}
-                className="bg-slate-700 border-slate-600 mt-1"
+                className="bg-white border-gray-300 text-gray-900 mt-1"
               />
             </div>
           </div>
@@ -992,7 +992,7 @@ function ProductFormModal({ open, onClose, onSave, isSaving, product }) {
               id="category"
               value={form.category}
               onChange={(e) => setForm(prev => ({ ...prev, category: e.target.value }))}
-              className="bg-slate-700 border-slate-600 mt-1"
+              className="bg-white border-gray-300 text-gray-900 mt-1"
             />
           </div>
 
@@ -1003,7 +1003,7 @@ function ProductFormModal({ open, onClose, onSave, isSaving, product }) {
                 <img 
                   src={form.image_url} 
                   alt="Aperçu" 
-                  className="w-full h-40 object-cover rounded-lg border-2 border-slate-600"
+                  className="w-full h-40 object-cover rounded-lg border-2 border-gray-300"
                 />
                 <button
                   type="button"
@@ -1016,13 +1016,13 @@ function ProductFormModal({ open, onClose, onSave, isSaving, product }) {
             ) : (
               <div className="mt-2 space-y-2">
                 <label className="block">
-                  <div className="border-2 border-dashed border-slate-600 rounded-lg p-4 text-center hover:border-orange-500 hover:bg-slate-700/30 cursor-pointer transition-colors">
+                  <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center hover:border-orange-500 hover:bg-orange-50 cursor-pointer transition-colors">
                     {uploadingImage ? (
-                      <Loader2 className="w-8 h-8 mx-auto mb-2 animate-spin text-slate-400" />
+                      <Loader2 className="w-8 h-8 mx-auto mb-2 animate-spin text-gray-500" />
                     ) : (
-                      <Upload className="w-8 h-8 mx-auto mb-2 text-slate-400" />
+                      <Upload className="w-8 h-8 mx-auto mb-2 text-gray-500" />
                     )}
-                    <p className="text-sm text-slate-300">
+                    <p className="text-sm text-gray-700">
                       {uploadingImage ? 'Upload en cours...' : 'Cliquez pour uploader une image'}
                     </p>
                   </div>
@@ -1039,7 +1039,7 @@ function ProductFormModal({ open, onClose, onSave, isSaving, product }) {
                   variant="outline"
                   onClick={handleGenerateImage}
                   disabled={!form.name || generatingImage}
-                  className="w-full border-slate-600 text-slate-300 hover:bg-slate-700"
+                  className="w-full border-gray-300 text-gray-900 hover:bg-gray-50"
                 >
                   {generatingImage ? (
                     <>
@@ -1058,7 +1058,7 @@ function ProductFormModal({ open, onClose, onSave, isSaving, product }) {
           </div>
 
           <div className="flex justify-end gap-3 pt-4">
-            <Button type="button" variant="outline" onClick={onClose} className="border-slate-600 text-slate-900 hover:text-slate-100 hover:bg-slate-700">
+            <Button type="button" variant="outline" onClick={onClose} className="border-gray-300 text-gray-900 hover:bg-gray-50">
               Annuler
             </Button>
             <Button type="submit" disabled={isSaving} className="bg-orange-600 hover:bg-orange-700">
