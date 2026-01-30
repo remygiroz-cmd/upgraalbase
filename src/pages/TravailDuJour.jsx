@@ -17,11 +17,10 @@ import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '../utils';
-import { getServiceDate } from '@/components/utils/serviceDate';
 
 export default function TravailDuJour() {
   const queryClient = useQueryClient();
-  const today = getServiceDate(); // Utilise le jour de service au lieu de la date système
+  const today = format(new Date(), 'yyyy-MM-dd');
   const dayOfWeek = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'][new Date().getDay()];
   const [showCompletionModal, setShowCompletionModal] = useState(false);
   const [confirmDialog, setConfirmDialog] = useState({ open: false, title: '', description: '', onConfirm: null });
