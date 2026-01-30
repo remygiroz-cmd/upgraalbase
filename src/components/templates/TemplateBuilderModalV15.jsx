@@ -457,7 +457,7 @@ export default function TemplateBuilderModalV15({ open, onOpenChange, template, 
                     {guide.checklist.map((item, idx) => (
                       <li key={idx} className="text-sm text-blue-800 flex items-start gap-2">
                         <span className="text-blue-600">•</span>
-                        <span>{item}</span>
+                        <span>{String(item || '')}</span>
                       </li>
                     ))}
                   </ul>
