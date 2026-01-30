@@ -265,12 +265,12 @@ function EmployeeCard({ employee, onClick, canView = true, userInfo, isManager }
                           <Clock className="w-3 h-3" />
                           <span className="text-[10px]">{formatLastActive(lastActiveAt)}</span>
                         </div>
-                      ) : (
-                        <div className="flex items-center gap-1 text-gray-400" title="Jamais connecté">
-                          <WifiOff className="w-3 h-3" />
-                          <span className="text-[10px]">Jamais</span>
-                        </div>
-                      )}
+                      ) : userInfo ? (
+                       <div className="flex items-center gap-1 text-gray-400" title="Jamais connecté">
+                         <WifiOff className="w-3 h-3" />
+                         <span className="text-[10px]">Jamais</span>
+                       </div>
+                      ) : null}
                     </div>
                   )}
                 </div>
