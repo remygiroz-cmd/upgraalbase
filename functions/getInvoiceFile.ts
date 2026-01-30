@@ -3,9 +3,14 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
 Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
+    
+    // Log pour debug
+    console.log('getInvoiceFile called:', req.url);
+
     const user = await base44.auth.me();
 
     if (!user) {
+      console.error('Unauthorized access attempt');
       return Response.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -13,7 +18,10 @@ Deno.serve(async (req) => {
     const invoiceId = url.searchParams.get('invoice_id');
     const mode = url.searchParams.get('mode') || 'preview'; // preview or download
 
+    console.log('Invoice ID:', invoiceId, 'Mode:', mode);
+
     if (!invoiceId) {
+      console.error('Missing invoice_id parameter');
       return Response.json({ error: 'invoice_id required' }, { status: 400 });
     }
 
@@ -21,16 +29,23 @@ Deno.serve(async (req) => {
     const invoices = await base44.entities.Invoice.filter({ id: invoiceId });
     const invoice = invoices[0];
 
+    console.log('Invoice found:', !!invoice, 'File URL:', invoice?.file_url);
+
     if (!invoice || !invoice.file_url) {
+      console.error('Invoice not found or no file_url');
       return Response.json({ error: 'Invoice file not found' }, { status: 404 });
     }
 
     // Récupérer le fichier depuis l'URL Supabase
+    console.log('Fetching file from:', invoice.file_url);
     const fileResponse = await fetch(invoice.file_url);
     
     if (!fileResponse.ok) {
+      console.error('File fetch failed:', fileResponse.status);
       return Response.json({ error: 'File not accessible' }, { status: 500 });
     }
+
+    console.log('File fetched successfully, content-type:', fileResponse.headers.get('content-type'));
 
     const fileBlob = await fileResponse.blob();
     const contentType = fileResponse.headers.get('content-type') || 'application/octet-stream';

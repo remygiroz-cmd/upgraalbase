@@ -48,11 +48,18 @@ export default function InvoiceDetailModal({ open, onClose, invoice }) {
       setSelectedCategories(invoice.categories || []);
 
       // Construire les URLs proxy pour preview et download
-      const baseUrl = window.location.origin;
-      const appId = window.location.pathname.split('/')[1];
-      setPreviewUrl(`${baseUrl}/${appId}/functions/getInvoiceFile?invoice_id=${invoice.id}&mode=preview`);
-      setDownloadUrl(`${baseUrl}/${appId}/functions/getInvoiceFile?invoice_id=${invoice.id}&mode=download`);
+      // Format Base44: /api/apps/{app_id}/functions/{function_name}
+      const appId = window.location.hostname.includes('base44.app') 
+        ? window.location.hostname.split('--')[1]?.split('.')[0] || window.location.pathname.split('/')[1]
+        : window.location.pathname.split('/')[1];
+      
+      const functionBaseUrl = `${window.location.origin}/api/apps/${appId}/functions/getInvoiceFile`;
+      
+      setPreviewUrl(`${functionBaseUrl}?invoice_id=${invoice.id}&mode=preview`);
+      setDownloadUrl(`${functionBaseUrl}?invoice_id=${invoice.id}&mode=download`);
       setPreviewError(false);
+      
+      console.log('Preview URL:', `${functionBaseUrl}?invoice_id=${invoice.id}&mode=preview`);
     }
   }, [invoice]);
 
