@@ -8,7 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { useQueryClient, useMutation } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { toast } from 'sonner';
-import { ExternalLink, Save, History, CheckCircle, X as XIcon, Download, Maximize2 } from 'lucide-react';
+import { ExternalLink, Save, History, CheckCircle, X as XIcon, Download, Maximize2, ZoomIn } from 'lucide-react';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 
@@ -28,6 +28,8 @@ export default function InvoiceDetailModal({ open, onClose, invoice }) {
   const queryClient = useQueryClient();
   const [form, setForm] = useState({});
   const [selectedCategories, setSelectedCategories] = useState([]);
+  const [previewUrl, setPreviewUrl] = useState('');
+  const [downloadUrl, setDownloadUrl] = useState('');
 
   useEffect(() => {
     if (invoice) {
@@ -43,6 +45,12 @@ export default function InvoiceDetailModal({ open, onClose, invoice }) {
         internal_comments: invoice.internal_comments || ''
       });
       setSelectedCategories(invoice.categories || []);
+
+      // Construire les URLs proxy pour preview et download
+      const baseUrl = window.location.origin;
+      const appId = window.location.pathname.split('/')[1];
+      setPreviewUrl(`${baseUrl}/${appId}/functions/getInvoiceFile?invoice_id=${invoice.id}&mode=preview`);
+      setDownloadUrl(`${baseUrl}/${appId}/functions/getInvoiceFile?invoice_id=${invoice.id}&mode=download`);
     }
   }, [invoice]);
 
@@ -79,33 +87,24 @@ export default function InvoiceDetailModal({ open, onClose, invoice }) {
           <DialogTitle className="text-gray-900 flex items-center justify-between">
             <span>Détail de la facture</span>
             <div className="flex items-center gap-2">
-              {invoice.file_url && (
-                <>
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    onClick={() => window.open(invoice.file_url, '_blank')}
-                    className="text-blue-600 hover:text-blue-700"
-                    title="Ouvrir dans un nouvel onglet"
-                  >
-                    <Maximize2 className="w-4 h-4" />
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => {
-                      const link = document.createElement('a');
-                      link.href = invoice.file_url;
-                      link.download = invoice.file_name || 'facture.pdf';
-                      link.click();
-                    }}
-                    className="text-gray-700 hover:text-gray-900"
-                    title="Télécharger"
-                  >
-                    <Download className="w-4 h-4 mr-1" />
-                    Télécharger
-                  </Button>
-                </>
+              {invoice.file_url && downloadUrl && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => {
+                    const link = document.createElement('a');
+                    link.href = downloadUrl;
+                    link.download = invoice.file_name || 'facture.pdf';
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                  }}
+                  className="text-gray-700 hover:text-gray-900 border-gray-300"
+                  title="Télécharger le fichier"
+                >
+                  <Download className="w-4 h-4 mr-1" />
+                  Télécharger
+                </Button>
               )}
             </div>
           </DialogTitle>
@@ -115,22 +114,53 @@ export default function InvoiceDetailModal({ open, onClose, invoice }) {
           {/* Aperçu */}
           <div className="space-y-4">
             <div>
-              <Label className="text-gray-900 font-semibold mb-2 block">Aperçu du fichier</Label>
-              {invoice.file_url && (
-                <div 
-                  className="border border-gray-300 rounded-lg overflow-hidden bg-gray-50 cursor-pointer hover:border-blue-400 transition-colors"
-                  onClick={() => window.open(invoice.file_url, '_blank')}
-                  title="Cliquer pour ouvrir en grand"
-                >
+              <Label className="text-gray-900 font-semibold mb-2 flex items-center justify-between">
+                <span>Aperçu du fichier</span>
+                {invoice.file_url && previewUrl && (
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => {
+                      const viewerWindow = window.open('', '_blank');
+                      viewerWindow.document.write(`
+                        <!DOCTYPE html>
+                        <html>
+                          <head>
+                            <title>${invoice.file_name || 'Facture'}</title>
+                            <style>
+                              body { margin: 0; padding: 0; overflow: hidden; }
+                              iframe { width: 100vw; height: 100vh; border: none; }
+                              img { max-width: 100%; height: auto; display: block; margin: 20px auto; }
+                            </style>
+                          </head>
+                          <body>
+                            ${invoice.file_url.match(/\.(pdf)$/i) 
+                              ? `<iframe src="${previewUrl}"></iframe>`
+                              : `<img src="${previewUrl}" alt="Facture" />`
+                            }
+                          </body>
+                        </html>
+                      `);
+                    }}
+                    className="text-blue-600 hover:text-blue-700"
+                    title="Ouvrir en plein écran"
+                  >
+                    <ZoomIn className="w-4 h-4 mr-1" />
+                    Plein écran
+                  </Button>
+                )}
+              </Label>
+              {previewUrl && (
+                <div className="border border-gray-300 rounded-lg overflow-hidden bg-gray-50">
                   {invoice.file_url.match(/\.(pdf)$/i) ? (
                     <iframe 
-                      src={`${invoice.file_url}#view=FitH`}
-                      className="w-full h-96 pointer-events-none"
+                      src={previewUrl}
+                      className="w-full h-96"
                       title="Aperçu PDF"
                     />
                   ) : invoice.file_url.match(/\.(jpg|jpeg|png|gif|webp)$/i) ? (
                     <img 
-                      src={invoice.file_url} 
+                      src={previewUrl}
                       alt="Facture" 
                       className="w-full h-96 object-contain"
                     />
@@ -138,7 +168,7 @@ export default function InvoiceDetailModal({ open, onClose, invoice }) {
                     <div className="w-full h-96 flex flex-col items-center justify-center text-gray-500">
                       <ExternalLink className="w-12 h-12 mb-3" />
                       <p className="font-medium">{invoice.file_name || 'Document'}</p>
-                      <p className="text-sm">Cliquer pour ouvrir</p>
+                      <p className="text-sm">Format non prévisualisable</p>
                     </div>
                   )}
                 </div>
