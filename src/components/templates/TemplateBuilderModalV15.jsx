@@ -205,23 +205,23 @@ export default function TemplateBuilderModalV15({ open, onOpenChange, template, 
     return html;
   }, [formData.htmlContent, ENHANCED_MOCK_DATA]);
 
-  // Variables manuelles autorisées (saisie libre lors de la génération - NE DOIVENT PAS BLOQUER le template)
-  const MANUAL_VARIABLES = new Set([
-    // Disciplinaires
-    'dateFaits', 'descriptionFaits', 'motifSanction', 'typeSanction', 'dateIncident',
-    'dateNotification', 'dateConvocation', 'heureConvocation', 'lieuConvocation',
-    // Avenants
-    'motifModification', 'ancienneValeur', 'nouvelleValeur', 'dateEffet',
-    // Ruptures
-    'dateRupture', 'motifRupture', 'dateFinContrat', 'indemnitePreavis', 'indemniteRupture',
-    // Administratifs
-    'periodeAttestation', 'natureAttestation', 'objetCourrier', 'contenuCourrier',
-    // Autres variables contextuelles
-    'remarques', 'observations', 'clauseParticuliere', 'mentionSpeciale'
-  ]);
-
-  // Détection des variables non résolues dans l'aperçu (UNIQUEMENT les variables automatiques)
+  // Détection des variables non résolues dans l'aperçu
   const unresolvedVariables = useMemo(() => {
+    // Variables manuelles autorisées (saisie libre lors de la génération - NE DOIVENT PAS BLOQUER le template)
+    const MANUAL_VARIABLES = new Set([
+      // Disciplinaires
+      'dateFaits', 'descriptionFaits', 'motifSanction', 'typeSanction', 'dateIncident',
+      'dateNotification', 'dateConvocation', 'heureConvocation', 'lieuConvocation',
+      // Avenants
+      'motifModification', 'ancienneValeur', 'nouvelleValeur', 'dateEffet',
+      // Ruptures
+      'dateRupture', 'motifRupture', 'dateFinContrat', 'indemnitePreavis', 'indemniteRupture',
+      // Administratifs
+      'periodeAttestation', 'natureAttestation', 'objetCourrier', 'contenuCourrier',
+      // Autres variables contextuelles
+      'remarques', 'observations', 'clauseParticuliere', 'mentionSpeciale'
+    ]);
+
     const regex = /{{([^}]+)}}/g;
     const matches = [];
     let match;
