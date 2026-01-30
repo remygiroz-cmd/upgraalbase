@@ -48,23 +48,35 @@ export default function InvoiceDetailModal({ open, onClose, invoice }) {
       setSelectedCategories(invoice.categories || []);
 
       // Construire les URLs proxy pour preview et download
-      // Format Base44: /api/apps/{app_id}/functions/{function_name}
-      const appId = window.location.hostname.includes('base44.app') 
-        ? window.location.hostname.split('--')[1]?.split('.')[0] || window.location.pathname.split('/')[1]
-        : window.location.pathname.split('/')[1];
+      // Récupérer l'app_id depuis le pathname (premier segment après /)
+      const pathSegments = window.location.pathname.split('/').filter(Boolean);
+      const appId = pathSegments[0];
       
+      // Format Base44: /api/apps/{app_id}/functions/{function_name}
       const functionBaseUrl = `${window.location.origin}/api/apps/${appId}/functions/getInvoiceFile`;
       
-      setPreviewUrl(`${functionBaseUrl}?invoice_id=${invoice.id}&mode=preview`);
-      setDownloadUrl(`${functionBaseUrl}?invoice_id=${invoice.id}&mode=download`);
+      const previewUrlBuilt = `${functionBaseUrl}?invoice_id=${invoice.id}&mode=preview`;
+      const downloadUrlBuilt = `${functionBaseUrl}?invoice_id=${invoice.id}&mode=download`;
+      
+      setPreviewUrl(previewUrlBuilt);
+      setDownloadUrl(downloadUrlBuilt);
       setPreviewError(false);
       
-      console.log('Preview URL:', `${functionBaseUrl}?invoice_id=${invoice.id}&mode=preview`);
+      // Logs pour debug
+      console.log('=== Invoice Preview URLs ===');
+      console.log('App ID:', appId);
+      console.log('Invoice ID:', invoice.id);
+      console.log('Preview URL:', previewUrlBuilt);
+      console.log('Download URL:', downloadUrlBuilt);
+      console.log('===========================');
     }
   }, [invoice]);
 
   const handlePrint = () => {
-    if (!previewUrl) return;
+    if (!previewUrl || previewError) {
+      toast.error('Aperçu indisponible');
+      return;
+    }
 
     const printWindow = window.open('', '_blank');
     if (!printWindow) {
@@ -83,24 +95,27 @@ export default function InvoiceDetailModal({ open, onClose, invoice }) {
             body { margin: 0; padding: 0; }
             iframe { width: 100vw; height: 100vh; border: none; }
             img { max-width: 100%; height: auto; display: block; }
+            #loading { 
+              position: fixed; 
+              top: 50%; 
+              left: 50%; 
+              transform: translate(-50%, -50%);
+              font-family: sans-serif;
+              color: #666;
+            }
             @media print {
               body { margin: 0; }
               iframe, img { page-break-inside: avoid; }
+              #loading { display: none; }
             }
           </style>
         </head>
         <body>
+          <div id="loading">Chargement du document...</div>
           ${isPDF 
-            ? `<iframe src="${previewUrl}" id="printFrame"></iframe>`
-            : `<img src="${previewUrl}" alt="Facture" id="printImg" />`
+            ? `<iframe src="${previewUrl}" id="printFrame" onload="document.getElementById('loading').style.display='none'; setTimeout(() => window.print(), 1000);"></iframe>`
+            : `<img src="${previewUrl}" alt="Facture" id="printImg" onload="document.getElementById('loading').style.display='none'; setTimeout(() => window.print(), 500);" onerror="document.getElementById('loading').innerText='Erreur de chargement';" />`
           }
-          <script>
-            window.onload = () => {
-              setTimeout(() => {
-                window.print();
-              }, 500);
-            };
-          </script>
         </body>
       </html>
     `);
@@ -184,26 +199,49 @@ export default function InvoiceDetailModal({ open, onClose, invoice }) {
                 Aperçu du fichier
               </Label>
               {previewUrl ? (
-                <div className="border border-gray-300 rounded-lg overflow-hidden bg-gray-50">
+                <div className="border border-gray-300 rounded-lg overflow-hidden bg-gray-50 relative">
                   {previewError ? (
                     <div className="w-full h-96 flex flex-col items-center justify-center text-gray-500">
                       <AlertCircle className="w-12 h-12 mb-3 text-orange-500" />
                       <p className="font-medium">Aperçu indisponible</p>
-                      <p className="text-sm">Utilisez le bouton Télécharger</p>
+                      <p className="text-sm">Le fichier ne peut pas être affiché</p>
+                      <p className="text-xs mt-2 text-gray-400">Utilisez le bouton Télécharger</p>
                     </div>
                   ) : invoice.file_url.match(/\.(pdf)$/i) ? (
-                    <iframe 
-                      src={previewUrl}
-                      className="w-full h-96"
-                      title="Aperçu PDF"
-                      onError={() => setPreviewError(true)}
-                    />
+                    <>
+                      <iframe 
+                        src={previewUrl}
+                        className="w-full h-96"
+                        title="Aperçu PDF"
+                        onLoad={(e) => {
+                          // Vérifier si l'iframe a chargé du JSON au lieu du PDF
+                          try {
+                            const iframeDoc = e.target.contentDocument || e.target.contentWindow.document;
+                            const text = iframeDoc.body.innerText;
+                            if (text.includes('App not found') || text.includes('error')) {
+                              console.error('Preview error:', text);
+                              setPreviewError(true);
+                            }
+                          } catch (err) {
+                            // Cross-origin, assume it's OK
+                            console.log('Preview loaded (cross-origin)');
+                          }
+                        }}
+                        onError={() => {
+                          console.error('Preview iframe error');
+                          setPreviewError(true);
+                        }}
+                      />
+                    </>
                   ) : invoice.file_url.match(/\.(jpg|jpeg|png|gif|webp)$/i) ? (
                     <img 
                       src={previewUrl}
                       alt="Facture" 
                       className="w-full h-96 object-contain"
-                      onError={() => setPreviewError(true)}
+                      onError={() => {
+                        console.error('Preview image error');
+                        setPreviewError(true);
+                      }}
                     />
                   ) : (
                     <div className="w-full h-96 flex flex-col items-center justify-center text-gray-500">
