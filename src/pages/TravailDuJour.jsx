@@ -25,7 +25,6 @@ export default function TravailDuJour() {
   const [showCompletionModal, setShowCompletionModal] = useState(false);
   const [confirmDialog, setConfirmDialog] = useState({ open: false, title: '', description: '', onConfirm: null });
   const [hideCompleted, setHideCompleted] = useState(true);
-  const [runningTasks, setRunningTasks] = useState({}); // { taskIndex: { startTime: timestamp } }
 
   const { data: activeSession, isLoading } = useQuery({
     queryKey: ['workSessions', 'active', today],
@@ -83,22 +82,8 @@ export default function TravailDuJour() {
     }
   });
 
-  const handleStartTask = (taskIndex) => {
-    setRunningTasks(prev => ({
-      ...prev,
-      [taskIndex]: { startTime: Date.now() }
-    }));
-  };
-
   const handleCompleteTask = (taskIndex) => {
     if (!activeSession) return;
-    
-    // Calculate actual duration if task was started
-    let actual_duration_seconds = null;
-    if (runningTasks[taskIndex]) {
-      const elapsedMs = Date.now() - runningTasks[taskIndex].startTime;
-      actual_duration_seconds = Math.round(elapsedMs / 1000);
-    }
     
     const updatedTasks = [...activeSession.tasks];
     updatedTasks[taskIndex] = {
@@ -106,20 +91,12 @@ export default function TravailDuJour() {
       is_completed: true,
       completed_by: currentUser?.email,
       completed_by_name: currentUser?.full_name || currentUser?.email,
-      completed_at: new Date().toISOString(),
-      actual_duration_seconds
+      completed_at: new Date().toISOString()
     };
 
     updateSessionMutation.mutate({
       id: activeSession.id,
       data: { tasks: updatedTasks }
-    });
-
-    // Remove from running tasks
-    setRunningTasks(prev => {
-      const newRunning = { ...prev };
-      delete newRunning[taskIndex];
-      return newRunning;
     });
   };
 
@@ -413,7 +390,6 @@ export default function TravailDuJour() {
                     <WorkTaskCard
                       key={task.originalIndex}
                       task={task}
-                      onStart={() => handleStartTask(task.originalIndex)}
                       onComplete={() => handleCompleteTask(task.originalIndex)}
                       onUncomplete={() => handleUncompleteTask(task.originalIndex)}
                       onRemove={() => handleRemoveTask(task.originalIndex)}
@@ -421,8 +397,6 @@ export default function TravailDuJour() {
                       allTasks={tasks}
                       taskEntities={tasks}
                       dayOfWeek={dayOfWeek}
-                      isRunning={!!runningTasks[task.originalIndex]}
-                      startTime={runningTasks[task.originalIndex]?.startTime}
                     />
                   ))}
                 </AnimatePresence>
@@ -467,11 +441,9 @@ export default function TravailDuJour() {
   );
 }
 
-function WorkTaskCard({ task, onStart, onComplete, onUncomplete, onRemove, onUpdateQuantity, isRunning, startTime }) {
+function WorkTaskCard({ task, onComplete, onUncomplete, onRemove, onUpdateQuantity }) {
   const dayOfWeek = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'][new Date().getDay()];
   const [localQuantity, setLocalQuantity] = useState(task.quantity_to_produce || 1);
-  const [elapsedSeconds, setElapsedSeconds] = useState(0);
-  
   const { data: tasks = [] } = useQuery({
     queryKey: ['tasks'],
     queryFn: () => base44.entities.Task.list()
@@ -479,18 +451,6 @@ function WorkTaskCard({ task, onStart, onComplete, onUncomplete, onRemove, onUpd
   
   const taskDetails = tasks.find(t => t.id === task.task_id);
   const isAdHoc = !task.task_id;
-
-  // Update elapsed time every second when running
-  useEffect(() => {
-    if (!isRunning || !startTime) return;
-    
-    const interval = setInterval(() => {
-      const elapsed = Math.floor((Date.now() - startTime) / 1000);
-      setElapsedSeconds(elapsed);
-    }, 1000);
-
-    return () => clearInterval(interval);
-  }, [isRunning, startTime]);
 
   // Sync local state with prop changes
   useEffect(() => {
@@ -599,63 +559,23 @@ function WorkTaskCard({ task, onStart, onComplete, onUncomplete, onRemove, onUpd
               </p>
             )}
             
-            {/* Timer en cours */}
-            {isRunning && (
-              <div className="mt-2 flex items-center gap-2 px-3 py-2 rounded-lg bg-orange-100 border-2 border-orange-400 animate-pulse">
-                <Clock className="w-4 h-4 text-orange-600" />
-                <span className="text-sm font-bold text-orange-900">
-                  {Math.floor(elapsedSeconds / 60)}:{String(elapsedSeconds % 60).padStart(2, '0')}
-                </span>
-                <span className="text-xs text-orange-700">en cours</span>
-              </div>
-            )}
-
             {task.is_completed && task.completed_by && (
-              <div className="mt-2 space-y-1">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <UserAvatar 
-                    userEmail={task.completed_by} 
-                    userName={task.completed_by_name}
-                    size="sm"
-                    showName={true}
-                  />
-                  <span className="text-xs text-gray-700 whitespace-nowrap">
-                    {format(new Date(task.completed_at), 'HH:mm')}
-                  </span>
-                </div>
-                {task.actual_duration_seconds && (
-                  <div className="flex items-center gap-1.5 text-green-700">
-                    <Clock className="w-3.5 h-3.5" />
-                    <span className="text-xs font-semibold">
-                      Temps: {Math.floor(task.actual_duration_seconds / 60)}:{String(task.actual_duration_seconds % 60).padStart(2, '0')}
-                    </span>
-                  </div>
-                )}
+              <div className="mt-2 flex items-center gap-2 flex-wrap">
+                <UserAvatar 
+                  userEmail={task.completed_by} 
+                  userName={task.completed_by_name}
+                  size="sm"
+                  showName={true}
+                />
+                <span className="text-xs text-gray-700 whitespace-nowrap">
+                  {format(new Date(task.completed_at), 'HH:mm')}
+                </span>
               </div>
             )}
           </div>
 
           <div className="flex items-center gap-2 mt-2">
-            {!task.is_completed && !isRunning && (
-              <>
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  onClick={onRemove}
-                  className="text-gray-600 hover:text-red-600 hover:bg-red-50 min-h-[48px] min-w-[48px] px-3"
-                >
-                  <X className="w-5 h-5" />
-                </Button>
-                <Button
-                  onClick={onStart}
-                  className="bg-indigo-600 hover:bg-indigo-700 min-h-[52px] flex-1 text-base font-semibold"
-                >
-                  <Clock className="w-5 h-5 mr-2" />
-                  Démarrer
-                </Button>
-              </>
-            )}
-            {!task.is_completed && isRunning && (
+            {!task.is_completed && (
               <>
                 <Button
                   size="sm"
