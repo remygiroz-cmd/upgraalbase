@@ -8,7 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { useQueryClient, useMutation } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { toast } from 'sonner';
-import { ExternalLink, Save, History, CheckCircle, X as XIcon, Download, Maximize2, ZoomIn } from 'lucide-react';
+import { ExternalLink, Save, History, CheckCircle, X as XIcon, Download, Printer, AlertCircle } from 'lucide-react';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 
@@ -30,6 +30,7 @@ export default function InvoiceDetailModal({ open, onClose, invoice }) {
   const [selectedCategories, setSelectedCategories] = useState([]);
   const [previewUrl, setPreviewUrl] = useState('');
   const [downloadUrl, setDownloadUrl] = useState('');
+  const [previewError, setPreviewError] = useState(false);
 
   useEffect(() => {
     if (invoice) {
@@ -51,8 +52,53 @@ export default function InvoiceDetailModal({ open, onClose, invoice }) {
       const appId = window.location.pathname.split('/')[1];
       setPreviewUrl(`${baseUrl}/${appId}/functions/getInvoiceFile?invoice_id=${invoice.id}&mode=preview`);
       setDownloadUrl(`${baseUrl}/${appId}/functions/getInvoiceFile?invoice_id=${invoice.id}&mode=download`);
+      setPreviewError(false);
     }
   }, [invoice]);
+
+  const handlePrint = () => {
+    if (!previewUrl) return;
+
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) {
+      toast.error('Impossible d\'ouvrir la fenêtre d\'impression');
+      return;
+    }
+
+    const isPDF = invoice.file_url.match(/\.(pdf)$/i);
+    
+    printWindow.document.write(`
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>Impression - ${invoice.file_name || 'Facture'}</title>
+          <style>
+            body { margin: 0; padding: 0; }
+            iframe { width: 100vw; height: 100vh; border: none; }
+            img { max-width: 100%; height: auto; display: block; }
+            @media print {
+              body { margin: 0; }
+              iframe, img { page-break-inside: avoid; }
+            }
+          </style>
+        </head>
+        <body>
+          ${isPDF 
+            ? `<iframe src="${previewUrl}" id="printFrame"></iframe>`
+            : `<img src="${previewUrl}" alt="Facture" id="printImg" />`
+          }
+          <script>
+            window.onload = () => {
+              setTimeout(() => {
+                window.print();
+              }, 500);
+            };
+          </script>
+        </body>
+      </html>
+    `);
+    printWindow.document.close();
+  };
 
   const updateMutation = useMutation({
     mutationFn: (data) => base44.entities.Invoice.update(invoice.id, data),
@@ -87,24 +133,37 @@ export default function InvoiceDetailModal({ open, onClose, invoice }) {
           <DialogTitle className="text-gray-900 flex items-center justify-between">
             <span>Détail de la facture</span>
             <div className="flex items-center gap-2">
-              {invoice.file_url && downloadUrl && (
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => {
-                    const link = document.createElement('a');
-                    link.href = downloadUrl;
-                    link.download = invoice.file_name || 'facture.pdf';
-                    document.body.appendChild(link);
-                    link.click();
-                    document.body.removeChild(link);
-                  }}
-                  className="text-gray-700 hover:text-gray-900 border-gray-300"
-                  title="Télécharger le fichier"
-                >
-                  <Download className="w-4 h-4 mr-1" />
-                  Télécharger
-                </Button>
+              {invoice.file_url && previewUrl && (
+                <>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={handlePrint}
+                    disabled={previewError}
+                    className="text-gray-700 hover:text-gray-900 border-gray-300"
+                    title="Imprimer"
+                  >
+                    <Printer className="w-4 h-4 mr-1" />
+                    Imprimer
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => {
+                      const link = document.createElement('a');
+                      link.href = downloadUrl;
+                      link.download = invoice.file_name || 'facture.pdf';
+                      document.body.appendChild(link);
+                      link.click();
+                      document.body.removeChild(link);
+                    }}
+                    className="text-gray-700 hover:text-gray-900 border-gray-300"
+                    title="Télécharger le fichier"
+                  >
+                    <Download className="w-4 h-4 mr-1" />
+                    Télécharger
+                  </Button>
+                </>
               )}
             </div>
           </DialogTitle>
@@ -114,55 +173,30 @@ export default function InvoiceDetailModal({ open, onClose, invoice }) {
           {/* Aperçu */}
           <div className="space-y-4">
             <div>
-              <Label className="text-gray-900 font-semibold mb-2 flex items-center justify-between">
-                <span>Aperçu du fichier</span>
-                {invoice.file_url && previewUrl && (
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    onClick={() => {
-                      const viewerWindow = window.open('', '_blank');
-                      viewerWindow.document.write(`
-                        <!DOCTYPE html>
-                        <html>
-                          <head>
-                            <title>${invoice.file_name || 'Facture'}</title>
-                            <style>
-                              body { margin: 0; padding: 0; overflow: hidden; }
-                              iframe { width: 100vw; height: 100vh; border: none; }
-                              img { max-width: 100%; height: auto; display: block; margin: 20px auto; }
-                            </style>
-                          </head>
-                          <body>
-                            ${invoice.file_url.match(/\.(pdf)$/i) 
-                              ? `<iframe src="${previewUrl}"></iframe>`
-                              : `<img src="${previewUrl}" alt="Facture" />`
-                            }
-                          </body>
-                        </html>
-                      `);
-                    }}
-                    className="text-blue-600 hover:text-blue-700"
-                    title="Ouvrir en plein écran"
-                  >
-                    <ZoomIn className="w-4 h-4 mr-1" />
-                    Plein écran
-                  </Button>
-                )}
+              <Label className="text-gray-900 font-semibold mb-2 block">
+                Aperçu du fichier
               </Label>
-              {previewUrl && (
+              {previewUrl ? (
                 <div className="border border-gray-300 rounded-lg overflow-hidden bg-gray-50">
-                  {invoice.file_url.match(/\.(pdf)$/i) ? (
+                  {previewError ? (
+                    <div className="w-full h-96 flex flex-col items-center justify-center text-gray-500">
+                      <AlertCircle className="w-12 h-12 mb-3 text-orange-500" />
+                      <p className="font-medium">Aperçu indisponible</p>
+                      <p className="text-sm">Utilisez le bouton Télécharger</p>
+                    </div>
+                  ) : invoice.file_url.match(/\.(pdf)$/i) ? (
                     <iframe 
                       src={previewUrl}
                       className="w-full h-96"
                       title="Aperçu PDF"
+                      onError={() => setPreviewError(true)}
                     />
                   ) : invoice.file_url.match(/\.(jpg|jpeg|png|gif|webp)$/i) ? (
                     <img 
                       src={previewUrl}
                       alt="Facture" 
                       className="w-full h-96 object-contain"
+                      onError={() => setPreviewError(true)}
                     />
                   ) : (
                     <div className="w-full h-96 flex flex-col items-center justify-center text-gray-500">
@@ -171,6 +205,10 @@ export default function InvoiceDetailModal({ open, onClose, invoice }) {
                       <p className="text-sm">Format non prévisualisable</p>
                     </div>
                   )}
+                </div>
+              ) : (
+                <div className="border border-gray-300 rounded-lg overflow-hidden bg-gray-50 w-full h-96 flex items-center justify-center">
+                  <p className="text-gray-500">Chargement...</p>
                 </div>
               )}
             </div>
