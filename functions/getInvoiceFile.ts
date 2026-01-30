@@ -54,6 +54,8 @@ Deno.serve(async (req) => {
     // Déterminer le nom du fichier
     const fileName = invoice.file_name || `facture_${invoice.supplier_name || 'document'}.pdf`;
 
+    console.log('Sending file:', fileName, 'Type:', contentType, 'Mode:', mode, 'Size:', fileBlob.size);
+
     // Headers selon le mode
     const headers = new Headers();
     headers.set('Content-Type', contentType);
@@ -71,13 +73,14 @@ Deno.serve(async (req) => {
     headers.set('Pragma', 'no-cache');
     headers.set('Expires', '0');
 
+    console.log('✅ Success: streaming file to client');
     return new Response(fileBlob, {
       status: 200,
       headers: headers
     });
 
   } catch (error) {
-    console.error('Error:', error);
+    console.error('❌ ERROR in getInvoiceFile:', error.message, error.stack);
     return Response.json({ error: error.message }, { status: 500 });
   }
 });
