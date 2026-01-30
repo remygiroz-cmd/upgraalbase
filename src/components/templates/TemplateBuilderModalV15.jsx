@@ -767,11 +767,70 @@ export default function TemplateBuilderModalV15({ open, onOpenChange, template, 
               </Card>
             )}
 
-            <div className="bg-white border border-gray-300 rounded-lg p-8 max-h-[600px] overflow-auto shadow-inner">
-              <div 
-                className="prose prose-sm max-w-none"
-                dangerouslySetInnerHTML={{ __html: previewHtml }}
-              />
+            <div className="bg-white border border-gray-300 rounded-lg overflow-auto shadow-inner max-h-[600px]">
+              {/* Simulation de la mise en page RH professionnelle */}
+              <div style={{
+                fontFamily: "'Calibri', 'Arial', 'Helvetica', sans-serif",
+                fontSize: '11pt',
+                lineHeight: '1.8',
+                color: '#1a1a1a',
+                padding: '2.5cm 2cm',
+                maxWidth: '21cm',
+                margin: '0 auto',
+                background: 'white'
+              }}>
+                {/* En-tête employeur */}
+                <div style={{
+                  borderBottom: '2px solid #2c3e50',
+                  paddingBottom: '15px',
+                  marginBottom: '30px'
+                }}>
+                  <div style={{ fontSize: '14pt', fontWeight: 'bold', color: '#2c3e50', marginBottom: '5px' }}>
+                    {ENHANCED_MOCK_DATA.etablissementNom}
+                  </div>
+                  <div style={{ fontSize: '9pt', color: '#555', lineHeight: '1.4' }}>
+                    {ENHANCED_MOCK_DATA.etablissementAdresse}<br/>
+                    SIRET : {ENHANCED_MOCK_DATA.etablissementSiret}<br/>
+                    Email : {ENHANCED_MOCK_DATA.etablissementEmail}
+                  </div>
+                </div>
+                
+                {/* Contenu principal avec styles harmonisés */}
+                <div 
+                  className="document-preview-content"
+                  style={{
+                    textAlign: 'justify'
+                  }}
+                  dangerouslySetInnerHTML={{ __html: previewHtml }}
+                />
+                
+                {/* Bloc signature si non présent */}
+                {!previewHtml.includes('signature') && (
+                  <div style={{
+                    marginTop: '60px',
+                    paddingTop: '30px',
+                    borderTop: '1px solid #ddd',
+                    display: 'grid',
+                    gridTemplateColumns: '1fr 1fr',
+                    gap: '30px'
+                  }}>
+                    <div style={{ textAlign: 'center' }}>
+                      <div style={{ fontWeight: 'bold', marginBottom: '10px', color: '#2c3e50' }}>L&apos;Employeur</div>
+                      <div style={{ fontSize: '10pt', color: '#666', marginBottom: '15px' }}>
+                        Fait le {ENHANCED_MOCK_DATA.signature}
+                      </div>
+                      <div style={{ marginTop: '40px', borderBottom: '1px solid #000', paddingTop: '5px' }}></div>
+                    </div>
+                    <div style={{ textAlign: 'center' }}>
+                      <div style={{ fontWeight: 'bold', marginBottom: '10px', color: '#2c3e50' }}>Le Salarié</div>
+                      <div style={{ fontSize: '10pt', color: '#666', marginBottom: '15px' }}>
+                        Fait le {ENHANCED_MOCK_DATA.signature}
+                      </div>
+                      <div style={{ marginTop: '40px', borderBottom: '1px solid #000', paddingTop: '5px' }}>Lu et approuvé</div>
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
           </TabsContent>
         </Tabs>
