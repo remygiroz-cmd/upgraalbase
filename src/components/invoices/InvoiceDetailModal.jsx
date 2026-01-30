@@ -37,7 +37,7 @@ export default function InvoiceDetailModal({ open, onClose, invoice }) {
   const [previewError, setPreviewError] = useState(false);
 
   useEffect(() => {
-    if (invoice) {
+    if (invoice && open) {
       setForm({
         supplier_name: invoice.supplier_name || '',
         invoice_date: invoice.invoice_date || '',
@@ -51,11 +51,9 @@ export default function InvoiceDetailModal({ open, onClose, invoice }) {
       });
       setSelectedCategories(invoice.categories || []);
 
-      // Construire les URLs pour preview et download
       const hostname = window.location.hostname;
       const pathname = window.location.pathname;
       
-      // Extraire app_id
       let appId;
       if (hostname.includes('.base44.app')) {
         const match = hostname.match(/app--([^.]+)/);
@@ -64,74 +62,31 @@ export default function InvoiceDetailModal({ open, onClose, invoice }) {
         appId = pathname.split('/').filter(Boolean)[0];
       }
       
-      const previewUrlBuilt = `${window.location.origin}/api/apps/${appId}/functions/getInvoiceFile?invoice_id=${invoice.id}&mode=preview`;
-      const downloadUrlBuilt = `${window.location.origin}/api/apps/${appId}/functions/downloadInvoiceFile?invoice_id=${invoice.id}`;
+      const previewUrlBuilt = `${window.location.origin}/api/apps/${appId}/functions/previewInvoice?id=${invoice.id}`;
+      const downloadUrlBuilt = `${window.location.origin}/api/apps/${appId}/functions/downloadInvoice?id=${invoice.id}`;
       
       setPreviewUrl(previewUrlBuilt);
       setDownloadUrl(downloadUrlBuilt);
       setPreviewError(false);
       
-      // Logs de debug
-      console.log('=== Invoice File URLs ===');
+      console.log('=== Invoice URLs ===');
       console.log('Invoice ID:', invoice.id);
-      console.log('File name:', invoice.file_name);
-      console.log('Supabase URL:', invoice.file_url);
+      console.log('Bucket:', invoice.file_bucket || '❌ N/A');
+      console.log('Path:', invoice.file_path || '❌ N/A');
       console.log('');
-      console.log('📋 TEST THESE URLS:');
-      console.log('Preview (should display PDF):', previewUrlBuilt);
-      console.log('Download (should download):', downloadUrlBuilt);
-      console.log('========================');
+      console.log('📋 TEST (open in new tab):');
+      console.log('Preview:', previewUrlBuilt);
+      console.log('Download:', downloadUrlBuilt);
+      console.log('==================');
     }
-  }, [invoice]);
+  }, [invoice, open]);
 
   const handlePrint = () => {
     if (!previewUrl || previewError) {
-      toast.error('Aperçu indisponible');
+      toast.error("Aperçu indisponible pour l'impression");
       return;
     }
-
-    const printWindow = window.open('', '_blank');
-    if (!printWindow) {
-      toast.error('Impossible d\'ouvrir la fenêtre d\'impression');
-      return;
-    }
-
-    const isPDF = invoice.file_url.match(/\.(pdf)$/i);
-    
-    printWindow.document.write(`
-      <!DOCTYPE html>
-      <html>
-        <head>
-          <title>Impression - ${invoice.file_name || 'Facture'}</title>
-          <style>
-            body { margin: 0; padding: 0; }
-            iframe { width: 100vw; height: 100vh; border: none; }
-            img { max-width: 100%; height: auto; display: block; }
-            #loading { 
-              position: fixed; 
-              top: 50%; 
-              left: 50%; 
-              transform: translate(-50%, -50%);
-              font-family: sans-serif;
-              color: #666;
-            }
-            @media print {
-              body { margin: 0; }
-              iframe, img { page-break-inside: avoid; }
-              #loading { display: none; }
-            }
-          </style>
-        </head>
-        <body>
-          <div id="loading">Chargement du document...</div>
-          ${isPDF 
-            ? `<iframe src="${previewUrl}" id="printFrame" onload="document.getElementById('loading').style.display='none'; setTimeout(() => window.print(), 1000);"></iframe>`
-            : `<img src="${previewUrl}" alt="Facture" id="printImg" onload="document.getElementById('loading').style.display='none'; setTimeout(() => window.print(), 500);" onerror="document.getElementById('loading').innerText='Erreur de chargement';" />`
-          }
-        </body>
-      </html>
-    `);
-    printWindow.document.close();
+    window.open(previewUrl, '_blank');
   };
 
   const updateMutation = useMutation({
@@ -183,14 +138,7 @@ export default function InvoiceDetailModal({ open, onClose, invoice }) {
                   <Button
                     size="sm"
                     variant="outline"
-                    onClick={() => {
-                      const link = document.createElement('a');
-                      link.href = downloadUrl;
-                      link.download = invoice.file_name || 'facture.pdf';
-                      document.body.appendChild(link);
-                      link.click();
-                      document.body.removeChild(link);
-                    }}
+                    onClick={() => window.open(downloadUrl, '_blank')}
                     className="text-gray-700 hover:text-gray-900 border-gray-300"
                     title="Télécharger le fichier"
                   >
@@ -219,7 +167,7 @@ export default function InvoiceDetailModal({ open, onClose, invoice }) {
                       <p className="text-sm">Le fichier ne peut pas être affiché</p>
                       <p className="text-xs mt-2 text-gray-400">Utilisez le bouton Télécharger</p>
                     </div>
-                  ) : invoice.file_url.match(/\.(pdf)$/i) ? (
+                  ) : (invoice.file_name || '').match(/\.(pdf)$/i) ? (
                     <>
                       <iframe 
                         src={previewUrl}
@@ -245,7 +193,7 @@ export default function InvoiceDetailModal({ open, onClose, invoice }) {
                         }}
                       />
                     </>
-                  ) : invoice.file_url.match(/\.(jpg|jpeg|png|gif|webp)$/i) ? (
+                  ) : (invoice.file_name || '').match(/\.(jpg|jpeg|png|gif|webp)$/i) ? (
                     <img 
                       src={previewUrl}
                       alt="Facture" 
