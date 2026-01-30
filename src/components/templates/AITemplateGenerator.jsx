@@ -400,9 +400,9 @@ GÉNÈRE UNIQUEMENT LE HTML, SANS PRÉAMBULE NI COMMENTAIRE.`;
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm text-blue-900">
                 <p className="font-medium mb-1">💡 Prochaines étapes :</p>
                 <ol className="text-xs space-y-1 ml-4 list-decimal">
-                  <li>Cliquez sur "Utiliser ce contenu" pour l'insérer dans l'éditeur</li>
+                  <li>Cliquez sur &quot;Utiliser ce contenu&quot; pour l&apos;insérer dans l&apos;éditeur</li>
                   <li>Modifiez et adaptez le texte selon vos besoins</li>
-                  <li>Vérifiez que toutes les variables {{}} sont présentes</li>
+                  <li>Vérifiez que toutes les variables {'{{}}'} sont présentes</li>
                   <li>Sauvegardez votre template</li>
                 </ol>
               </div>
