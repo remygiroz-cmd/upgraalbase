@@ -517,6 +517,26 @@ function WorkTaskCard({ task, onComplete, onUncomplete, onRemove, onUpdateQuanti
                   Stock restant : {task.current_stock} / {task.target_quantity}
                 </div>
               )}
+              
+              {/* Temps estimé */}
+              {taskDetails && (taskDetails.duration_minutes > 0 || taskDetails.duration_seconds > 0) && (
+                <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-blue-50 border border-blue-200">
+                  <Clock className="w-3.5 h-3.5 text-blue-600 flex-shrink-0" />
+                  <span className="text-blue-700 text-xs font-semibold">
+                    {(() => {
+                      const baseSeconds = (taskDetails.duration_minutes || 0) * 60 + (taskDetails.duration_seconds || 0);
+                      const totalSeconds = baseSeconds * (task.quantity_to_produce || 1);
+                      const minutes = Math.floor(totalSeconds / 60);
+                      const seconds = totalSeconds % 60;
+                      if (minutes > 0) {
+                        return seconds > 0 ? `${minutes}min ${seconds}s` : `${minutes}min`;
+                      }
+                      return `${seconds}s`;
+                    })()}
+                  </span>
+                </div>
+              )}
+              
               {hasQuantity && !task.is_completed && (
                 <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-indigo-600/20">
                   <button
