@@ -11,42 +11,87 @@ Deno.serve(async (req) => {
     const user = await base44.auth.me();
 
     if (!user) {
-      console.error('Unauthorized access attempt');
+      console.error('❌ Unauthorized access attempt');
       return Response.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     const url = new URL(req.url);
     const invoiceId = url.searchParams.get('invoice_id');
-    const mode = url.searchParams.get('mode') || 'preview'; // preview or download
+    const mode = url.searchParams.get('mode') || 'preview';
 
-    console.log('Invoice ID:', invoiceId, 'Mode:', mode);
+    console.log('User:', user.email);
+    console.log('Invoice ID:', invoiceId);
+    console.log('Mode:', mode);
 
     if (!invoiceId) {
-      console.error('Missing invoice_id parameter');
+      console.error('❌ Missing invoice_id parameter');
       return Response.json({ error: 'invoice_id required' }, { status: 400 });
     }
 
     // Récupérer la facture
+    console.log('🔍 Fetching invoice from database...');
     const invoices = await base44.entities.Invoice.filter({ id: invoiceId });
     const invoice = invoices[0];
 
-    console.log('Invoice found:', !!invoice, 'File URL:', invoice?.file_url);
+    if (!invoice) {
+      console.error('❌ Invoice not found in database');
+      return Response.json({ error: 'Invoice not found' }, { status: 404 });
+    }
 
-    if (!invoice || !invoice.file_url) {
-      console.error('Invoice not found or no file_url');
-      return Response.json({ error: 'Invoice file not found' }, { status: 404 });
+    console.log('✅ Invoice found:');
+    console.log('  - ID:', invoice.id);
+    console.log('  - File name:', invoice.file_name);
+    console.log('  - File URL:', invoice.file_url);
+    console.log('  - Supplier:', invoice.supplier_name);
+
+    if (!invoice.file_url) {
+      console.error('❌ Invoice has no file_url');
+      return Response.json({ error: 'Invoice file URL missing' }, { status: 404 });
+    }
+
+    // Extraire bucket et path depuis l'URL Supabase
+    let bucket, filePath;
+    try {
+      const fileUrlObj = new URL(invoice.file_url);
+      const pathParts = fileUrlObj.pathname.split('/');
+      const objectIndex = pathParts.indexOf('object');
+      if (objectIndex !== -1 && pathParts[objectIndex + 1] === 'public') {
+        bucket = pathParts[objectIndex + 2];
+        filePath = pathParts.slice(objectIndex + 3).join('/');
+      }
+      console.log('📦 Storage info:');
+      console.log('  - Bucket:', bucket || 'unknown');
+      console.log('  - Path:', filePath || 'unknown');
+      console.log('  - Full URL:', invoice.file_url);
+    } catch (e) {
+      console.error('⚠️ Could not parse storage URL:', e.message);
     }
 
     // Récupérer le fichier depuis l'URL Supabase
-    console.log('Fetching file from:', invoice.file_url);
+    console.log('⬇️ Fetching file from Supabase...');
     const fileResponse = await fetch(invoice.file_url);
     
-    if (!fileResponse.ok) {
-      console.error('File fetch failed:', fileResponse.status);
-      return Response.json({ error: 'File not accessible' }, { status: 500 });
-    }
+    console.log('📊 Supabase response:');
+    console.log('  - Status:', fileResponse.status, fileResponse.statusText);
+    console.log('  - Content-Type:', fileResponse.headers.get('content-type'));
+    console.log('  - Content-Length:', fileResponse.headers.get('content-length'));
 
-    console.log('File fetched successfully, content-type:', fileResponse.headers.get('content-type'));
+    if (!fileResponse.ok) {
+      console.error('❌ File fetch failed');
+      console.error('  - Status:', fileResponse.status);
+      console.error('  - Status text:', fileResponse.statusText);
+      const errorText = await fileResponse.text();
+      console.error('  - Error body:', errorText);
+      return Response.json({ 
+        error: 'File not accessible',
+        details: {
+          status: fileResponse.status,
+          statusText: fileResponse.statusText,
+          bucket: bucket || 'unknown',
+          path: filePath || 'unknown'
+        }
+      }, { status: fileResponse.status === 404 ? 404 : 403 });
+    }
 
     const fileBlob = await fileResponse.blob();
     const contentType = fileResponse.headers.get('content-type') || 'application/octet-stream';

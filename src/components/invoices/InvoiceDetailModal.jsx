@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
-import { useQueryClient, useMutation } from '@tanstack/react-query';
+import { useQueryClient, useMutation, useQuery } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { toast } from 'sonner';
 import { ExternalLink, Save, History, CheckCircle, X as XIcon, Download, Printer, AlertCircle } from 'lucide-react';
@@ -26,6 +26,10 @@ const CATEGORIES = [
 
 export default function InvoiceDetailModal({ open, onClose, invoice }) {
   const queryClient = useQueryClient();
+  const { data: currentUser } = useQuery({
+    queryKey: ['currentUser'],
+    queryFn: () => base44.auth.me()
+  });
   const [form, setForm] = useState({});
   const [selectedCategories, setSelectedCategories] = useState([]);
   const [previewUrl, setPreviewUrl] = useState('');
@@ -47,47 +51,36 @@ export default function InvoiceDetailModal({ open, onClose, invoice }) {
       });
       setSelectedCategories(invoice.categories || []);
 
-      // Construire les URLs proxy pour preview et download
-      // Récupérer l'app_id de manière fiable
+      // Construire les URLs pour preview et download
       const hostname = window.location.hostname;
       const pathname = window.location.pathname;
       
-      // Extraire app_id selon le format d'URL Base44
+      // Extraire app_id
       let appId;
       if (hostname.includes('.base44.app')) {
-        // Format: app--{app_id}.base44.app
         const match = hostname.match(/app--([^.]+)/);
         appId = match ? match[1] : pathname.split('/').filter(Boolean)[0];
       } else {
-        // Format custom domain ou local: /{app_id}/...
         appId = pathname.split('/').filter(Boolean)[0];
       }
       
-      // Format Base44: /api/apps/{app_id}/functions/{function_name}
-      const functionBaseUrl = `${window.location.origin}/api/apps/${appId}/functions/getInvoiceFile`;
-      
-      const previewUrlBuilt = `${functionBaseUrl}?invoice_id=${invoice.id}&mode=preview`;
-      const downloadUrlBuilt = `${functionBaseUrl}?invoice_id=${invoice.id}&mode=download`;
+      const previewUrlBuilt = `${window.location.origin}/api/apps/${appId}/functions/getInvoiceFile?invoice_id=${invoice.id}&mode=preview`;
+      const downloadUrlBuilt = `${window.location.origin}/api/apps/${appId}/functions/downloadInvoiceFile?invoice_id=${invoice.id}`;
       
       setPreviewUrl(previewUrlBuilt);
       setDownloadUrl(downloadUrlBuilt);
       setPreviewError(false);
       
-      // Logs pour debug et test
-      console.log('=== Invoice Preview URLs ===');
-      console.log('Hostname:', hostname);
-      console.log('Pathname:', pathname);
-      console.log('Extracted App ID:', appId);
+      // Logs de debug
+      console.log('=== Invoice File URLs ===');
       console.log('Invoice ID:', invoice.id);
-      console.log('Invoice file_url:', invoice.file_url);
-      console.log('Preview URL:', previewUrlBuilt);
-      console.log('Download URL:', downloadUrlBuilt);
+      console.log('File name:', invoice.file_name);
+      console.log('Supabase URL:', invoice.file_url);
       console.log('');
-      console.log('📋 TEST URLS:');
-      console.log('Copy/paste ces URLs dans un nouvel onglet pour tester:');
-      console.log('Preview:', previewUrlBuilt);
-      console.log('Download:', downloadUrlBuilt);
-      console.log('===========================');
+      console.log('📋 TEST THESE URLS:');
+      console.log('Preview (should display PDF):', previewUrlBuilt);
+      console.log('Download (should download):', downloadUrlBuilt);
+      console.log('========================');
     }
   }, [invoice]);
 
@@ -312,6 +305,31 @@ export default function InvoiceDetailModal({ open, onClose, invoice }) {
                       )}
                     </div>
                   ))}
+                </div>
+              </div>
+            )}
+
+            {/* Debug info (admin only) */}
+            {currentUser?.role === 'admin' && invoice.file_url && (
+              <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded text-xs">
+                <p className="font-semibold text-blue-900 mb-2">Debug Info (Admin)</p>
+                <div className="space-y-1 text-blue-800 font-mono">
+                  <p><strong>Bucket/Path:</strong> {(() => {
+                    try {
+                      const url = new URL(invoice.file_url);
+                      const parts = url.pathname.split('/');
+                      const objIdx = parts.indexOf('object');
+                      if (objIdx !== -1) {
+                        const bucket = parts[objIdx + 2];
+                        const path = parts.slice(objIdx + 3).join('/');
+                        return `${bucket}/${path}`;
+                      }
+                      return 'N/A';
+                    } catch { return 'N/A'; }
+                  })()}</p>
+                  <p><strong>File Name:</strong> {invoice.file_name || 'N/A'}</p>
+                  <p><strong>Supabase URL:</strong> <a href={invoice.file_url} target="_blank" rel="noopener" className="underline break-all">{invoice.file_url}</a></p>
+                  <p><strong>Preview URL:</strong> <a href={previewUrl} target="_blank" rel="noopener" className="underline break-all">{previewUrl}</a></p>
                 </div>
               </div>
             )}
