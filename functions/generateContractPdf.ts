@@ -1,5 +1,43 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
 
+// Fonction pour mapper automatiquement toutes les propriétés d'établissement
+const mapEstablishmentToVariables = (establishment) => {
+  if (!establishment) return {};
+  
+  const variables = {};
+  
+  // Mapper toutes les propriétés non-internes
+  Object.keys(establishment).forEach(key => {
+    // Ignorer les métadonnées internes
+    if (['id', 'created_date', 'updated_date', 'created_by', 'managers'].includes(key)) return;
+    
+    // Mapping explicite pour les clés connues
+    const keyMapping = {
+      'name': 'etablissementNom',
+      'siret': 'etablissementSiret',
+      'contact_email': 'etablissementEmail',
+      'website': 'etablissementSite',
+      'postal_address': 'etablissementAdresse',
+      'postal_code': 'codePostalEtablissement',
+      'city': 'villeEtablissement',
+      'delivery_address': 'etablissementAdresseLivraison'
+    };
+    
+    const variableName = keyMapping[key] || 
+                        `etablissement${key.charAt(0).toUpperCase()}${key.slice(1).replace(/_/g, '')}`;
+    
+    variables[variableName] = establishment[key] || '';
+  });
+  
+  // Gérer les responsables
+  const mainManager = establishment.managers?.[0] || {};
+  variables.responsableNom = mainManager.name || '';
+  variables.responsableTel = mainManager.phone || '';
+  variables.responsableEmail = mainManager.email || '';
+  
+  return variables;
+};
+
 const getBaseStyles = () => `
   :root {
     --font: Arial, Helvetica, sans-serif;
@@ -302,20 +340,14 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Construire l'objet variables (communes + spécifiques selon type)
+    // Construire l'objet variables - MAPPING DYNAMIQUE de TOUTES les propriétés d'établissement
+    const establishmentVariables = mapEstablishmentToVariables(establishment);
+    
     const variables = {
-      // Variables communes
-      etablissementNom: establishment.name || '',
-      etablissementSiret: establishment.siret || '',
-      etablissementEmail: establishment.contact_email || '',
-      etablissementSite: establishment.website || '',
-      etablissementAdresse: establishment.postal_address || '',
-      codePostalEtablissement: establishment.postal_code || '',
-      villeEtablissement: establishment.city || '',
-      etablissementAdresseLivraison: establishment.delivery_address || establishment.postal_address || '',
-      responsableNom: mainManager.name || '',
-      responsableTel: mainManager.phone || '',
-      responsableEmail: mainManager.email || '',
+      // Variables d'établissement (TOUTES mappées automatiquement)
+      ...establishmentVariables,
+      
+      // Variables employé de base
       prenom: employee.first_name || '',
       nom: employee.last_name || '',
       signature: formatDateFR(new Date()),

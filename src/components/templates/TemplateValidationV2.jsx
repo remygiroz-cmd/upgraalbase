@@ -1,4 +1,5 @@
 // Validation RH V2 - Par catégorie de document
+import { getStaticEstablishmentVariables } from './EstablishmentVariablesGenerator';
 
 // Catégories et leurs règles de validation
 export const CATEGORIES = {
@@ -36,11 +37,9 @@ export const CATEGORIES = {
 
 // Variables par catégorie
 export const VARIABLES_BY_CATEGORY = {
-  // Variables communes à tous
+  // Variables communes à tous - INCLUANT TOUTES les variables d'établissement dynamiquement
   COMMON: [
-    { var: '{{etablissementNom}}', label: 'Nom de l\'établissement' },
-    { var: '{{etablissementAdresse}}', label: 'Adresse de l\'établissement' },
-    { var: '{{responsableNom}}', label: 'Nom du responsable' },
+    ...getStaticEstablishmentVariables(), // Toutes les variables d'établissement
     { var: '{{prenom}}', label: 'Prénom du salarié' },
     { var: '{{nom}}', label: 'Nom du salarié' },
     { var: '{{signature}}', label: 'Date de signature' }
