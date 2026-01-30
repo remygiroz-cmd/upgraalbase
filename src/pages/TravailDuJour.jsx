@@ -26,11 +26,12 @@ export default function TravailDuJour() {
   const [confirmDialog, setConfirmDialog] = useState({ open: false, title: '', description: '', onConfirm: null });
   const [hideCompleted, setHideCompleted] = useState(true);
 
+  // Récupère la session active (sans filtrage par date)
   const { data: activeSession, isLoading } = useQuery({
-    queryKey: ['workSessions', 'active', today],
+    queryKey: ['workSessions', 'active'],
     queryFn: async () => {
-      const sessions = await base44.entities.WorkSession.filter({ date: today, status: 'active' });
-      return sessions[0];
+      const sessions = await base44.entities.WorkSession.filter({ status: 'active' });
+      return sessions[0] || null;
     }
   });
 
@@ -169,8 +170,7 @@ export default function TravailDuJour() {
   const deleteSessionMutation = useMutation({
     mutationFn: (id) => base44.entities.WorkSession.delete(id),
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ['workSessions', 'active', today] });
-      await queryClient.refetchQueries({ queryKey: ['workSessions', 'active', today] });
+      await queryClient.invalidateQueries({ queryKey: ['workSessions'] });
       window.location.href = createPageUrl('Home');
     }
   });

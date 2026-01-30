@@ -202,9 +202,10 @@ export default function MiseEnPlace() {
     queryFn: () => base44.auth.me()
   });
 
+  // Récupère la session active (sans filtrage par date)
   const { data: activeSessions = [] } = useQuery({
     queryKey: ['workSessions', 'active'],
-    queryFn: () => base44.entities.WorkSession.filter({ date: today, status: 'active' })
+    queryFn: () => base44.entities.WorkSession.filter({ status: 'active' })
   });
 
   const hasActiveSession = activeSessions.length > 0;
