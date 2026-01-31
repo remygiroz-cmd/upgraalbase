@@ -1,7 +1,28 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
-import Resend from 'npm:resend@3.0.0';
 
-const resend = new Resend(Deno.env.get('RESEND_API_KEY'));
+async function sendEmail(to, subject, html, attachments) {
+  const response = await fetch('https://api.resend.com/emails', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${Deno.env.get('RESEND_API_KEY')}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      from: `UpGraal <onboarding@resend.dev>`,
+      to,
+      subject,
+      html,
+      attachments,
+    }),
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(`Resend API error: ${error.message}`);
+  }
+
+  return response.json();
+}
 
 Deno.serve(async (req) => {
   try {
