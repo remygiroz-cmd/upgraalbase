@@ -12,6 +12,8 @@ import TeamsManager from '@/components/personnel/TeamsManager';
 import RegistryImportModal from '@/components/personnel/RegistryImportModal';
 import PayrollOverview from '@/components/personnel/PayrollOverview';
 import PayslipsManagement from '@/components/personnel/PayslipsManagement';
+import PayslipExtraction from '@/components/personnel/PayslipExtraction';
+import PayrollDashboard from '@/components/personnel/PayrollDashboard';
 import { cn } from '@/lib/utils';
 import jsPDF from 'jspdf';
 
