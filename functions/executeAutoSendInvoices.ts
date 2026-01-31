@@ -278,13 +278,12 @@ Deno.serve(async (req) => {
 </div>
 `;
 
-          await resend.emails.send({
-            from: `${senderName} <onboarding@resend.dev>`,
-            to: config.recipients,
-            subject: `📄 Facture ${inv.supplier || ''} - ${inv.invoice_date || ''}`,
-            html: emailBody,
+          await sendEmail(
+            config.recipients,
+            `📄 Facture ${inv.supplier || ''} - ${inv.invoice_date || ''}`,
+            emailBody,
             attachments
-          });
+          );
 
           // Mise à jour de la facture
           const send_history = inv.send_history || [];
