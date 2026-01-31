@@ -67,6 +67,7 @@ export default function AutomationsTab() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['invoiceSettings'] });
+      queryClient.refetchQueries({ queryKey: ['invoiceSettings'] });
     }
   });
 
@@ -74,7 +75,7 @@ export default function AutomationsTab() {
     mutationFn: () => base44.functions.invoke('executeAutoSendInvoices', { test_mode: true })
   });
 
-  const handleSave = () => {
+  const handleSave = async () => {
     const recipients = recipientsText
       .split(/[,;\n]/)
       .map(r => r.trim())
@@ -90,18 +91,23 @@ export default function AutomationsTab() {
       return;
     }
 
-    saveMutation.mutate({
-      auto_send_enabled: enabled,
-      frequency,
-      send_time: sendTime,
-      day_of_week: frequency === 'weekly' ? parseInt(dayOfWeek) : null,
-      day_of_month: frequency === 'monthly' ? dayOfMonth : null,
-      include_non_envoyee: includeNonEnvoyee,
-      include_a_verifier: includeAVerifier,
-      include_envoyee: includeEnvoyee,
-      group_in_one_email: groupInOne,
-      recipients
-    });
+    try {
+      await saveMutation.mutateAsync({
+        auto_send_enabled: enabled,
+        frequency,
+        send_time: sendTime,
+        day_of_week: frequency === 'weekly' ? parseInt(dayOfWeek) : null,
+        day_of_month: frequency === 'monthly' ? dayOfMonth : null,
+        include_non_envoyee: includeNonEnvoyee,
+        include_a_verifier: includeAVerifier,
+        include_envoyee: includeEnvoyee,
+        group_in_one_email: groupInOne,
+        recipients
+      });
+      alert('Automatisation enregistrée ✓');
+    } catch (err) {
+      alert('Erreur: ' + err.message);
+    }
   };
 
   const handleTest = async () => {
