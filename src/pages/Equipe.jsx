@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
-import { Users, User, FileText, Download, Printer, Upload, Trash2, FileJson, DollarSign } from 'lucide-react';
+import { Users, User, FileText, Download, Printer, Upload, Trash2, FileJson, DollarSign, File } from 'lucide-react';
 import PageHeader from '@/components/ui/PageHeader';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
@@ -11,6 +11,7 @@ import EmployeeList from '@/components/personnel/EmployeeList';
 import TeamsManager from '@/components/personnel/TeamsManager';
 import RegistryImportModal from '@/components/personnel/RegistryImportModal';
 import PayrollOverview from '@/components/personnel/PayrollOverview';
+import PayslipsManagement from '@/components/personnel/PayslipsManagement';
 import { cn } from '@/lib/utils';
 import jsPDF from 'jspdf';
 
