@@ -23,7 +23,7 @@ Deno.serve(async (req) => {
       recipients
     } = payload;
 
-    // 1. Mettre à jour les settings dans InvoiceSettings
+    // Mettre à jour les settings dans InvoiceSettings
     const settings = await base44.entities.InvoiceSettings.filter({ setting_key: 'auto_send_config' });
     
     if (settings[0]) {
@@ -55,29 +55,9 @@ Deno.serve(async (req) => {
       });
     }
 
-    // 2. Mettre à jour l'automation elle-même
-    const automations = await base44.asServiceRole.functions.invoke('_listAutomations', { 
-      automation_type: 'scheduled'
-    });
-
-    // On cherche l'automation pour executeAutoSendInvoices
-    const invoiceAutomation = automations.find(a => a.function_name === 'executeAutoSendInvoices');
-
-    if (invoiceAutomation && auto_send_enabled) {
-      // Mettre à jour l'heure et la fréquence de l'automation
-      await base44.asServiceRole.functions.invoke('_updateAutomation', {
-        automation_id: invoiceAutomation.id,
-        repeat_interval: frequency === 'daily' ? 1 : (frequency === 'weekly' ? 1 : 1),
-        repeat_unit: frequency === 'daily' ? 'days' : (frequency === 'weekly' ? 'weeks' : 'months'),
-        start_time: send_time,
-        repeat_on_days: frequency === 'weekly' ? [day_of_week] : null,
-        repeat_on_day_of_month: frequency === 'monthly' ? day_of_month : null
-      });
-    }
-
     return Response.json({ 
       success: true, 
-      message: 'Configuration mise à jour et automation synchronisée'
+      message: 'Configuration mise à jour'
     });
   } catch (error) {
     return Response.json({ error: error.message }, { status: 500 });
