@@ -322,10 +322,17 @@ Deno.serve(async (req) => {
       });
     }
 
+    const successCount = invoiceResults.filter(r => r.status !== 'failed').length;
+    
     return Response.json({ 
       success: true, 
-      sent_count: invoices.length,
-      total_amount: totalTTC
+      requested: invoices.length,
+      sent_attachment: attachedCount,
+      sent_link: linkCount,
+      failed: failedCount,
+      total_delivered: successCount,
+      total_amount: totalTTC,
+      details: invoiceResults
     });
 
   } catch (error) {
