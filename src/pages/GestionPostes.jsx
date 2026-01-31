@@ -107,23 +107,63 @@ export default function GestionPostes() {
     setShowEditor(true);
   };
 
+  const typeColors = {
+    CDD: 'bg-blue-50 border-blue-200',
+    CDI: 'bg-green-50 border-green-200',
+    AVENANT: 'bg-orange-50 border-orange-200'
+  };
+
+  const typeBadges = {
+    CDD: 'bg-blue-100 text-blue-800',
+    CDI: 'bg-green-100 text-green-800',
+    AVENANT: 'bg-orange-100 text-orange-800'
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Gestion des Postes</h1>
-          <p className="text-gray-600 mt-1">Définissez les postes et leurs tâches pour les contrats</p>
+          <h1 className="text-3xl font-bold text-gray-900">Postes et Templates RH</h1>
+          <p className="text-gray-600 mt-1">Gérez les postes et les templates de contrats</p>
         </div>
         <Button
-          onClick={() => setShowForm(true)}
+          onClick={() => {
+            if (activeTab === 'postes') {
+              setShowForm(true);
+            } else {
+              setSelectedTemplate(null);
+              setShowEditor(true);
+            }
+          }}
           className="bg-orange-600 hover:bg-orange-700"
         >
           <Plus className="w-4 h-4 mr-2" />
-          Nouveau poste
+          {activeTab === 'postes' ? 'Nouveau poste' : 'Nouveau template'}
         </Button>
       </div>
 
-      {isLoading ? (
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="mb-8">
+        <TabsList className="bg-transparent border-b-2 border-gray-200 p-0 w-full grid grid-cols-2 h-auto gap-0 rounded-none">
+          <TabsTrigger 
+            value="postes" 
+            className="data-[state=active]:bg-transparent data-[state=active]:border-b-[3px] data-[state=active]:border-orange-600 data-[state=active]:text-orange-600 text-gray-600 hover:text-gray-900 text-sm sm:text-base font-medium min-h-[48px] rounded-none border-b-[3px] border-transparent transition-all"
+          >
+            <Briefcase className="w-5 h-5 mr-2" />
+            Postes
+          </TabsTrigger>
+          <TabsTrigger 
+            value="templates" 
+            className="data-[state=active]:bg-transparent data-[state=active]:border-b-[3px] data-[state=active]:border-orange-600 data-[state=active]:text-orange-600 text-gray-600 hover:text-gray-900 text-sm sm:text-base font-medium min-h-[48px] rounded-none border-b-[3px] border-transparent transition-all"
+          >
+            <FileText className="w-5 h-5 mr-2" />
+            Templates RH
+          </TabsTrigger>
+        </TabsList>
+      </Tabs>
+
+      {activeTab === 'postes' && (
+        <>
+          {loadingRoles ? (
         <div className="text-center py-12">
           <p className="text-gray-500">Chargement...</p>
         </div>
