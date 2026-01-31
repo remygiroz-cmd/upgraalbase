@@ -340,12 +340,27 @@ export default function CoffreFactures() {
                       </button>
                     </td>
                     <td className="p-4 text-sm text-gray-900">
-                      {invoice.invoice_date && !isNaN(new Date(invoice.invoice_date).getTime()) 
-                        ? format(new Date(invoice.invoice_date), 'dd/MM/yyyy') 
-                        : '-'}
+                      {invoice.ai_processing ? (
+                        <div className="flex items-center gap-2 text-orange-600">
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                        </div>
+                      ) : invoice.invoice_date && !isNaN(new Date(invoice.invoice_date).getTime()) ? (
+                        format(new Date(invoice.invoice_date), 'dd/MM/yyyy')
+                      ) : '-'}
                     </td>
-                    <td className="p-4 text-sm font-medium text-gray-900">{invoice.supplier || '-'}</td>
-                    <td className="p-4 text-sm text-gray-700 max-w-xs truncate">{invoice.short_description || '-'}</td>
+                    <td className="p-4 text-sm font-medium text-gray-900">
+                      {invoice.ai_processing ? (
+                        <div className="flex items-center gap-2 text-orange-600">
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                          <span className="text-xs">Extraction IA...</span>
+                        </div>
+                      ) : (
+                        invoice.supplier || '-'
+                      )}
+                    </td>
+                    <td className="p-4 text-sm text-gray-700 max-w-xs truncate">
+                      {invoice.ai_processing ? '-' : (invoice.short_description || '-')}
+                    </td>
                     <td className="p-4">
                       <div className="flex flex-wrap gap-1">
                         {(invoice.categories || []).slice(0, 2).map((cat, idx) => (
