@@ -267,7 +267,7 @@ export default function Equipe() {
       />
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="mb-8">
-        <TabsList className="bg-transparent border-b-2 border-gray-200 p-0 w-full grid gap-0 rounded-none" style={{ gridTemplateColumns: `repeat(${currentUser?.role === 'admin' ? 4 : 3}, minmax(0, 1fr))` }}>
+        <TabsList className="bg-transparent border-b-2 border-gray-200 p-0 w-full grid gap-0 rounded-none" style={{ gridTemplateColumns: `repeat(${currentUser?.role === 'admin' ? 5 : 3}, minmax(0, 1fr))` }}>
           <TabsTrigger 
             value="equipes" 
             className="data-[state=active]:bg-transparent data-[state=active]:border-b-[3px] data-[state=active]:border-orange-600 data-[state=active]:text-orange-600 text-gray-600 hover:text-gray-900 text-sm sm:text-base font-medium min-h-[48px] rounded-none border-b-[3px] border-transparent transition-all"
@@ -290,13 +290,22 @@ export default function Equipe() {
             Registre
           </TabsTrigger>
           {currentUser?.role === 'admin' && (
-            <TabsTrigger 
-              value="masse-salariale" 
-              className="data-[state=active]:bg-transparent data-[state=active]:border-b-[3px] data-[state=active]:border-orange-600 data-[state=active]:text-orange-600 text-gray-600 hover:text-gray-900 text-sm sm:text-base font-medium min-h-[48px] rounded-none border-b-[3px] border-transparent transition-all"
-            >
-              <DollarSign className="w-5 h-5 mr-2" />
-              Masse salariale
-            </TabsTrigger>
+            <>
+              <TabsTrigger 
+                value="masse-salariale" 
+                className="data-[state=active]:bg-transparent data-[state=active]:border-b-[3px] data-[state=active]:border-orange-600 data-[state=active]:text-orange-600 text-gray-600 hover:text-gray-900 text-sm sm:text-base font-medium min-h-[48px] rounded-none border-b-[3px] border-transparent transition-all"
+              >
+                <DollarSign className="w-5 h-5 mr-2" />
+                Masse salariale
+              </TabsTrigger>
+              <TabsTrigger 
+                value="fiches-paie" 
+                className="data-[state=active]:bg-transparent data-[state=active]:border-b-[3px] data-[state=active]:border-orange-600 data-[state=active]:text-orange-600 text-gray-600 hover:text-gray-900 text-sm sm:text-base font-medium min-h-[48px] rounded-none border-b-[3px] border-transparent transition-all"
+              >
+                <File className="w-5 h-5 mr-2" />
+                Fiches de paie
+              </TabsTrigger>
+            </>
           )}
         </TabsList>
       </Tabs>
