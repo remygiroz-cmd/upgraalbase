@@ -11,6 +11,7 @@ import { Download, Save, X, Send, CheckCircle, XCircle, AlertCircle, Upload } fr
 import { format, parseISO } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { toast } from 'sonner';
+import SendInvoicesModal from './SendInvoicesModal';
 
 const CATEGORIES = [
   "Produits alimentaires",
@@ -32,6 +33,7 @@ const STATUS_LABELS = {
 
 export default function InvoiceDetailModal({ invoice, onClose }) {
   const queryClient = useQueryClient();
+  const [showSendModal, setShowSendModal] = useState(false);
   const [form, setForm] = useState({
     supplier: invoice.supplier || '',
     invoice_date: invoice.invoice_date || '',
@@ -299,6 +301,14 @@ export default function InvoiceDetailModal({ invoice, onClose }) {
               Fermer
             </Button>
             <Button
+              variant="outline"
+              onClick={() => setShowSendModal(true)}
+              className="border-blue-300 text-blue-600 hover:bg-blue-50"
+            >
+              <Send className="w-4 h-4 mr-2" />
+              Envoyer
+            </Button>
+            <Button
               onClick={handleSave}
               disabled={updateMutation.isPending}
               className="bg-orange-600 hover:bg-orange-700"
@@ -309,6 +319,13 @@ export default function InvoiceDetailModal({ invoice, onClose }) {
           </div>
         </div>
       </DialogContent>
+
+      {showSendModal && (
+        <SendInvoicesModal
+          invoices={[invoice]}
+          onClose={() => setShowSendModal(false)}
+        />
+      )}
     </Dialog>
   );
 }
