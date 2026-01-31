@@ -205,6 +205,35 @@ Système de gestion des factures`;
 
         console.log(`[executeAutoSendInvoices] Email envoyé pour ${config.name}, ID: ${emailResult.id}`);
 
+        // Mettre à jour le statut de chaque facture à "envoyee"
+        for (const invoice of invoicesToSend) {
+          try {
+            const sendHistoryEntry = {
+              sent_at: new Date().toISOString(),
+              sent_by: 'automation',
+              sent_by_name: 'Automation',
+              method: 'automatic',
+              recipient: config.recipient_email,
+              delivery_method: 'attachment',
+              success: true
+            };
+
+            const updatedSendHistory = invoice.send_history || [];
+            updatedSendHistory.push(sendHistoryEntry);
+
+            await base44.asServiceRole.entities.Invoice.update(invoice.id, {
+              status: 'envoyee',
+              last_sent_at: new Date().toISOString(),
+              last_sent_method: 'automatic',
+              send_history: updatedSendHistory
+            });
+
+            console.log(`[executeAutoSendInvoices] Statut mis à jour: ${invoice.id} -> envoyee`);
+          } catch (err) {
+            console.error(`[executeAutoSendInvoices] Erreur mise à jour statut ${invoice.id}:`, err.message);
+          }
+        }
+
         // Mettre à jour l'historique
         const updatedHistory = config.run_history || [];
         updatedHistory.push({
