@@ -12,8 +12,8 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Seuls les admins, gérants et comptables peuvent exécuter
-    if (user.role !== 'admin' && user.permission_level !== 'manager' && user.permission_level !== 'comptabilite') {
+    // Seuls les admins peuvent exécuter
+    if (user.role !== 'admin') {
       return Response.json({ error: 'Forbidden' }, { status: 403 });
     }
 
