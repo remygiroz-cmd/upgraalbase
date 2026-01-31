@@ -333,6 +333,7 @@ export default function CoffreFactures() {
                   <th className="p-4 text-left text-sm font-semibold text-gray-900">Compte</th>
                   <th className="p-4 text-right text-sm font-semibold text-gray-900">HT</th>
                   <th className="p-4 text-right text-sm font-semibold text-gray-900">TTC</th>
+                  <th className="p-4 text-center text-sm font-semibold text-gray-900">Taille</th>
                   <th className="p-4 text-left text-sm font-semibold text-gray-900">Statut</th>
                   <th className="p-4 text-left text-sm font-semibold text-gray-900">Actions</th>
                 </tr>
@@ -398,6 +399,22 @@ export default function CoffreFactures() {
                       ) : (
                         invoice.amount_ttc ? `${invoice.amount_ttc.toFixed(2)} €` : '-'
                       )}
+                    </td>
+                    <td className="p-4 text-center">
+                      <div className="text-xs text-gray-600">
+                        {invoice.optimized_size ? (
+                          <div className="space-y-0.5">
+                            <div className="font-medium">{(invoice.optimized_size / 1024).toFixed(0)} Ko</div>
+                            {invoice.compression_applied && invoice.original_size !== invoice.optimized_size && (
+                              <div className="text-green-600">
+                                -{((1 - invoice.optimized_size / invoice.original_size) * 100).toFixed(0)}%
+                              </div>
+                            )}
+                          </div>
+                        ) : invoice.file_size ? (
+                          <div className="font-medium">{(invoice.file_size / 1024).toFixed(0)} Ko</div>
+                        ) : '-'}
+                      </div>
                     </td>
                     <td className="p-4">
                       <Badge className={STATUS_LABELS[invoice.status]?.color}>
