@@ -22,11 +22,32 @@ Deno.serve(async (req) => {
       invoices.push(invoice);
     }
 
-    // Préparer les pièces jointes
-    const attachments = invoices.map(inv => ({
-      filename: inv.normalized_file_name || inv.file_name || `facture_${inv.id}.pdf`,
-      url: inv.file_url
-    }));
+    // Télécharger et préparer les fichiers pour pièces jointes
+    const attachments = [];
+    for (const inv of invoices) {
+      if (!inv.file_url) continue;
+      
+      try {
+        // Télécharger le fichier
+        const fileResponse = await fetch(inv.file_url);
+        if (!fileResponse.ok) {
+          console.error(`Failed to download file for invoice ${inv.id}`);
+          continue;
+        }
+        
+        const fileBlob = await fileResponse.blob();
+        const fileBuffer = await fileBlob.arrayBuffer();
+        const base64Content = btoa(String.fromCharCode(...new Uint8Array(fileBuffer)));
+        
+        attachments.push({
+          filename: inv.normalized_file_name || inv.file_name || `facture_${inv.id}.pdf`,
+          content: base64Content,
+          type: inv.file_mime || 'application/pdf'
+        });
+      } catch (err) {
+        console.error(`Error processing file for invoice ${inv.id}:`, err);
+      }
+    }
 
     // Préparer le corps de l'email
     const totalTTC = invoices.reduce((sum, inv) => sum + (inv.amount_ttc || 0), 0);
@@ -60,12 +81,33 @@ Deno.serve(async (req) => {
       </div>
     `;
 
-    // Envoyer l'email
-    await base44.integrations.Core.SendEmail({
-      to: recipient,
+    // Envoyer l'email via Resend avec pièces jointes
+    const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY');
+    if (!RESEND_API_KEY) {
+      return Response.json({ error: 'RESEND_API_KEY not configured' }, { status: 500 });
+    }
+
+    const emailPayload = {
+      from: 'UpGraal <noreply@lalyste.com>',
+      to: [recipient],
       subject: `Factures - ${invoices.length} document(s) - ${totalTTC.toFixed(2)} €`,
-      body: htmlBody
+      html: htmlBody,
+      attachments: attachments
+    };
+
+    const resendResponse = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${RESEND_API_KEY}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(emailPayload)
     });
+
+    if (!resendResponse.ok) {
+      const errorText = await resendResponse.text();
+      throw new Error(`Resend API error: ${errorText}`);
+    }
 
     // Mettre à jour les factures
     const historyEntry = {
