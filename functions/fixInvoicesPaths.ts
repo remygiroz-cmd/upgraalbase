@@ -18,21 +18,23 @@ Deno.serve(async (req) => {
     for (const invoice of invoices) {
       // Si file_bucket et file_path sont déjà remplis, skip
       if (invoice.file_bucket && invoice.file_path) {
+        console.log(`Skipping ${invoice.id}: already has bucket/path`);
         continue;
       }
 
       // Si pas de file_url, impossible de fixer
       if (!invoice.file_url) {
+        console.log(`Skipping ${invoice.id}: no file_url`);
         failed.push({ id: invoice.id, reason: 'No file_url' });
         continue;
       }
 
       try {
         // Utiliser des valeurs par défaut pour les anciennes factures
-        // qui n'ont pas été uploadées avec le code corrigé
-        // Le vrai bucket/path ne sera pas utilisé par sendInvoices grâce à file_url
         const fileBucket = 'base44-prod';
         const filePath = invoice.file_name || `invoice_${invoice.id}.pdf`;
+
+        console.log(`Updating ${invoice.id}: bucket=${fileBucket}, path=${filePath}`);
 
         // Mettre à jour la facture
         await base44.asServiceRole.entities.Invoice.update(invoice.id, {
@@ -42,6 +44,7 @@ Deno.serve(async (req) => {
 
         fixed.push({ id: invoice.id, bucket: fileBucket, path: filePath });
       } catch (err) {
+        console.error(`Error updating ${invoice.id}:`, err);
         failed.push({ id: invoice.id, reason: err.message });
       }
     }
