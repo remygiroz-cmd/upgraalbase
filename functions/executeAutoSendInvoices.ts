@@ -48,6 +48,7 @@ Deno.serve(async (req) => {
     const currentTime = `${String(parisHour).padStart(2, '0')}:${String(parisMinute).padStart(2, '0')}`;
     
     console.log(`[executeAutoSendInvoices] Vérification - Jour: ${currentDay}, Heure Paris: ${currentTime}`);
+    console.log(`[executeAutoSendInvoices] Details - Hour: ${parisHour}, Minute: ${parisMinute}`);
 
     // Récupérer toutes les configurations actives
     const configs = await base44.asServiceRole.entities.InvoiceAutomationConfig.filter({ enabled: true });
