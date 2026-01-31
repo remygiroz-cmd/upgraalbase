@@ -69,26 +69,7 @@ export default function AutomationsTab() {
 
   const saveMutation = useMutation({
     mutationFn: async (data) => {
-      const { automation_id, ...settingsData } = data;
-
-      // 1. Sauvegarder dans InvoiceSettings
-      await base44.functions.invoke('updateAutoSendConfig', settingsData);
-
-      // 2. Syncer l'automation
-      if (automation_id) {
-        await base44.manage_automation({
-          automation_id,
-          action: 'update',
-          automation_name: 'Envoi automatique des factures',
-          is_active: true,
-          start_time: data.send_time,
-          repeat_unit: data.frequency === 'daily' ? 'days' : (data.frequency === 'weekly' ? 'weeks' : 'months'),
-          repeat_interval: 1,
-          ...(data.frequency === 'weekly' && { repeat_on_days: [parseInt(data.day_of_week)] }),
-          ...(data.frequency === 'monthly' && { repeat_on_day_of_month: data.day_of_month })
-        });
-      }
-
+      await base44.functions.invoke('updateAutoSendInvoicesAutomation', data);
       return { success: true };
     },
     onSuccess: () => {
