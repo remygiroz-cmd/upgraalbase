@@ -220,7 +220,7 @@ export default function Equipe() {
       />
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="mb-8">
-        <TabsList className="bg-transparent border-b-2 border-gray-200 p-0 w-full grid grid-cols-3 sm:grid-cols-3 h-auto gap-0 rounded-none">
+        <TabsList className="bg-transparent border-b-2 border-gray-200 p-0 w-full grid grid-cols-2 sm:grid-cols-2 h-auto gap-0 rounded-none">
           <TabsTrigger 
             value="equipes" 
             className="data-[state=active]:bg-transparent data-[state=active]:border-b-[3px] data-[state=active]:border-orange-600 data-[state=active]:text-orange-600 text-gray-600 hover:text-gray-900 text-sm sm:text-base font-medium min-h-[48px] rounded-none border-b-[3px] border-transparent transition-all"
@@ -235,306 +235,25 @@ export default function Equipe() {
             <User className="w-5 h-5 mr-2" />
             Personnel
           </TabsTrigger>
-          <TabsTrigger 
-            value="registre" 
-            className="data-[state=active]:bg-transparent data-[state=active]:border-b-[3px] data-[state=active]:border-orange-600 data-[state=active]:text-orange-600 text-gray-600 hover:text-gray-900 text-sm sm:text-base font-medium min-h-[48px] rounded-none border-b-[3px] border-transparent transition-all"
-          >
-            <FileText className="w-5 h-5 mr-2" />
-            Registre
-          </TabsTrigger>
         </TabsList>
       </Tabs>
 
-      {activeTab === 'equipes' && <TeamsManager />}
-      
-      {activeTab === 'personnel' && <EmployeeList />}
-
-      {activeTab === 'registre' && (
-        <>
-          {isLoading ? (
-            <LoadingSpinner />
-          ) : (
-            <>
-              {isManager && (
-                <div className="flex flex-col md:flex-row gap-2 mb-6">
-                  <Button
-                    onClick={() => setShowImport(true)}
-                    className="bg-orange-600 hover:bg-orange-700"
-                  >
-                    <Upload className="w-4 h-4 mr-2" />
-                    Importer
-                  </Button>
-                  <Button
-                    onClick={handleDownloadPDF}
-                    variant="outline"
-                    className="border-gray-300 text-gray-700 hover:bg-gray-100"
-                  >
-                    <FileJson className="w-4 h-4 mr-2" />
-                    <span className="hidden sm:inline">Exporter PDF</span>
-                    <span className="sm:hidden">PDF</span>
-                  </Button>
-                  <Button
-                    onClick={handleDownloadCSV}
-                    variant="outline"
-                    className="border-gray-300 text-gray-700 hover:bg-gray-100"
-                  >
-                    <Download className="w-4 h-4 mr-2" />
-                    <span className="hidden sm:inline">Exporter CSV</span>
-                    <span className="sm:hidden">CSV</span>
-                  </Button>
-                  <Button
-                    onClick={handlePrint}
-                    variant="outline"
-                    className="border-gray-300 text-gray-700 hover:bg-gray-100"
-                  >
-                    <Printer className="w-4 h-4 mr-2" />
-                    <span className="hidden sm:inline">Imprimer</span>
-                    <span className="sm:hidden">Imprimer</span>
-                  </Button>
-                </div>
-              )}
-
-              {registryEntries.length === 0 ? (
-                <EmptyState
-                  icon={FileText}
-                  title="Aucun employé enregistré"
-                  description="Aucun employé n'a été ajouté au registre pour le moment"
-                />
-              ) : (
-                <>
-                  {/* Desktop - Table View */}
-                  <div className="hidden lg:block bg-white border-2 border-gray-300 rounded-lg overflow-x-auto print:border-0">
-                    <table className="w-full">
-                      <thead>
-                        <tr className="bg-gray-100 border-b-2 border-gray-300 print:bg-white">
-                          <th className="px-4 py-3 text-left text-xs font-semibold text-gray-900 border-r border-gray-300">N°</th>
-                          <th className="px-4 py-3 text-left text-xs font-semibold text-gray-900 border-r border-gray-300">Nom</th>
-                          <th className="px-4 py-3 text-left text-xs font-semibold text-gray-900 border-r border-gray-300">Prénom</th>
-                          <th className="px-4 py-3 text-left text-xs font-semibold text-gray-900 border-r border-gray-300">Date naissance</th>
-                          <th className="px-4 py-3 text-left text-xs font-semibold text-gray-900 border-r border-gray-300">Lieu</th>
-                          <th className="px-4 py-3 text-left text-xs font-semibold text-gray-900 border-r border-gray-300">Nationalité</th>
-                          <th className="px-4 py-3 text-left text-xs font-semibold text-gray-900 border-r border-gray-300">Sexe</th>
-                          <th className="px-4 py-3 text-left text-xs font-semibold text-gray-900 border-r border-gray-300">Adresse</th>
-                          <th className="px-4 py-3 text-left text-xs font-semibold text-gray-900 border-r border-gray-300">N° SS</th>
-                          <th className="px-4 py-3 text-left text-xs font-semibold text-gray-900 border-r border-gray-300">Poste</th>
-                          <th className="px-4 py-3 text-left text-xs font-semibold text-gray-900 border-r border-gray-300">Embauche</th>
-                          <th className="px-4 py-3 text-left text-xs font-semibold text-gray-900 border-r border-gray-300">Type contrat</th>
-                          <th className="px-4 py-3 text-left text-xs font-semibold text-gray-900 border-r border-gray-300">Sortie</th>
-                          <th className="px-4 py-3 text-left text-xs font-semibold text-gray-900 print:hidden">Actions</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {registryEntries.map((entry, index) => (
-                          <tr key={entry.id} className={cn(
-                            "border-b border-gray-200 hover:bg-gray-50 print:hover:bg-white",
-                            index % 2 === 0 && "bg-white"
-                          )}>
-                            <td className="px-4 py-3 text-sm text-gray-900 border-r border-gray-200 font-semibold">{index + 1}</td>
-                            <td className="px-4 py-3 text-sm text-gray-900 border-r border-gray-200 font-semibold">{entry.last_name}</td>
-                            <td className="px-4 py-3 text-sm text-gray-900 border-r border-gray-200">{entry.first_name}</td>
-                            <td className="px-4 py-3 text-sm text-gray-900 border-r border-gray-200">
-                              {entry.birth_date ? new Date(entry.birth_date).toLocaleDateString('fr-FR') : '-'}
-                            </td>
-                            <td className="px-4 py-3 text-sm text-gray-900 border-r border-gray-200">{entry.birth_place || '-'}</td>
-                            <td className="px-4 py-3 text-sm text-gray-900 border-r border-gray-200">{entry.nationality || '-'}</td>
-                            <td className="px-4 py-3 text-sm text-gray-900 border-r border-gray-200">
-                              {entry.gender === 'male' ? 'H' : entry.gender === 'female' ? 'F' : '-'}
-                            </td>
-                            <td className="px-4 py-3 text-sm text-gray-900 border-r border-gray-200 max-w-xs">{entry.address || '-'}</td>
-                            <td className="px-4 py-3 text-sm text-gray-900 border-r border-gray-200 font-mono text-xs">{entry.social_security_number || '-'}</td>
-                            <td className="px-4 py-3 text-sm text-gray-900 border-r border-gray-200">{entry.position || '-'}</td>
-                            <td className="px-4 py-3 text-sm text-gray-900 border-r border-gray-200">
-                              {entry.start_date ? new Date(entry.start_date).toLocaleDateString('fr-FR') : '-'}
-                            </td>
-                            <td className="px-4 py-3 text-sm text-gray-900 border-r border-gray-200">{entry.contract_type || '-'}</td>
-                            <td className={cn(
-                              "px-4 py-3 text-sm border-r border-gray-200",
-                              entry.exit_date ? "text-red-700 font-semibold" : "text-gray-900"
-                            )}>
-                              {entry.exit_date ? new Date(entry.exit_date).toLocaleDateString('fr-FR') : '-'}
-                            </td>
-                            <td className="px-4 py-3 text-sm text-gray-400 hover:text-red-600 print:hidden transition-colors">
-                              {isManager && (
-                                <button
-                                  onClick={() => handleDeleteEntry(entry.id)}
-                                  className="p-1 hover:opacity-100 opacity-60"
-                                  title="Supprimer cette ligne"
-                                >
-                                  <Trash2 className="w-4 h-4" />
-                                </button>
-                              )}
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-
-                  {/* Mobile - Card View */}
-                  <div className="lg:hidden space-y-3">
-                    {registryEntries.map((entry, index) => (
-                      <div key={entry.id} className="bg-white border border-gray-300 rounded-lg p-4 hover:shadow-md transition-shadow">
-                        <div className="flex items-start justify-between mb-3">
-                          <div className="flex-1">
-                            <div className="flex items-center gap-2 mb-1">
-                              <span className="font-semibold text-gray-900">{entry.last_name}</span>
-                              <span className="text-gray-700">{entry.first_name}</span>
-                              <span className="text-xs bg-gray-200 text-gray-800 px-2 py-1 rounded">#{index + 1}</span>
-                            </div>
-                            {entry.position && <p className="text-sm text-blue-700 font-medium">{entry.position}</p>}
-                          </div>
-                          {isManager && (
-                            <button
-                              onClick={() => handleDeleteEntry(entry.id)}
-                              className="p-2 text-gray-400 hover:text-red-600 transition-colors"
-                              title="Supprimer cette ligne"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </button>
-                          )}
-                        </div>
-
-                        <div className="grid grid-cols-2 gap-3 text-sm">
-                          <div>
-                            <p className="text-xs font-semibold text-gray-600 uppercase">Naissance</p>
-                            <p className="text-gray-900">{entry.birth_date ? new Date(entry.birth_date).toLocaleDateString('fr-FR') : '-'}</p>
-                            {entry.birth_place && <p className="text-xs text-gray-700">{entry.birth_place}</p>}
-                          </div>
-                          <div>
-                            <p className="text-xs font-semibold text-gray-600 uppercase">Nationalité</p>
-                            <p className="text-gray-900">{entry.nationality || '-'}</p>
-                            {entry.gender && <p className="text-xs text-gray-700">{entry.gender === 'male' ? 'Homme' : 'Femme'}</p>}
-                          </div>
-                          <div className="col-span-2">
-                            <p className="text-xs font-semibold text-gray-600 uppercase">Adresse</p>
-                            <p className="text-gray-900 whitespace-pre-wrap">{entry.address || '-'}</p>
-                          </div>
-                          <div>
-                            <p className="text-xs font-semibold text-gray-600 uppercase">N° SS</p>
-                            <p className="text-gray-900 font-mono text-xs">{entry.social_security_number || '-'}</p>
-                          </div>
-                          <div>
-                            <p className="text-xs font-semibold text-gray-600 uppercase">Embauche</p>
-                            <p className="text-gray-900">{entry.start_date ? new Date(entry.start_date).toLocaleDateString('fr-FR') : '-'}</p>
-                          </div>
-                          {entry.contract_type && (
-                            <div>
-                              <p className="text-xs font-semibold text-gray-600 uppercase">Type contrat</p>
-                              <p className="text-gray-900">{entry.contract_type}</p>
-                            </div>
-                          )}
-                          {entry.exit_date && (
-                            <div>
-                              <p className="text-xs font-semibold text-red-600 uppercase">Date sortie</p>
-                              <p className="text-red-700 font-semibold">{new Date(entry.exit_date).toLocaleDateString('fr-FR')}</p>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </>
-              )}
-
-              <RegistryImportModal
-                open={showImport}
-                onOpenChange={setShowImport}
-                onSuccess={() => {
-                  queryClient.invalidateQueries({ queryKey: ['personnelRegistry'] });
-                  setShowImport(false);
-                }}
-              />
-
-              <style>{`
-                @page {
-                  size: A4 landscape;
-                  margin: 6mm;
-                }
-                @media print {
-                  * {
-                    -webkit-print-color-adjust: exact;
-                    print-color-adjust: exact;
-                  }
-                  body {
-                    margin: 0;
-                    padding: 0;
-                    background: white;
-                  }
-                  html {
-                    margin: 0;
-                    padding: 0;
-                  }
-                  div {
-                    display: none !important;
-                  }
-                  div:has(table) {
-                    display: block !important;
-                  }
-                  .bg-white.border-2 {
-                    border: none !important;
-                    box-shadow: none !important;
-                    background: white !important;
-                  }
-                  table {
-                    width: 100%;
-                    border-collapse: collapse;
-                    font-size: 7.5pt;
-                    margin: 0;
-                    padding: 0;
-                  }
-                  thead {
-                    display: table-header-group;
-                  }
-                  th {
-                    background-color: #f0f0f0 !important;
-                    border: none;
-                    border-bottom: 0.6mm solid black;
-                    padding: 6mm 1mm;
-                    text-align: left;
-                    font-weight: bold;
-                    font-size: 7.5pt;
-                    height: 8mm;
-                    vertical-align: middle;
-                    word-wrap: break-word;
-                    overflow-wrap: break-word;
-                    white-space: normal;
-                  }
-                  td {
-                    border: none;
-                    border-bottom: 0.2mm solid #b4b4b4;
-                    padding: 1.5mm;
-                    text-align: left;
-                    font-size: 7.5pt;
-                    min-height: 10mm;
-                    vertical-align: middle;
-                    word-wrap: break-word;
-                    overflow-wrap: break-word;
-                    white-space: normal;
-                    line-height: 3.8mm;
-                  }
-                  tr {
-                    page-break-inside: avoid;
-                  }
-                  tr:last-child td {
-                    border-bottom: 0.6mm solid black;
-                  }
-                  .print\\:hidden {
-                    display: none !important;
-                  }
-                  .print\\:hover\\:bg-white {
-                    background-color: white !important;
-                  }
-                  .print\\:border-0 {
-                    border: none !important;
-                  }
-                  .print\\:bg-white {
-                    background-color: white !important;
-                  }
-                }
-              `}</style>
-            </>
-          )}
-        </>
+      {activeTab === 'equipes' ? (
+        <TeamsManager />
+      ) : (
+        <div>
+          <div className="mb-6 flex justify-end">
+            <Button
+              onClick={() => setShowImport(true)}
+              variant="outline"
+              className="border-gray-300 text-gray-700 hover:bg-gray-100"
+            >
+              <FileText className="w-4 h-4 mr-2" />
+              Registre du Personnel
+            </Button>
+          </div>
+          <EmployeeList />
+        </div>
       )}
     </div>
   );
