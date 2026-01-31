@@ -25,7 +25,7 @@ export default function AutomationsTab() {
   const queryClient = useQueryClient();
 
   const { data: settings = [] } = useQuery({
-    queryKey: ['invoiceSettings', 'auto_send'],
+    queryKey: ['invoiceSettings'],
     queryFn: () => base44.entities.InvoiceSettings.filter({ setting_key: 'auto_send_config' })
   });
 
