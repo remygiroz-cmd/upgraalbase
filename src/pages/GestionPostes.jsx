@@ -3,23 +3,36 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { Plus, Edit, Trash2, Briefcase } from 'lucide-react';
+import { Plus, Edit, Trash2, Briefcase, FileText, Copy } from 'lucide-react';
 import { toast } from 'sonner';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { cn } from '@/lib/utils';
 import ConfirmDialog from '@/components/ui/ConfirmDialog';
+import TemplateBuilderModalV15 from '@/components/templates/TemplateBuilderModalV15';
 
 export default function GestionPostes() {
+  const [activeTab, setActiveTab] = useState('postes');
   const queryClient = useQueryClient();
   const [showForm, setShowForm] = useState(false);
   const [editingRole, setEditingRole] = useState(null);
   const [confirmDelete, setConfirmDelete] = useState(null);
+  const [selectedTemplate, setSelectedTemplate] = useState(null);
+  const [showEditor, setShowEditor] = useState(false);
 
-  const { data: jobRoles = [], isLoading } = useQuery({
+  const { data: jobRoles = [], isLoading: loadingRoles } = useQuery({
     queryKey: ['jobRoles'],
-    queryFn: () => base44.entities.JobRoles.list('ordre')
+    queryFn: () => base44.entities.JobRoles.list('ordre'),
+    enabled: activeTab === 'postes'
+  });
+
+  const { data: templates = [], isLoading: loadingTemplates } = useQuery({
+    queryKey: ['templatesRH'],
+    queryFn: () => base44.entities.TemplatesRH.list(),
+    enabled: activeTab === 'templates'
   });
 
   const createMutation = useMutation({
