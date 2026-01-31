@@ -201,28 +201,77 @@ export default function InvoiceUploadModal({ open, onClose }) {
         </DialogHeader>
 
         <div className="space-y-4">
-          {files.length === 0 && uploadResults.length === 0 && (
-            <label className="block">
-              <div className={cn(
-                "border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-all",
-                "border-gray-300 hover:border-orange-500 hover:bg-orange-50"
-              )}>
-                <Upload className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                <p className="text-lg font-medium text-gray-900 mb-2">
-                  Cliquez pour sélectionner des fichiers
-                </p>
-                <p className="text-sm text-gray-600">
-                  PDF ou images (JPEG, PNG) - Sélection multiple
-                </p>
+          {files.length === 0 && uploadResults.length === 0 && !cameraMode && (
+            <div className="space-y-3">
+              <label className="block">
+                <div className={cn(
+                  "border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-all",
+                  "border-gray-300 hover:border-orange-500 hover:bg-orange-50"
+                )}>
+                  <Upload className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                  <p className="text-lg font-medium text-gray-900 mb-2">
+                    Cliquez pour sélectionner des fichiers
+                  </p>
+                  <p className="text-sm text-gray-600">
+                    PDF ou images (JPEG, PNG) - Sélection multiple
+                  </p>
+                </div>
+                <input
+                  type="file"
+                  className="hidden"
+                  accept=".pdf,.jpg,.jpeg,.png"
+                  multiple
+                  onChange={handleFileSelect}
+                />
+              </label>
+
+              <div className="relative">
+                <div className="absolute inset-0 flex items-center">
+                  <div className="w-full border-t border-gray-300"></div>
+                </div>
+                <div className="relative flex justify-center text-sm">
+                  <span className="px-2 bg-white text-gray-500">ou</span>
+                </div>
               </div>
-              <input
-                type="file"
-                className="hidden"
-                accept=".pdf,.jpg,.jpeg,.png"
-                multiple
-                onChange={handleFileSelect}
-              />
-            </label>
+
+              <Button
+                onClick={startCamera}
+                variant="outline"
+                className="w-full border-2 border-gray-300 hover:border-orange-500 hover:bg-orange-50"
+              >
+                <Camera className="w-5 h-5 mr-2" />
+                Capturer une photo
+              </Button>
+            </div>
+          )}
+
+          {cameraMode && (
+            <div className="space-y-4">
+              <div className="relative bg-black rounded-xl overflow-hidden">
+                <video
+                  ref={videoRef}
+                  autoPlay
+                  playsInline
+                  className="w-full aspect-video object-cover"
+                />
+              </div>
+              <div className="flex gap-3">
+                <Button
+                  onClick={stopCamera}
+                  variant="outline"
+                  className="flex-1 border-gray-300 text-gray-900"
+                >
+                  Annuler
+                </Button>
+                <Button
+                  onClick={capturePhoto}
+                  className="flex-1 bg-orange-600 hover:bg-orange-700"
+                >
+                  <Camera className="w-4 h-4 mr-2" />
+                  Capturer
+                </Button>
+              </div>
+            </div>
           )}
 
           {files.length > 0 && !uploading && uploadResults.length === 0 && (
