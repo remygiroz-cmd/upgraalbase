@@ -34,6 +34,7 @@ export default function CoffreFactures() {
   const [selectedInvoices, setSelectedInvoices] = useState([]);
   const [showDetail, setShowDetail] = useState(null);
   const [showUpload, setShowUpload] = useState(false);
+  const [showCapture, setShowCapture] = useState(false);
   const [showSend, setShowSend] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
 
