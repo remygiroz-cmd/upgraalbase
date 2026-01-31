@@ -396,9 +396,14 @@ export default function CoffreFactures() {
                         />
                       </td>
                       <td className="p-3 text-sm text-gray-900">
-                        {invoice.invoice_date 
-                          ? format(new Date(invoice.invoice_date), 'dd/MM/yyyy', { locale: fr })
-                          : '-'}
+                        {(() => {
+                          if (!invoice.invoice_date) return '-';
+                          try {
+                            return format(new Date(invoice.invoice_date), 'dd/MM/yyyy', { locale: fr });
+                          } catch {
+                            return invoice.invoice_date;
+                          }
+                        })()}
                       </td>
                       <td className="p-3 text-sm font-medium text-gray-900">
                         {invoice.supplier_name || '-'}

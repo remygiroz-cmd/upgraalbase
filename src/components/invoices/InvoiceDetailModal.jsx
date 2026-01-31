@@ -140,7 +140,13 @@ export default function InvoiceDetailModal({ open, onClose, invoice }) {
                           <XIcon className="w-4 h-4 text-red-600" />
                         )}
                         <span className="font-medium text-gray-900">
-                          {format(new Date(entry.date), 'dd/MM/yyyy HH:mm', { locale: fr })}
+                          {(() => {
+                            try {
+                              return format(new Date(entry.date), 'dd/MM/yyyy HH:mm', { locale: fr });
+                            } catch {
+                              return entry.date;
+                            }
+                          })()}
                         </span>
                         <Badge className="bg-blue-100 text-blue-700 text-xs">
                           {entry.method}
