@@ -108,8 +108,11 @@ export default function AutomationsTab() {
         include_a_verifier: includeAVerifier,
         include_envoyee: includeEnvoyee,
         group_in_one_email: groupInOne,
-        recipients
+        recipients,
+        automation_id: '697e21bfb8a8ce1bec920778'
       });
+      // Rafraîchir les automations après la sauvegarde
+      setTimeout(() => queryClient.refetchQueries({ queryKey: ['automations'] }), 500);
       alert('Automatisation enregistrée ✓');
     } catch (err) {
       alert('Erreur: ' + err.message);
