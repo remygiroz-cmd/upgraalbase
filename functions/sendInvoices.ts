@@ -28,29 +28,44 @@ Deno.serve(async (req) => {
 
     // Télécharger et préparer les fichiers pour pièces jointes
     const attachments = [];
+    console.log(`Processing ${invoices.length} invoices for attachments`);
+    
     for (const inv of invoices) {
-      if (!inv.file_url) continue;
+      console.log(`Processing invoice ${inv.id} - ${inv.supplier} - file_url: ${inv.file_url ? 'exists' : 'MISSING'}`);
+      
+      if (!inv.file_url) {
+        console.error(`Invoice ${inv.id} (${inv.supplier}) has no file_url - SKIPPING`);
+        continue;
+      }
       
       try {
-        // Télécharger le fichier
+        console.log(`Downloading file for invoice ${inv.id} from ${inv.file_url}`);
         const fileResponse = await fetch(inv.file_url);
+        
         if (!fileResponse.ok) {
-          console.error(`Failed to download file for invoice ${inv.id}`);
+          console.error(`Failed to download file for invoice ${inv.id} (${inv.supplier}) - HTTP ${fileResponse.status}`);
           continue;
         }
         
         const fileBlob = await fileResponse.blob();
         const fileBuffer = await fileBlob.arrayBuffer();
+        console.log(`Downloaded ${fileBuffer.byteLength} bytes for invoice ${inv.id}`);
+        
         const base64Content = btoa(String.fromCharCode(...new Uint8Array(fileBuffer)));
         
+        const filename = inv.normalized_file_name || inv.file_name || `facture_${inv.id}.pdf`;
         attachments.push({
-          filename: inv.normalized_file_name || inv.file_name || `facture_${inv.id}.pdf`,
+          filename: filename,
           content: base64Content
         });
+        
+        console.log(`Successfully added attachment: ${filename}`);
       } catch (err) {
-        console.error(`Error processing file for invoice ${inv.id}:`, err);
+        console.error(`Error processing file for invoice ${inv.id} (${inv.supplier}):`, err.message);
       }
     }
+    
+    console.log(`Total attachments prepared: ${attachments.length}`);
 
     // Préparer le corps de l'email
     const totalTTC = invoices.reduce((sum, inv) => sum + (inv.amount_ttc || 0), 0);
