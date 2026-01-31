@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { Send, Clock, Mail, Calendar, CheckCircle, AlertCircle, Settings as SettingsIcon, PlayCircle } from 'lucide-react';
@@ -53,6 +53,19 @@ export default function AutomationsTab() {
   const [includeEnvoyee, setIncludeEnvoyee] = useState(config.include_envoyee);
   const [groupInOne, setGroupInOne] = useState(config.group_in_one_email);
   const [recipientsText, setRecipientsText] = useState((config.recipients || []).join(', '));
+
+  useEffect(() => {
+    setEnabled(config.auto_send_enabled);
+    setFrequency(config.frequency);
+    setSendTime(config.send_time);
+    setDayOfWeek(String(config.day_of_week || '1'));
+    setDayOfMonth(config.day_of_month || 1);
+    setIncludeNonEnvoyee(config.include_non_envoyee);
+    setIncludeAVerifier(config.include_a_verifier);
+    setIncludeEnvoyee(config.include_envoyee);
+    setGroupInOne(config.group_in_one_email);
+    setRecipientsText((config.recipients || []).join(', '));
+  }, [settings]);
 
   const saveMutation = useMutation({
     mutationFn: async (data) => {
