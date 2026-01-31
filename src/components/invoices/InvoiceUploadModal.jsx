@@ -13,6 +13,9 @@ export default function InvoiceUploadModal({ open, onClose }) {
   const [uploading, setUploading] = useState(false);
   const [uploadResults, setUploadResults] = useState([]);
   const [globalProgress, setGlobalProgress] = useState(0);
+  const [cameraMode, setCameraMode] = useState(false);
+  const videoRef = React.useRef(null);
+  const streamRef = React.useRef(null);
 
   const handleFileSelect = (e) => {
     const selectedFiles = Array.from(e.target.files || []);
