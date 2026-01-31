@@ -99,6 +99,8 @@ export default function AutomationsTab() {
 
     try {
       await saveMutation.mutateAsync({
+        setting_id: config.id,
+        automation_id: '697e21bfb8a8ce1bec920778',
         auto_send_enabled: enabled,
         frequency,
         send_time: sendTime,
@@ -108,8 +110,7 @@ export default function AutomationsTab() {
         include_a_verifier: includeAVerifier,
         include_envoyee: includeEnvoyee,
         group_in_one_email: groupInOne,
-        recipients,
-        automation_id: '697e21bfb8a8ce1bec920778'
+        recipients
       });
       alert('Automatisation enregistrée ✓');
     } catch (err) {
