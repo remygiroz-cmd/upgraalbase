@@ -142,6 +142,14 @@ export default function CoffreFactures() {
               Export CSV
             </Button>
             <Button
+              variant="outline"
+              onClick={() => setShowCapture(true)}
+              className="border-gray-300 text-gray-900 hover:bg-gray-50"
+            >
+              <Camera className="w-4 h-4 mr-2" />
+              Capturer
+            </Button>
+            <Button
               onClick={() => setShowUpload(true)}
               className="bg-orange-600 hover:bg-orange-700"
             >
