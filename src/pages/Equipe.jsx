@@ -267,7 +267,7 @@ export default function Equipe() {
       />
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="mb-8">
-        <TabsList className="bg-transparent border-b-2 border-gray-200 p-0 w-full grid gap-0 rounded-none" style={{ gridTemplateColumns: `repeat(${currentUser?.role === 'admin' ? 5 : 3}, minmax(0, 1fr))` }}>
+        <TabsList className="bg-transparent border-b-2 border-gray-200 p-0 w-full flex gap-0 rounded-none overflow-x-auto sm:overflow-visible sm:grid" style={{ gridTemplateColumns: currentUser?.role === 'admin' ? 'repeat(auto-fit, minmax(150px, 1fr))' : 'repeat(auto-fit, minmax(120px, 1fr))' }}>
           <TabsTrigger 
             value="equipes" 
             className="data-[state=active]:bg-transparent data-[state=active]:border-b-[3px] data-[state=active]:border-orange-600 data-[state=active]:text-orange-600 text-gray-600 hover:text-gray-900 text-sm sm:text-base font-medium min-h-[48px] rounded-none border-b-[3px] border-transparent transition-all"
