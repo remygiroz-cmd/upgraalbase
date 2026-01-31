@@ -1,5 +1,5 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
-import Resend from 'npm:resend';
+import { Resend } from 'npm:resend@3.0.0';
 
 const resend = new Resend(Deno.env.get('RESEND_API_KEY'));
 
