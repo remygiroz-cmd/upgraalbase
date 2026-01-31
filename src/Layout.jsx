@@ -295,6 +295,14 @@ export default function Layout({ children, currentPageName }) {
                     active={currentPageName === link.name}
                   />
                 ))}
+                {hasPermission('equipe') && (
+                  <NavLink
+                    to="AutomationsComptables"
+                    icon={Settings}
+                    label="Automatisations"
+                    active={currentPageName === 'AutomationsComptables'}
+                  />
+                )}
               </div>
             </div>
 
