@@ -7,6 +7,11 @@ import { DollarSign, Users, TrendingUp } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 
 export default function PayrollOverview() {
+  const { data: establishments = [] } = useQuery({
+    queryKey: ['establishment'],
+    queryFn: () => base44.entities.Establishment.list()
+  });
+
   const { data: employees = [], isLoading } = useQuery({
     queryKey: ['employees'],
     queryFn: () => base44.entities.Employee.list()
@@ -16,7 +21,10 @@ export default function PayrollOverview() {
     return <LoadingSpinner />;
   }
 
-  const activeEmployees = employees.filter(emp => emp.is_active);
+  const managerEmails = establishments[0]?.managers?.map(m => m.email?.toLowerCase()) || [];
+  const activeEmployees = employees.filter(emp => 
+    emp.is_active && !managerEmails.includes(emp.email?.toLowerCase())
+  );
   const totalGrossSalary = activeEmployees.reduce((sum, emp) => sum + (emp.gross_salary || 0), 0);
   const totalHourlyRate = activeEmployees.reduce((sum, emp) => sum + (emp.gross_hourly_rate || 0), 0);
 
