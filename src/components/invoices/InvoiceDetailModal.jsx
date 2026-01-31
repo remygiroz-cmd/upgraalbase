@@ -7,9 +7,10 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import { Download, Save, X, Send, CheckCircle, XCircle, AlertCircle } from 'lucide-react';
+import { Download, Save, X, Send, CheckCircle, XCircle, AlertCircle, Upload } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { fr } from 'date-fns/locale';
+import { toast } from 'sonner';
 
 const CATEGORIES = [
   "Produits alimentaires",
@@ -67,6 +68,57 @@ export default function InvoiceDetailModal({ invoice, onClose }) {
     });
   };
 
+  const handleDownload = async () => {
+    if (!invoice.file_bucket || !invoice.file_path) {
+      toast.error('Fichier manquant — réuploader');
+      return;
+    }
+
+    try {
+      const downloadUrl = `/api/functions/downloadInvoiceFile/${invoice.id}`;
+      window.location.href = downloadUrl;
+    } catch (error) {
+      toast.error('Erreur lors du téléchargement');
+    }
+  };
+
+  const handleReupload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    try {
+      toast.info('Upload en cours...');
+
+      const { file_url } = await base44.integrations.Core.UploadFile({ file });
+
+      // Extract bucket and path
+      const urlParts = file_url.split('/storage/v1/object/public/');
+      let fileBucket = '';
+      let filePath = '';
+
+      if (urlParts.length > 1) {
+        const pathParts = urlParts[1].split('/');
+        fileBucket = pathParts[0];
+        filePath = pathParts.slice(1).join('/');
+      }
+
+      await base44.entities.Invoice.update(invoice.id, {
+        file_url: file_url,
+        file_bucket: fileBucket,
+        file_path: filePath,
+        file_name: file.name,
+        file_mime: file.type,
+        file_size: file.size
+      });
+
+      queryClient.invalidateQueries({ queryKey: ['invoices'] });
+      toast.success('Fichier re-uploadé');
+      onClose();
+    } catch (error) {
+      toast.error('Erreur lors du re-upload');
+    }
+  };
+
   const StatusIcon = STATUS_LABELS[invoice.status]?.icon;
 
   return (
@@ -75,8 +127,8 @@ export default function InvoiceDetailModal({ invoice, onClose }) {
         <DialogHeader>
           <DialogTitle className="text-gray-900 flex items-center gap-3">
             <span>Détail facture</span>
-            <Badge className={invoice.status === 'envoyee' ? 'bg-green-100 text-green-800' : 
-                             invoice.status === 'a_verifier' ? 'bg-yellow-100 text-yellow-800' : 
+            <Badge className={invoice.status === 'envoyee' ? 'bg-green-100 text-green-800' :
+                             invoice.status === 'a_verifier' ? 'bg-yellow-100 text-yellow-800' :
                              'bg-gray-100 text-gray-800'}>
               <StatusIcon className="w-4 h-4 mr-1" />
               {STATUS_LABELS[invoice.status]?.label}
@@ -89,20 +141,56 @@ export default function InvoiceDetailModal({ invoice, onClose }) {
           <div>
             <Label className="text-gray-900 mb-2 block">Aperçu</Label>
             <div className="border-2 border-gray-300 rounded-lg overflow-hidden bg-gray-50">
-              {invoice.file_url?.endsWith('.pdf') ? (
+              {(!invoice.file_bucket || !invoice.file_path) ? (
+                <div className="flex items-center justify-center h-96 border-2 border-dashed border-gray-300 rounded bg-white">
+                  <div className="text-center p-4">
+                    <AlertCircle className="w-12 h-12 text-orange-500 mx-auto mb-2" />
+                    <p className="text-sm text-gray-600 font-medium">Fichier non relié</p>
+                    <p className="text-xs text-gray-500 mt-1">Utilisez le bouton "Réuploader" ci-dessous</p>
+                  </div>
+                </div>
+              ) : invoice.file_url?.endsWith('.pdf') || invoice.file_mime?.includes('pdf') ? (
                 <iframe src={invoice.file_url} className="w-full h-96" />
-              ) : (
+              ) : invoice.file_url ? (
                 <img src={invoice.file_url} alt="Facture" className="w-full h-96 object-contain" />
+              ) : (
+                <div className="flex items-center justify-center h-96 border border-gray-300 rounded bg-white">
+                  <p className="text-sm text-gray-500">Prévisualisation non disponible</p>
+                </div>
               )}
             </div>
-            <Button
-              variant="outline"
-              onClick={() => window.open(invoice.file_url, '_blank')}
-              className="w-full mt-2 border-gray-300 text-gray-900 hover:bg-gray-50"
-            >
-              <Download className="w-4 h-4 mr-2" />
-              Télécharger
-            </Button>
+
+            <div className="mt-2 flex gap-2">
+              {(!invoice.file_bucket || !invoice.file_path) ? (
+                <label className="flex-1 cursor-pointer">
+                  <Button
+                    variant="outline"
+                    className="w-full border-orange-300 text-orange-600 hover:bg-orange-50"
+                    asChild
+                  >
+                    <span>
+                      <Upload className="w-4 h-4 mr-2" />
+                      Réuploader le fichier
+                    </span>
+                  </Button>
+                  <input
+                    type="file"
+                    className="hidden"
+                    accept=".pdf,.jpg,.jpeg,.png"
+                    onChange={handleReupload}
+                  />
+                </label>
+              ) : (
+                <Button
+                  variant="outline"
+                  onClick={handleDownload}
+                  className="flex-1 border-gray-300 text-gray-900 hover:bg-gray-50"
+                >
+                  <Download className="w-4 h-4 mr-2" />
+                  Télécharger
+                </Button>
+              )}
+            </div>
 
             {invoice.ai_confidence !== undefined && (
               <div className="mt-4 p-3 bg-blue-50 rounded-lg">
@@ -237,12 +325,12 @@ export default function InvoiceDetailModal({ invoice, onClose }) {
                   {invoice.send_history.map((h, idx) => (
                     <div key={idx} className="flex items-center justify-between text-sm">
                       <div className="flex items-center gap-2">
-                        {h.success ? 
+                        {h.success ?
                           <CheckCircle className="w-4 h-4 text-green-600" /> :
                           <XCircle className="w-4 h-4 text-red-600" />
                         }
                         <span className="text-gray-900">
-                          {(h.sent_at && !isNaN(new Date(h.sent_at).getTime())) 
+                          {(h.sent_at && !isNaN(new Date(h.sent_at).getTime()))
                             ? format(new Date(h.sent_at), "dd/MM/yyyy 'à' HH:mm", { locale: fr })
                             : '-'}
                         </span>
