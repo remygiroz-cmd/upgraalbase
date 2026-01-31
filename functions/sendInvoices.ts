@@ -27,8 +27,10 @@ Deno.serve(async (req) => {
     const establishment = establishments[0] || {};
 
     // Configuration des limites
+    // Note: Avec compression à 900 Ko, les images ne devraient jamais dépasser ces limites
     const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB par fichier
     const MAX_TOTAL_SIZE = 20 * 1024 * 1024; // 20 MB total
+    const RECOMMENDED_SIZE = 5 * 1024 * 1024; // 5 MB recommandé pour compatibilité email
     
     // Télécharger et préparer les fichiers
     const attachments = [];
@@ -55,6 +57,8 @@ Deno.serve(async (req) => {
       console.log(`Fichier: ${inv.file_name || 'N/A'}`);
       console.log(`MIME: ${inv.file_mime || 'N/A'}`);
       console.log(`Taille: ${inv.file_size ? `${(inv.file_size / 1024).toFixed(2)} KB` : 'N/A'}`);
+      console.log(`Optimisée: ${inv.optimized_size ? `${(inv.optimized_size / 1024).toFixed(2)} KB` : 'N/A'}`);
+      console.log(`Compression: ${inv.compression_applied ? `Oui (${inv.compression_passes_count} passes)` : 'Non'}`);
       console.log(`URL: ${inv.file_url ? 'exists' : 'MISSING'}`);
       
       if (!inv.file_url) {
@@ -355,7 +359,7 @@ Deno.serve(async (req) => {
         sent_by_name: user.full_name || user.email,
         method: method,
         recipient: recipient,
-        delivery_method: result.delivery_method,
+        delivery_method: result.delivery_method || 'unknown',
         success: result.status !== 'failed',
         error_message: result.error || null
       };
