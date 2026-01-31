@@ -346,6 +346,16 @@ export default function GestionPostes() {
         variant="danger"
         confirmText="Supprimer"
       />
+
+      <TemplateBuilderModalV15
+        open={showEditor}
+        onOpenChange={handleCloseTemplate}
+        template={selectedTemplate}
+        onSuccess={() => {
+          queryClient.invalidateQueries({ queryKey: ['templatesRH'] });
+          handleCloseTemplate();
+        }}
+      />
     </div>
   );
 }
