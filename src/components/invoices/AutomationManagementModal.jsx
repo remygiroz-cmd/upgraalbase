@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Plus, Trash2, Edit2, Clock, Mail } from 'lucide-react';
+import { Plus, Trash2, Edit2, Clock, Mail, AlertCircle, CheckCircle2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
@@ -29,6 +29,12 @@ export default function AutomationManagementModal({ open, onClose }) {
   const { data: configs = [] } = useQuery({
     queryKey: ['automationConfigs'],
     queryFn: () => base44.entities.InvoiceAutomationConfig.list('-created_date', 100),
+    enabled: open
+  });
+
+  const { data: automationStatus } = useQuery({
+    queryKey: ['automationStatus'],
+    queryFn: () => base44.functions.invoke('getAutomationStatus'),
     enabled: open
   });
 
@@ -62,6 +68,53 @@ export default function AutomationManagementModal({ open, onClose }) {
         </DialogHeader>
 
         <div className="space-y-4">
+          {/* État de l'automation */}
+          {automationStatus?.data?.has_automation ? (
+            <div className="bg-green-50 border-2 border-green-200 rounded-lg p-4 space-y-3">
+              <div className="flex items-start gap-3">
+                <CheckCircle2 className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
+                <div className="flex-1">
+                  <p className="font-semibold text-green-900">Envoi automatique configuré ✓</p>
+                  <p className="text-sm text-green-800 mt-1">
+                    {automationStatus.data.configs.length} configuration(s) active(s)
+                  </p>
+                </div>
+              </div>
+
+              {automationStatus.data.configs.map(config => (
+                <div key={config.id} className="bg-white rounded border border-green-200 p-3 space-y-2 text-sm">
+                  <p className="font-medium text-gray-900">{config.name}</p>
+                  <div className="space-y-1 text-gray-700">
+                    <p>
+                      <span className="font-medium">Prochain envoi:</span>{' '}
+                      <span className="text-green-700 font-semibold">
+                        {format(new Date(config.next_run_at), 'eeee dd MMMM à HH:mm', { locale: fr })}
+                      </span>
+                    </p>
+                    {config.last_run_at && (
+                      <p>
+                        <span className="font-medium">Dernier envoi:</span> {format(new Date(config.last_run_at), 'dd/MM/yyyy HH:mm', { locale: fr })}
+                        {config.last_run_status === 'success' ? (
+                          <Badge className="ml-2 bg-green-100 text-green-800">Succès</Badge>
+                        ) : (
+                          <Badge className="ml-2 bg-red-100 text-red-800">Échec</Badge>
+                        )}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="bg-yellow-50 border-2 border-yellow-200 rounded-lg p-4 flex gap-3">
+              <AlertCircle className="w-5 h-5 text-yellow-600 flex-shrink-0 mt-0.5" />
+              <div>
+                <p className="font-semibold text-yellow-900">Aucun envoi automatique configuré</p>
+                <p className="text-sm text-yellow-800 mt-1">Créez une configuration pour activer l'envoi automatique de factures.</p>
+              </div>
+            </div>
+          )}
+
           {/* Bouton créer */}
           <div className="flex justify-end">
             <Button
