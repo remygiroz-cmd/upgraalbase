@@ -63,7 +63,6 @@ import Stocks from './pages/Stocks';
 import Temperatures from './pages/Temperatures';
 import TemplatesRH from './pages/TemplatesRH';
 import TravailDuJour from './pages/TravailDuJour';
-import CoffreFactures from './pages/CoffreFactures';
 import __Layout from './Layout.jsx';
 
 
@@ -84,7 +83,6 @@ export const PAGES = {
     "Temperatures": Temperatures,
     "TemplatesRH": TemplatesRH,
     "TravailDuJour": TravailDuJour,
-    "CoffreFactures": CoffreFactures,
 }
 
 export const pagesConfig = {
