@@ -61,6 +61,32 @@ export default function GestionPostes() {
     }
   });
 
+  const deleteTemplateMutation = useMutation({
+    mutationFn: (id) => base44.entities.TemplatesRH.delete(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['templatesRH'] });
+      toast.success('Template supprimé');
+    }
+  });
+
+  const duplicateTemplateMutation = useMutation({
+    mutationFn: async (template) => {
+      const newTemplate = {
+        ...template,
+        name: `${template.name} (Copie)`,
+        version: `${template.version}_copy`
+      };
+      delete newTemplate.id;
+      delete newTemplate.created_date;
+      delete newTemplate.updated_date;
+      return await base44.entities.TemplatesRH.create(newTemplate);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['templatesRH'] });
+      toast.success('Template dupliqué');
+    }
+  });
+
   const handleClose = () => {
     setShowForm(false);
     setEditingRole(null);
@@ -69,6 +95,16 @@ export default function GestionPostes() {
   const handleEdit = (role) => {
     setEditingRole(role);
     setShowForm(true);
+  };
+
+  const handleCloseTemplate = () => {
+    setSelectedTemplate(null);
+    setShowEditor(false);
+  };
+
+  const handleEditTemplate = (template) => {
+    setSelectedTemplate(template);
+    setShowEditor(true);
   };
 
   return (
