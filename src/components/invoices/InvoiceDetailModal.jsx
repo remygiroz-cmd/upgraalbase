@@ -283,19 +283,30 @@ export default function InvoiceDetailModal({ invoice, onClose }) {
             )}
         </div>
 
-        <div className="flex justify-end gap-3 pt-4 border-t border-gray-200">
-          <Button variant="outline" onClick={onClose} className="border-gray-300 text-gray-900 hover:bg-gray-50">
-            <X className="w-4 h-4 mr-2" />
-            Fermer
-          </Button>
-          <Button
-            onClick={handleSave}
-            disabled={updateMutation.isPending}
-            className="bg-orange-600 hover:bg-orange-700"
+        <div className="flex justify-between items-center pt-4 border-t border-gray-200">
+          <Button 
+            variant="outline" 
+            onClick={handleDownload}
+            disabled={!invoice.file_url}
+            className="border-gray-300 text-gray-900 hover:bg-gray-50"
           >
-            <Save className="w-4 h-4 mr-2" />
-            Enregistrer
+            <Download className="w-4 h-4 mr-2" />
+            Télécharger
           </Button>
+          <div className="flex gap-3">
+            <Button variant="outline" onClick={onClose} className="border-gray-300 text-gray-900 hover:bg-gray-50">
+              <X className="w-4 h-4 mr-2" />
+              Fermer
+            </Button>
+            <Button
+              onClick={handleSave}
+              disabled={updateMutation.isPending}
+              className="bg-orange-600 hover:bg-orange-700"
+            >
+              <Save className="w-4 h-4 mr-2" />
+              Enregistrer
+            </Button>
+          </div>
         </div>
       </DialogContent>
     </Dialog>
