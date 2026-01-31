@@ -18,8 +18,7 @@ import {
         Settings,
         LogOut,
         FileText,
-        File,
-        Receipt
+        File
       } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import UserAccessCheck from '@/components/UserAccessCheck';
@@ -82,7 +81,6 @@ export default function Layout({ children, currentPageName }) {
 
   const caisseLinks = [
     { name: 'Pertes', label: 'Invendus & Pertes', icon: PackageMinus, module: 'pertes' },
-    { name: 'CoffreFactures', label: 'Coffre à factures', icon: Receipt, module: 'coffre_factures' },
   ].filter(link => hasPermission(link.module));
 
   const NavLink = ({ to, icon: Icon, label, active }) => (
