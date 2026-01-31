@@ -377,10 +377,18 @@ export default function CoffreFactures() {
                     </td>
                     <td className="p-4 text-sm text-gray-700">{invoice.accounting_account || '-'}</td>
                     <td className="p-4 text-sm text-gray-900 text-right font-medium">
-                      {invoice.amount_ht ? `${invoice.amount_ht.toFixed(2)} €` : '-'}
+                      {invoice.ai_processing ? (
+                        <Loader2 className="w-4 h-4 animate-spin text-orange-600 ml-auto" />
+                      ) : (
+                        invoice.amount_ht ? `${invoice.amount_ht.toFixed(2)} €` : '-'
+                      )}
                     </td>
                     <td className="p-4 text-sm text-gray-900 text-right font-bold">
-                      {invoice.amount_ttc ? `${invoice.amount_ttc.toFixed(2)} €` : '-'}
+                      {invoice.ai_processing ? (
+                        <Loader2 className="w-4 h-4 animate-spin text-orange-600 ml-auto" />
+                      ) : (
+                        invoice.amount_ttc ? `${invoice.amount_ttc.toFixed(2)} €` : '-'
+                      )}
                     </td>
                     <td className="p-4">
                       <Badge className={STATUS_LABELS[invoice.status]?.color}>
