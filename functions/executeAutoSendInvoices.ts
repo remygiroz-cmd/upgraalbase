@@ -53,6 +53,9 @@ Deno.serve(async (req) => {
     // Récupérer toutes les configurations actives
     const configs = await base44.asServiceRole.entities.InvoiceAutomationConfig.filter({ enabled: true });
     
+    console.log(`[executeAutoSendInvoices] Configurations actives trouvées: ${configs.length}`);
+    configs.forEach(c => console.log(`  - ${c.name}: ${c.send_day} à ${c.send_time}`));
+    
     if (configs.length === 0) {
       return Response.json({
         success: true,
