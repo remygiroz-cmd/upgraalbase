@@ -302,6 +302,7 @@ export default function Equipe() {
 
       {activeTab === 'equipes' && <TeamsManager />}
       {activeTab === 'personnel' && <EmployeeList />}
+      {activeTab === 'masse-salariale' && currentUser?.role === 'admin' && <PayrollOverview />}
       {activeTab === 'registre' && (
         <>
           {registryEntries.length === 0 ? (
