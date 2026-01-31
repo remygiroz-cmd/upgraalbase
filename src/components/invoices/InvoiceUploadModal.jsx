@@ -102,7 +102,14 @@ export default function InvoiceUploadModal({ open, onClose }) {
           });
 
           queryClient.invalidateQueries({ queryKey: ['invoices'] });
-        }).catch(err => console.error('Extraction error:', err));
+        }).catch(async (err) => {
+          console.error('Extraction error:', err);
+          // Mark as failed processing
+          await base44.entities.Invoice.update(invoice.id, {
+            ai_processing: false
+          });
+          queryClient.invalidateQueries({ queryKey: ['invoices'] });
+        });
 
         fileResult.status = 'success';
         fileResult.progress = 100;
