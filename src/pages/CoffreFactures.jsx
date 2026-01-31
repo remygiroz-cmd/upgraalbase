@@ -14,6 +14,8 @@ import InvoiceDetailModal from '@/components/invoices/InvoiceDetailModal';
 import InvoiceUploadModal from '@/components/invoices/InvoiceUploadModal';
 import SendInvoicesModal from '@/components/invoices/SendInvoicesModal';
 import AutomationsTab from '@/components/invoices/AutomationsTab';
+import EmailImportInfoBox from '@/components/invoices/EmailImportInfoBox';
+import EmailImportLogModal from '@/components/invoices/EmailImportLogModal';
 import { format, parseISO } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
@@ -41,6 +43,7 @@ export default function CoffreFactures() {
   const [showCapture, setShowCapture] = useState(false);
   const [showSend, setShowSend] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
+  const [showImportLog, setShowImportLog] = useState(false);
 
   const { data: invoices = [], isLoading } = useQuery({
     queryKey: ['invoices'],
@@ -143,8 +146,20 @@ export default function CoffreFactures() {
         </TabsList>
 
         <TabsContent value="factures" className="space-y-6 mt-6">
+          {/* Encart import email */}
+          <EmailImportInfoBox />
+
           {/* Actions */}
-          <div className="flex flex-wrap gap-2 justify-end">
+          <div className="flex flex-wrap gap-2 justify-between">
+            <Button
+              variant="outline"
+              onClick={() => setShowImportLog(true)}
+              className="border-gray-300 text-gray-900 hover:bg-gray-50"
+            >
+              <Mail className="w-4 h-4 mr-2" />
+              Journal des imports
+            </Button>
+            <div className="flex flex-wrap gap-2">
             <Button
               variant="outline"
               onClick={() => setShowFilters(!showFilters)}
@@ -177,6 +192,7 @@ export default function CoffreFactures() {
               <Upload className="w-4 h-4 mr-2" />
               Uploader
             </Button>
+            </div>
           </div>
 
               {/* Recherche */}
@@ -410,7 +426,15 @@ export default function CoffreFactures() {
                           <span className="text-xs">Extraction IA...</span>
                         </div>
                       ) : (
-                        invoice.supplier || '-'
+                        <div>
+                          <div>{invoice.supplier || '-'}</div>
+                          {invoice.import_source === 'email' && (
+                            <Badge className="bg-blue-100 text-blue-800 text-xs mt-1">
+                              <Mail className="w-3 h-3 mr-1" />
+                              Import email
+                            </Badge>
+                          )}
+                        </div>
                       )}
                     </td>
                     <td className="p-4 text-sm text-gray-700 max-w-xs truncate">
@@ -568,6 +592,13 @@ export default function CoffreFactures() {
             setShowSend(false);
             setSelectedInvoices([]);
           }}
+        />
+      )}
+
+      {showImportLog && (
+        <EmailImportLogModal
+          open={showImportLog}
+          onClose={() => setShowImportLog(false)}
         />
       )}
     </div>
