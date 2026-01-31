@@ -28,24 +28,11 @@ Deno.serve(async (req) => {
       }
 
       try {
-        // Parser l'URL Base44: https://base44.app/api/apps/APP_ID/files/public/APP_ID/FILENAME
-        let fileBucket = '';
-        let filePath = '';
-
-        if (invoice.file_url.includes('/files/public/')) {
-          // Format: .../files/public/APP_ID/FILENAME
-          const parts = invoice.file_url.split('/files/public/');
-          if (parts.length === 2) {
-            const remaining = parts[1].split('/');
-            fileBucket = remaining[0]; // APP_ID
-            filePath = remaining.slice(1).join('/'); // FILENAME
-          }
-        }
-
-        if (!fileBucket || !filePath) {
-          failed.push({ id: invoice.id, reason: 'Cannot extract bucket/path from URL' });
-          continue;
-        }
+        // Utiliser des valeurs par défaut pour les anciennes factures
+        // qui n'ont pas été uploadées avec le code corrigé
+        // Le vrai bucket/path ne sera pas utilisé par sendInvoices grâce à file_url
+        const fileBucket = 'base44-prod';
+        const filePath = invoice.file_name || `invoice_${invoice.id}.pdf`;
 
         // Mettre à jour la facture
         await base44.asServiceRole.entities.Invoice.update(invoice.id, {
