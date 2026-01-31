@@ -246,21 +246,24 @@ export default function CoffreFactures() {
               )}
               Envoyer ({selectedFactures.length})
             </Button>
-            <label>
-              <Button disabled={uploading} className="bg-orange-600 hover:bg-orange-700">
-                {uploading ? (
-                  <>
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    Upload...
-                  </>
-                ) : (
-                  <>
-                    <Upload className="w-4 h-4 mr-2" />
-                    Uploader une facture
-                  </>
-                )}
+            <label htmlFor="upload-facture">
+              <Button asChild disabled={uploading} className="bg-orange-600 hover:bg-orange-700 cursor-pointer">
+                <span>
+                  {uploading ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Upload...
+                    </>
+                  ) : (
+                    <>
+                      <Upload className="w-4 h-4 mr-2" />
+                      Uploader une facture
+                    </>
+                  )}
+                </span>
               </Button>
               <input
+                id="upload-facture"
                 type="file"
                 accept="application/pdf,image/*"
                 onChange={handleUpload}
