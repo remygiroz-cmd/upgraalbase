@@ -76,12 +76,16 @@ export default function AutomationsTab() {
 
       // 2. Syncer l'automation
       if (automation_id) {
-        await base44.functions.invoke('syncInvoiceAutomation', {
+        await base44.manage_automation({
           automation_id,
-          frequency: data.frequency,
-          send_time: data.send_time,
-          day_of_week: data.day_of_week,
-          day_of_month: data.day_of_month
+          action: 'update',
+          automation_name: 'Envoi automatique des factures',
+          is_active: true,
+          start_time: data.send_time,
+          repeat_unit: data.frequency === 'daily' ? 'days' : (data.frequency === 'weekly' ? 'weeks' : 'months'),
+          repeat_interval: 1,
+          ...(data.frequency === 'weekly' && { repeat_on_days: [parseInt(data.day_of_week)] }),
+          ...(data.frequency === 'monthly' && { repeat_on_day_of_month: data.day_of_month })
         });
       }
 
