@@ -1,9 +1,17 @@
 import React, { useState } from 'react';
-import { Users, User } from 'lucide-react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { base44 } from '@/api/base44Client';
+import { Users, User, FileText, Download, Printer, Upload, Trash2, FileJson } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import PageHeader from '@/components/ui/PageHeader';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import EmployeeList from '@/components/personnel/EmployeeList';
 import TeamsManager from '@/components/personnel/TeamsManager';
+import RegistryImportModal from '@/components/personnel/RegistryImportModal';
+import LoadingSpinner from '@/components/ui/LoadingSpinner';
+import EmptyState from '@/components/ui/EmptyState';
+import { cn } from '@/lib/utils';
+import jsPDF from 'jspdf';
 
 export default function Equipe() {
   const [activeTab, setActiveTab] = useState('equipes');
