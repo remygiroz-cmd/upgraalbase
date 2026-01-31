@@ -28,17 +28,24 @@ Deno.serve(async (req) => {
       }
 
       try {
-        // Extraire bucket et path depuis l'URL
-        const urlParts = invoice.file_url.split('/storage/v1/object/public/');
-        
-        if (urlParts.length < 2) {
-          failed.push({ id: invoice.id, reason: 'Invalid URL format' });
-          continue;
+        // Parser l'URL Base44: https://base44.app/api/apps/APP_ID/files/public/APP_ID/FILENAME
+        let fileBucket = '';
+        let filePath = '';
+
+        if (invoice.file_url.includes('/files/public/')) {
+          // Format: .../files/public/APP_ID/FILENAME
+          const parts = invoice.file_url.split('/files/public/');
+          if (parts.length === 2) {
+            const remaining = parts[1].split('/');
+            fileBucket = remaining[0]; // APP_ID
+            filePath = remaining.slice(1).join('/'); // FILENAME
+          }
         }
 
-        const pathParts = urlParts[1].split('/');
-        const fileBucket = pathParts[0];
-        const filePath = pathParts.slice(1).join('/');
+        if (!fileBucket || !filePath) {
+          failed.push({ id: invoice.id, reason: 'Cannot extract bucket/path from URL' });
+          continue;
+        }
 
         // Mettre à jour la facture
         await base44.asServiceRole.entities.Invoice.update(invoice.id, {
