@@ -27,6 +27,8 @@ export default function CoffreFactures() {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [categoryFilter, setCategoryFilter] = useState('all');
+  const [supplierFilter, setSupplierFilter] = useState('');
+  const [accountFilter, setAccountFilter] = useState('');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [minAmount, setMinAmount] = useState('');
@@ -65,12 +67,14 @@ export default function CoffreFactures() {
     // Filtres
     const matchesStatus = statusFilter === 'all' || inv.status === statusFilter;
     const matchesCategory = categoryFilter === 'all' || inv.categories?.includes(categoryFilter);
+    const matchesSupplier = !supplierFilter || inv.supplier?.toLowerCase().includes(supplierFilter.toLowerCase());
+    const matchesAccount = !accountFilter || inv.accounting_account?.toLowerCase().includes(accountFilter.toLowerCase());
     const matchesDateRange = (!startDate || inv.invoice_date >= startDate) && 
                               (!endDate || inv.invoice_date <= endDate);
     const matchesAmount = (!minAmount || inv.amount_ttc >= parseFloat(minAmount)) &&
                           (!maxAmount || inv.amount_ttc <= parseFloat(maxAmount));
 
-    return matchesSearch && matchesStatus && matchesCategory && matchesDateRange && matchesAmount;
+    return matchesSearch && matchesStatus && matchesCategory && matchesSupplier && matchesAccount && matchesDateRange && matchesAmount;
   });
 
   const toggleSelect = (id) => {
@@ -214,7 +218,29 @@ export default function CoffreFactures() {
             </div>
 
             <div>
-              <label className="text-sm font-medium text-gray-900 mb-2 block">Du</label>
+              <label className="text-sm font-medium text-gray-900 mb-2 block">Fournisseur</label>
+              <Input
+                type="text"
+                value={supplierFilter}
+                onChange={(e) => setSupplierFilter(e.target.value)}
+                placeholder="Nom du fournisseur"
+                className="bg-white border-gray-300 text-gray-900"
+              />
+            </div>
+
+            <div>
+              <label className="text-sm font-medium text-gray-900 mb-2 block">Compte</label>
+              <Input
+                type="text"
+                value={accountFilter}
+                onChange={(e) => setAccountFilter(e.target.value)}
+                placeholder="Compte comptable"
+                className="bg-white border-gray-300 text-gray-900"
+              />
+            </div>
+
+            <div>
+              <label className="text-sm font-medium text-gray-900 mb-2 block">Date facture (Du)</label>
               <Input
                 type="date"
                 value={startDate}
@@ -224,7 +250,7 @@ export default function CoffreFactures() {
             </div>
 
             <div>
-              <label className="text-sm font-medium text-gray-900 mb-2 block">Au</label>
+              <label className="text-sm font-medium text-gray-900 mb-2 block">Date facture (Au)</label>
               <Input
                 type="date"
                 value={endDate}
@@ -240,6 +266,7 @@ export default function CoffreFactures() {
                 step="0.01"
                 value={minAmount}
                 onChange={(e) => setMinAmount(e.target.value)}
+                placeholder="0.00"
                 className="bg-white border-gray-300 text-gray-900"
               />
             </div>
@@ -251,6 +278,7 @@ export default function CoffreFactures() {
                 step="0.01"
                 value={maxAmount}
                 onChange={(e) => setMaxAmount(e.target.value)}
+                placeholder="9999.99"
                 className="bg-white border-gray-300 text-gray-900"
               />
             </div>
@@ -261,6 +289,8 @@ export default function CoffreFactures() {
             onClick={() => {
               setStatusFilter('all');
               setCategoryFilter('all');
+              setSupplierFilter('');
+              setAccountFilter('');
               setStartDate('');
               setEndDate('');
               setMinAmount('');
