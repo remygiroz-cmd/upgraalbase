@@ -170,10 +170,22 @@ Deno.serve(async (req) => {
           continue;
         }
         
-        const filename = inv.normalized_file_name || inv.file_name || `facture_${inv.id}.pdf`;
+        // Déterminer le type MIME correct
+        const mimeType = inv.file_mime || 
+          (inv.file_name?.toLowerCase().endsWith('.pdf') ? 'application/pdf' : 'image/jpeg');
+        
+        // Normaliser le nom de fichier avec la bonne extension
+        let filename = inv.normalized_file_name || inv.file_name || `facture_${inv.id}`;
+        if (mimeType === 'image/jpeg' && !filename.toLowerCase().match(/\.(jpg|jpeg)$/)) {
+          filename = filename.replace(/\.[^.]*$/, '') + '.jpg';
+        } else if (mimeType === 'application/pdf' && !filename.toLowerCase().endsWith('.pdf')) {
+          filename = filename + '.pdf';
+        }
+        
         attachments.push({
           filename: filename,
-          content: base64Content
+          content: base64Content,
+          type: mimeType
         });
         
         totalAttachmentSize += downloadedSize;
