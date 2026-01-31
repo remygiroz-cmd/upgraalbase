@@ -242,7 +242,9 @@ export default function InvoiceDetailModal({ invoice, onClose }) {
                           <XCircle className="w-4 h-4 text-red-600" />
                         }
                         <span className="text-gray-900">
-                          {format(new Date(h.sent_at), "dd/MM/yyyy 'à' HH:mm", { locale: fr })}
+                          {(h.sent_at && !isNaN(new Date(h.sent_at).getTime())) 
+                            ? format(new Date(h.sent_at), "dd/MM/yyyy 'à' HH:mm", { locale: fr })
+                            : '-'}
                         </span>
                         <Badge className="bg-blue-100 text-blue-800 text-xs">
                           {h.method === 'manual' ? 'Manuel' : 'Auto'}

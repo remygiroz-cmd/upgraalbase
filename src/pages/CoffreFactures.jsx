@@ -89,7 +89,8 @@ export default function CoffreFactures() {
   const handleExport = () => {
     const headers = ['Date facture', 'Fournisseur', 'Description', 'Catégories', 'Compte', 'HT', 'TTC', 'TVA', 'Statut', 'Date envoi'];
     const rows = filteredInvoices.map(inv => [
-      inv.invoice_date ? format(new Date(inv.invoice_date), 'dd/MM/yyyy') : '',
+      (inv.invoice_date && !isNaN(new Date(inv.invoice_date).getTime())) 
+        ? format(new Date(inv.invoice_date), 'dd/MM/yyyy') : '',
       inv.supplier || '',
       inv.short_description || '',
       (inv.categories || []).join(', '),
@@ -98,7 +99,8 @@ export default function CoffreFactures() {
       inv.amount_ttc?.toFixed(2) || '',
       inv.vat?.toFixed(2) || '',
       STATUS_LABELS[inv.status]?.label || '',
-      inv.last_sent_at ? format(new Date(inv.last_sent_at), 'dd/MM/yyyy HH:mm') : ''
+      (inv.last_sent_at && !isNaN(new Date(inv.last_sent_at).getTime())) 
+        ? format(new Date(inv.last_sent_at), 'dd/MM/yyyy HH:mm') : ''
     ]);
 
     const csv = [headers, ...rows].map(r => r.join(';')).join('\n');
@@ -338,7 +340,9 @@ export default function CoffreFactures() {
                       </button>
                     </td>
                     <td className="p-4 text-sm text-gray-900">
-                      {invoice.invoice_date ? format(new Date(invoice.invoice_date), 'dd/MM/yyyy') : '-'}
+                      {invoice.invoice_date && !isNaN(new Date(invoice.invoice_date).getTime()) 
+                        ? format(new Date(invoice.invoice_date), 'dd/MM/yyyy') 
+                        : '-'}
                     </td>
                     <td className="p-4 text-sm font-medium text-gray-900">{invoice.supplier || '-'}</td>
                     <td className="p-4 text-sm text-gray-700 max-w-xs truncate">{invoice.short_description || '-'}</td>
@@ -367,7 +371,7 @@ export default function CoffreFactures() {
                       <Badge className={STATUS_LABELS[invoice.status]?.color}>
                         {STATUS_LABELS[invoice.status]?.label}
                       </Badge>
-                      {invoice.last_sent_at && (
+                      {invoice.last_sent_at && !isNaN(new Date(invoice.last_sent_at).getTime()) && (
                         <div className="text-xs text-gray-500 mt-1">
                           {format(new Date(invoice.last_sent_at), 'dd/MM/yy HH:mm')}
                         </div>
