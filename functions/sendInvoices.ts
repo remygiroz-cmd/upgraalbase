@@ -166,35 +166,75 @@ Deno.serve(async (req) => {
     }
     console.log(`========================================\n`);
 
-    // Préparer le corps de l'email
+    // Préparer le corps de l'email avec tableau détaillé
     const totalTTC = invoices.reduce((sum, inv) => sum + (inv.amount_ttc || 0), 0);
+    const attachedCount = invoiceResults.filter(r => r.delivery_method === 'attachment').length;
+    const linkCount = invoiceResults.filter(r => r.delivery_method === 'link').length;
+    const failedCount = invoiceResults.filter(r => r.status === 'failed').length;
     
     let htmlBody = `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+      <div style="font-family: Arial, sans-serif; max-width: 700px; margin: 0 auto;">
         <h2 style="color: #f97316;">Factures - ${new Date().toLocaleDateString('fr-FR')}</h2>
         <p>Bonjour,</p>
-        <p>Veuillez trouver ci-joint ${invoices.length} facture(s) pour un montant total de <strong>${totalTTC.toFixed(2)} €</strong>.</p>
+        <p>Vous trouverez ${invoices.length} facture(s) pour un montant total de <strong>${totalTTC.toFixed(2)} €</strong>.</p>
+        <p style="color: #6b7280; font-size: 14px;">
+          ${attachedCount > 0 ? `${attachedCount} en pièce(s) jointe(s)` : ''}
+          ${linkCount > 0 ? `${attachedCount > 0 ? ', ' : ''}${linkCount} par lien(s) sécurisé(s) (expire dans 72h)` : ''}
+          ${failedCount > 0 ? ` - ⚠️ ${failedCount} échec(s)` : ''}
+        </p>
         
-        <table style="width: 100%; border-collapse: collapse; margin: 20px 0;">
+        <table style="width: 100%; border-collapse: collapse; margin: 20px 0; font-size: 14px;">
           <thead>
             <tr style="background-color: #f3f4f6;">
               <th style="padding: 10px; text-align: left; border: 1px solid #e5e7eb;">Fournisseur</th>
               <th style="padding: 10px; text-align: left; border: 1px solid #e5e7eb;">Date</th>
-              <th style="padding: 10px; text-align: right; border: 1px solid #e5e7eb;">Montant TTC</th>
+              <th style="padding: 10px; text-align: left; border: 1px solid #e5e7eb;">Fichier</th>
+              <th style="padding: 10px; text-align: right; border: 1px solid #e5e7eb;">TTC</th>
+              <th style="padding: 10px; text-align: center; border: 1px solid #e5e7eb;">Livraison</th>
             </tr>
           </thead>
           <tbody>
-            ${invoices.map(inv => `
-              <tr>
-                <td style="padding: 10px; border: 1px solid #e5e7eb;">${inv.supplier || 'N/A'}</td>
-                <td style="padding: 10px; border: 1px solid #e5e7eb;">${inv.invoice_date ? new Date(inv.invoice_date).toLocaleDateString('fr-FR') : 'N/A'}</td>
-                <td style="padding: 10px; text-align: right; border: 1px solid #e5e7eb;">${(inv.amount_ttc || 0).toFixed(2)} €</td>
-              </tr>
-            `).join('')}
+            ${invoices.map((inv, idx) => {
+              const result = invoiceResults[idx];
+              let statusBadge = '';
+              let fileCell = inv.file_name || 'N/A';
+              
+              if (result.status === 'sent_attachment') {
+                statusBadge = '<span style="background: #10b981; color: white; padding: 3px 8px; border-radius: 4px; font-size: 12px;">📎 PJ</span>';
+              } else if (result.status === 'sent_link') {
+                statusBadge = '<span style="background: #3b82f6; color: white; padding: 3px 8px; border-radius: 4px; font-size: 12px;">🔗 Lien</span>';
+                fileCell = `<a href="${result.signed_url}" style="color: #3b82f6; text-decoration: none;">📥 Télécharger</a>`;
+              } else {
+                statusBadge = '<span style="background: #ef4444; color: white; padding: 3px 8px; border-radius: 4px; font-size: 12px;">❌ Échec</span>';
+                fileCell = `<span style="color: #ef4444; font-size: 12px;">${result.error}</span>`;
+              }
+              
+              return `
+                <tr>
+                  <td style="padding: 10px; border: 1px solid #e5e7eb;">${inv.supplier || 'N/A'}</td>
+                  <td style="padding: 10px; border: 1px solid #e5e7eb;">${inv.invoice_date ? new Date(inv.invoice_date).toLocaleDateString('fr-FR') : 'N/A'}</td>
+                  <td style="padding: 10px; border: 1px solid #e5e7eb;">${fileCell}</td>
+                  <td style="padding: 10px; text-align: right; border: 1px solid #e5e7eb;">${(inv.amount_ttc || 0).toFixed(2)} €</td>
+                  <td style="padding: 10px; text-align: center; border: 1px solid #e5e7eb;">${statusBadge}</td>
+                </tr>
+              `;
+            }).join('')}
           </tbody>
         </table>
         
-        <p>Cordialement,<br>${user.full_name || user.email}</p>
+        ${linkCount > 0 ? `
+          <p style="color: #6b7280; font-size: 13px; background: #eff6ff; padding: 12px; border-radius: 6px; border-left: 3px solid #3b82f6;">
+            ℹ️ Les liens sécurisés expirent dans 72 heures. Téléchargez les fichiers avant cette échéance.
+          </p>
+        ` : ''}
+        
+        ${failedCount > 0 ? `
+          <p style="color: #991b1b; font-size: 13px; background: #fee; padding: 12px; border-radius: 6px; border-left: 3px solid #ef4444;">
+            ⚠️ ${failedCount} facture(s) n'ont pas pu être envoyées. Contactez-nous pour plus d'informations.
+          </p>
+        ` : ''}
+        
+        <p style="margin-top: 30px;">Cordialement,<br>${user.full_name || user.email}</p>
       </div>
     `;
 
