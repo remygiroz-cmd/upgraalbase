@@ -55,6 +55,33 @@ Deno.serve(async (req) => {
       });
     }
 
+    // Mettre à jour l'automation elle-même
+    try {
+      const automations = await base44.asServiceRole.entities.Automation.filter({ 
+        function_name: 'executeAutoSendInvoices'
+      });
+
+      if (automations[0]) {
+        const automation = automations[0];
+        const updateData = {
+          repeat_interval: frequency === 'daily' ? 1 : (frequency === 'weekly' ? 1 : 1),
+          repeat_unit: frequency === 'daily' ? 'days' : (frequency === 'weekly' ? 'weeks' : 'months'),
+          start_time: send_time,
+          is_active: auto_send_enabled
+        };
+
+        if (frequency === 'weekly') {
+          updateData.repeat_on_days = [day_of_week];
+        } else if (frequency === 'monthly') {
+          updateData.repeat_on_day_of_month = day_of_month;
+        }
+
+        await base44.asServiceRole.entities.Automation.update(automation.id, updateData);
+      }
+    } catch (err) {
+      console.error('Erreur mise à jour automation:', err);
+    }
+
     return Response.json({ 
       success: true, 
       message: 'Configuration mise à jour'
