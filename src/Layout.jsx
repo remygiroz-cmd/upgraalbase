@@ -18,7 +18,8 @@ import {
         Settings,
         LogOut,
         FileText,
-        File
+        File,
+        Receipt
       } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import UserAccessCheck from '@/components/UserAccessCheck';
@@ -77,6 +78,7 @@ export default function Layout({ children, currentPageName }) {
     { name: 'RegistrePersonnel', label: 'Registre du Personnel', icon: FileText, module: 'registre_personnel' },
     { name: 'GestionPostes', label: 'Postes & Tâches', icon: Users, module: 'equipe' },
     { name: 'TemplatesRH', label: 'Templates RH', icon: File, module: 'equipe' },
+    { name: 'CoffreFactures', label: 'Coffre à factures', icon: Receipt, module: 'equipe' },
   ].filter(link => hasPermission(link.module));
 
   const caisseLinks = [
