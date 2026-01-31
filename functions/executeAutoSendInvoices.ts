@@ -187,13 +187,12 @@ Deno.serve(async (req) => {
 `;
 
         // Envoyer l'email groupé
-        await resend.emails.send({
-          from: `${senderName} <onboarding@resend.dev>`,
-          to: config.recipients,
-          subject: `📄 ${invoicesToSend.length} facture(s) - ${new Date().toLocaleDateString('fr-FR')}`,
-          html: emailBody,
-          attachments: attachments.length > 0 ? attachments : undefined
-        });
+        await sendEmail(
+          config.recipients,
+          `📄 ${invoicesToSend.length} facture(s) - ${new Date().toLocaleDateString('fr-FR')}`,
+          emailBody,
+          attachments.length > 0 ? attachments : undefined
+        );
 
         // Mettre à jour toutes les factures
         for (const inv of invoicesToSend) {
