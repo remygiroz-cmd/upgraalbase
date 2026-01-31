@@ -26,32 +26,109 @@ Deno.serve(async (req) => {
     const establishments = await base44.asServiceRole.entities.Establishment.list();
     const establishment = establishments[0] || {};
 
-    // Télécharger et préparer les fichiers pour pièces jointes
+    // Configuration des limites
+    const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB par fichier
+    const MAX_TOTAL_SIZE = 20 * 1024 * 1024; // 20 MB total
+    
+    // Télécharger et préparer les fichiers
     const attachments = [];
-    console.log(`Processing ${invoices.length} invoices for attachments`);
+    const invoiceResults = [];
+    let totalAttachmentSize = 0;
+    
+    console.log(`\n========== DÉBUT TRAITEMENT ${invoices.length} FACTURES ==========`);
     
     for (const inv of invoices) {
-      console.log(`Processing invoice ${inv.id} - ${inv.supplier} - file_url: ${inv.file_url ? 'exists' : 'MISSING'}`);
+      const result = {
+        invoiceId: inv.id,
+        supplier: inv.supplier,
+        file_name: inv.file_name,
+        file_mime: inv.file_mime,
+        file_size: inv.file_size,
+        status: 'pending',
+        delivery_method: null,
+        error: null,
+        signed_url: null
+      };
+      
+      console.log(`\n--- Facture ${inv.id} ---`);
+      console.log(`Fournisseur: ${inv.supplier}`);
+      console.log(`Fichier: ${inv.file_name || 'N/A'}`);
+      console.log(`MIME: ${inv.file_mime || 'N/A'}`);
+      console.log(`Taille: ${inv.file_size ? `${(inv.file_size / 1024).toFixed(2)} KB` : 'N/A'}`);
+      console.log(`URL: ${inv.file_url ? 'exists' : 'MISSING'}`);
       
       if (!inv.file_url) {
-        console.error(`Invoice ${inv.id} (${inv.supplier}) has no file_url - SKIPPING`);
+        result.status = 'failed';
+        result.error = 'Fichier manquant';
+        console.error(`❌ ÉCHEC: Pas de file_url`);
+        invoiceResults.push(result);
+        continue;
+      }
+      
+      // Vérifier la taille avant téléchargement
+      if (inv.file_size && inv.file_size > MAX_FILE_SIZE) {
+        console.warn(`⚠️ Fichier trop volumineux (${(inv.file_size / 1024 / 1024).toFixed(2)} MB > 10 MB), création d'un lien sécurisé`);
+        try {
+          // Générer un lien sécurisé (valide 72h)
+          const { signed_url } = await base44.asServiceRole.integrations.Core.CreateFileSignedUrl({
+            file_uri: `${inv.file_bucket}/${inv.file_path}`,
+            expires_in: 259200 // 72 heures
+          });
+          result.status = 'sent_link';
+          result.delivery_method = 'link';
+          result.signed_url = signed_url;
+          console.log(`✅ Lien sécurisé créé (expire dans 72h)`);
+        } catch (err) {
+          result.status = 'failed';
+          result.error = `Erreur création lien: ${err.message}`;
+          console.error(`❌ ÉCHEC création lien: ${err.message}`);
+        }
+        invoiceResults.push(result);
         continue;
       }
       
       try {
-        console.log(`Downloading file for invoice ${inv.id} from ${inv.file_url}`);
+        console.log(`📥 Téléchargement depuis ${inv.file_url}`);
         const fileResponse = await fetch(inv.file_url);
         
         if (!fileResponse.ok) {
-          console.error(`Failed to download file for invoice ${inv.id} (${inv.supplier}) - HTTP ${fileResponse.status}`);
+          result.status = 'failed';
+          result.error = `HTTP ${fileResponse.status}`;
+          console.error(`❌ ÉCHEC téléchargement: HTTP ${fileResponse.status}`);
+          invoiceResults.push(result);
           continue;
         }
         
         const fileBlob = await fileResponse.blob();
         const fileBuffer = await fileBlob.arrayBuffer();
-        console.log(`Downloaded ${fileBuffer.byteLength} bytes for invoice ${inv.id}`);
+        const downloadedSize = fileBuffer.byteLength;
         
+        console.log(`📦 Téléchargé: ${(downloadedSize / 1024).toFixed(2)} KB`);
+        
+        // Vérifier si l'ajout dépasserait la limite totale
+        if (totalAttachmentSize + downloadedSize > MAX_TOTAL_SIZE) {
+          console.warn(`⚠️ Limite totale dépassée (${((totalAttachmentSize + downloadedSize) / 1024 / 1024).toFixed(2)} MB > 20 MB), création d'un lien`);
+          try {
+            const { signed_url } = await base44.asServiceRole.integrations.Core.CreateFileSignedUrl({
+              file_uri: `${inv.file_bucket}/${inv.file_path}`,
+              expires_in: 259200
+            });
+            result.status = 'sent_link';
+            result.delivery_method = 'link';
+            result.signed_url = signed_url;
+            console.log(`✅ Lien sécurisé créé (limite totale)`);
+          } catch (err) {
+            result.status = 'failed';
+            result.error = `Erreur création lien: ${err.message}`;
+            console.error(`❌ ÉCHEC création lien: ${err.message}`);
+          }
+          invoiceResults.push(result);
+          continue;
+        }
+        
+        // Convertir en base64
         const base64Content = btoa(String.fromCharCode(...new Uint8Array(fileBuffer)));
+        console.log(`🔄 Converti en base64: ${(base64Content.length / 1024).toFixed(2)} KB`);
         
         const filename = inv.normalized_file_name || inv.file_name || `facture_${inv.id}.pdf`;
         attachments.push({
@@ -59,13 +136,35 @@ Deno.serve(async (req) => {
           content: base64Content
         });
         
-        console.log(`Successfully added attachment: ${filename}`);
+        totalAttachmentSize += downloadedSize;
+        result.status = 'sent_attachment';
+        result.delivery_method = 'attachment';
+        console.log(`✅ Ajouté en PJ: ${filename}`);
+        
       } catch (err) {
-        console.error(`Error processing file for invoice ${inv.id} (${inv.supplier}):`, err.message);
+        result.status = 'failed';
+        result.error = err.message;
+        console.error(`❌ ÉCHEC traitement: ${err.message}`);
       }
+      
+      invoiceResults.push(result);
     }
     
-    console.log(`Total attachments prepared: ${attachments.length}`);
+    console.log(`\n========== RÉSUMÉ GLOBAL ==========`);
+    console.log(`Factures demandées: ${invoices.length}`);
+    console.log(`PJ attachées: ${attachments.length}`);
+    console.log(`Liens créés: ${invoiceResults.filter(r => r.delivery_method === 'link').length}`);
+    console.log(`Échecs: ${invoiceResults.filter(r => r.status === 'failed').length}`);
+    console.log(`Taille totale PJ: ${(totalAttachmentSize / 1024 / 1024).toFixed(2)} MB`);
+    
+    const failedInvoices = invoiceResults.filter(r => r.status === 'failed');
+    if (failedInvoices.length > 0) {
+      console.log(`\n⚠️ Factures non livrées:`);
+      failedInvoices.forEach(f => {
+        console.log(`  - ${f.supplier} (${f.invoiceId}): ${f.error}`);
+      });
+    }
+    console.log(`========================================\n`);
 
     // Préparer le corps de l'email
     const totalTTC = invoices.reduce((sum, inv) => sum + (inv.amount_ttc || 0), 0);
