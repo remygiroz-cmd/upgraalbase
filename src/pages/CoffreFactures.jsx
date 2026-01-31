@@ -486,6 +486,13 @@ export default function CoffreFactures() {
         />
       )}
 
+      {showCapture && (
+        <InvoiceUploadModal
+          open={showCapture}
+          onClose={() => setShowCapture(false)}
+        />
+      )}
+
       {showSend && (
         <SendInvoicesModal
           invoiceIds={selectedInvoices}
