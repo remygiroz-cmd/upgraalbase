@@ -145,75 +145,7 @@ export default function InvoiceDetailModal({ invoice, onClose }) {
           </DialogTitle>
         </DialogHeader>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Aperçu fichier */}
-          <div>
-            <Label className="text-gray-900 mb-2 block">Aperçu</Label>
-            <div className="border-2 border-gray-300 rounded-lg overflow-hidden bg-gray-50">
-              {!invoice.file_url ? (
-                <div className="flex items-center justify-center h-96 border-2 border-dashed border-gray-300 rounded bg-white">
-                  <div className="text-center p-4">
-                    <AlertCircle className="w-12 h-12 text-orange-500 mx-auto mb-2" />
-                    <p className="text-sm text-gray-600 font-medium">Fichier non relié</p>
-                    <p className="text-xs text-gray-500 mt-1">Utilisez le bouton "Réuploader" ci-dessous</p>
-                  </div>
-                </div>
-              ) : invoice.file_url?.endsWith('.pdf') || invoice.file_mime?.includes('pdf') ? (
-                <iframe src={invoice.file_url} className="w-full h-96" />
-              ) : (
-                <img src={invoice.file_url} alt="Facture" className="w-full h-96 object-contain" />
-              )}
-            </div>
-
-            <div className="mt-2 flex gap-2">
-              {!invoice.file_url ? (
-                <label className="flex-1 cursor-pointer">
-                  <Button
-                    variant="outline"
-                    className="w-full border-orange-300 text-orange-600 hover:bg-orange-50"
-                    asChild
-                  >
-                    <span>
-                      <Upload className="w-4 h-4 mr-2" />
-                      Réuploader le fichier
-                    </span>
-                  </Button>
-                  <input
-                    type="file"
-                    className="hidden"
-                    accept=".pdf,.jpg,.jpeg,.png"
-                    onChange={handleReupload}
-                  />
-                </label>
-              ) : (
-                <Button
-                  variant="outline"
-                  onClick={handleDownload}
-                  className="flex-1 border-gray-300 text-gray-900 hover:bg-gray-50"
-                >
-                  <Download className="w-4 h-4 mr-2" />
-                  Télécharger
-                </Button>
-              )}
-            </div>
-
-            {invoice.ai_confidence !== undefined && (
-              <div className="mt-4 p-3 bg-blue-50 rounded-lg">
-                <p className="text-xs text-blue-900 font-medium mb-1">
-                  Confiance IA: {(invoice.ai_confidence * 100).toFixed(0)}%
-                </p>
-                <div className="w-full bg-blue-200 rounded-full h-2">
-                  <div
-                    className="bg-blue-600 h-2 rounded-full"
-                    style={{ width: `${invoice.ai_confidence * 100}%` }}
-                  />
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Formulaire */}
-          <div className="space-y-4">
+        <div className="space-y-4">
             <div>
               <Label htmlFor="supplier" className="text-gray-900">Fournisseur *</Label>
               <Input
@@ -349,7 +281,6 @@ export default function InvoiceDetailModal({ invoice, onClose }) {
                 </div>
               </div>
             )}
-          </div>
         </div>
 
         <div className="flex justify-end gap-3 pt-4 border-t border-gray-200">
