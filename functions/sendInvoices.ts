@@ -290,20 +290,32 @@ Deno.serve(async (req) => {
       throw new Error(`Resend API error: ${JSON.stringify(result)}`);
     }
 
-    // Mettre à jour les factures
-    const historyEntry = {
-      sent_at: new Date().toISOString(),
-      sent_by: user.email,
-      sent_by_name: user.full_name || user.email,
-      method: method,
-      recipient: recipient,
-      success: true,
-      error_message: null
-    };
-
-    for (const invoice of invoices) {
+    // Mettre à jour les factures individuellement selon leur statut
+    for (let i = 0; i < invoices.length; i++) {
+      const invoice = invoices[i];
+      const result = invoiceResults[i];
+      
+      const historyEntry = {
+        sent_at: new Date().toISOString(),
+        sent_by: user.email,
+        sent_by_name: user.full_name || user.email,
+        method: method,
+        recipient: recipient,
+        delivery_method: result.delivery_method,
+        success: result.status !== 'failed',
+        error_message: result.error || null
+      };
+      
+      // Statut final selon le résultat
+      let finalStatus = invoice.status;
+      if (result.status === 'sent_attachment' || result.status === 'sent_link') {
+        finalStatus = 'envoyee';
+      } else if (result.status === 'failed') {
+        finalStatus = 'a_verifier'; // Garde ou marque comme "à vérifier"
+      }
+      
       await base44.asServiceRole.entities.Invoice.update(invoice.id, {
-        status: 'envoyee',
+        status: finalStatus,
         last_sent_at: historyEntry.sent_at,
         last_sent_method: method,
         send_history: [...(invoice.send_history || []), historyEntry]
