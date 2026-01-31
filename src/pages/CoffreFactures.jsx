@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
-import { FileText, Upload, Search, Filter, Download, Send, Eye, Edit2, Trash2, CheckSquare, Square, RefreshCw, Loader2, Camera } from 'lucide-react';
+import { FileText, Upload, Search, Filter, Download, Send, Eye, Edit2, Trash2, CheckSquare, Square, RefreshCw, Loader2, Camera, Zap } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -12,6 +12,7 @@ import EmptyState from '@/components/ui/EmptyState';
 import InvoiceDetailModal from '@/components/invoices/InvoiceDetailModal';
 import InvoiceUploadModal from '@/components/invoices/InvoiceUploadModal';
 import SendInvoicesModal from '@/components/invoices/SendInvoicesModal';
+import AutomationManagementModal from '@/components/invoices/AutomationManagementModal';
 import { format, parseISO } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
@@ -39,6 +40,7 @@ export default function CoffreFactures() {
   const [showCapture, setShowCapture] = useState(false);
   const [showSend, setShowSend] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
+  const [showAutomation, setShowAutomation] = useState(false);
 
   const { data: invoices = [], isLoading } = useQuery({
     queryKey: ['invoices'],
@@ -128,6 +130,14 @@ export default function CoffreFactures() {
         subtitle="Gestion centralisée de vos factures"
         actions={
           <div className="flex flex-wrap gap-2">
+            <Button
+              variant="outline"
+              onClick={() => setShowAutomation(true)}
+              className="border-gray-300 text-gray-900 hover:bg-gray-50"
+            >
+              <Zap className="w-4 h-4 mr-2" />
+              Automatisation
+            </Button>
             <Button
               variant="outline"
               onClick={() => setShowFilters(!showFilters)}
@@ -547,6 +557,13 @@ export default function CoffreFactures() {
             setShowSend(false);
             setSelectedInvoices([]);
           }}
+        />
+      )}
+
+      {showAutomation && (
+        <AutomationManagementModal
+          open={showAutomation}
+          onClose={() => setShowAutomation(false)}
         />
       )}
     </div>
