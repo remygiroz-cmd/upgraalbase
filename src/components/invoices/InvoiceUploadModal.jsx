@@ -97,7 +97,8 @@ export default function InvoiceUploadModal({ open, onClose }) {
             vat: extractedData.data.vat,
             indexed_text: extractedData.data.indexed_text,
             ai_confidence: extractedData.data.confidence,
-            status: extractedData.data.status
+            status: extractedData.data.status,
+            ai_processing: false
           });
 
           queryClient.invalidateQueries({ queryKey: ['invoices'] });
