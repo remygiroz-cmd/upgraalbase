@@ -69,7 +69,32 @@ export default function AutomationsTab() {
 
   const saveMutation = useMutation({
     mutationFn: async (data) => {
-      await base44.functions.invoke('updateAutoSendInvoicesAutomation', data);
+      const { automation_id, ...settingsData } = data;
+
+      // Sauvegarder les settings
+      await base44.functions.invoke('updateAutoSendInvoicesAutomation', settingsData);
+
+      // Syncer l'automation côté frontend
+      if (automation_id && data.auto_send_enabled) {
+        await base44.asServiceRole.manage_automation({
+          automation_id,
+          action: 'update',
+          automation_name: 'Envoi automatique des factures',
+          is_active: true,
+          start_time: data.send_time,
+          repeat_unit: data.frequency === 'daily' ? 'days' : (data.frequency === 'weekly' ? 'weeks' : 'months'),
+          repeat_interval: 1,
+          ...(data.frequency === 'weekly' && { repeat_on_days: [parseInt(data.day_of_week)] }),
+          ...(data.frequency === 'monthly' && { repeat_on_day_of_month: data.day_of_month })
+        });
+      } else if (automation_id && !data.auto_send_enabled) {
+        await base44.asServiceRole.manage_automation({
+          automation_id,
+          action: 'toggle',
+          automation_name: 'Envoi automatique des factures'
+        });
+      }
+
       return { success: true };
     },
     onSuccess: () => {
