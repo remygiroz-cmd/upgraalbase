@@ -383,7 +383,7 @@ export default function CoffreFactures() {
                           size="sm"
                           variant="outline"
                           onClick={() => {
-                            if (!invoice.file_bucket || !invoice.file_path) {
+                            if (!invoice.file_url) {
                               alert('Fichier manquant — réuploader');
                               return;
                             }

@@ -69,7 +69,7 @@ export default function InvoiceDetailModal({ invoice, onClose }) {
   };
 
   const handleDownload = async () => {
-    if (!invoice.file_bucket || !invoice.file_path) {
+    if (!invoice.file_url) {
       toast.error('Fichier manquant — réuploader');
       return;
     }
@@ -141,7 +141,7 @@ export default function InvoiceDetailModal({ invoice, onClose }) {
           <div>
             <Label className="text-gray-900 mb-2 block">Aperçu</Label>
             <div className="border-2 border-gray-300 rounded-lg overflow-hidden bg-gray-50">
-              {(!invoice.file_bucket || !invoice.file_path) ? (
+              {!invoice.file_url ? (
                 <div className="flex items-center justify-center h-96 border-2 border-dashed border-gray-300 rounded bg-white">
                   <div className="text-center p-4">
                     <AlertCircle className="w-12 h-12 text-orange-500 mx-auto mb-2" />
@@ -151,17 +151,13 @@ export default function InvoiceDetailModal({ invoice, onClose }) {
                 </div>
               ) : invoice.file_url?.endsWith('.pdf') || invoice.file_mime?.includes('pdf') ? (
                 <iframe src={invoice.file_url} className="w-full h-96" />
-              ) : invoice.file_url ? (
-                <img src={invoice.file_url} alt="Facture" className="w-full h-96 object-contain" />
               ) : (
-                <div className="flex items-center justify-center h-96 border border-gray-300 rounded bg-white">
-                  <p className="text-sm text-gray-500">Prévisualisation non disponible</p>
-                </div>
+                <img src={invoice.file_url} alt="Facture" className="w-full h-96 object-contain" />
               )}
             </div>
 
             <div className="mt-2 flex gap-2">
-              {(!invoice.file_bucket || !invoice.file_path) ? (
+              {!invoice.file_url ? (
                 <label className="flex-1 cursor-pointer">
                   <Button
                     variant="outline"
