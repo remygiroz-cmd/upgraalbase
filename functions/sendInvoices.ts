@@ -22,6 +22,10 @@ Deno.serve(async (req) => {
       invoices.push(invoice);
     }
 
+    // Récupérer les informations de l'établissement
+    const establishments = await base44.asServiceRole.entities.Establishment.list();
+    const establishment = establishments[0] || {};
+
     // Télécharger et préparer les fichiers pour pièces jointes
     const attachments = [];
     for (const inv of invoices) {
