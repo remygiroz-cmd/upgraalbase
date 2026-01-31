@@ -126,9 +126,45 @@ Deno.serve(async (req) => {
           continue;
         }
         
-        // Convertir en base64
-        const base64Content = btoa(String.fromCharCode(...new Uint8Array(fileBuffer)));
-        console.log(`🔄 Converti en base64: ${(base64Content.length / 1024).toFixed(2)} KB`);
+        // Convertir en base64 de manière sûre (par chunks pour éviter stack overflow)
+        let base64Content;
+        try {
+          const uint8Array = new Uint8Array(fileBuffer);
+          console.log(`🔄 Conversion base64 de ${uint8Array.length} bytes...`);
+          
+          // Conversion par chunks pour éviter "Maximum call stack size exceeded"
+          const chunkSize = 8192;
+          let base64 = '';
+          for (let i = 0; i < uint8Array.length; i += chunkSize) {
+            const chunk = uint8Array.slice(i, i + chunkSize);
+            base64 += String.fromCharCode.apply(null, chunk);
+          }
+          base64Content = btoa(base64);
+          console.log(`✅ Converti en base64: ${(base64Content.length / 1024).toFixed(2)} KB`);
+        } catch (conversionError) {
+          console.error(`❌ ÉCHEC conversion base64: ${conversionError.message}`);
+          console.error(`Stack trace:`, conversionError.stack);
+          
+          // Fallback: créer un lien sécurisé au lieu d'une PJ
+          console.log(`🔄 Création d'un lien sécurisé de secours...`);
+          try {
+            const { signed_url } = await base44.asServiceRole.integrations.Core.CreateFileSignedUrl({
+              file_uri: `${inv.file_bucket}/${inv.file_path}`,
+              expires_in: 259200
+            });
+            result.status = 'sent_link';
+            result.delivery_method = 'link';
+            result.signed_url = signed_url;
+            result.error = `Conversion échouée, lien créé: ${conversionError.message}`;
+            console.log(`✅ Lien sécurisé créé (fallback conversion)`);
+          } catch (linkError) {
+            result.status = 'failed';
+            result.error = `Conversion ET lien échoués: ${conversionError.message} / ${linkError.message}`;
+            console.error(`❌ ÉCHEC total: ${linkError.message}`);
+          }
+          invoiceResults.push(result);
+          continue;
+        }
         
         const filename = inv.normalized_file_name || inv.file_name || `facture_${inv.id}.pdf`;
         attachments.push({
@@ -142,9 +178,27 @@ Deno.serve(async (req) => {
         console.log(`✅ Ajouté en PJ: ${filename}`);
         
       } catch (err) {
-        result.status = 'failed';
-        result.error = err.message;
         console.error(`❌ ÉCHEC traitement: ${err.message}`);
+        console.error(`Type d'erreur: ${err.name}`);
+        console.error(`Stack trace:`, err.stack);
+        
+        // Tentative de fallback sur lien sécurisé
+        try {
+          console.log(`🔄 Tentative de création d'un lien de secours...`);
+          const { signed_url } = await base44.asServiceRole.integrations.Core.CreateFileSignedUrl({
+            file_uri: `${inv.file_bucket}/${inv.file_path}`,
+            expires_in: 259200
+          });
+          result.status = 'sent_link';
+          result.delivery_method = 'link';
+          result.signed_url = signed_url;
+          result.error = `Traitement échoué, lien créé: ${err.message}`;
+          console.log(`✅ Lien sécurisé créé (fallback erreur)`);
+        } catch (linkError) {
+          result.status = 'failed';
+          result.error = `Échec complet: ${err.message}`;
+          console.error(`❌ Fallback lien échoué: ${linkError.message}`);
+        }
       }
       
       invoiceResults.push(result);
