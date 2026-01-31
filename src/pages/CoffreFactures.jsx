@@ -167,7 +167,7 @@ export default function CoffreFactures() {
           <Input
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Rechercher par fournisseur, description, contenu de la facture..."
+            placeholder="Rechercher un mot dans le contenu des factures (ex: intervention, réparation...)"
             className="pl-10 bg-white border-gray-300 text-gray-900"
           />
         </div>
