@@ -163,68 +163,162 @@ export default function GestionPostes() {
 
       {activeTab === 'postes' && (
         <>
-          {loadingRoles ? (
-        <div className="text-center py-12">
-          <p className="text-gray-500">Chargement...</p>
-        </div>
-      ) : jobRoles.length === 0 ? (
-        <Card className="border-dashed border-2 p-12 text-center">
-          <Briefcase className="w-12 h-12 text-gray-300 mx-auto mb-4" />
-          <p className="text-gray-500">Aucun poste défini</p>
-          <p className="text-sm text-gray-400 mt-1">Créez des postes avec leurs tâches associées</p>
-        </Card>
-      ) : (
-        <div className="grid gap-4">
-          {jobRoles.filter(r => r.isActive).map((role) => (
-            <Card key={role.id} className="border p-6 hover:shadow-lg transition-all">
-              <div className="flex items-start justify-between">
-                <div className="flex-1">
-                  <div className="flex items-center gap-3 mb-3">
-                    <Briefcase className="w-5 h-5 text-orange-600" />
-                    <h3 className="font-bold text-gray-900 text-lg">{role.label}</h3>
-                  </div>
-                  
-                  <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
-                    <p className="text-sm font-semibold text-gray-700 mb-2">Tâches associées :</p>
-                    <div className="text-sm text-gray-800 whitespace-pre-wrap">
-                      {role.tasksText}
-                    </div>
-                  </div>
-
-                  {role.posteAlias && role.posteAlias.length > 0 && (
-                    <div className="mt-3 flex gap-2 flex-wrap">
-                      {role.posteAlias.map((alias, idx) => (
-                        <span key={idx} className="text-xs px-2 py-1 bg-blue-50 text-blue-700 rounded-full">
-                          {alias}
-                        </span>
-                      ))}
-                    </div>
-                  )}
-                </div>
-
-                <div className="flex gap-2 ml-4">
-                  <Button
-                    onClick={() => handleEdit(role)}
-                    variant="outline"
-                    size="sm"
-                    className="border-gray-300"
-                  >
-                    <Edit className="w-4 h-4 mr-1" />
-                    Modifier
-                  </Button>
-                  <Button
-                    onClick={() => setConfirmDelete(role)}
-                    variant="outline"
-                    size="sm"
-                    className="border-red-300 text-red-700 hover:bg-red-50"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </Button>
-                </div>
-              </div>
+              {loadingRoles ? (
+            <div className="text-center py-12">
+              <p className="text-gray-500">Chargement...</p>
+            </div>
+          ) : jobRoles.length === 0 ? (
+            <Card className="border-dashed border-2 p-12 text-center">
+              <Briefcase className="w-12 h-12 text-gray-300 mx-auto mb-4" />
+              <p className="text-gray-500">Aucun poste défini</p>
+              <p className="text-sm text-gray-400 mt-1">Créez des postes avec leurs tâches associées</p>
             </Card>
-          ))}
-        </div>
+          ) : (
+            <div className="grid gap-4">
+              {jobRoles.filter(r => r.isActive).map((role) => (
+                <Card key={role.id} className="border p-6 hover:shadow-lg transition-all">
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-3 mb-3">
+                        <Briefcase className="w-5 h-5 text-orange-600" />
+                        <h3 className="font-bold text-gray-900 text-lg">{role.label}</h3>
+                      </div>
+                      
+                      <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                        <p className="text-sm font-semibold text-gray-700 mb-2">Tâches associées :</p>
+                        <div className="text-sm text-gray-800 whitespace-pre-wrap">
+                          {role.tasksText}
+                        </div>
+                      </div>
+
+                      {role.posteAlias && role.posteAlias.length > 0 && (
+                        <div className="mt-3 flex gap-2 flex-wrap">
+                          {role.posteAlias.map((alias, idx) => (
+                            <span key={idx} className="text-xs px-2 py-1 bg-blue-50 text-blue-700 rounded-full">
+                              {alias}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="flex gap-2 ml-4">
+                      <Button
+                        onClick={() => handleEdit(role)}
+                        variant="outline"
+                        size="sm"
+                        className="border-gray-300"
+                      >
+                        <Edit className="w-4 h-4 mr-1" />
+                        Modifier
+                      </Button>
+                      <Button
+                        onClick={() => setConfirmDelete(role)}
+                        variant="outline"
+                        size="sm"
+                        className="border-red-300 text-red-700 hover:bg-red-50"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  </div>
+                </Card>
+              ))}
+            </div>
+          )}
+        </>
+      )}
+
+      {activeTab === 'templates' && (
+        <>
+          {loadingTemplates ? (
+            <div className="text-center py-12">
+              <p className="text-gray-500">Chargement...</p>
+            </div>
+          ) : templates.length === 0 ? (
+            <Card className="border-dashed border-2 p-12 text-center">
+              <FileText className="w-12 h-12 text-gray-300 mx-auto mb-4" />
+              <p className="text-gray-500">Aucun template trouvé</p>
+            </Card>
+          ) : (
+            <div className="grid gap-4">
+              {templates.map((template) => (
+                <Card
+                  key={template.id}
+                  className={cn(
+                    'border p-6 transition-all hover:shadow-lg',
+                    typeColors[template.typeDocument]
+                  )}
+                >
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-3 mb-2">
+                        <FileText className="w-5 h-5 text-gray-600" />
+                        <h3 className="font-bold text-gray-900">{template.name}</h3>
+                        <span className={cn('text-xs px-2 py-1 rounded-full font-semibold', typeBadges[template.typeDocument])}>
+                          {template.typeDocument}
+                        </span>
+                        {template.isOfficial && (
+                          <span className="text-xs px-2 py-1 rounded-full font-semibold bg-purple-100 text-purple-800 flex items-center gap-1">
+                            <span>🛡️</span> Officiel
+                          </span>
+                        )}
+                        {template.parentTemplateId && (
+                          <span className="text-xs px-2 py-1 rounded-full font-semibold bg-gray-100 text-gray-600">
+                            Copie personnalisée
+                          </span>
+                        )}
+                      </div>
+                      {template.description && (
+                        <p className="text-sm text-gray-600 mb-2">{template.description}</p>
+                      )}
+                      <div className="flex gap-4 text-xs text-gray-500">
+                        <span>Version: {template.version}</span>
+                        {template.sousType && <span>Type: {template.sousType}</span>}
+                        <span className={template.isActive ? 'text-green-600 font-semibold' : 'text-red-600'}>
+                          {template.isActive ? '✓ Actif' : '✗ Inactif'}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="flex gap-2 ml-4">
+                      <Button
+                        onClick={() => handleEditTemplate(template)}
+                        variant="outline"
+                        size="sm"
+                        className="border-orange-300 text-orange-700 hover:bg-orange-50"
+                      >
+                        <Edit className="w-4 h-4 mr-1" />
+                        Modifier
+                      </Button>
+                      <Button
+                        onClick={() => duplicateTemplateMutation.mutate(template)}
+                        variant="outline"
+                        size="sm"
+                        className="border-gray-300 text-gray-700 hover:bg-gray-50"
+                      >
+                        <Copy className="w-4 h-4 mr-1" />
+                        Dupliquer
+                      </Button>
+                      <Button
+                        onClick={() => {
+                          if (confirm('Êtes-vous sûr de vouloir supprimer ce template ?')) {
+                            deleteTemplateMutation.mutate(template.id);
+                          }
+                        }}
+                        variant="outline"
+                        size="sm"
+                        className="border-red-300 text-red-700 hover:bg-red-50"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  </div>
+                </Card>
+              ))}
+            </div>
+          )}
+        </>
       )}
 
       <PosteFormModal
