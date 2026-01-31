@@ -7,19 +7,22 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Send, Loader2, CheckCircle } from 'lucide-react';
 
-export default function SendInvoicesModal({ invoiceIds, onClose }) {
+export default function SendInvoicesModal({ invoiceIds, invoices, onClose }) {
   const queryClient = useQueryClient();
   const [recipient, setRecipient] = useState('');
   const [sending, setSending] = useState(false);
   const [success, setSuccess] = useState(false);
+  
+  // Support both invoiceIds (from table) and invoices (from detail modal)
+  const ids = invoiceIds || (invoices ? invoices.map(inv => inv.id) : []);
 
   const handleSend = async () => {
-    if (!recipient) return;
+    if (!recipient || ids.length === 0) return;
 
     setSending(true);
     try {
       await base44.functions.invoke('sendInvoices', {
-        invoice_ids: invoiceIds,
+        invoice_ids: ids,
         recipient,
         method: 'manual'
       });
@@ -43,7 +46,7 @@ export default function SendInvoicesModal({ invoiceIds, onClose }) {
       <DialogContent className="bg-white border-gray-200">
         <DialogHeader>
           <DialogTitle className="text-gray-900">
-            Envoyer {invoiceIds.length} facture(s) à la comptabilité
+            Envoyer {ids.length} facture(s) à la comptabilité
           </DialogTitle>
         </DialogHeader>
 
