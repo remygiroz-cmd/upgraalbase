@@ -3,7 +3,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Upload, Loader2, CheckCircle, AlertCircle, X, FileText, Camera } from 'lucide-react';
+import { Upload, Loader2, CheckCircle, AlertCircle, X, FileText, Camera, Plus } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
 import { cn } from '@/lib/utils';
 
@@ -13,66 +13,16 @@ export default function InvoiceUploadModal({ open, onClose }) {
   const [uploading, setUploading] = useState(false);
   const [uploadResults, setUploadResults] = useState([]);
   const [globalProgress, setGlobalProgress] = useState(0);
-  const [cameraMode, setCameraMode] = useState(false);
-  const videoRef = React.useRef(null);
-  const streamRef = React.useRef(null);
 
   const handleFileSelect = (e) => {
     const selectedFiles = Array.from(e.target.files || []);
-    setFiles(selectedFiles);
+    setFiles(prev => [...prev, ...selectedFiles]);
+    e.target.value = ''; // Reset input to allow selecting same file again
   };
 
   const handleRemoveFile = (index) => {
     setFiles(prev => prev.filter((_, i) => i !== index));
   };
-
-  const startCamera = async () => {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ 
-        video: { facingMode: 'environment' } // Use rear camera on mobile
-      });
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-        streamRef.current = stream;
-      }
-      setCameraMode(true);
-    } catch (err) {
-      alert('Impossible d\'accéder à la caméra: ' + err.message);
-    }
-  };
-
-  const stopCamera = () => {
-    if (streamRef.current) {
-      streamRef.current.getTracks().forEach(track => track.stop());
-      streamRef.current = null;
-    }
-    setCameraMode(false);
-  };
-
-  const capturePhoto = () => {
-    const video = videoRef.current;
-    if (!video) return;
-
-    const canvas = document.createElement('canvas');
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
-    const ctx = canvas.getContext('2d');
-    ctx.drawImage(video, 0, 0);
-
-    canvas.toBlob((blob) => {
-      const file = new File([blob], `facture_${Date.now()}.jpg`, { type: 'image/jpeg' });
-      setFiles([file]);
-      stopCamera();
-    }, 'image/jpeg', 0.9);
-  };
-
-  React.useEffect(() => {
-    return () => {
-      if (streamRef.current) {
-        streamRef.current.getTracks().forEach(track => track.stop());
-      }
-    };
-  }, []);
 
   const handleUpload = async () => {
     if (files.length === 0) return;
@@ -201,75 +151,52 @@ export default function InvoiceUploadModal({ open, onClose }) {
         </DialogHeader>
 
         <div className="space-y-4">
-          {files.length === 0 && uploadResults.length === 0 && !cameraMode && (
+          {uploadResults.length === 0 && (
             <div className="space-y-3">
-              <label className="block">
-                <div className={cn(
-                  "border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-all",
-                  "border-gray-300 hover:border-orange-500 hover:bg-orange-50"
-                )}>
-                  <Upload className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                  <p className="text-lg font-medium text-gray-900 mb-2">
-                    Cliquez pour sélectionner des fichiers
-                  </p>
-                  <p className="text-sm text-gray-600">
-                    PDF ou images (JPEG, PNG) - Sélection multiple
-                  </p>
-                </div>
-                <input
-                  type="file"
-                  className="hidden"
-                  accept=".pdf,.jpg,.jpeg,.png"
-                  multiple
-                  onChange={handleFileSelect}
-                />
-              </label>
+              <div className="grid grid-cols-2 gap-3">
+                <label className="block">
+                  <div className={cn(
+                    "border-2 border-dashed rounded-xl p-6 text-center cursor-pointer transition-all",
+                    "border-gray-300 hover:border-orange-500 hover:bg-orange-50"
+                  )}>
+                    <Upload className="w-8 h-8 text-gray-400 mx-auto mb-2" />
+                    <p className="text-sm font-medium text-gray-900">
+                      Sélectionner des fichiers
+                    </p>
+                    <p className="text-xs text-gray-500 mt-1">
+                      PDF ou images
+                    </p>
+                  </div>
+                  <input
+                    type="file"
+                    className="hidden"
+                    accept=".pdf,.jpg,.jpeg,.png,image/*"
+                    multiple
+                    onChange={handleFileSelect}
+                  />
+                </label>
 
-              <div className="relative">
-                <div className="absolute inset-0 flex items-center">
-                  <div className="w-full border-t border-gray-300"></div>
-                </div>
-                <div className="relative flex justify-center text-sm">
-                  <span className="px-2 bg-white text-gray-500">ou</span>
-                </div>
-              </div>
-
-              <Button
-                onClick={startCamera}
-                variant="outline"
-                className="w-full border-2 border-gray-300 hover:border-orange-500 hover:bg-orange-50"
-              >
-                <Camera className="w-5 h-5 mr-2" />
-                Capturer une photo
-              </Button>
-            </div>
-          )}
-
-          {cameraMode && (
-            <div className="space-y-4">
-              <div className="relative bg-black rounded-xl overflow-hidden">
-                <video
-                  ref={videoRef}
-                  autoPlay
-                  playsInline
-                  className="w-full aspect-video object-cover"
-                />
-              </div>
-              <div className="flex gap-3">
-                <Button
-                  onClick={stopCamera}
-                  variant="outline"
-                  className="flex-1 border-gray-300 text-gray-900"
-                >
-                  Annuler
-                </Button>
-                <Button
-                  onClick={capturePhoto}
-                  className="flex-1 bg-orange-600 hover:bg-orange-700"
-                >
-                  <Camera className="w-4 h-4 mr-2" />
-                  Capturer
-                </Button>
+                <label className="block">
+                  <div className={cn(
+                    "border-2 border-dashed rounded-xl p-6 text-center cursor-pointer transition-all",
+                    "border-gray-300 hover:border-orange-500 hover:bg-orange-50"
+                  )}>
+                    <Camera className="w-8 h-8 text-gray-400 mx-auto mb-2" />
+                    <p className="text-sm font-medium text-gray-900">
+                      Capturer une photo
+                    </p>
+                    <p className="text-xs text-gray-500 mt-1">
+                      Appareil photo
+                    </p>
+                  </div>
+                  <input
+                    type="file"
+                    className="hidden"
+                    accept="image/*"
+                    capture="environment"
+                    onChange={handleFileSelect}
+                  />
+                </label>
               </div>
             </div>
           )}
@@ -306,6 +233,48 @@ export default function InvoiceUploadModal({ open, onClose }) {
                     </button>
                   </div>
                 ))}
+              </div>
+
+              <div className="grid grid-cols-2 gap-2">
+                <label className="block">
+                  <Button
+                    variant="outline"
+                    className="w-full border-gray-300"
+                    asChild
+                  >
+                    <span>
+                      <Plus className="w-4 h-4 mr-2" />
+                      Ajouter fichiers
+                    </span>
+                  </Button>
+                  <input
+                    type="file"
+                    className="hidden"
+                    accept=".pdf,.jpg,.jpeg,.png,image/*"
+                    multiple
+                    onChange={handleFileSelect}
+                  />
+                </label>
+
+                <label className="block">
+                  <Button
+                    variant="outline"
+                    className="w-full border-gray-300"
+                    asChild
+                  >
+                    <span>
+                      <Camera className="w-4 h-4 mr-2" />
+                      Photo
+                    </span>
+                  </Button>
+                  <input
+                    type="file"
+                    className="hidden"
+                    accept="image/*"
+                    capture="environment"
+                    onChange={handleFileSelect}
+                  />
+                </label>
               </div>
             </div>
           )}
@@ -367,7 +336,7 @@ export default function InvoiceUploadModal({ open, onClose }) {
             </div>
           )}
 
-          {!uploading && uploadResults.length === 0 && files.length === 0 && (
+          {!uploading && uploadResults.length === 0 && (
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
               <p className="text-sm text-blue-900 font-medium mb-2">✨ Extraction automatique</p>
               <ul className="text-xs text-blue-800 space-y-1">
