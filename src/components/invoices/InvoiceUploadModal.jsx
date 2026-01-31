@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Upload, Loader2, CheckCircle, AlertCircle, X, FileText, Camera, Plus } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
 import { cn } from '@/lib/utils';
+import { compressImageStrict } from '@/components/utils/imageCompressor';
 
 export default function InvoiceUploadModal({ open, onClose }) {
   const queryClient = useQueryClient();
@@ -14,9 +15,27 @@ export default function InvoiceUploadModal({ open, onClose }) {
   const [uploadResults, setUploadResults] = useState([]);
   const [globalProgress, setGlobalProgress] = useState(0);
 
-  const handleFileSelect = (e) => {
+  const handleFileSelect = async (e) => {
     const selectedFiles = Array.from(e.target.files || []);
-    setFiles(prev => [...prev, ...selectedFiles]);
+    
+    // Compression automatique des images
+    const processedFiles = [];
+    for (const file of selectedFiles) {
+      if (file.type.startsWith('image/')) {
+        try {
+          const { file: compressedFile, metadata } = await compressImageStrict(file);
+          console.log(`Image compressée: ${file.name}`, metadata);
+          processedFiles.push(compressedFile);
+        } catch (err) {
+          console.error('Erreur compression:', err);
+          processedFiles.push(file); // Fallback: utiliser le fichier original
+        }
+      } else {
+        processedFiles.push(file); // PDF non compressé
+      }
+    }
+    
+    setFiles(prev => [...prev, ...processedFiles]);
     e.target.value = ''; // Reset input to allow selecting same file again
   };
 
@@ -71,12 +90,31 @@ export default function InvoiceUploadModal({ open, onClose }) {
           file_name: file.name,
           file_mime: file.type || 'application/pdf',
           file_size: file.size,
+          original_size: file.size,
+          optimized_size: file.size,
+          compression_applied: file.type.startsWith('image/'),
           status: 'non_envoyee',
           ai_processing: true
         });
 
-        fileResult.progress = 70;
+        fileResult.progress = 60;
         fileResult.invoiceId = invoice.id;
+        setUploadResults([...results, fileResult]);
+
+        // 2b. Compression serveur si image > 900 Ko
+        if (file.type.startsWith('image/') && file.size > 900 * 1024) {
+          try {
+            const compressionResult = await base44.functions.invoke('compressInvoiceImage', {
+              file_url,
+              invoice_id: invoice.id
+            });
+            console.log('Compression serveur:', compressionResult.data);
+          } catch (err) {
+            console.error('Compression serveur échouée:', err);
+          }
+        }
+
+        fileResult.progress = 70;
         setUploadResults([...results, fileResult]);
 
         // 3. Launch AI extraction (async)
