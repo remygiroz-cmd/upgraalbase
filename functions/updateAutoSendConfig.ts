@@ -55,17 +55,70 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Mettre à jour l'automation via l'API
+    // Créer/Mettre à jour l'automation
+    const API_URL = Deno.env.get('BASE44_APP_URL') || 'https://api.base44.com';
+    const APP_ID = Deno.env.get('BASE44_APP_ID');
+    
+    // Récupérer les automations existantes pour cette fonction
+    const automations = await base44.asServiceRole.entities.Automation?.filter?.({ 
+      function_name: 'executeAutoSendInvoices'
+    }).catch(() => []);
+
+    const automationData = {
+      automation_type: 'scheduled',
+      name: 'Auto-envoi des factures',
+      function_name: 'executeAutoSendInvoices',
+      schedule_type: 'simple',
+      repeat_interval: frequency === 'daily' ? 1 : (frequency === 'weekly' ? 1 : 1),
+      repeat_unit: frequency === 'daily' ? 'days' : (frequency === 'weekly' ? 'weeks' : 'months'),
+      start_time: send_time,
+      is_active: auto_send_enabled
+    };
+
+    if (frequency === 'weekly') {
+      automationData.repeat_on_days = [parseInt(day_of_week)];
+    } else if (frequency === 'monthly') {
+      automationData.repeat_on_day_of_month = day_of_month;
+    }
+
     try {
-      await base44.asServiceRole.functions.invoke('updateInvoiceAutomation', {
-        frequency,
-        send_time,
-        day_of_week,
-        day_of_month,
-        auto_send_enabled
-      });
+      if (automations && automations[0]) {
+        // Mettre à jour via API REST
+        const updateRes = await fetch(
+          `${API_URL}/v1/apps/${APP_ID}/automations/${automations[0].id}`,
+          {
+            method: 'PATCH',
+            headers: {
+              'Authorization': `Bearer ${user.id}`,
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(automationData)
+          }
+        );
+        
+        if (!updateRes.ok) {
+          console.error('Erreur PATCH automation:', await updateRes.text());
+        }
+      } else {
+        // Créer via API REST
+        const createRes = await fetch(
+          `${API_URL}/v1/apps/${APP_ID}/automations`,
+          {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${user.id}`,
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(automationData)
+          }
+        );
+        
+        if (!createRes.ok) {
+          console.error('Erreur POST automation:', await createRes.text());
+        }
+      }
     } catch (err) {
-      console.error('Erreur mise à jour automation:', err);
+      console.error('Erreur sync automation:', err);
     }
 
     return Response.json({ 
