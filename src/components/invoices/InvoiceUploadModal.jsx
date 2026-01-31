@@ -62,7 +62,7 @@ export default function InvoiceUploadModal({ open, onClose }) {
         fileResult.progress = 50;
         setUploadResults([...results, fileResult]);
 
-        // 2. Create invoice record
+        // 2. Create invoice record with processing status
         const invoice = await base44.entities.Invoice.create({
           file_url,
           file_bucket: fileBucket,
@@ -70,7 +70,8 @@ export default function InvoiceUploadModal({ open, onClose }) {
           file_name: file.name,
           file_mime: file.type || 'application/pdf',
           file_size: file.size,
-          status: 'non_envoyee'
+          status: 'non_envoyee',
+          ai_processing: true
         });
 
         fileResult.progress = 70;
