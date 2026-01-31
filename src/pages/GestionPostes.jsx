@@ -163,7 +163,7 @@ export default function GestionPostes() {
 
       {activeTab === 'postes' && (
         <>
-              {loadingRoles ? (
+          {loadingRoles ? (
             <div className="text-center py-12">
               <p className="text-gray-500">Chargement...</p>
             </div>
