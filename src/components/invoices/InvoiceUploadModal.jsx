@@ -26,6 +26,54 @@ export default function InvoiceUploadModal({ open, onClose }) {
     setFiles(prev => prev.filter((_, i) => i !== index));
   };
 
+  const startCamera = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ 
+        video: { facingMode: 'environment' } // Use rear camera on mobile
+      });
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+        streamRef.current = stream;
+      }
+      setCameraMode(true);
+    } catch (err) {
+      alert('Impossible d\'accéder à la caméra: ' + err.message);
+    }
+  };
+
+  const stopCamera = () => {
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach(track => track.stop());
+      streamRef.current = null;
+    }
+    setCameraMode(false);
+  };
+
+  const capturePhoto = () => {
+    const video = videoRef.current;
+    if (!video) return;
+
+    const canvas = document.createElement('canvas');
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(video, 0, 0);
+
+    canvas.toBlob((blob) => {
+      const file = new File([blob], `facture_${Date.now()}.jpg`, { type: 'image/jpeg' });
+      setFiles([file]);
+      stopCamera();
+    }, 'image/jpeg', 0.9);
+  };
+
+  React.useEffect(() => {
+    return () => {
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach(track => track.stop());
+      }
+    };
+  }, []);
+
   const handleUpload = async () => {
     if (files.length === 0) return;
 
