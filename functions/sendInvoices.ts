@@ -81,33 +81,22 @@ Deno.serve(async (req) => {
       </div>
     `;
 
-    // Envoyer l'email via Resend avec pièces jointes
-    const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY');
-    if (!RESEND_API_KEY) {
-      return Response.json({ error: 'RESEND_API_KEY not configured' }, { status: 500 });
-    }
+    // Récupérer les paramètres d'email
+    const [emailSettings] = await base44.asServiceRole.entities.AppSettings.filter({ setting_key: 'app_logo' });
+    const fromName = emailSettings?.email_sender_name || 'UpGraal';
 
-    const emailPayload = {
-      from: 'UpGraal <noreply@lalyste.com>',
-      to: [recipient],
+    // Envoyer l'email avec Core.SendEmail et attachments
+    await base44.asServiceRole.integrations.Core.SendEmail({
+      from_name: fromName,
+      to: recipient,
       subject: `Factures - ${invoices.length} document(s) - ${totalTTC.toFixed(2)} €`,
-      html: htmlBody,
-      attachments: attachments
-    };
-
-    const resendResponse = await fetch('https://api.resend.com/emails', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${RESEND_API_KEY}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify(emailPayload)
+      body: htmlBody,
+      attachments: attachments.map(att => ({
+        filename: att.filename,
+        content: att.content,
+        contentType: att.type
+      }))
     });
-
-    if (!resendResponse.ok) {
-      const errorText = await resendResponse.text();
-      throw new Error(`Resend API error: ${errorText}`);
-    }
 
     // Mettre à jour les factures
     const historyEntry = {
