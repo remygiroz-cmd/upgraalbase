@@ -69,14 +69,7 @@ export default function AutomationsTab() {
 
   const saveMutation = useMutation({
     mutationFn: async (data) => {
-      if (settings[0]) {
-        return base44.entities.InvoiceSettings.update(settings[0].id, data);
-      } else {
-        return base44.entities.InvoiceSettings.create({
-          setting_key: 'auto_send_config',
-          ...data
-        });
-      }
+      return base44.functions.invoke('updateAutoSendConfig', data);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['invoiceSettings'] });
