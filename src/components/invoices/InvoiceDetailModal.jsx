@@ -75,8 +75,17 @@ export default function InvoiceDetailModal({ invoice, onClose }) {
     }
 
     try {
-      const downloadUrl = `/api/functions/downloadInvoiceFile/${invoice.id}`;
-      window.location.href = downloadUrl;
+      const response = await fetch(invoice.file_url);
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = invoice.file_name || 'facture.pdf';
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      a.remove();
+      toast.success('Téléchargement lancé');
     } catch (error) {
       toast.error('Erreur lors du téléchargement');
     }

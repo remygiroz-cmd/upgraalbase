@@ -382,12 +382,25 @@ export default function CoffreFactures() {
                         <Button
                           size="sm"
                           variant="outline"
-                          onClick={() => {
+                          onClick={async () => {
                             if (!invoice.file_url) {
                               alert('Fichier manquant — réuploader');
                               return;
                             }
-                            window.location.href = `/api/functions/downloadInvoiceFile/${invoice.id}`;
+                            try {
+                              const response = await fetch(invoice.file_url);
+                              const blob = await response.blob();
+                              const url = window.URL.createObjectURL(blob);
+                              const a = document.createElement('a');
+                              a.href = url;
+                              a.download = invoice.file_name || 'facture.pdf';
+                              document.body.appendChild(a);
+                              a.click();
+                              window.URL.revokeObjectURL(url);
+                              a.remove();
+                            } catch (error) {
+                              alert('Erreur lors du téléchargement');
+                            }
                           }}
                           className="border-gray-300 text-gray-900 hover:bg-gray-50"
                           title="Télécharger"
