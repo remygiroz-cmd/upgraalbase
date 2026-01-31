@@ -6,10 +6,9 @@ Deno.serve(async (req) => {
     const user = await base44.auth.me();
 
     if (!user || user.role !== 'admin') {
-      return Response.json({ error: 'Forbidden: Admin access required' }, { status: 403 });
+      return Response.json({ error: 'Forbidden' }, { status: 403 });
     }
 
-    const payload = await req.json();
     const {
       auto_send_enabled,
       frequency,
@@ -21,60 +20,34 @@ Deno.serve(async (req) => {
       include_envoyee,
       group_in_one_email,
       recipients
-    } = payload;
+    } = await req.json();
 
-    // Mettre à jour les settings dans InvoiceSettings
+    // Récupérer ou créer les settings
     const settings = await base44.entities.InvoiceSettings.filter({ setting_key: 'auto_send_config' });
     
+    const data = {
+      auto_send_enabled,
+      frequency,
+      send_time,
+      day_of_week: frequency === 'weekly' ? day_of_week : null,
+      day_of_month: frequency === 'monthly' ? day_of_month : null,
+      include_non_envoyee,
+      include_a_verifier,
+      include_envoyee,
+      group_in_one_email,
+      recipients
+    };
+
     if (settings[0]) {
-      await base44.entities.InvoiceSettings.update(settings[0].id, {
-        auto_send_enabled,
-        frequency,
-        send_time,
-        day_of_week: frequency === 'weekly' ? day_of_week : null,
-        day_of_month: frequency === 'monthly' ? day_of_month : null,
-        include_non_envoyee,
-        include_a_verifier,
-        include_envoyee,
-        group_in_one_email,
-        recipients
-      });
+      await base44.entities.InvoiceSettings.update(settings[0].id, data);
     } else {
       await base44.entities.InvoiceSettings.create({
         setting_key: 'auto_send_config',
-        auto_send_enabled,
-        frequency,
-        send_time,
-        day_of_week: frequency === 'weekly' ? day_of_week : null,
-        day_of_month: frequency === 'monthly' ? day_of_month : null,
-        include_non_envoyee,
-        include_a_verifier,
-        include_envoyee,
-        group_in_one_email,
-        recipients
+        ...data
       });
     }
 
-    // L'automation ID est 697e21bfb8a8ce1bec920778 (créée précédemment)
-    const automationId = '697e21bfb8a8ce1bec920778';
-
-    try {
-      await base44.asServiceRole.functions.invoke('updateInvoiceAutomation', {
-        frequency,
-        send_time,
-        day_of_week,
-        day_of_month,
-        auto_send_enabled,
-        automation_id: automationId
-      });
-    } catch (err) {
-      console.error('Erreur sync automation:', err);
-    }
-
-    return Response.json({ 
-      success: true, 
-      message: 'Configuration mise à jour'
-    });
+    return Response.json({ success: true });
   } catch (error) {
     return Response.json({ error: error.message }, { status: 500 });
   }
