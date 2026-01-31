@@ -1,21 +1,17 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
-import { FileText, Upload, Search, Filter, Download, Send, Eye, Edit2, Trash2, CheckSquare, Square, RefreshCw, Loader2, Camera, Settings, Mail } from 'lucide-react';
+import { FileText, Upload, Search, Filter, Download, Send, Eye, Edit2, Trash2, CheckSquare, Square, RefreshCw, Loader2, Camera } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import PageHeader from '@/components/ui/PageHeader';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import EmptyState from '@/components/ui/EmptyState';
 import InvoiceDetailModal from '@/components/invoices/InvoiceDetailModal';
 import InvoiceUploadModal from '@/components/invoices/InvoiceUploadModal';
 import SendInvoicesModal from '@/components/invoices/SendInvoicesModal';
-import AutomationsTab from '@/components/invoices/AutomationsTab';
-import EmailImportInfoBox from '@/components/invoices/EmailImportInfoBox';
-import EmailImportLogModal from '@/components/invoices/EmailImportLogModal';
 import { format, parseISO } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
@@ -43,7 +39,6 @@ export default function CoffreFactures() {
   const [showCapture, setShowCapture] = useState(false);
   const [showSend, setShowSend] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
-  const [showImportLog, setShowImportLog] = useState(false);
 
   const { data: invoices = [], isLoading } = useQuery({
     queryKey: ['invoices'],
@@ -131,35 +126,8 @@ export default function CoffreFactures() {
         icon={FileText}
         title="Coffre à factures"
         subtitle="Gestion centralisée de vos factures"
-      />
-
-      <Tabs defaultValue="factures" className="w-full">
-        <TabsList className="bg-gray-100 border-gray-300">
-          <TabsTrigger value="factures" className="data-[state=active]:bg-white">
-            <FileText className="w-4 h-4 mr-2" />
-            Factures
-          </TabsTrigger>
-          <TabsTrigger value="automatisations" className="data-[state=active]:bg-white">
-            <Settings className="w-4 h-4 mr-2" />
-            Automatisations
-          </TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="factures" className="space-y-6 mt-6">
-          {/* Encart import email */}
-          <EmailImportInfoBox />
-
-          {/* Actions */}
-          <div className="flex flex-wrap gap-2 justify-between">
-            <Button
-              variant="outline"
-              onClick={() => setShowImportLog(true)}
-              className="border-gray-300 text-gray-900 hover:bg-gray-50"
-            >
-              <Mail className="w-4 h-4 mr-2" />
-              Journal des imports
-            </Button>
-            <div className="flex flex-wrap gap-2">
+        actions={
+          <div className="flex flex-wrap gap-2">
             <Button
               variant="outline"
               onClick={() => setShowFilters(!showFilters)}
@@ -192,11 +160,12 @@ export default function CoffreFactures() {
               <Upload className="w-4 h-4 mr-2" />
               Uploader
             </Button>
-            </div>
           </div>
+        }
+      />
 
-              {/* Recherche */}
-          <div>
+      {/* Recherche */}
+      <div className="mb-6">
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
           <Input
@@ -208,9 +177,9 @@ export default function CoffreFactures() {
         </div>
       </div>
 
-          {/* Filtres avancés */}
-          {showFilters && (
-            <div className="bg-white rounded-xl border-2 border-gray-300 p-4 space-y-4">
+      {/* Filtres avancés */}
+      {showFilters && (
+        <div className="bg-white rounded-xl border-2 border-gray-300 p-4 mb-6 space-y-4">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <div>
               <label className="text-sm font-medium text-gray-900 mb-2 block">Statut</label>
@@ -331,13 +300,13 @@ export default function CoffreFactures() {
           >
             <RefreshCw className="w-4 h-4 mr-2" />
             Réinitialiser
-            </Button>
-          </div>
-          )}
+          </Button>
+        </div>
+      )}
 
-          {/* Actions sélection */}
-          {selectedInvoices.length > 0 && (
-            <div className="bg-orange-50 border-2 border-orange-200 rounded-xl p-4 flex items-center justify-between">
+      {/* Actions sélection */}
+      {selectedInvoices.length > 0 && (
+        <div className="bg-orange-50 border-2 border-orange-200 rounded-xl p-4 mb-6 flex items-center justify-between">
           <span className="text-gray-900 font-medium">
             {selectedInvoices.length} facture(s) sélectionnée(s)
           </span>
@@ -356,12 +325,12 @@ export default function CoffreFactures() {
               <Send className="w-4 h-4 mr-2" />
               Envoyer
             </Button>
-            </div>
           </div>
-          )}
+        </div>
+      )}
 
-          {/* Tableau */}
-          {filteredInvoices.length === 0 ? (
+      {/* Tableau */}
+      {filteredInvoices.length === 0 ? (
         <EmptyState
           icon={FileText}
           title="Aucune facture"
@@ -371,10 +340,10 @@ export default function CoffreFactures() {
               <Upload className="w-4 h-4 mr-2" />
               Uploader une facture
             </Button>
-            }
-          />
-          ) : (
-            <div className="bg-white rounded-xl border-2 border-gray-300 overflow-hidden">
+          }
+        />
+      ) : (
+        <div className="bg-white rounded-xl border-2 border-gray-300 overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead className="bg-gray-50 border-b-2 border-gray-200">
@@ -426,15 +395,7 @@ export default function CoffreFactures() {
                           <span className="text-xs">Extraction IA...</span>
                         </div>
                       ) : (
-                        <div>
-                          <div>{invoice.supplier || '-'}</div>
-                          {invoice.import_source === 'email' && (
-                            <Badge className="bg-blue-100 text-blue-800 text-xs mt-1">
-                              <Mail className="w-3 h-3 mr-1" />
-                              Import email
-                            </Badge>
-                          )}
-                        </div>
+                        invoice.supplier || '-'
                       )}
                     </td>
                     <td className="p-4 text-sm text-gray-700 max-w-xs truncate">
@@ -552,16 +513,10 @@ export default function CoffreFactures() {
                   </tr>
                 ))}
               </tbody>
-              </table>
-            </div>
+            </table>
           </div>
-          )}
-        </TabsContent>
-
-        <TabsContent value="automatisations" className="mt-6">
-          <AutomationsTab />
-        </TabsContent>
-      </Tabs>
+        </div>
+      )}
 
       {/* Modals */}
       {showDetail && (
@@ -592,13 +547,6 @@ export default function CoffreFactures() {
             setShowSend(false);
             setSelectedInvoices([]);
           }}
-        />
-      )}
-
-      {showImportLog && (
-        <EmailImportLogModal
-          open={showImportLog}
-          onClose={() => setShowImportLog(false)}
         />
       )}
     </div>
