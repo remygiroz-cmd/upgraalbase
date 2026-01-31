@@ -81,35 +81,60 @@ Deno.serve(async (req) => {
       </div>
     `;
 
-    // Envoyer l'email via Resend avec pièces jointes
-    const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY');
-    if (!RESEND_API_KEY) {
-      throw new Error('RESEND_API_KEY not configured');
+    // Envoyer l'email via EmailJS avec pièces jointes
+    const SERVICE_ID = Deno.env.get('EMAILJS_SERVICE_ID');
+    const TEMPLATE_ID = Deno.env.get('EMAILJS_TEMPLATE_ID');
+    const PUBLIC_KEY = Deno.env.get('EMAILJS_PUBLIC_KEY');
+    const PRIVATE_KEY = Deno.env.get('EMAILJS_PRIVATE_KEY');
+
+    if (!SERVICE_ID || !TEMPLATE_ID || !PUBLIC_KEY || !PRIVATE_KEY) {
+      throw new Error('EmailJS configuration missing');
     }
 
     const [emailSettings] = await base44.asServiceRole.entities.AppSettings.filter({ setting_key: 'app_logo' });
     const fromName = emailSettings?.email_sender_name || 'UpGraal';
 
+    // Construire le contenu avec liens de téléchargement
+    let emailBodyWithLinks = htmlBody + `
+      <div style="margin-top: 30px; padding-top: 20px; border-top: 2px solid #e5e7eb;">
+        <p style="font-weight: bold; margin-bottom: 10px;">📎 Fichiers joints :</p>
+        <ul>
+          ${invoices.map(inv => `
+            <li style="margin-bottom: 8px;">
+              <a href="${inv.file_url}" style="color: #f97316; text-decoration: none;">
+                ${inv.normalized_file_name || inv.file_name || 'Télécharger la facture'}
+              </a>
+            </li>
+          `).join('')}
+        </ul>
+      </div>
+    `;
+
     const emailPayload = {
-      from: `${fromName} <onboarding@resend.dev>`,
-      to: [recipient],
-      subject: `Factures - ${invoices.length} document(s) - ${totalTTC.toFixed(2)} €`,
-      html: htmlBody,
-      attachments: attachments
+      service_id: SERVICE_ID,
+      template_id: TEMPLATE_ID,
+      user_id: PUBLIC_KEY,
+      accessToken: PRIVATE_KEY,
+      template_params: {
+        from_name: fromName,
+        to_email: recipient,
+        subject: `Factures - ${invoices.length} document(s) - ${totalTTC.toFixed(2)} €`,
+        message: emailBodyWithLinks,
+        reply_to: user.email
+      }
     };
 
-    const resendResponse = await fetch('https://api.resend.com/emails', {
+    const emailResponse = await fetch('https://api.emailjs.com/api/v1.0/email/send', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${RESEND_API_KEY}`,
         'Content-Type': 'application/json'
       },
       body: JSON.stringify(emailPayload)
     });
 
-    if (!resendResponse.ok) {
-      const errorData = await resendResponse.json();
-      throw new Error(`Resend API error: ${JSON.stringify(errorData)}`);
+    if (!emailResponse.ok) {
+      const errorText = await emailResponse.text();
+      throw new Error(`EmailJS error: ${errorText}`);
     }
 
     // Mettre à jour les factures
