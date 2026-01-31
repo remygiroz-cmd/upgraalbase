@@ -263,31 +263,30 @@ export default function Equipe() {
         icon={Users}
         title="Gestion du personnel"
         subtitle="Équipes, employés et registre légal"
-        actions={activeTab === 'registre' ? registryActions : undefined}
       />
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="mb-8">
-        <TabsList className="bg-transparent border-b-2 border-gray-200 p-0 w-full flex gap-0 rounded-none overflow-x-auto sm:overflow-visible sm:grid" style={{ gridTemplateColumns: currentUser?.role === 'admin' ? 'repeat(auto-fit, minmax(150px, 1fr))' : 'repeat(auto-fit, minmax(120px, 1fr))' }}>
+        <TabsList className="bg-transparent border-b-2 border-gray-200 p-0 w-full flex gap-0 rounded-none overflow-x-auto">
           <TabsTrigger 
             value="equipes" 
             className="data-[state=active]:bg-transparent data-[state=active]:border-b-[3px] data-[state=active]:border-orange-600 data-[state=active]:text-orange-600 text-gray-600 hover:text-gray-900 text-xs sm:text-sm font-medium min-h-[48px] rounded-none border-b-[3px] border-transparent transition-all whitespace-nowrap"
           >
             <Users className="w-4 h-4 sm:w-5 sm:h-5 mr-1 sm:mr-2" />
-            <span className="sm:inline">Équipes</span>
+            <span className="hidden sm:inline">Équipes</span>
           </TabsTrigger>
           <TabsTrigger 
             value="personnel" 
             className="data-[state=active]:bg-transparent data-[state=active]:border-b-[3px] data-[state=active]:border-orange-600 data-[state=active]:text-orange-600 text-gray-600 hover:text-gray-900 text-xs sm:text-sm font-medium min-h-[48px] rounded-none border-b-[3px] border-transparent transition-all whitespace-nowrap"
           >
             <User className="w-4 h-4 sm:w-5 sm:h-5 mr-1 sm:mr-2" />
-            <span className="sm:inline">Personnel</span>
+            <span className="hidden sm:inline">Personnel</span>
           </TabsTrigger>
           <TabsTrigger 
             value="registre" 
             className="data-[state=active]:bg-transparent data-[state=active]:border-b-[3px] data-[state=active]:border-orange-600 data-[state=active]:text-orange-600 text-gray-600 hover:text-gray-900 text-xs sm:text-sm font-medium min-h-[48px] rounded-none border-b-[3px] border-transparent transition-all whitespace-nowrap"
           >
             <FileText className="w-4 h-4 sm:w-5 sm:h-5 mr-1 sm:mr-2" />
-            <span className="sm:inline">Registre</span>
+            <span className="hidden sm:inline">Registre</span>
           </TabsTrigger>
           {currentUser?.role === 'admin' && (
             <>
@@ -296,19 +295,25 @@ export default function Equipe() {
                 className="data-[state=active]:bg-transparent data-[state=active]:border-b-[3px] data-[state=active]:border-orange-600 data-[state=active]:text-orange-600 text-gray-600 hover:text-gray-900 text-xs sm:text-sm font-medium min-h-[48px] rounded-none border-b-[3px] border-transparent transition-all whitespace-nowrap"
               >
                 <DollarSign className="w-4 h-4 sm:w-5 sm:h-5 mr-1 sm:mr-2" />
-                <span className="sm:inline">Masse sal.</span>
+                <span className="hidden sm:inline">Masse salariale</span>
               </TabsTrigger>
               <TabsTrigger 
                 value="fiches-paie" 
                 className="data-[state=active]:bg-transparent data-[state=active]:border-b-[3px] data-[state=active]:border-orange-600 data-[state=active]:text-orange-600 text-gray-600 hover:text-gray-900 text-xs sm:text-sm font-medium min-h-[48px] rounded-none border-b-[3px] border-transparent transition-all whitespace-nowrap"
               >
                 <File className="w-4 h-4 sm:w-5 sm:h-5 mr-1 sm:mr-2" />
-                <span className="sm:inline">Fiches paie</span>
+                <span className="hidden sm:inline">Fiches de paie</span>
               </TabsTrigger>
             </>
           )}
         </TabsList>
       </Tabs>
+
+      {activeTab === 'registre' && registryActions && (
+        <div className="mb-6">
+          {registryActions}
+        </div>
+      )}
 
       {activeTab === 'equipes' && <TeamsManager />}
       {activeTab === 'personnel' && <EmployeeList />}
