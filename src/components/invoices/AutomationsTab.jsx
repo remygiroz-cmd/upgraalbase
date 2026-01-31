@@ -133,8 +133,6 @@ export default function AutomationsTab() {
         recipients,
         automation_id: '697e21bfb8a8ce1bec920778'
       });
-      // Rafraîchir les automations après la sauvegarde
-      setTimeout(() => queryClient.refetchQueries({ queryKey: ['automations'] }), 500);
       alert('Automatisation enregistrée ✓');
     } catch (err) {
       alert('Erreur: ' + err.message);
