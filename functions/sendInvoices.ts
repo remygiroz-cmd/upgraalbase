@@ -45,8 +45,7 @@ Deno.serve(async (req) => {
         
         attachments.push({
           filename: inv.normalized_file_name || inv.file_name || `facture_${inv.id}.pdf`,
-          content: base64Content,
-          type: inv.file_mime || 'application/pdf'
+          content: base64Content
         });
       } catch (err) {
         console.error(`Error processing file for invoice ${inv.id}:`, err);
