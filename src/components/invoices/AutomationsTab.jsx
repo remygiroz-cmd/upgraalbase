@@ -128,10 +128,12 @@ export default function AutomationsTab() {
   };
 
   const nextExecution = () => {
-    if (!enabled) return null;
+    if (!enabled || !sendTime) return null;
 
     const now = new Date();
     const [hours, minutes] = sendTime.split(':');
+    if (!hours || !minutes) return null;
+
     let next = new Date();
     next.setHours(parseInt(hours), parseInt(minutes), 0, 0);
 
