@@ -29,6 +29,15 @@ export default function PayslipsManagement() {
     queryFn: () => base44.entities.Establishment.list()
   });
 
+  const normalizeText = (text) => {
+    if (!text) return '';
+    return text
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .trim();
+  };
+
   const handleFileSelect = async (e) => {
     const files = Array.from(e.target.files || []);
     if (files.length === 0) return;
@@ -91,12 +100,19 @@ Retourne uniquement le JSON sans texte supplémentaire.`,
           }
         });
 
-        // Find matching employee
+        // Find matching employee (with accent normalization)
+        const normalizedAIFirstName = normalizeText(aiResponse.first_name);
+        const normalizedAILastName = normalizeText(aiResponse.last_name);
+        
         const matchedEmployee = employees.find(emp => {
-          const firstNameMatch = emp.first_name?.toLowerCase().includes(aiResponse.first_name?.toLowerCase()) ||
-                                aiResponse.first_name?.toLowerCase().includes(emp.first_name?.toLowerCase());
-          const lastNameMatch = emp.last_name?.toLowerCase().includes(aiResponse.last_name?.toLowerCase()) ||
-                               aiResponse.last_name?.toLowerCase().includes(emp.last_name?.toLowerCase());
+          const normalizedEmpFirstName = normalizeText(emp.first_name);
+          const normalizedEmpLastName = normalizeText(emp.last_name);
+          
+          const firstNameMatch = normalizedEmpFirstName.includes(normalizedAIFirstName) ||
+                                normalizedAIFirstName.includes(normalizedEmpFirstName);
+          const lastNameMatch = normalizedEmpLastName.includes(normalizedAILastName) ||
+                               normalizedAILastName.includes(normalizedEmpLastName);
+          
           return firstNameMatch && lastNameMatch;
         });
 
