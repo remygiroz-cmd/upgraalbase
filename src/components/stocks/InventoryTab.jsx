@@ -311,18 +311,32 @@ export default function InventoryTab() {
     const today = new Date().toISOString().split('T')[0];
     const ordersInProgress = existingOrders.filter(order => order.status === 'en_cours');
     
-    for (const order of Object.values(ordersBySupplier)) {
-      const existingOrder = ordersInProgress.find(o => o.supplier_id === order.supplier_id);
+    // Séparer les commandes avec conflit et sans conflit
+    const ordersWithConflict = [];
+    const ordersWithoutConflict = {};
+    
+    Object.entries(ordersBySupplier).forEach(([supplierId, order]) => {
+      const existingOrder = ordersInProgress.find(o => o.supplier_id === supplierId);
       
       if (existingOrder) {
-        // Conflit détecté
-        setConflictInfo({
+        ordersWithConflict.push({
           supplierName: order.supplier_name,
           newOrder: order,
           existingOrder: existingOrder
         });
-        return; // Arrêter et attendre la décision de l'utilisateur
+      } else {
+        ordersWithoutConflict[supplierId] = order;
       }
+    });
+
+    // S'il y a des conflits, traiter le premier et stocker les autres pour après
+    if (ordersWithConflict.length > 0) {
+      setConflictInfo({
+        ...ordersWithConflict[0],
+        remainingConflicts: ordersWithConflict.slice(1),
+        ordersWithoutConflict: ordersWithoutConflict
+      });
+      return;
     }
 
     // Aucun conflit, créer les commandes
@@ -418,7 +432,7 @@ export default function InventoryTab() {
       const supplier = suppliers.find(s => s.id === conflictInfo.newOrder.supplier_id);
       const desiredDeliveryDay = supplier ? getNextDeliveryDay(supplier.preferred_delivery_days) : '';
       
-      // Créer la nouvelle
+      // Créer la nouvelle commande
       await createOrderMutation.mutateAsync({
         ...conflictInfo.newOrder,
         date: today,
@@ -426,6 +440,21 @@ export default function InventoryTab() {
         desired_delivery_day: desiredDeliveryDay,
         status: 'en_cours'
       });
+      
+      // Créer les commandes sans conflit
+      if (conflictInfo.ordersWithoutConflict && Object.keys(conflictInfo.ordersWithoutConflict).length > 0) {
+        await createOrders(conflictInfo.ordersWithoutConflict, today);
+      }
+      
+      // S'il reste des conflits, traiter le suivant
+      if (conflictInfo.remainingConflicts && conflictInfo.remainingConflicts.length > 0) {
+        setConflictInfo({
+          ...conflictInfo.remainingConflicts[0],
+          remainingConflicts: conflictInfo.remainingConflicts.slice(1),
+          ordersWithoutConflict: {} // Déjà traités
+        });
+        return;
+      }
       
       // Vider le panier
       setCart({});
@@ -438,7 +467,7 @@ export default function InventoryTab() {
       localStorage.removeItem('inventoryHiddenArticles');
       
       setConflictInfo(null);
-      toast.success('Commande remplacée avec succès');
+      toast.success('Commande(s) créée(s) avec succès');
     } catch (error) {
       toast.error('Erreur lors du remplacement de la commande');
     }
@@ -478,6 +507,23 @@ export default function InventoryTab() {
         data: { items: mergedItems }
       });
       
+      const today = new Date().toISOString().split('T')[0];
+      
+      // Créer les commandes sans conflit
+      if (conflictInfo.ordersWithoutConflict && Object.keys(conflictInfo.ordersWithoutConflict).length > 0) {
+        await createOrders(conflictInfo.ordersWithoutConflict, today);
+      }
+      
+      // S'il reste des conflits, traiter le suivant
+      if (conflictInfo.remainingConflicts && conflictInfo.remainingConflicts.length > 0) {
+        setConflictInfo({
+          ...conflictInfo.remainingConflicts[0],
+          remainingConflicts: conflictInfo.remainingConflicts.slice(1),
+          ordersWithoutConflict: {} // Déjà traités
+        });
+        return;
+      }
+      
       // Vider le panier
       setCart({});
       setStockValues({});
@@ -489,7 +535,7 @@ export default function InventoryTab() {
       localStorage.removeItem('inventoryHiddenArticles');
       
       setConflictInfo(null);
-      toast.success('Articles ajoutés au bon de commande existant');
+      toast.success('Commande(s) créée(s) avec succès');
     } catch (error) {
       toast.error('Erreur lors de la fusion des commandes');
     }
