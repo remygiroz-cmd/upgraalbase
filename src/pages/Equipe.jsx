@@ -12,8 +12,6 @@ import TeamsManager from '@/components/personnel/TeamsManager';
 import RegistryImportModal from '@/components/personnel/RegistryImportModal';
 import PayrollOverview from '@/components/personnel/PayrollOverview';
 import PayslipsManagement from '@/components/personnel/PayslipsManagement';
-import PayslipExtraction from '@/components/personnel/PayslipExtraction';
-import PayrollDashboard from '@/components/personnel/PayrollDashboard';
 import { cn } from '@/lib/utils';
 import jsPDF from 'jspdf';
 
@@ -319,8 +317,8 @@ export default function Equipe() {
 
       {activeTab === 'equipes' && <TeamsManager />}
       {activeTab === 'personnel' && <EmployeeList />}
-      {activeTab === 'masse-salariale' && currentUser?.role === 'admin' && <PayrollDashboard />}
-      {activeTab === 'fiches-paie' && currentUser?.role === 'admin' && <PayslipExtraction />}
+      {activeTab === 'masse-salariale' && currentUser?.role === 'admin' && <PayrollOverview />}
+      {activeTab === 'fiches-paie' && currentUser?.role === 'admin' && <PayslipsManagement />}
       {activeTab === 'registre' && (
         <>
           {registryEntries.length === 0 ? (
