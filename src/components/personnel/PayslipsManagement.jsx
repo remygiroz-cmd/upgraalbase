@@ -54,20 +54,21 @@ export default function PayslipsManagement() {
         const aiResponse = await base44.integrations.Core.InvokeLLM({
           prompt: `Analyse ce bulletin de paie français et extrait les données suivantes.
 
-IDENTITÉ: Nom et prénom du salarié (pas l'employeur), période au format YYYY-MM.
+        IDENTITÉ: Nom et prénom du salarié (pas l'employeur), période au format YYYY-MM.
 
-MONTANTS EN EUROS (enlève le symbole €):
-- Salaire brut: montant total avant cotisations
-- Net à payer: montant final versé au salarié (en bas du bulletin)
-- Part salariale: TOTAL de la colonne cotisations salariales
-- Part patronale: TOTAL de la colonne charges patronales
+        MONTANTS EN EUROS (enlève le symbole €):
+        - Salaire brut: montant total avant cotisations
+        - Net à payer: montant final versé au salarié (en bas du bulletin)
+        - Part salariale: TOTAL de la colonne cotisations salariales
+        - Part patronale: TOTAL de la colonne charges patronales
+        - Acompte: cherche "Acompte" ou "Acompte de" dans le bulletin (souvent en bas, près du net à payer). Si présent, retourne le montant en euros, sinon 0.
 
-CONGÉS EN JOURS (enlève "j" ou "jours"):
-- Cherche la section congés payés
-- ADDITIONNE tous les soldes de congés (N-1 + N ou toutes lignes de solde)
-- Retourne le TOTAL en jours dans le champ total_leave
+        CONGÉS EN JOURS (enlève "j" ou "jours"):
+        - Cherche la section congés payés
+        - ADDITIONNE tous les soldes de congés (N-1 + N ou toutes lignes de solde)
+        - Retourne le TOTAL en jours dans le champ total_leave
 
-Retourne uniquement le JSON sans texte supplémentaire.`,
+        Retourne uniquement le JSON sans texte supplémentaire.`,
           file_urls: [file_url],
           add_context_from_internet: false,
           response_json_schema: {
@@ -80,7 +81,8 @@ Retourne uniquement le JSON sans texte supplémentaire.`,
               net_salary: { type: "number" },
               employee_contributions: { type: "number" },
               employer_contributions: { type: "number" },
-              total_leave: { type: "number" }
+              total_leave: { type: "number" },
+              advance_payment: { type: "number" }
             },
             required: ["first_name", "last_name"]
           }
@@ -147,7 +149,8 @@ Retourne uniquement le JSON sans texte supplémentaire.`,
         net_salary: parseFloat(extractedData.net_salary) || null,
         employee_contributions: parseFloat(extractedData.employee_contributions) || null,
         employer_contributions: parseFloat(extractedData.employer_contributions) || null,
-        total_leave: parseFloat(extractedData.total_leave) || 0
+        total_leave: parseFloat(extractedData.total_leave) || 0,
+        advance_payment: parseFloat(extractedData.advance_payment) || 0
       };
 
       console.log('Saving payslip:', newPayslip);
@@ -422,8 +425,18 @@ Retourne uniquement le JSON sans texte supplémentaire.`,
                           className="text-sm"
                         />
                       </div>
-                    </div>
-                    <div className="mt-3 pt-3 border-t border-blue-200">
+                      <div>
+                        <label className="text-xs text-gray-700 block mb-1">Acompte (€)</label>
+                        <Input
+                          type="number"
+                          step="0.01"
+                          value={item.extracted_info.advance_payment || ''}
+                          onChange={(e) => handleEditQueueItem(item.id, 'advance_payment', e.target.value)}
+                          className="text-sm"
+                        />
+                      </div>
+                      </div>
+                      <div className="mt-3 pt-3 border-t border-blue-200">
                       <h5 className="text-xs font-semibold text-gray-700 mb-2">Congés totaux (jours)</h5>
                       <Input
                         type="number"
@@ -433,7 +446,7 @@ Retourne uniquement le JSON sans texte supplémentaire.`,
                         onChange={(e) => handleEditQueueItem(item.id, 'total_leave', e.target.value)}
                         className="text-sm"
                       />
-                    </div>
+                      </div>
                     <Button
                       size="sm"
                       onClick={() => {
@@ -495,6 +508,12 @@ Retourne uniquement le JSON sans texte supplémentaire.`,
                               <span className="text-gray-600">Charges patronales:</span>
                               <span className="ml-1 font-semibold">{item.extracted_info.employer_contributions ? `${item.extracted_info.employer_contributions}€` : 'N/A'}</span>
                             </div>
+                            {item.extracted_info.advance_payment > 0 && (
+                              <div>
+                                <span className="text-gray-600">Acompte:</span>
+                                <span className="ml-1 font-semibold text-purple-700">{item.extracted_info.advance_payment}€</span>
+                              </div>
+                            )}
                           </div>
                           {item.extracted_info.total_leave && (
                             <div className="mt-2 pt-2 border-t border-yellow-200">
@@ -852,7 +871,8 @@ function PayslipDetailModal({ employee, payslip, onClose }) {
     net_salary: payslip.net_salary || 0,
     employee_contributions: payslip.employee_contributions || 0,
     employer_contributions: payslip.employer_contributions || 0,
-    total_leave: payslip.total_leave || 0
+    total_leave: payslip.total_leave || 0,
+    advance_payment: payslip.advance_payment || 0
   });
   const queryClient = useQueryClient();
 
@@ -983,8 +1003,26 @@ function PayslipDetailModal({ employee, payslip, onClose }) {
                   </p>
                 )}
               </div>
-            </div>
-          </div>
+              </div>
+              {(payslip.advance_payment > 0 || isEditing) && (
+              <div className="bg-purple-50 p-4 rounded-lg border border-purple-200 mt-3">
+                <p className="text-xs text-purple-600 mb-1">Acompte versé</p>
+                {isEditing ? (
+                  <Input
+                    type="number"
+                    step="0.01"
+                    value={editedData.advance_payment}
+                    onChange={(e) => setEditedData({...editedData, advance_payment: parseFloat(e.target.value) || 0})}
+                    className="text-lg font-bold text-purple-900 mt-1"
+                  />
+                ) : (
+                  <p className="text-xl font-bold text-purple-900">
+                    {payslip.advance_payment ? payslip.advance_payment.toLocaleString('fr-FR', { style: 'currency', currency: 'EUR' }) : '0,00 €'}
+                  </p>
+                )}
+              </div>
+              )}
+              </div>
 
           {/* Cotisations */}
           <div>
@@ -1096,7 +1134,8 @@ function PayslipDetailModal({ employee, payslip, onClose }) {
                       net_salary: payslip.net_salary || 0,
                       employee_contributions: payslip.employee_contributions || 0,
                       employer_contributions: payslip.employer_contributions || 0,
-                      total_leave: payslip.total_leave || 0
+                      total_leave: payslip.total_leave || 0,
+                      advance_payment: payslip.advance_payment || 0
                     });
                   }}
                   className="flex-1 border-gray-300"
