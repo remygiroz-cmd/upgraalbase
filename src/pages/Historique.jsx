@@ -277,24 +277,27 @@ function DayDetailModal({ day, onClose }) {
   // Get unique users from completed tasks
   const uniqueUsers = useMemo(() => {
     const users = new Set();
-    day.tasks?.forEach(task => {
-      if (task.completed_by_name) {
-        users.add(task.completed_by_name);
-      }
-    });
+    if (day.tasks) {
+      day.tasks.forEach(task => {
+        if (task.completed_by_name) {
+          users.add(task.completed_by_name);
+        }
+      });
+    }
     return Array.from(users).sort();
   }, [day.tasks]);
 
   // Filter tasks by search and user
   const filteredTasks = useMemo(() => {
-    return day.tasks?.filter(task => {
+    if (!day.tasks) return [];
+    return day.tasks.filter(task => {
       const matchesSearch = searchQuery === '' || 
         task.task_name?.toLowerCase().includes(searchQuery.toLowerCase());
       const matchesUser = selectedUser === 'all' || 
         task.completed_by_name === selectedUser ||
         (!task.completed_by_name && selectedUser === 'not_completed');
       return matchesSearch && matchesUser;
-    }) || [];
+    });
   }, [day.tasks, searchQuery, selectedUser]);
 
   // Group filtered tasks by category
