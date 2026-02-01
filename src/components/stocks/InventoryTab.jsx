@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
-import { Plus, ShoppingCart, RotateCcw, Check, RefreshCw, EyeOff } from 'lucide-react';
+import { Plus, ShoppingCart, RotateCcw, Check, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
@@ -57,14 +57,6 @@ export default function InventoryTab() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['orders'] });
       toast.success('Commande mise à jour');
-    }
-  });
-
-  const updateArticleMutation = useMutation({
-    mutationFn: ({ id, data }) => base44.entities.Article.update(id, data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['articles'] });
-      toast.success('Article masqué');
     }
   });
 
@@ -125,9 +117,9 @@ export default function InventoryTab() {
 
   const currentDay = getCurrentDay();
 
-  // Filtrer les articles dont le jour de comptage correspond à aujourd'hui (et non masqués)
+  // Filtrer les articles dont le jour de comptage correspond à aujourd'hui
   const todayArticles = articles.filter(article => 
-    article.counting_days?.includes(currentDay) && !article.is_hidden
+    article.counting_days?.includes(currentDay)
   );
 
   // Filtrer les articles non remplis (sauf si showAll est activé)
@@ -633,19 +625,7 @@ export default function InventoryTab() {
                             </div>
                           </div>
 
-                          <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
-                            <button
-                              onClick={() => {
-                                updateArticleMutation.mutate({
-                                  id: article.id,
-                                  data: { is_hidden: true }
-                                });
-                              }}
-                              className="p-2 text-gray-400 hover:text-orange-600 hover:bg-orange-50 rounded transition-colors touch-manipulation min-h-[44px] min-w-[44px] flex items-center justify-center"
-                              title="Masquer de l'inventaire"
-                            >
-                              <EyeOff className="w-4 h-4" />
-                            </button>
+                          <div className="flex items-center gap-3 w-full sm:w-auto justify-end">
                             <div className="text-right flex-shrink-0">
                               <div className="text-[11px] sm:text-xs text-gray-400 uppercase mb-1">En réserve</div>
                               {article.inventory_mode === 'juste_a_cocher' ? (
