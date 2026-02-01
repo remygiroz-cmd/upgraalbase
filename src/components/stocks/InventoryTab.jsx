@@ -151,11 +151,8 @@ export default function InventoryTab() {
     ? todayArticles 
     : todayArticles.filter(article => !completedArticles.has(article.id) && !hiddenArticles.has(article.id));
 
-  // Trier par storage_order avant de grouper
-  const sortedArticles = [...filteredArticles].sort((a, b) => (a.storage_order || 0) - (b.storage_order || 0));
-
   // Grouper par catégorie
-  const groupedByCategory = sortedArticles.reduce((acc, article) => {
+  const groupedByCategory = filteredArticles.reduce((acc, article) => {
     const category = article.category || 'Sans catégorie';
     if (!acc[category]) {
       acc[category] = [];
@@ -163,6 +160,18 @@ export default function InventoryTab() {
     acc[category].push(article);
     return acc;
   }, {});
+
+  // Trier les articles dans chaque catégorie par storage_order
+  Object.keys(groupedByCategory).forEach(categoryName => {
+    groupedByCategory[categoryName].sort((a, b) => (a.storage_order || 0) - (b.storage_order || 0));
+  });
+
+  // Trier les catégories selon leur ordre défini dans l'entité Category
+  const sortedCategoryEntries = Object.entries(groupedByCategory).sort(([catNameA], [catNameB]) => {
+    const catA = categories.find(c => c.name === catNameA);
+    const catB = categories.find(c => c.name === catNameB);
+    return (catA?.order || 999) - (catB?.order || 999);
+  });
 
   const handleStockChange = (articleId, value, article) => {
     setStockValues(prev => ({
@@ -681,7 +690,7 @@ export default function InventoryTab() {
             </div>
           ) : (
             <div className="space-y-4">
-              {Object.entries(groupedByCategory).map(([categoryName, categoryArticles]) => {
+              {sortedCategoryEntries.map(([categoryName, categoryArticles]) => {
                 const category = categories.find(c => c.name === categoryName);
                 return (
                   <div key={categoryName}>
