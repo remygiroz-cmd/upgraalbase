@@ -296,6 +296,8 @@ export default function MiseEnPlace() {
     const newSelected = new Set();
     const newStockInputs = {};
     
+    if (!tasks) return;
+    
     tasks.forEach(task => {
       // Auto-schedule tasks - skip if session already exists
       if (shouldAutoSchedule(task)) {
@@ -330,7 +332,7 @@ export default function MiseEnPlace() {
     if (Object.keys(newStockInputs).length > 0) {
       setStockInputs(prev => ({ ...prev, ...newStockInputs }));
     }
-  }, [tasks, hasActiveSession]);
+  }, [tasks, hasActiveSession, dayOfWeek]);
 
   const handleCreateNewSession = async () => {
     // Clôturer toutes les sessions actives existantes
