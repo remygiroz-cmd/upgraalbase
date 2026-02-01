@@ -663,6 +663,7 @@ Retourne uniquement le JSON sans texte supplémentaire.`,
 
 function PayslipDetailModal({ employee, payslip, onClose }) {
   const [isEditing, setIsEditing] = useState(false);
+  const [activeTab, setActiveTab] = useState('data'); // 'data' or 'preview'
   const [editedData, setEditedData] = useState({
     gross_salary: payslip.gross_salary || 0,
     net_salary: payslip.net_salary || 0,
@@ -713,24 +714,54 @@ function PayslipDetailModal({ employee, payslip, onClose }) {
   return (
     <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
       <Card className="max-w-2xl w-full max-h-[90vh] overflow-y-auto bg-white">
-        <div className="sticky top-0 bg-white border-b border-gray-200 p-6 flex items-center justify-between">
-          <div>
-            <h2 className="text-xl font-bold text-gray-900">
-              Fiche de paie - {formatMonth(payslip.month)}
-            </h2>
-            <p className="text-sm text-gray-600">
-              {employee.first_name} {employee.last_name}
-            </p>
+        <div className="sticky top-0 bg-white border-b border-gray-200">
+          <div className="p-6 flex items-center justify-between">
+            <div>
+              <h2 className="text-xl font-bold text-gray-900">
+                Fiche de paie - {formatMonth(payslip.month)}
+              </h2>
+              <p className="text-sm text-gray-600">
+                {employee.first_name} {employee.last_name}
+              </p>
+            </div>
+            <button
+              onClick={onClose}
+              className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+            >
+              <XCircle className="w-5 h-5 text-gray-500" />
+            </button>
           </div>
-          <button
-            onClick={onClose}
-            className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-          >
-            <XCircle className="w-5 h-5 text-gray-500" />
-          </button>
+
+          {/* Tabs */}
+          <div className="flex border-t border-gray-200">
+            <button
+              onClick={() => setActiveTab('data')}
+              className={cn(
+                "flex-1 px-6 py-3 text-sm font-medium transition-colors",
+                activeTab === 'data'
+                  ? "bg-orange-50 text-orange-900 border-b-2 border-orange-600"
+                  : "text-gray-600 hover:bg-gray-50"
+              )}
+            >
+              Données extraites
+            </button>
+            <button
+              onClick={() => setActiveTab('preview')}
+              className={cn(
+                "flex-1 px-6 py-3 text-sm font-medium transition-colors",
+                activeTab === 'preview'
+                  ? "bg-orange-50 text-orange-900 border-b-2 border-orange-600"
+                  : "text-gray-600 hover:bg-gray-50"
+              )}
+            >
+              Aperçu PDF
+            </button>
+          </div>
         </div>
 
         <div className="p-6 space-y-6">
+          {activeTab === 'data' ? (
+            <>
           {/* Salaires */}
           <div>
             <h3 className="text-sm font-semibold text-gray-900 mb-3 uppercase tracking-wide">
@@ -918,10 +949,21 @@ function PayslipDetailModal({ employee, payslip, onClose }) {
                   Fermer
                 </Button>
               </>
-            )}
-          </div>
-        </div>
-      </Card>
-    </div>
-  );
-}
+              )}
+              </div>
+              </>
+              ) : (
+              /* PDF Preview */
+              <div className="h-[600px] w-full bg-gray-100 rounded-lg overflow-hidden">
+              <iframe
+                src={payslip.file_url}
+                className="w-full h-full"
+                title="Aperçu fiche de paie"
+              />
+              </div>
+              )}
+              </div>
+              </Card>
+              </div>
+              );
+              }
