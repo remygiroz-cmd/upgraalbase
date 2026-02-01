@@ -251,14 +251,30 @@ Retourne uniquement le JSON sans texte supplémentaire.`,
 
   const handleBulkDownload = () => {
     const allEmps = [...activeEmployeesWithPayslips, ...archivedEmployeesWithPayslips];
+    const payslipsToDownload = [];
+    
     selectedPayslips.forEach(payslipId => {
       const [empId, payslipIdx] = payslipId.split('-');
       const emp = allEmps.find(e => e.id === empId);
       if (emp && emp.payslips && emp.payslips[payslipIdx]) {
-        window.open(emp.payslips[payslipIdx].file_url, '_blank');
+        payslipsToDownload.push(emp.payslips[payslipIdx].file_url);
       }
     });
-    toast.success(`${selectedPayslips.size} fiche(s) de paie téléchargée(s)`);
+
+    // Télécharger avec un délai pour éviter le blocage des popups
+    payslipsToDownload.forEach((url, index) => {
+      setTimeout(() => {
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = '';
+        link.target = '_blank';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      }, index * 300);
+    });
+    
+    toast.success(`Téléchargement de ${selectedPayslips.size} fiche(s) de paie...`);
   };
 
   const handleBulkDelete = async () => {
