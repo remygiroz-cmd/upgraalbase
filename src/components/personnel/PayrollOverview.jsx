@@ -41,7 +41,8 @@ export default function PayrollOverview() {
             totalNet: 0,
             totalEmployeeContributions: 0,
             totalEmployerContributions: 0,
-            totalLeave: 0
+            totalLeave: 0,
+            totalAdvancePayment: 0
           };
         }
         
@@ -54,6 +55,7 @@ export default function PayrollOverview() {
         payslipsByMonth[payslip.month].totalEmployeeContributions += payslip.employee_contributions || 0;
         payslipsByMonth[payslip.month].totalEmployerContributions += payslip.employer_contributions || 0;
         payslipsByMonth[payslip.month].totalLeave += payslip.total_leave || 0;
+        payslipsByMonth[payslip.month].totalAdvancePayment += payslip.advance_payment || 0;
       });
     }
   });
@@ -146,6 +148,8 @@ export default function PayrollOverview() {
                     <th className="px-4 py-3 text-center text-xs font-semibold text-gray-900">Employés</th>
                     <th className="px-4 py-3 text-right text-xs font-semibold text-gray-900">Salaire brut</th>
                     <th className="px-4 py-3 text-right text-xs font-semibold text-gray-900">Net payé</th>
+                    <th className="px-4 py-3 text-right text-xs font-semibold text-gray-900">Acomptes</th>
+                    <th className="px-4 py-3 text-right text-xs font-semibold text-gray-900">Net + Acomptes</th>
                     <th className="px-4 py-3 text-right text-xs font-semibold text-gray-900">Cotis. salariales</th>
                     <th className="px-4 py-3 text-right text-xs font-semibold text-gray-900">Charges patronales</th>
                     <th className="px-4 py-3 text-right text-xs font-semibold text-gray-900">Coût de revient</th>
@@ -177,6 +181,12 @@ export default function PayrollOverview() {
                       </td>
                       <td className="px-4 py-3 text-sm text-right font-semibold text-green-900">
                         {data.totalNet.toFixed(2)}€
+                      </td>
+                      <td className="px-4 py-3 text-sm text-right text-purple-700">
+                        {data.totalAdvancePayment > 0 ? `${data.totalAdvancePayment.toFixed(2)}€` : '-'}
+                      </td>
+                      <td className="px-4 py-3 text-sm text-right font-bold text-green-900">
+                        {(data.totalNet + data.totalAdvancePayment).toFixed(2)}€
                       </td>
                       <td className="px-4 py-3 text-sm text-right text-orange-700">
                         {data.totalEmployeeContributions.toFixed(2)}€
@@ -221,6 +231,7 @@ export default function PayrollOverview() {
                       <th className="px-4 py-3 text-left text-xs font-semibold text-gray-900">Poste</th>
                       <th className="px-4 py-3 text-right text-xs font-semibold text-gray-900">Brut</th>
                       <th className="px-4 py-3 text-right text-xs font-semibold text-gray-900">Net</th>
+                      <th className="px-4 py-3 text-right text-xs font-semibold text-gray-900">Acompte</th>
                       <th className="px-4 py-3 text-right text-xs font-semibold text-gray-900">Cotis. sal.</th>
                       <th className="px-4 py-3 text-right text-xs font-semibold text-gray-900">Ch. patron.</th>
                       <th className="px-4 py-3 text-right text-xs font-semibold text-gray-900">Coût de revient</th>
@@ -241,6 +252,9 @@ export default function PayrollOverview() {
                         </td>
                         <td className="px-4 py-3 text-sm text-right text-gray-900">
                           {emp.payslip.net_salary ? `${emp.payslip.net_salary.toFixed(2)}€` : '-'}
+                        </td>
+                        <td className="px-4 py-3 text-sm text-right text-purple-700">
+                          {emp.payslip.advance_payment > 0 ? `${emp.payslip.advance_payment.toFixed(2)}€` : '-'}
                         </td>
                         <td className="px-4 py-3 text-sm text-right text-gray-700">
                           {emp.payslip.employee_contributions ? `${emp.payslip.employee_contributions.toFixed(2)}€` : '-'}
