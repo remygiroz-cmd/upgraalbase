@@ -196,23 +196,36 @@ Retourne uniquement le JSON sans texte supplémentaire.`,
   });
 
   const managerEmails = establishments[0]?.managers?.map(m => m.email?.toLowerCase()) || [];
-  const activeEmployees = employees.filter(emp => 
-    emp.is_active && !managerEmails.includes(emp.email?.toLowerCase())
-  );
+  const allEmployees = employees.filter(emp => !managerEmails.includes(emp.email?.toLowerCase()));
+  
+  const activeEmployees = allEmployees.filter(emp => emp.is_active);
+  const archivedEmployees = allEmployees.filter(emp => !emp.is_active);
 
-  const filteredEmployees = activeEmployees.filter(emp => {
+  const filteredActiveEmployees = activeEmployees.filter(emp => {
     const fullName = `${emp.first_name} ${emp.last_name}`.toLowerCase();
     const matchesSearch = fullName.includes(searchTerm.toLowerCase()) || 
                          emp.email?.toLowerCase().includes(searchTerm.toLowerCase());
     return matchesSearch;
   });
 
-  const employeesWithPayslips = filteredEmployees.filter(emp => {
+  const filteredArchivedEmployees = archivedEmployees.filter(emp => {
+    const fullName = `${emp.first_name} ${emp.last_name}`.toLowerCase();
+    const matchesSearch = fullName.includes(searchTerm.toLowerCase()) || 
+                         emp.email?.toLowerCase().includes(searchTerm.toLowerCase());
+    return matchesSearch;
+  });
+
+  const activeEmployeesWithPayslips = filteredActiveEmployees.filter(emp => {
     const payslips = (emp.payslips || []).filter(p => !selectedMonth || p.month === selectedMonth);
     return payslips.length > 0;
   });
 
-  const allPayslipIds = employeesWithPayslips.flatMap(emp => 
+  const archivedEmployeesWithPayslips = filteredArchivedEmployees.filter(emp => {
+    const payslips = (emp.payslips || []).filter(p => !selectedMonth || p.month === selectedMonth);
+    return payslips.length > 0;
+  });
+
+  const allPayslipIds = [...activeEmployeesWithPayslips, ...archivedEmployeesWithPayslips].flatMap(emp => 
     (emp.payslips || [])
       .filter(p => !selectedMonth || p.month === selectedMonth)
       .map((_, idx) => `${emp.id}-${idx}`)
@@ -544,7 +557,7 @@ Retourne uniquement le JSON sans texte supplémentaire.`,
       </div>
 
       {/* Payslips List */}
-      {employeesWithPayslips.length === 0 ? (
+      {activeEmployeesWithPayslips.length === 0 && archivedEmployeesWithPayslips.length === 0 ? (
         <EmptyState
           icon={Calendar}
           title="Aucune fiche de paie"
@@ -554,7 +567,7 @@ Retourne uniquement le JSON sans texte supplémentaire.`,
           }
         />
       ) : (
-        <div className="space-y-4">
+        <div className="space-y-6">
           {allPayslipIds.length > 0 && (
             <div className="flex items-center gap-2 px-4 py-2 bg-gray-100 rounded-lg">
               <input
@@ -569,7 +582,11 @@ Retourne uniquement le JSON sans texte supplémentaire.`,
             </div>
           )}
 
-          {employeesWithPayslips.map(emp => {
+          {/* Active Employees */}
+          {activeEmployeesWithPayslips.length > 0 && (
+            <div className="space-y-4">
+              <h3 className="text-lg font-bold text-gray-900">Employés actifs</h3>
+              {activeEmployeesWithPayslips.map(emp => {
             const employeePayslips = (emp.payslips || [])
               .filter(p => !selectedMonth || p.month === selectedMonth)
               .sort((a, b) => (b.month || '').localeCompare(a.month || ''));
@@ -644,10 +661,101 @@ Retourne uniquement le JSON sans texte supplémentaire.`,
                   })}
                 </div>
               </Card>
-            );
-          })}
-        </div>
-      )}
+              );
+              })}
+              </div>
+              )}
+
+              {/* Archived Employees */}
+              {archivedEmployeesWithPayslips.length > 0 && (
+              <div className="space-y-4">
+              <h3 className="text-lg font-bold text-gray-900">Anciens employés</h3>
+              {archivedEmployeesWithPayslips.map(emp => {
+                const employeePayslips = (emp.payslips || [])
+                  .filter(p => !selectedMonth || p.month === selectedMonth)
+                  .sort((a, b) => (b.month || '').localeCompare(a.month || ''));
+
+                return (
+                  <Card key={emp.id} className="border border-gray-300 p-6 bg-gray-50">
+                    <div className="mb-4">
+                      <div className="flex items-center gap-2">
+                        <h3 className="font-bold text-gray-900">{emp.first_name} {emp.last_name}</h3>
+                        <span className="px-2 py-1 rounded-full text-xs font-semibold bg-gray-200 text-gray-700">
+                          Archivé
+                        </span>
+                      </div>
+                      <p className="text-sm text-gray-600">{emp.email}</p>
+                      {emp.position && <p className="text-sm text-gray-600">{emp.position}</p>}
+                    </div>
+
+                    <div className="space-y-2">
+                      {employeePayslips.map((payslip, idx) => {
+                        const payslipId = `${emp.id}-${(emp.payslips || []).indexOf(payslip)}`;
+                        const isSelected = selectedPayslips.has(payslipId);
+
+                        return (
+                          <div 
+                            key={idx} 
+                            className={cn(
+                              "flex items-center gap-3 bg-white p-3 rounded-lg border transition-colors",
+                              isSelected ? "border-orange-600 bg-orange-50" : "border-gray-200"
+                            )}
+                          >
+                            <input
+                              type="checkbox"
+                              checked={isSelected}
+                              onChange={() => handleTogglePayslip(payslipId)}
+                              className="w-4 h-4 text-orange-600 border-gray-300 rounded focus:ring-orange-500"
+                            />
+                            <div className="flex-1">
+                              <p className="text-sm font-medium text-gray-900">{payslip.month || 'N/A'}</p>
+                              <p className="text-xs text-gray-500">
+                                Ajouté le {new Date(payslip.uploaded_at).toLocaleDateString('fr-FR')}
+                              </p>
+                            </div>
+                            <div className="flex gap-2">
+                              <button
+                                onClick={() => setViewingPayslip({ employee: emp, payslip })}
+                                className="p-2 text-blue-600 hover:bg-blue-50 rounded transition-colors"
+                                title="Voir les détails"
+                              >
+                                <FileText className="w-4 h-4" />
+                              </button>
+                              <a
+                                href={payslip.file_url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="p-2 text-blue-600 hover:bg-blue-50 rounded transition-colors"
+                                title="Télécharger"
+                              >
+                                <Download className="w-4 h-4" />
+                              </a>
+                              <button
+                                onClick={() => {
+                                  if (confirm('Êtes-vous sûr de vouloir supprimer cette fiche de paie ?')) {
+                                    deletePayslipMutation.mutate({ 
+                                      employeeId: emp.id, 
+                                      payslipIndex: (emp.payslips || []).indexOf(payslip)
+                                    });
+                                  }
+                                }}
+                                className="p-2 text-red-600 hover:bg-red-50 rounded transition-colors"
+                                title="Supprimer"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </Card>
+                );
+              })}
+              </div>
+              )}
+              </div>
+              )}
 
       {/* Payslip Detail Modal */}
       {viewingPayslip && (

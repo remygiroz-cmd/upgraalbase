@@ -24,13 +24,11 @@ export default function PayrollOverview() {
   }
 
   const managerEmails = establishments[0]?.managers?.map(m => m.email?.toLowerCase()) || [];
-  const activeEmployees = employees.filter(emp => 
-    emp.is_active && !managerEmails.includes(emp.email?.toLowerCase())
-  );
+  const allEmployees = employees.filter(emp => !managerEmails.includes(emp.email?.toLowerCase()));
 
-  // Agréger les données des fiches de paie par mois
+  // Agréger les données des fiches de paie par mois (incluant tous les employés, actifs et archivés)
   const payslipsByMonth = {};
-  activeEmployees.forEach(emp => {
+  allEmployees.forEach(emp => {
     if (emp.payslips && emp.payslips.length > 0) {
       emp.payslips.forEach(payslip => {
         if (!payslip.month) return;
@@ -71,6 +69,7 @@ export default function PayrollOverview() {
     return `${year}-${monthNames[monthIndex] || month}`;
   };
 
+  const activeEmployees = allEmployees.filter(emp => emp.is_active);
   const totalGrossSalary = activeEmployees.reduce((sum, emp) => sum + (emp.gross_salary || 0), 0);
   const totalHourlyRate = activeEmployees.reduce((sum, emp) => sum + (emp.gross_hourly_rate || 0), 0);
 
