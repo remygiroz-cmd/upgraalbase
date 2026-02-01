@@ -664,13 +664,22 @@ Retourne uniquement le JSON sans texte supplémentaire.`,
 function PayslipDetailModal({ employee, payslip, onClose }) {
   console.log('Payslip data:', payslip);
   
+  const formatMonth = (monthStr) => {
+    if (!monthStr) return 'N/A';
+    const [year, month] = monthStr.split('-');
+    const monthNames = ['JANVIER', 'FÉVRIER', 'MARS', 'AVRIL', 'MAI', 'JUIN', 
+                        'JUILLET', 'AOÛT', 'SEPTEMBRE', 'OCTOBRE', 'NOVEMBRE', 'DÉCEMBRE'];
+    const monthIndex = parseInt(month, 10) - 1;
+    return `${year}-${monthNames[monthIndex] || month}`;
+  };
+  
   return (
     <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
       <Card className="max-w-2xl w-full max-h-[90vh] overflow-y-auto bg-white">
         <div className="sticky top-0 bg-white border-b border-gray-200 p-6 flex items-center justify-between">
           <div>
             <h2 className="text-xl font-bold text-gray-900">
-              Fiche de paie - {payslip.month}
+              Fiche de paie - {formatMonth(payslip.month)}
             </h2>
             <p className="text-sm text-gray-600">
               {employee.first_name} {employee.last_name}
