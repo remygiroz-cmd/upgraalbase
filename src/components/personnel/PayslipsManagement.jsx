@@ -63,8 +63,10 @@ MONTANTS EN EUROS (enlève le symbole €):
 - Part patronale: TOTAL de la colonne charges patronales
 
 CONGÉS EN JOURS (enlève "j" ou "jours"):
-- Ligne N-1: acquis, pris, solde
-- Ligne N: acquis, pris, solde
+ATTENTION: Sur les bulletins français, les lignes sont souvent inversées.
+- Ce qui est étiqueté "N-1" dans le bulletin = mettre dans leave_n (année en cours)
+- Ce qui est étiqueté "N" dans le bulletin = mettre dans leave_n_minus_1 (année précédente)
+Pour chaque ligne: extraire acquis, pris, solde
 
 Retourne uniquement le JSON sans texte supplémentaire.`,
           file_urls: [file_url],
