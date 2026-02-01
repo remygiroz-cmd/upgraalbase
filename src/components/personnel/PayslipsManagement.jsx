@@ -16,6 +16,7 @@ export default function PayslipsManagement() {
   const [uploadQueue, setUploadQueue] = useState([]);
   const [processing, setProcessing] = useState(false);
   const [selectedPayslips, setSelectedPayslips] = useState(new Set());
+  const [viewingPayslip, setViewingPayslip] = useState(null);
   const queryClient = useQueryClient();
 
   const { data: employees = [], isLoading: loadingEmployees } = useQuery({
@@ -42,16 +43,44 @@ export default function PayslipsManagement() {
         
         // Use AI to extract employee info
         const aiResponse = await base44.integrations.Core.InvokeLLM({
-          prompt: `Analyse cette fiche de paie et extrait UNIQUEMENT le nom et prénom de l'employé (salarié). 
-          Retourne UNIQUEMENT un objet JSON avec les champs: first_name, last_name, month (au format YYYY-MM).
-          Ne retourne RIEN d'autre que le JSON.`,
+          prompt: `Analyse cette fiche de paie française et extrait les informations suivantes:
+          - Nom et prénom de l'employé (salarié)
+          - Mois et année (format YYYY-MM)
+          - Salaire brut à payer
+          - Salaire net payé
+          - Cotisations salariales (total)
+          - Cotisations patronales (total)
+          - Congés N-1: acquis, pris, solde
+          - Congés N (année en cours): acquis, pris, solde
+          
+          Retourne un objet JSON structuré. Pour les nombres, utilise des valeurs numériques.`,
           file_urls: [file_url],
           response_json_schema: {
             type: "object",
             properties: {
               first_name: { type: "string" },
               last_name: { type: "string" },
-              month: { type: "string" }
+              month: { type: "string" },
+              gross_salary: { type: "number" },
+              net_salary: { type: "number" },
+              employee_contributions: { type: "number" },
+              employer_contributions: { type: "number" },
+              leave_n_minus_1: {
+                type: "object",
+                properties: {
+                  acquired: { type: "number" },
+                  taken: { type: "number" },
+                  balance: { type: "number" }
+                }
+              },
+              leave_n: {
+                type: "object",
+                properties: {
+                  acquired: { type: "number" },
+                  taken: { type: "number" },
+                  balance: { type: "number" }
+                }
+              }
             },
             required: ["first_name", "last_name"]
           }
@@ -91,15 +120,24 @@ export default function PayslipsManagement() {
   };
 
   const savePayslipMutation = useMutation({
-    mutationFn: async ({ employeeId, file_url, month }) => {
+    mutationFn: async ({ employeeId, file_url, extractedData }) => {
       const emp = employees.find(e => e.id === employeeId);
       if (!emp) throw new Error('Employé non trouvé');
 
+      const totalLeave = (extractedData.leave_n_minus_1?.balance || 0) + (extractedData.leave_n?.balance || 0);
+
       const newPayslip = {
-        month: month || new Date().toISOString().slice(0, 7),
+        month: extractedData.month || new Date().toISOString().slice(0, 7),
         file_url,
         uploaded_at: new Date().toISOString(),
-        uploaded_by: (await base44.auth.me()).email
+        uploaded_by: (await base44.auth.me()).email,
+        gross_salary: extractedData.gross_salary,
+        net_salary: extractedData.net_salary,
+        employee_contributions: extractedData.employee_contributions,
+        employer_contributions: extractedData.employer_contributions,
+        leave_n_minus_1: extractedData.leave_n_minus_1,
+        leave_n: extractedData.leave_n,
+        total_leave: totalLeave
       };
 
       const updatedPayslips = [...(emp.payslips || []), newPayslip];
@@ -117,7 +155,7 @@ export default function PayslipsManagement() {
     await savePayslipMutation.mutateAsync({
       employeeId: queueItem.matched_employee.id,
       file_url: queueItem.file_url,
-      month: queueItem.extracted_info?.month
+      extractedData: queueItem.extracted_info
     });
 
     setUploadQueue(prev => prev.filter(item => item.id !== queueItem.id));
@@ -430,12 +468,19 @@ export default function PayslipsManagement() {
                           </p>
                         </div>
                         <div className="flex gap-2">
+                          <button
+                            onClick={() => setViewingPayslip({ employee: emp, payslip })}
+                            className="p-2 text-blue-600 hover:bg-blue-50 rounded transition-colors"
+                            title="Voir les détails"
+                          >
+                            <FileText className="w-4 h-4" />
+                          </button>
                           <a
                             href={payslip.file_url}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="p-2 text-blue-600 hover:bg-blue-50 rounded transition-colors"
-                            title="Voir"
+                            title="Télécharger"
                           >
                             <Download className="w-4 h-4" />
                           </a>
@@ -463,6 +508,193 @@ export default function PayslipsManagement() {
           })}
         </div>
       )}
+
+      {/* Payslip Detail Modal */}
+      {viewingPayslip && (
+        <PayslipDetailModal
+          employee={viewingPayslip.employee}
+          payslip={viewingPayslip.payslip}
+          onClose={() => setViewingPayslip(null)}
+        />
+      )}
+    </div>
+  );
+}
+
+function PayslipDetailModal({ employee, payslip, onClose }) {
+  const totalLeave = payslip.total_leave || 0;
+
+  return (
+    <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
+      <Card className="max-w-2xl w-full max-h-[90vh] overflow-y-auto bg-white">
+        <div className="sticky top-0 bg-white border-b border-gray-200 p-6 flex items-center justify-between">
+          <div>
+            <h2 className="text-xl font-bold text-gray-900">
+              Fiche de paie - {payslip.month}
+            </h2>
+            <p className="text-sm text-gray-600">
+              {employee.first_name} {employee.last_name}
+            </p>
+          </div>
+          <button
+            onClick={onClose}
+            className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+          >
+            <XCircle className="w-5 h-5 text-gray-500" />
+          </button>
+        </div>
+
+        <div className="p-6 space-y-6">
+          {/* Salaires */}
+          <div>
+            <h3 className="text-sm font-semibold text-gray-900 mb-3 uppercase tracking-wide">
+              Rémunération
+            </h3>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                <p className="text-xs text-blue-600 mb-1">Salaire brut</p>
+                <p className="text-2xl font-bold text-blue-900">
+                  {payslip.gross_salary?.toLocaleString('fr-FR', { style: 'currency', currency: 'EUR' }) || 'N/A'}
+                </p>
+              </div>
+              <div className="bg-green-50 p-4 rounded-lg border border-green-200">
+                <p className="text-xs text-green-600 mb-1">Salaire net payé</p>
+                <p className="text-2xl font-bold text-green-900">
+                  {payslip.net_salary?.toLocaleString('fr-FR', { style: 'currency', currency: 'EUR' }) || 'N/A'}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Cotisations */}
+          <div>
+            <h3 className="text-sm font-semibold text-gray-900 mb-3 uppercase tracking-wide">
+              Cotisations et contributions
+            </h3>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="bg-orange-50 p-4 rounded-lg border border-orange-200">
+                <p className="text-xs text-orange-600 mb-1">Part salariale</p>
+                <p className="text-xl font-bold text-orange-900">
+                  {payslip.employee_contributions?.toLocaleString('fr-FR', { style: 'currency', currency: 'EUR' }) || 'N/A'}
+                </p>
+              </div>
+              <div className="bg-purple-50 p-4 rounded-lg border border-purple-200">
+                <p className="text-xs text-purple-600 mb-1">Part patronale</p>
+                <p className="text-xl font-bold text-purple-900">
+                  {payslip.employer_contributions?.toLocaleString('fr-FR', { style: 'currency', currency: 'EUR' }) || 'N/A'}
+                </p>
+              </div>
+            </div>
+            <div className="mt-3 bg-gray-50 p-3 rounded-lg border border-gray-200">
+              <p className="text-xs text-gray-600">Total des cotisations</p>
+              <p className="text-lg font-bold text-gray-900">
+                {((payslip.employee_contributions || 0) + (payslip.employer_contributions || 0)).toLocaleString('fr-FR', { style: 'currency', currency: 'EUR' })}
+              </p>
+            </div>
+          </div>
+
+          {/* Congés */}
+          <div>
+            <h3 className="text-sm font-semibold text-gray-900 mb-3 uppercase tracking-wide">
+              Compteur de congés
+            </h3>
+            
+            {/* Congés N-1 */}
+            {payslip.leave_n_minus_1 && (
+              <div className="mb-4 bg-slate-50 p-4 rounded-lg border border-slate-200">
+                <p className="text-xs text-slate-600 mb-2 font-medium">Congés N-1</p>
+                <div className="grid grid-cols-3 gap-3">
+                  <div>
+                    <p className="text-xs text-slate-500">Acquis</p>
+                    <p className="text-lg font-bold text-slate-900">
+                      {payslip.leave_n_minus_1.acquired || 0} j
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-slate-500">Pris</p>
+                    <p className="text-lg font-bold text-slate-900">
+                      {payslip.leave_n_minus_1.taken || 0} j
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-slate-500">Solde</p>
+                    <p className="text-lg font-bold text-blue-600">
+                      {payslip.leave_n_minus_1.balance || 0} j
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Congés N */}
+            {payslip.leave_n && (
+              <div className="mb-4 bg-slate-50 p-4 rounded-lg border border-slate-200">
+                <p className="text-xs text-slate-600 mb-2 font-medium">Congés N (année en cours)</p>
+                <div className="grid grid-cols-3 gap-3">
+                  <div>
+                    <p className="text-xs text-slate-500">Acquis</p>
+                    <p className="text-lg font-bold text-slate-900">
+                      {payslip.leave_n.acquired || 0} j
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-slate-500">Pris</p>
+                    <p className="text-lg font-bold text-slate-900">
+                      {payslip.leave_n.taken || 0} j
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-slate-500">Solde</p>
+                    <p className="text-lg font-bold text-blue-600">
+                      {payslip.leave_n.balance || 0} j
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Total des congés */}
+            <div className="bg-green-50 p-4 rounded-lg border-2 border-green-300">
+              <p className="text-xs text-green-600 mb-1 font-medium">Total des congés disponibles</p>
+              <p className="text-3xl font-bold text-green-900">
+                {totalLeave} jours
+              </p>
+              <p className="text-xs text-green-600 mt-1">
+                Solde N-1 + Solde N
+              </p>
+            </div>
+          </div>
+
+          {/* Métadonnées */}
+          <div className="pt-4 border-t border-gray-200">
+            <p className="text-xs text-gray-500">
+              Ajouté le {new Date(payslip.uploaded_at).toLocaleDateString('fr-FR')} par {payslip.uploaded_by}
+            </p>
+          </div>
+
+          {/* Actions */}
+          <div className="flex gap-3">
+            <a
+              href={payslip.file_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex-1"
+            >
+              <Button className="w-full bg-blue-600 hover:bg-blue-700">
+                <Download className="w-4 h-4 mr-2" />
+                Télécharger le PDF
+              </Button>
+            </a>
+            <Button
+              variant="outline"
+              onClick={onClose}
+              className="flex-1 border-gray-300"
+            >
+              Fermer
+            </Button>
+          </div>
+        </div>
+      </Card>
     </div>
   );
 }
