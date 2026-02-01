@@ -953,14 +953,25 @@ function PayslipDetailModal({ employee, payslip, onClose }) {
               </div>
               </>
               ) : (
-              /* PDF Preview */
-              <div className="h-[600px] w-full bg-gray-100 rounded-lg overflow-hidden">
-              <iframe
-                src={payslip.file_url}
-                className="w-full h-full"
-                title="Aperçu fiche de paie"
-              />
-              </div>
+                /* PDF Preview */
+                <div className="h-[600px] w-full bg-gray-100 rounded-lg overflow-hidden border border-gray-300">
+                  {payslip.file_url.toLowerCase().endsWith('.pdf') ? (
+                    <iframe
+                      src={`${payslip.file_url}#view=FitH`}
+                      className="w-full h-full"
+                      title="Aperçu fiche de paie"
+                      type="application/pdf"
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center">
+                      <img 
+                        src={payslip.file_url} 
+                        alt="Fiche de paie" 
+                        className="max-w-full max-h-full object-contain"
+                      />
+                    </div>
+                  )}
+                </div>
               )}
               </div>
               </Card>
