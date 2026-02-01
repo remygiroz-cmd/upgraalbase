@@ -342,7 +342,7 @@ function DayDetailModal({ day, onClose }) {
       <DialogContent className="bg-white border-gray-200 max-w-3xl max-h-[80vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="text-gray-900">
-            {format(new Date(day.date), 'EEEE d MMMM yyyy', { locale: fr })}
+            {format(new Date(day.date), 'dd/MM/yyyy', { locale: fr })}
           </DialogTitle>
         </DialogHeader>
 
