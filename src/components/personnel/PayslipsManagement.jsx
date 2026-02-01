@@ -4,7 +4,7 @@ import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
-import { Upload, Download, Trash2, Search, Calendar, FileText, Loader2, CheckCircle, XCircle } from 'lucide-react';
+import { Upload, Download, Trash2, Search, Calendar, FileText, Loader2, CheckCircle, XCircle, Pencil } from 'lucide-react';
 import { toast } from 'sonner';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import EmptyState from '@/components/ui/EmptyState';
@@ -662,7 +662,44 @@ Retourne uniquement le JSON sans texte supplémentaire.`,
 }
 
 function PayslipDetailModal({ employee, payslip, onClose }) {
-  console.log('Payslip data:', payslip);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editedData, setEditedData] = useState({
+    gross_salary: payslip.gross_salary || 0,
+    net_salary: payslip.net_salary || 0,
+    employee_contributions: payslip.employee_contributions || 0,
+    employer_contributions: payslip.employer_contributions || 0,
+    total_leave: payslip.total_leave || 0
+  });
+  const queryClient = useQueryClient();
+
+  const updatePayslipMutation = useMutation({
+    mutationFn: async () => {
+      const payslipIndex = employee.payslips.findIndex(p => p.month === payslip.month && p.uploaded_at === payslip.uploaded_at);
+      if (payslipIndex === -1) throw new Error('Fiche de paie non trouvée');
+
+      const updatedPayslips = [...employee.payslips];
+      updatedPayslips[payslipIndex] = {
+        ...updatedPayslips[payslipIndex],
+        ...editedData
+      };
+
+      await base44.entities.Employee.update(employee.id, { payslips: updatedPayslips });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['employees'] });
+      toast.success('Fiche de paie mise à jour');
+      setIsEditing(false);
+      onClose();
+    },
+    onError: (error) => {
+      toast.error('Erreur lors de la mise à jour');
+      console.error(error);
+    }
+  });
+
+  const handleSave = () => {
+    updatePayslipMutation.mutate();
+  };
   
   const formatMonth = (monthStr) => {
     if (!monthStr) return 'N/A';
@@ -702,15 +739,35 @@ function PayslipDetailModal({ employee, payslip, onClose }) {
             <div className="grid grid-cols-2 gap-4">
               <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
                 <p className="text-xs text-blue-600 mb-1">Salaire brut</p>
-                <p className="text-2xl font-bold text-blue-900">
-                  {payslip.gross_salary != null ? payslip.gross_salary.toLocaleString('fr-FR', { style: 'currency', currency: 'EUR' }) : 'N/A'}
-                </p>
+                {isEditing ? (
+                  <Input
+                    type="number"
+                    step="0.01"
+                    value={editedData.gross_salary}
+                    onChange={(e) => setEditedData({...editedData, gross_salary: parseFloat(e.target.value) || 0})}
+                    className="text-xl font-bold text-blue-900 mt-1"
+                  />
+                ) : (
+                  <p className="text-2xl font-bold text-blue-900">
+                    {payslip.gross_salary != null ? payslip.gross_salary.toLocaleString('fr-FR', { style: 'currency', currency: 'EUR' }) : 'N/A'}
+                  </p>
+                )}
               </div>
               <div className="bg-green-50 p-4 rounded-lg border border-green-200">
                 <p className="text-xs text-green-600 mb-1">Salaire net payé</p>
-                <p className="text-2xl font-bold text-green-900">
-                  {payslip.net_salary != null ? payslip.net_salary.toLocaleString('fr-FR', { style: 'currency', currency: 'EUR' }) : 'N/A'}
-                </p>
+                {isEditing ? (
+                  <Input
+                    type="number"
+                    step="0.01"
+                    value={editedData.net_salary}
+                    onChange={(e) => setEditedData({...editedData, net_salary: parseFloat(e.target.value) || 0})}
+                    className="text-xl font-bold text-green-900 mt-1"
+                  />
+                ) : (
+                  <p className="text-2xl font-bold text-green-900">
+                    {payslip.net_salary != null ? payslip.net_salary.toLocaleString('fr-FR', { style: 'currency', currency: 'EUR' }) : 'N/A'}
+                  </p>
+                )}
               </div>
             </div>
           </div>
@@ -723,39 +780,70 @@ function PayslipDetailModal({ employee, payslip, onClose }) {
             <div className="grid grid-cols-2 gap-4">
               <div className="bg-orange-50 p-4 rounded-lg border border-orange-200">
                 <p className="text-xs text-orange-600 mb-1">Part salariale</p>
-                <p className="text-xl font-bold text-orange-900">
-                  {payslip.employee_contributions != null ? payslip.employee_contributions.toLocaleString('fr-FR', { style: 'currency', currency: 'EUR' }) : 'N/A'}
-                </p>
+                {isEditing ? (
+                  <Input
+                    type="number"
+                    step="0.01"
+                    value={editedData.employee_contributions}
+                    onChange={(e) => setEditedData({...editedData, employee_contributions: parseFloat(e.target.value) || 0})}
+                    className="text-lg font-bold text-orange-900 mt-1"
+                  />
+                ) : (
+                  <p className="text-xl font-bold text-orange-900">
+                    {payslip.employee_contributions != null ? payslip.employee_contributions.toLocaleString('fr-FR', { style: 'currency', currency: 'EUR' }) : 'N/A'}
+                  </p>
+                )}
               </div>
               <div className="bg-purple-50 p-4 rounded-lg border border-purple-200">
                 <p className="text-xs text-purple-600 mb-1">Part patronale</p>
-                <p className="text-xl font-bold text-purple-900">
-                  {payslip.employer_contributions != null ? payslip.employer_contributions.toLocaleString('fr-FR', { style: 'currency', currency: 'EUR' }) : 'N/A'}
-                </p>
+                {isEditing ? (
+                  <Input
+                    type="number"
+                    step="0.01"
+                    value={editedData.employer_contributions}
+                    onChange={(e) => setEditedData({...editedData, employer_contributions: parseFloat(e.target.value) || 0})}
+                    className="text-lg font-bold text-purple-900 mt-1"
+                  />
+                ) : (
+                  <p className="text-xl font-bold text-purple-900">
+                    {payslip.employer_contributions != null ? payslip.employer_contributions.toLocaleString('fr-FR', { style: 'currency', currency: 'EUR' }) : 'N/A'}
+                  </p>
+                )}
               </div>
             </div>
             <div className="mt-3 bg-gray-50 p-3 rounded-lg border border-gray-200">
               <p className="text-xs text-gray-600">Total des cotisations</p>
               <p className="text-lg font-bold text-gray-900">
-                {((payslip.employee_contributions || 0) + (payslip.employer_contributions || 0)).toLocaleString('fr-FR', { style: 'currency', currency: 'EUR' })}
+                {isEditing 
+                  ? ((editedData.employee_contributions || 0) + (editedData.employer_contributions || 0)).toLocaleString('fr-FR', { style: 'currency', currency: 'EUR' })
+                  : ((payslip.employee_contributions || 0) + (payslip.employer_contributions || 0)).toLocaleString('fr-FR', { style: 'currency', currency: 'EUR' })
+                }
               </p>
             </div>
           </div>
 
           {/* Congés */}
-          {payslip.total_leave != null && (
-            <div>
-              <h3 className="text-sm font-semibold text-gray-900 mb-3 uppercase tracking-wide">
-                Compteur de congés
-              </h3>
-              <div className="bg-green-50 p-4 rounded-lg border-2 border-green-300">
-                <p className="text-xs text-green-600 mb-1 font-medium">Congés</p>
+          <div>
+            <h3 className="text-sm font-semibold text-gray-900 mb-3 uppercase tracking-wide">
+              Compteur de congés
+            </h3>
+            <div className="bg-green-50 p-4 rounded-lg border-2 border-green-300">
+              <p className="text-xs text-green-600 mb-1 font-medium">Congés</p>
+              {isEditing ? (
+                <Input
+                  type="number"
+                  step="0.5"
+                  value={editedData.total_leave}
+                  onChange={(e) => setEditedData({...editedData, total_leave: parseFloat(e.target.value) || 0})}
+                  className="text-2xl font-bold text-green-900 mt-1"
+                />
+              ) : (
                 <p className="text-3xl font-bold text-green-900">
-                  {payslip.total_leave} jours
+                  {payslip.total_leave || 0} jours
                 </p>
-              </div>
+              )}
             </div>
-          )}
+          </div>
 
           {/* Métadonnées */}
           <div className="pt-4 border-t border-gray-200">
@@ -766,24 +854,71 @@ function PayslipDetailModal({ employee, payslip, onClose }) {
 
           {/* Actions */}
           <div className="flex gap-3">
-            <a
-              href={payslip.file_url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex-1"
-            >
-              <Button className="w-full bg-blue-600 hover:bg-blue-700">
-                <Download className="w-4 h-4 mr-2" />
-                Télécharger le PDF
-              </Button>
-            </a>
-            <Button
-              variant="outline"
-              onClick={onClose}
-              className="flex-1 border-gray-300"
-            >
-              Fermer
-            </Button>
+            {isEditing ? (
+              <>
+                <Button
+                  onClick={handleSave}
+                  disabled={updatePayslipMutation.isPending}
+                  className="flex-1 bg-green-600 hover:bg-green-700"
+                >
+                  {updatePayslipMutation.isPending ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Enregistrement...
+                    </>
+                  ) : (
+                    <>
+                      <CheckCircle className="w-4 h-4 mr-2" />
+                      Enregistrer
+                    </>
+                  )}
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setIsEditing(false);
+                    setEditedData({
+                      gross_salary: payslip.gross_salary || 0,
+                      net_salary: payslip.net_salary || 0,
+                      employee_contributions: payslip.employee_contributions || 0,
+                      employer_contributions: payslip.employer_contributions || 0,
+                      total_leave: payslip.total_leave || 0
+                    });
+                  }}
+                  className="flex-1 border-gray-300"
+                >
+                  Annuler
+                </Button>
+              </>
+            ) : (
+              <>
+                <Button
+                  onClick={() => setIsEditing(true)}
+                  className="flex-1 bg-orange-600 hover:bg-orange-700"
+                >
+                  <Pencil className="w-4 h-4 mr-2" />
+                  Modifier
+                </Button>
+                <a
+                  href={payslip.file_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex-1"
+                >
+                  <Button className="w-full bg-blue-600 hover:bg-blue-700">
+                    <Download className="w-4 h-4 mr-2" />
+                    Télécharger
+                  </Button>
+                </a>
+                <Button
+                  variant="outline"
+                  onClick={onClose}
+                  className="border-gray-300"
+                >
+                  Fermer
+                </Button>
+              </>
+            )}
           </div>
         </div>
       </Card>
