@@ -136,12 +136,14 @@ Retourne uniquement le JSON sans texte supplémentaire.`,
         file_url,
         uploaded_at: new Date().toISOString(),
         uploaded_by: (await base44.auth.me()).email,
-        gross_salary: extractedData.gross_salary,
-        net_salary: extractedData.net_salary,
-        employee_contributions: extractedData.employee_contributions,
-        employer_contributions: extractedData.employer_contributions,
-        total_leave: extractedData.total_leave || 0
+        gross_salary: parseFloat(extractedData.gross_salary) || null,
+        net_salary: parseFloat(extractedData.net_salary) || null,
+        employee_contributions: parseFloat(extractedData.employee_contributions) || null,
+        employer_contributions: parseFloat(extractedData.employer_contributions) || null,
+        total_leave: parseFloat(extractedData.total_leave) || 0
       };
+
+      console.log('Saving payslip:', newPayslip);
 
       const updatedPayslips = [...(emp.payslips || []), newPayslip];
       await base44.entities.Employee.update(employeeId, { payslips: updatedPayslips });
@@ -660,6 +662,8 @@ Retourne uniquement le JSON sans texte supplémentaire.`,
 }
 
 function PayslipDetailModal({ employee, payslip, onClose }) {
+  console.log('Payslip data:', payslip);
+  
   return (
     <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
       <Card className="max-w-2xl w-full max-h-[90vh] overflow-y-auto bg-white">
@@ -690,13 +694,13 @@ function PayslipDetailModal({ employee, payslip, onClose }) {
               <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
                 <p className="text-xs text-blue-600 mb-1">Salaire brut</p>
                 <p className="text-2xl font-bold text-blue-900">
-                  {payslip.gross_salary?.toLocaleString('fr-FR', { style: 'currency', currency: 'EUR' }) || 'N/A'}
+                  {payslip.gross_salary != null ? payslip.gross_salary.toLocaleString('fr-FR', { style: 'currency', currency: 'EUR' }) : 'N/A'}
                 </p>
               </div>
               <div className="bg-green-50 p-4 rounded-lg border border-green-200">
                 <p className="text-xs text-green-600 mb-1">Salaire net payé</p>
                 <p className="text-2xl font-bold text-green-900">
-                  {payslip.net_salary?.toLocaleString('fr-FR', { style: 'currency', currency: 'EUR' }) || 'N/A'}
+                  {payslip.net_salary != null ? payslip.net_salary.toLocaleString('fr-FR', { style: 'currency', currency: 'EUR' }) : 'N/A'}
                 </p>
               </div>
             </div>
@@ -711,13 +715,13 @@ function PayslipDetailModal({ employee, payslip, onClose }) {
               <div className="bg-orange-50 p-4 rounded-lg border border-orange-200">
                 <p className="text-xs text-orange-600 mb-1">Part salariale</p>
                 <p className="text-xl font-bold text-orange-900">
-                  {payslip.employee_contributions?.toLocaleString('fr-FR', { style: 'currency', currency: 'EUR' }) || 'N/A'}
+                  {payslip.employee_contributions != null ? payslip.employee_contributions.toLocaleString('fr-FR', { style: 'currency', currency: 'EUR' }) : 'N/A'}
                 </p>
               </div>
               <div className="bg-purple-50 p-4 rounded-lg border border-purple-200">
                 <p className="text-xs text-purple-600 mb-1">Part patronale</p>
                 <p className="text-xl font-bold text-purple-900">
-                  {payslip.employer_contributions?.toLocaleString('fr-FR', { style: 'currency', currency: 'EUR' }) || 'N/A'}
+                  {payslip.employer_contributions != null ? payslip.employer_contributions.toLocaleString('fr-FR', { style: 'currency', currency: 'EUR' }) : 'N/A'}
                 </p>
               </div>
             </div>
@@ -730,7 +734,7 @@ function PayslipDetailModal({ employee, payslip, onClose }) {
           </div>
 
           {/* Congés */}
-          {payslip.total_leave !== undefined && (
+          {payslip.total_leave != null && (
             <div>
               <h3 className="text-sm font-semibold text-gray-900 mb-3 uppercase tracking-wide">
                 Compteur de congés
