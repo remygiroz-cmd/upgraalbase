@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
-import { Plus, ShoppingCart, RotateCcw, Check, RefreshCw } from 'lucide-react';
+import { Plus, ShoppingCart, RotateCcw, Check, RefreshCw, Calendar } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import FreeAddModal from './FreeAddModal';
@@ -42,6 +43,11 @@ export default function InventoryTab() {
   const [hiddenArticles, setHiddenArticles] = useState(() => {
     const saved = localStorage.getItem('inventoryHiddenArticles');
     return saved ? new Set(JSON.parse(saved)) : new Set();
+  });
+
+  const [simulatedDay, setSimulatedDay] = useState(() => {
+    const saved = localStorage.getItem('inventorySimulatedDay');
+    return saved || null;
   });
 
   const [showFreeAddModal, setShowFreeAddModal] = useState(false);
@@ -97,6 +103,14 @@ export default function InventoryTab() {
     localStorage.setItem('inventoryHiddenArticles', JSON.stringify(Array.from(hiddenArticles)));
   }, [hiddenArticles]);
 
+  useEffect(() => {
+    if (simulatedDay) {
+      localStorage.setItem('inventorySimulatedDay', simulatedDay);
+    } else {
+      localStorage.removeItem('inventorySimulatedDay');
+    }
+  }, [simulatedDay]);
+
   const { data: articles = [] } = useQuery({
     queryKey: ['articles'],
     queryFn: () => base44.entities.Article.filter({ is_active: true })
@@ -124,7 +138,8 @@ export default function InventoryTab() {
     return days[today];
   };
 
-  const currentDay = getCurrentDay();
+  const realCurrentDay = getCurrentDay();
+  const currentDay = simulatedDay || realCurrentDay;
 
   // Filtrer les articles dont le jour de comptage correspond à aujourd'hui
   const todayArticles = articles.filter(article => 
@@ -554,6 +569,33 @@ export default function InventoryTab() {
             <p className="text-xs sm:text-sm text-gray-600 break-words">
               Liste filtrée selon les jours de comptage paramétrés
             </p>
+            <div className="flex items-center gap-2 mt-2">
+              <Calendar className="w-4 h-4 text-gray-500" />
+              <Select value={currentDay} onValueChange={(value) => setSimulatedDay(value === realCurrentDay ? null : value)}>
+                <SelectTrigger className="w-48 h-9">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="L">Lundi</SelectItem>
+                  <SelectItem value="MA">Mardi</SelectItem>
+                  <SelectItem value="ME">Mercredi</SelectItem>
+                  <SelectItem value="J">Jeudi</SelectItem>
+                  <SelectItem value="V">Vendredi</SelectItem>
+                  <SelectItem value="S">Samedi</SelectItem>
+                  <SelectItem value="D">Dimanche</SelectItem>
+                </SelectContent>
+              </Select>
+              {simulatedDay && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="text-xs text-orange-600 hover:text-orange-700"
+                  onClick={() => setSimulatedDay(null)}
+                >
+                  Revenir à aujourd'hui
+                </Button>
+              )}
+            </div>
           </div>
           <div className="flex flex-col sm:flex-row gap-2">
             <Button 
