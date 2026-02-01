@@ -328,7 +328,7 @@ export default function TravailDuJour() {
         </div>
         {activeSession.started_at && (
           <div className="flex items-center gap-2 text-gray-700 text-xs font-medium mb-2 flex-wrap">
-            <span>Créée le {format(new Date(activeSession.started_at), "d MMM 'à' HH:mm", { locale: fr })} par</span>
+            <span>Démarré le {format(new Date(activeSession.started_at), "EEEE d MMM 'à' HH:mm", { locale: fr })} par</span>
             {activeSession.started_by && (
               <UserAvatar 
                 userEmail={activeSession.started_by} 
@@ -341,7 +341,7 @@ export default function TravailDuJour() {
         )}
         {activeSession.status === 'completed' && activeSession.completed_at && (
           <div className="flex items-center gap-2 text-orange-600 text-xs font-semibold mb-2 flex-wrap">
-            <span>Validée le {format(new Date(activeSession.completed_at), "d MMM 'à' HH:mm", { locale: fr })} par</span>
+            <span>Validée le {format(new Date(activeSession.completed_at), "EEEE d MMM 'à' HH:mm", { locale: fr })} par</span>
             {activeSession.completed_by && (
               <UserAvatar 
                 userEmail={activeSession.completed_by} 
@@ -588,7 +588,7 @@ function WorkTaskCard({ task, onComplete, onUncomplete, onRemove, onUpdateQuanti
                   showName={true}
                 />
                 <span className="text-xs text-gray-700 whitespace-nowrap">
-                  {format(new Date(task.completed_at), 'HH:mm')}
+                  {format(new Date(task.completed_at), "EEE d MMM 'à' HH:mm", { locale: fr })}
                 </span>
               </div>
             )}
