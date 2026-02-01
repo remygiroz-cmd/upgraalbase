@@ -193,8 +193,15 @@ export default function Historique() {
 
               <div className="flex items-center justify-between gap-3 sm:gap-4">
                 <div className="flex-1 min-w-0">
-                  <h3 className="font-semibold text-base sm:text-lg truncate">
-                    {format(new Date(session.date), 'EEEE d MMMM yyyy', { locale: fr })}
+                  <h3 className="font-semibold text-base sm:text-lg">
+                    {session.started_at && session.completed_at ? (
+                      <span className="block">
+                        Créé le {format(new Date(session.started_at), 'EEEE d MMMM', { locale: fr })} à {format(new Date(session.started_at), 'HH:mm')}, 
+                        terminé le {format(new Date(session.completed_at), 'EEEE d MMMM', { locale: fr })} à {format(new Date(session.completed_at), 'HH:mm')}
+                      </span>
+                    ) : (
+                      format(new Date(session.date), 'EEEE d MMMM yyyy', { locale: fr })
+                    )}
                   </h3>
                   <div className="flex items-center gap-2 sm:gap-4 mt-2 text-xs sm:text-sm text-slate-400 flex-wrap">
                     <span>{completed}/{total} tâches complétées</span>
@@ -212,9 +219,6 @@ export default function Historique() {
                     }
                     {session.started_by_name &&
                     <span>Démarré par {session.started_by_name}</span>
-                    }
-                    {session.completed_at &&
-                    <span>Terminé à {format(new Date(session.completed_at), 'dd/MM/yyyy HH:mm')}</span>
                     }
                   </div>
                 </div>
