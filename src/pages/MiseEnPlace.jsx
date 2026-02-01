@@ -297,10 +297,10 @@ export default function MiseEnPlace() {
 
   // Auto-select tasks on mount
   React.useEffect(() => {
+    if (!tasks || !tasks.length) return;
+    
     const newSelected = new Set();
     const newStockInputs = {};
-    
-    if (!tasks) return;
     
     tasks.forEach(task => {
       // Auto-schedule tasks - skip if session already exists
@@ -317,8 +317,7 @@ export default function MiseEnPlace() {
       // Stock check tasks
       if (task.requires_stock_check && (task.weekly_targets?.[dayOfWeek] || 0) > 0) {
         const targetQuantity = task.weekly_targets[dayOfWeek] || 0;
-        // Si une session existe déjà, pré-remplir avec la quantité cible (stock complet)
-        const currentStock = hasActiveSession ? targetQuantity : (stockInputs[task.id] || 0);
+        const currentStock = hasActiveSession ? targetQuantity : 0;
         
         if (!hasActiveSession) {
           newStockInputs[task.id] = currentStock;
@@ -334,7 +333,7 @@ export default function MiseEnPlace() {
     
     setSelectedTasks(newSelected);
     if (Object.keys(newStockInputs).length > 0) {
-      setStockInputs(prev => ({ ...prev, ...newStockInputs }));
+      setStockInputs(newStockInputs);
     }
   }, [tasks, hasActiveSession, dayOfWeek]);
 
