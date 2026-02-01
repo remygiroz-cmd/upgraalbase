@@ -249,6 +249,48 @@ Retourne uniquement le JSON sans texte supplémentaire.`,
     }
   };
 
+  const handleBulkDownload = () => {
+    const allEmps = [...activeEmployeesWithPayslips, ...archivedEmployeesWithPayslips];
+    selectedPayslips.forEach(payslipId => {
+      const [empId, payslipIdx] = payslipId.split('-');
+      const emp = allEmps.find(e => e.id === empId);
+      if (emp && emp.payslips && emp.payslips[payslipIdx]) {
+        window.open(emp.payslips[payslipIdx].file_url, '_blank');
+      }
+    });
+    toast.success(`${selectedPayslips.size} fiche(s) de paie téléchargée(s)`);
+  };
+
+  const handleBulkDelete = async () => {
+    if (!confirm(`Êtes-vous sûr de vouloir supprimer ${selectedPayslips.size} fiche(s) de paie ?`)) {
+      return;
+    }
+
+    const allEmps = [...activeEmployeesWithPayslips, ...archivedEmployeesWithPayslips];
+    const deletePromises = [];
+
+    selectedPayslips.forEach(payslipId => {
+      const [empId, payslipIdx] = payslipId.split('-');
+      const emp = allEmps.find(e => e.id === empId);
+      if (emp) {
+        deletePromises.push(
+          deletePayslipMutation.mutateAsync({ 
+            employeeId: empId, 
+            payslipIndex: parseInt(payslipIdx) 
+          })
+        );
+      }
+    });
+
+    try {
+      await Promise.all(deletePromises);
+      setSelectedPayslips(new Set());
+      toast.success(`${selectedPayslips.size} fiche(s) de paie supprimée(s)`);
+    } catch (error) {
+      toast.error('Erreur lors de la suppression');
+    }
+  };
+
   if (loadingEmployees) {
     return <LoadingSpinner />;
   }
@@ -496,7 +538,7 @@ Retourne uniquement le JSON sans texte supplémentaire.`,
       {/* Selection Bar */}
       {selectedPayslips.size > 0 && (
         <Card className="border-2 border-orange-600 bg-orange-50 p-4">
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between flex-wrap gap-3">
             <div className="flex items-center gap-3">
               <span className="text-sm font-semibold text-gray-900">
                 {selectedPayslips.size} fiche{selectedPayslips.size > 1 ? 's' : ''} sélectionnée{selectedPayslips.size > 1 ? 's' : ''}
@@ -513,10 +555,20 @@ Retourne uniquement le JSON sans texte supplémentaire.`,
             <div className="flex gap-2">
               <Button
                 size="sm"
-                variant="outline"
-                className="border-gray-300"
+                onClick={handleBulkDownload}
+                className="bg-blue-600 hover:bg-blue-700"
               >
-                Actions groupées
+                <Download className="w-4 h-4 mr-2" />
+                Télécharger
+              </Button>
+              <Button
+                size="sm"
+                onClick={handleBulkDelete}
+                variant="outline"
+                className="border-red-300 text-red-600 hover:bg-red-50"
+              >
+                <Trash2 className="w-4 h-4 mr-2" />
+                Supprimer
               </Button>
             </div>
           </div>
