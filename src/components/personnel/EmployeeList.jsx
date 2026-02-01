@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
-import { User, Plus, Search, Mail, Phone, MapPin, Archive, Lock, MessageSquare, Wifi, WifiOff, Clock } from 'lucide-react';
+import { User, Plus, Search, Mail, Phone, MapPin, Archive, Lock, MessageSquare, Wifi, WifiOff, Clock, Calendar } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import EmptyState from '@/components/ui/EmptyState';
@@ -195,6 +195,12 @@ function EmployeeCard({ employee, onClick, canView = true, userInfo, isManager }
         const isEndingSoon = endDate && (endDate.getTime() - today.getTime()) < (30 * 24 * 60 * 60 * 1000) && endDate > today;
         const isExpired = endDate && endDate < today;
 
+        // Récupérer le solde de congés de la dernière fiche de paie
+        const latestPayslip = employee.payslips?.length > 0 
+          ? employee.payslips.sort((a, b) => (b.month || '').localeCompare(a.month || ''))[0]
+          : null;
+        const remainingLeave = latestPayslip?.total_leave;
+
         // Connection status logic (only for managers)
         const isOnline = isManager && userInfo?.is_online;
         const lastActiveAt = isManager && userInfo?.last_active_at ? new Date(userInfo.last_active_at) : null;
@@ -311,6 +317,12 @@ function EmployeeCard({ employee, onClick, canView = true, userInfo, isManager }
           <div className="flex items-center gap-2 truncate">
             <MapPin className="w-3 h-3 flex-shrink-0" />
             <span className="truncate">{employee.address}</span>
+          </div>
+        )}
+        {canView && remainingLeave != null && (
+          <div className="flex items-center gap-2 truncate text-green-700 font-medium">
+            <Calendar className="w-3 h-3 flex-shrink-0" />
+            <span className="truncate">Congés restants: {remainingLeave} jours</span>
           </div>
         )}
       </div>
