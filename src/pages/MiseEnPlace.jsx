@@ -187,15 +187,18 @@ export default function MiseEnPlace() {
   };
 
   const getTasksByCategory = (categoryId) => {
+    if (!tasks) return [];
     return tasks
       .filter(t => t.category_id === categoryId)
-      .filter(t => t.name.toLowerCase().includes(searchQuery.toLowerCase()))
+      .filter(t => t.name?.toLowerCase().includes(searchQuery.toLowerCase()))
       .sort((a, b) => (a.order || 0) - (b.order || 0));
   };
 
   const uncategorizedTasks = tasks
-    .filter(t => !t.category_id)
-    .filter(t => t.name.toLowerCase().includes(searchQuery.toLowerCase()));
+    ? tasks
+      .filter(t => !t.category_id)
+      .filter(t => t.name?.toLowerCase().includes(searchQuery.toLowerCase()))
+    : [];
 
   const { data: currentUser } = useQuery({
     queryKey: ['currentUser'],
