@@ -1,12 +1,14 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import EmptyState from '@/components/ui/EmptyState';
-import { DollarSign, Users, TrendingUp } from 'lucide-react';
+import { DollarSign, Users, TrendingUp, Calendar } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 
 export default function PayrollOverview() {
+  const [selectedMonth, setSelectedMonth] = useState('');
+
   const { data: establishments = [] } = useQuery({
     queryKey: ['establishment'],
     queryFn: () => base44.entities.Establishment.list()
@@ -25,6 +27,50 @@ export default function PayrollOverview() {
   const activeEmployees = employees.filter(emp => 
     emp.is_active && !managerEmails.includes(emp.email?.toLowerCase())
   );
+
+  // Agréger les données des fiches de paie par mois
+  const payslipsByMonth = {};
+  activeEmployees.forEach(emp => {
+    if (emp.payslips && emp.payslips.length > 0) {
+      emp.payslips.forEach(payslip => {
+        if (!payslip.month) return;
+        
+        if (!payslipsByMonth[payslip.month]) {
+          payslipsByMonth[payslip.month] = {
+            month: payslip.month,
+            employees: [],
+            totalGross: 0,
+            totalNet: 0,
+            totalEmployeeContributions: 0,
+            totalEmployerContributions: 0,
+            totalLeave: 0
+          };
+        }
+        
+        payslipsByMonth[payslip.month].employees.push({
+          ...emp,
+          payslip
+        });
+        payslipsByMonth[payslip.month].totalGross += payslip.gross_salary || 0;
+        payslipsByMonth[payslip.month].totalNet += payslip.net_salary || 0;
+        payslipsByMonth[payslip.month].totalEmployeeContributions += payslip.employee_contributions || 0;
+        payslipsByMonth[payslip.month].totalEmployerContributions += payslip.employer_contributions || 0;
+        payslipsByMonth[payslip.month].totalLeave += payslip.total_leave || 0;
+      });
+    }
+  });
+
+  const monthlyData = Object.values(payslipsByMonth).sort((a, b) => b.month.localeCompare(a.month));
+
+  const formatMonth = (monthStr) => {
+    if (!monthStr) return 'N/A';
+    const [year, month] = monthStr.split('-');
+    const monthNames = ['JANVIER', 'FÉVRIER', 'MARS', 'AVRIL', 'MAI', 'JUIN', 
+                        'JUILLET', 'AOÛT', 'SEPTEMBRE', 'OCTOBRE', 'NOVEMBRE', 'DÉCEMBRE'];
+    const monthIndex = parseInt(month, 10) - 1;
+    return `${year}-${monthNames[monthIndex] || month}`;
+  };
+
   const totalGrossSalary = activeEmployees.reduce((sum, emp) => sum + (emp.gross_salary || 0), 0);
   const totalHourlyRate = activeEmployees.reduce((sum, emp) => sum + (emp.gross_hourly_rate || 0), 0);
 
@@ -36,16 +82,16 @@ export default function PayrollOverview() {
       color: 'text-blue-600'
     },
     {
-      label: 'Masse salariale mensuelle',
-      value: `${totalGrossSalary.toFixed(2)}€`,
-      icon: DollarSign,
-      color: 'text-green-600'
+      label: 'Fiches de paie enregistrées',
+      value: monthlyData.length > 0 ? `${monthlyData.length} mois` : '0',
+      icon: Calendar,
+      color: 'text-purple-600'
     },
     {
-      label: 'Taux horaire moyen',
-      value: activeEmployees.length > 0 ? `${(totalHourlyRate / activeEmployees.length).toFixed(2)}€/h` : '0€',
-      icon: TrendingUp,
-      color: 'text-orange-600'
+      label: 'Masse salariale brute (dernier mois)',
+      value: monthlyData.length > 0 ? `${monthlyData[0].totalGross.toFixed(2)}€` : '0€',
+      icon: DollarSign,
+      color: 'text-green-600'
     }
   ];
 
@@ -68,53 +114,130 @@ export default function PayrollOverview() {
         })}
       </div>
 
-      {activeEmployees.length === 0 ? (
+      {monthlyData.length === 0 ? (
         <EmptyState
-          icon={Users}
-          title="Aucun employé"
-          description="Aucun employé actif trouvé. Ajoutez des employés dans l'onglet Personnel."
+          icon={Calendar}
+          title="Aucune fiche de paie"
+          description="Aucune fiche de paie n'a été uploadée. Rendez-vous dans l'onglet Fiches de paie pour en ajouter."
         />
       ) : (
-        <div>
-          <h2 className="text-xl font-bold text-gray-900 mb-4">Détail par employé</h2>
-          <div className="bg-white border border-gray-300 rounded-lg overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="bg-gray-100 border-b border-gray-300">
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-900">Nom</th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-900">Poste</th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-900">Type contrat</th>
-                  <th className="px-4 py-3 text-right text-xs font-semibold text-gray-900">Salaire brut mensuel</th>
-                  <th className="px-4 py-3 text-right text-xs font-semibold text-gray-900">Taux horaire brut</th>
-                  <th className="px-4 py-3 text-right text-xs font-semibold text-gray-900">Heures mensuelles</th>
-                </tr>
-              </thead>
-              <tbody>
-                {activeEmployees.map((emp, idx) => (
-                  <tr key={emp.id} className={idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
-                    <td className="px-4 py-3 text-sm font-medium text-gray-900">
-                      {emp.first_name} {emp.last_name}
-                    </td>
-                    <td className="px-4 py-3 text-sm text-gray-700">{emp.position || '-'}</td>
-                    <td className="px-4 py-3 text-sm text-gray-700">
-                      <span className="px-2 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-800">
-                        {emp.contract_type ? emp.contract_type.toUpperCase() : '-'}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 text-sm text-right font-medium text-gray-900">
-                      {emp.gross_salary ? `${emp.gross_salary.toFixed(2)}€` : '-'}
-                    </td>
-                    <td className="px-4 py-3 text-sm text-right text-gray-700">
-                      {emp.gross_hourly_rate ? `${emp.gross_hourly_rate.toFixed(2)}€/h` : '-'}
-                    </td>
-                    <td className="px-4 py-3 text-sm text-right text-gray-700">
-                      {emp.contract_hours || '-'}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+        <div className="space-y-6">
+          <div className="flex items-center justify-between">
+            <h2 className="text-xl font-bold text-gray-900">Récapitulatif mensuel</h2>
+            <select
+              value={selectedMonth}
+              onChange={(e) => setSelectedMonth(e.target.value)}
+              className="px-4 py-2 border border-gray-300 rounded-lg bg-white text-gray-900"
+            >
+              <option value="">Tous les mois</option>
+              {monthlyData.map(data => (
+                <option key={data.month} value={data.month}>
+                  {formatMonth(data.month)}
+                </option>
+              ))}
+            </select>
           </div>
+
+          <div className="bg-white border border-gray-300 rounded-lg overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="bg-gray-100 border-b border-gray-300">
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-900">Mois</th>
+                    <th className="px-4 py-3 text-center text-xs font-semibold text-gray-900">Employés</th>
+                    <th className="px-4 py-3 text-right text-xs font-semibold text-gray-900">Salaire brut</th>
+                    <th className="px-4 py-3 text-right text-xs font-semibold text-gray-900">Net payé</th>
+                    <th className="px-4 py-3 text-right text-xs font-semibold text-gray-900">Cotis. salariales</th>
+                    <th className="px-4 py-3 text-right text-xs font-semibold text-gray-900">Charges patronales</th>
+                    <th className="px-4 py-3 text-right text-xs font-semibold text-gray-900">Total cotisations</th>
+                    <th className="px-4 py-3 text-right text-xs font-semibold text-gray-900">Congés totaux</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {monthlyData
+                    .filter(data => !selectedMonth || data.month === selectedMonth)
+                    .map((data, idx) => (
+                    <tr key={data.month} className={idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
+                      <td className="px-4 py-3 text-sm font-bold text-gray-900">
+                        {formatMonth(data.month)}
+                      </td>
+                      <td className="px-4 py-3 text-sm text-center text-gray-700">
+                        {data.employees.length}
+                      </td>
+                      <td className="px-4 py-3 text-sm text-right font-semibold text-blue-900">
+                        {data.totalGross.toFixed(2)}€
+                      </td>
+                      <td className="px-4 py-3 text-sm text-right font-semibold text-green-900">
+                        {data.totalNet.toFixed(2)}€
+                      </td>
+                      <td className="px-4 py-3 text-sm text-right text-orange-700">
+                        {data.totalEmployeeContributions.toFixed(2)}€
+                      </td>
+                      <td className="px-4 py-3 text-sm text-right text-purple-700">
+                        {data.totalEmployerContributions.toFixed(2)}€
+                      </td>
+                      <td className="px-4 py-3 text-sm text-right font-bold text-gray-900">
+                        {(data.totalEmployeeContributions + data.totalEmployerContributions).toFixed(2)}€
+                      </td>
+                      <td className="px-4 py-3 text-sm text-right text-green-700">
+                        {data.totalLeave.toFixed(1)}j
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {selectedMonth && monthlyData.find(d => d.month === selectedMonth) && (
+            <div>
+              <h3 className="text-lg font-bold text-gray-900 mb-4">
+                Détail - {formatMonth(selectedMonth)}
+              </h3>
+              <div className="bg-white border border-gray-300 rounded-lg overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="bg-gray-100 border-b border-gray-300">
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-900">Employé</th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-900">Poste</th>
+                      <th className="px-4 py-3 text-right text-xs font-semibold text-gray-900">Brut</th>
+                      <th className="px-4 py-3 text-right text-xs font-semibold text-gray-900">Net</th>
+                      <th className="px-4 py-3 text-right text-xs font-semibold text-gray-900">Cotis. sal.</th>
+                      <th className="px-4 py-3 text-right text-xs font-semibold text-gray-900">Ch. patron.</th>
+                      <th className="px-4 py-3 text-right text-xs font-semibold text-gray-900">Congés</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {monthlyData
+                      .find(d => d.month === selectedMonth)
+                      .employees.map((emp, idx) => (
+                      <tr key={emp.id} className={idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
+                        <td className="px-4 py-3 text-sm font-medium text-gray-900">
+                          {emp.first_name} {emp.last_name}
+                        </td>
+                        <td className="px-4 py-3 text-sm text-gray-700">{emp.position || '-'}</td>
+                        <td className="px-4 py-3 text-sm text-right text-gray-900">
+                          {emp.payslip.gross_salary ? `${emp.payslip.gross_salary.toFixed(2)}€` : '-'}
+                        </td>
+                        <td className="px-4 py-3 text-sm text-right text-gray-900">
+                          {emp.payslip.net_salary ? `${emp.payslip.net_salary.toFixed(2)}€` : '-'}
+                        </td>
+                        <td className="px-4 py-3 text-sm text-right text-gray-700">
+                          {emp.payslip.employee_contributions ? `${emp.payslip.employee_contributions.toFixed(2)}€` : '-'}
+                        </td>
+                        <td className="px-4 py-3 text-sm text-right text-gray-700">
+                          {emp.payslip.employer_contributions ? `${emp.payslip.employer_contributions.toFixed(2)}€` : '-'}
+                        </td>
+                        <td className="px-4 py-3 text-sm text-right text-gray-700">
+                          {emp.payslip.total_leave ? `${emp.payslip.total_leave.toFixed(1)}j` : '-'}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>
