@@ -149,6 +149,7 @@ export default function PayrollOverview() {
                     <th className="px-4 py-3 text-right text-xs font-semibold text-gray-900">Net payé</th>
                     <th className="px-4 py-3 text-right text-xs font-semibold text-gray-900">Cotis. salariales</th>
                     <th className="px-4 py-3 text-right text-xs font-semibold text-gray-900">Charges patronales</th>
+                    <th className="px-4 py-3 text-right text-xs font-semibold text-gray-900">Coût de revient</th>
                     <th className="px-4 py-3 text-right text-xs font-semibold text-gray-900">Total cotisations</th>
                     <th className="px-4 py-3 text-right text-xs font-semibold text-gray-900">Congés totaux</th>
                   </tr>
@@ -157,7 +158,15 @@ export default function PayrollOverview() {
                   {monthlyData
                     .filter(data => !selectedMonth || data.month === selectedMonth)
                     .map((data, idx) => (
-                    <tr key={data.month} className={idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
+                    <tr 
+                      key={data.month} 
+                      onClick={() => setSelectedMonth(data.month)}
+                      className={`cursor-pointer transition-colors ${
+                        selectedMonth === data.month 
+                          ? 'bg-orange-50 hover:bg-orange-100' 
+                          : idx % 2 === 0 ? 'bg-white hover:bg-gray-50' : 'bg-gray-50 hover:bg-gray-100'
+                      }`}
+                    >
                       <td className="px-4 py-3 text-sm font-bold text-gray-900">
                         {formatMonth(data.month)}
                       </td>
@@ -176,6 +185,9 @@ export default function PayrollOverview() {
                       <td className="px-4 py-3 text-sm text-right text-purple-700">
                         {data.totalEmployerContributions.toFixed(2)}€
                       </td>
+                      <td className="px-4 py-3 text-sm text-right font-bold text-indigo-900">
+                        {(data.totalGross + data.totalEmployerContributions).toFixed(2)}€
+                      </td>
                       <td className="px-4 py-3 text-sm text-right font-bold text-gray-900">
                         {(data.totalEmployeeContributions + data.totalEmployerContributions).toFixed(2)}€
                       </td>
@@ -190,10 +202,18 @@ export default function PayrollOverview() {
           </div>
 
           {selectedMonth && monthlyData.find(d => d.month === selectedMonth) && (
-            <div>
-              <h3 className="text-lg font-bold text-gray-900 mb-4">
-                Détail - {formatMonth(selectedMonth)}
-              </h3>
+            <div className="bg-orange-50 border-2 border-orange-300 rounded-lg p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-bold text-gray-900">
+                  Détail - {formatMonth(selectedMonth)}
+                </h3>
+                <button
+                  onClick={() => setSelectedMonth('')}
+                  className="text-sm text-gray-600 hover:text-gray-900 underline"
+                >
+                  Fermer
+                </button>
+              </div>
               <div className="bg-white border border-gray-300 rounded-lg overflow-x-auto">
                 <table className="w-full">
                   <thead>
@@ -204,6 +224,7 @@ export default function PayrollOverview() {
                       <th className="px-4 py-3 text-right text-xs font-semibold text-gray-900">Net</th>
                       <th className="px-4 py-3 text-right text-xs font-semibold text-gray-900">Cotis. sal.</th>
                       <th className="px-4 py-3 text-right text-xs font-semibold text-gray-900">Ch. patron.</th>
+                      <th className="px-4 py-3 text-right text-xs font-semibold text-gray-900">Coût de revient</th>
                       <th className="px-4 py-3 text-right text-xs font-semibold text-gray-900">Congés</th>
                     </tr>
                   </thead>
@@ -227,6 +248,9 @@ export default function PayrollOverview() {
                         </td>
                         <td className="px-4 py-3 text-sm text-right text-gray-700">
                           {emp.payslip.employer_contributions ? `${emp.payslip.employer_contributions.toFixed(2)}€` : '-'}
+                        </td>
+                        <td className="px-4 py-3 text-sm text-right font-bold text-indigo-900">
+                          {((emp.payslip.gross_salary || 0) + (emp.payslip.employer_contributions || 0)).toFixed(2)}€
                         </td>
                         <td className="px-4 py-3 text-sm text-right text-gray-700">
                           {emp.payslip.total_leave ? `${emp.payslip.total_leave.toFixed(1)}j` : '-'}
