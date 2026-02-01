@@ -74,6 +74,7 @@ export default function MiseEnPlace() {
 
     // Handle category reordering
     if (type === 'category') {
+      if (!categories) return;
       const visibleCategories = categories.filter(category => getTasksByCategory(category.id).length > 0);
       const items = Array.from(visibleCategories);
       const [reorderedItem] = items.splice(source.index, 1);
@@ -680,7 +681,7 @@ export default function MiseEnPlace() {
                 )}
 
                 {/* Category columns */}
-                {categories.filter(category => getTasksByCategory(category.id).length > 0).map((category, index) => (
+                {(categories || []).filter(category => getTasksByCategory(category.id).length > 0).map((category, index) => (
                   <Draggable key={category.id} draggableId={category.id} index={index}>
                     {(provided, snapshot) => (
                       <div
