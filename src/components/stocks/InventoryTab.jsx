@@ -39,6 +39,11 @@ export default function InventoryTab() {
     return saved ? new Set(JSON.parse(saved)) : new Set();
   });
 
+  const [hiddenArticles, setHiddenArticles] = useState(() => {
+    const saved = localStorage.getItem('inventoryHiddenArticles');
+    return saved ? new Set(JSON.parse(saved)) : new Set();
+  });
+
   const [showFreeAddModal, setShowFreeAddModal] = useState(false);
   const [showExceptionalOrderModal, setShowExceptionalOrderModal] = useState(false);
 
@@ -88,6 +93,10 @@ export default function InventoryTab() {
     localStorage.setItem('inventoryCompletedArticles', JSON.stringify(Array.from(completedArticles)));
   }, [completedArticles]);
 
+  useEffect(() => {
+    localStorage.setItem('inventoryHiddenArticles', JSON.stringify(Array.from(hiddenArticles)));
+  }, [hiddenArticles]);
+
   const { data: articles = [] } = useQuery({
     queryKey: ['articles'],
     queryFn: () => base44.entities.Article.filter({ is_active: true })
@@ -122,10 +131,10 @@ export default function InventoryTab() {
     article.counting_days?.includes(currentDay)
   );
 
-  // Filtrer les articles non remplis (sauf si showAll est activé)
+  // Filtrer les articles non remplis et non masqués (sauf si showAll est activé)
   const filteredArticles = showAll 
     ? todayArticles 
-    : todayArticles.filter(article => !completedArticles.has(article.id));
+    : todayArticles.filter(article => !completedArticles.has(article.id) && !hiddenArticles.has(article.id));
 
   // Trier par storage_order avant de grouper
   const sortedArticles = [...filteredArticles].sort((a, b) => (a.storage_order || 0) - (b.storage_order || 0));
@@ -219,10 +228,12 @@ export default function InventoryTab() {
       setStockValues({});
       setCart({});
       setCompletedArticles(new Set());
+      setHiddenArticles(new Set());
       setShowAll(false);
       localStorage.removeItem('inventoryStockValues');
       localStorage.removeItem('inventoryCart');
       localStorage.removeItem('inventoryCompletedArticles');
+      localStorage.removeItem('inventoryHiddenArticles');
       localStorage.removeItem('inventoryShowAll');
     }
   };
@@ -382,9 +393,11 @@ export default function InventoryTab() {
       setCart({});
       setStockValues({});
       setCompletedArticles(new Set());
+      setHiddenArticles(new Set());
       localStorage.removeItem('inventoryCart');
       localStorage.removeItem('inventoryStockValues');
       localStorage.removeItem('inventoryCompletedArticles');
+      localStorage.removeItem('inventoryHiddenArticles');
       
       toast.success(`${Object.keys(ordersBySupplier).length} commande(s) créée(s)`);
     } catch (error) {
@@ -467,9 +480,11 @@ export default function InventoryTab() {
       setCart({});
       setStockValues({});
       setCompletedArticles(new Set());
+      setHiddenArticles(new Set());
       localStorage.removeItem('inventoryCart');
       localStorage.removeItem('inventoryStockValues');
       localStorage.removeItem('inventoryCompletedArticles');
+      localStorage.removeItem('inventoryHiddenArticles');
       
       setConflictInfo(null);
       toast.success('Articles ajoutés au bon de commande existant');
@@ -627,27 +642,37 @@ export default function InventoryTab() {
 
                           <div className="flex items-center gap-3 w-full sm:w-auto justify-end">
                             <div className="text-right flex-shrink-0">
-                              <div className="text-[11px] sm:text-xs text-gray-400 uppercase mb-1">En réserve</div>
-                              {article.inventory_mode === 'juste_a_cocher' ? (
-                                <div className="flex flex-col sm:flex-row items-end sm:items-center gap-2">
-                                  <div className="text-sm text-gray-300 whitespace-nowrap">
-                                    {article.order_quantity?.[currentDay] || 0}
-                                  </div>
-                                  <Button
-                                    variant={stockValues[article.id] ? "default" : "outline"}
-                                    size="sm"
-                                    className={cn(
-                                      stockValues[article.id] 
-                                        ? "bg-emerald-600 hover:bg-emerald-700 gap-2" 
-                                        : "border-gray-600 text-gray-400 hover:bg-gray-700 hover:border-gray-500",
-                                      "min-h-[44px] text-xs sm:text-sm whitespace-nowrap touch-manipulation"
-                                    )}
-                                    onClick={() => handleStockChange(article.id, !stockValues[article.id], article)}
-                                  >
-                                    {stockValues[article.id] && <Check className="w-4 h-4" />}
-                                    COMMANDER
-                                  </Button>
-                                </div>
+                            <div className="text-[11px] sm:text-xs text-gray-400 uppercase mb-1">En réserve</div>
+                            {article.inventory_mode === 'juste_a_cocher' ? (
+                             <div className="flex flex-col sm:flex-row items-end sm:items-center gap-2">
+                               <div className="text-sm text-gray-300 whitespace-nowrap">
+                                 {article.order_quantity?.[currentDay] || 0}
+                               </div>
+                               <div className="flex gap-2">
+                                 <Button
+                                   variant={stockValues[article.id] ? "default" : "outline"}
+                                   size="sm"
+                                   className={cn(
+                                     stockValues[article.id] 
+                                       ? "bg-emerald-600 hover:bg-emerald-700 gap-2" 
+                                       : "border-gray-600 text-gray-400 hover:bg-gray-700 hover:border-gray-500",
+                                     "min-h-[44px] text-xs sm:text-sm whitespace-nowrap touch-manipulation"
+                                   )}
+                                   onClick={() => handleStockChange(article.id, !stockValues[article.id], article)}
+                                 >
+                                   {stockValues[article.id] && <Check className="w-4 h-4" />}
+                                   COMMANDER
+                                 </Button>
+                                 <Button
+                                   variant="outline"
+                                   size="sm"
+                                   className="border-red-600 text-red-600 hover:bg-red-700 hover:text-white min-h-[44px] text-xs sm:text-sm whitespace-nowrap touch-manipulation"
+                                   onClick={() => setHiddenArticles(prev => new Set(prev).add(article.id))}
+                                 >
+                                   NE PAS COMMANDER
+                                 </Button>
+                               </div>
+                             </div>
                               ) : (
                                 <div className="flex items-center gap-1">
                                   <button
