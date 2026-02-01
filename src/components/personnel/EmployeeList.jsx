@@ -196,8 +196,8 @@ function EmployeeCard({ employee, onClick, canView = true, userInfo, isManager }
         const isExpired = endDate && endDate < today;
 
         // Récupérer le solde de congés de la dernière fiche de paie
-        const latestPayslip = employee.payslips?.length > 0 
-          ? employee.payslips.sort((a, b) => (b.month || '').localeCompare(a.month || ''))[0]
+        const latestPayslip = (employee.payslips && employee.payslips.length > 0)
+          ? [...employee.payslips].sort((a, b) => (b.month || '').localeCompare(a.month || ''))[0]
           : null;
         const remainingLeave = latestPayslip?.total_leave;
 
