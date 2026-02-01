@@ -41,64 +41,25 @@ export default function PayslipsManagement() {
         // Upload file
         const { file_url } = await base44.integrations.Core.UploadFile({ file });
         
-        // Use AI to extract employee info
+        // Use AI to extract employee info with web search
         const aiResponse = await base44.integrations.Core.InvokeLLM({
-          prompt: `Tu es un expert en analyse de bulletins de paie français. Examine attentivement ce bulletin de salaire et extrait les informations EXACTES suivantes:
+          prompt: `Analyse ce bulletin de paie français et extrait les données suivantes.
 
-**IDENTITÉ DU SALARIÉ:**
-- Prénom (first_name): cherche dans l'en-tête, section "Salarié" ou "Employé"
-- Nom (last_name): cherche dans l'en-tête, section "Salarié" ou "Employé"
-- Période (month): format YYYY-MM (exemple: "2025-05" pour mai 2025)
+IDENTITÉ: Nom et prénom du salarié (pas l'employeur), période au format YYYY-MM.
 
-**SALAIRE BRUT (gross_salary):**
-- Cherche dans le tableau des rémunérations la ligne qui contient "Salaire brut" ou "Brut"
-- C'est le montant AVANT les cotisations salariales
-- Souvent affiché dans la colonne "Base" ou directement visible
-- Valeur en euros (nombre décimal)
+MONTANTS EN EUROS (enlève le symbole €):
+- Salaire brut: montant total avant cotisations
+- Net à payer: montant final versé au salarié (en bas du bulletin)
+- Part salariale: TOTAL de la colonne cotisations salariales
+- Part patronale: TOTAL de la colonne charges patronales
 
-**NET À PAYER (net_salary):**
-- Cherche en BAS du bulletin la mention "Net à payer" ou "Net payé" ou "Net à payer avant impôt"
-- C'est le montant final que le salarié reçoit
-- Souvent mis en évidence en gros caractères
-- Valeur en euros (nombre décimal)
+CONGÉS EN JOURS (enlève "j" ou "jours"):
+- Ligne N-1: acquis, pris, solde
+- Ligne N: acquis, pris, solde
 
-**COTISATIONS SALARIALES (employee_contributions):**
-- Dans le tableau des cotisations, cherche la COLONNE intitulée "Part salariale" ou "Salarié" ou "Retenue salariale"
-- ADDITIONNE TOUS les montants de cette colonne (tous les chiffres de la colonne salariale)
-- C'est ce qui est déduit du salaire brut
-- Valeur totale en euros (nombre décimal)
-
-**CHARGES PATRONALES (employer_contributions):**
-- Dans le tableau des cotisations, cherche la COLONNE intitulée "Charges patronales" ou "Part patronale" ou "Employeur"
-- ADDITIONNE TOUS les montants de cette colonne (tous les chiffres de la colonne patronale)
-- C'est ce que l'employeur paie en plus
-- Valeur totale en euros (nombre décimal)
-
-**CONGÉS N-1 (année précédente - leave_n_minus_1):**
-- Cherche dans la section "Congés payés" ou "CP" la ligne marquée "N-1" ou "Solde N-1" ou "Année précédente"
-- Extrait:
-  * acquired (acquis): nombre de jours acquis l'année N-1
-  * taken (pris): nombre de jours pris de N-1
-  * balance (solde): nombre de jours restants de N-1
-- Valeurs en jours (nombres décimaux)
-- Si cette section n'existe pas, retourne null
-
-**CONGÉS N (année en cours - leave_n):**
-- Cherche dans la section "Congés payés" ou "CP" la ligne marquée "N" ou "Congés N" ou "Année en cours"
-- Extrait:
-  * acquired (acquis): nombre de jours acquis cette année
-  * taken (pris): nombre de jours pris cette année
-  * balance (solde): nombre de jours restants cette année
-- Valeurs en jours (nombres décimaux)
-- Si cette section n'existe pas, retourne null
-
-**INSTRUCTIONS IMPORTANTES:**
-- Enlève tous les symboles (€, j, jours) des valeurs
-- Convertis les valeurs en nombres décimaux
-- Si une information est absente, utilise null
-- Ne retourne QUE le JSON, aucun texte supplémentaire
-- Sois TRÈS PRÉCIS dans l'extraction des montants`,
+Retourne uniquement le JSON sans texte supplémentaire.`,
           file_urls: [file_url],
+          add_context_from_internet: false,
           response_json_schema: {
             type: "object",
             properties: {
@@ -207,6 +168,22 @@ export default function PayslipsManagement() {
 
   const handleRemoveFromQueue = (id) => {
     setUploadQueue(prev => prev.filter(item => item.id !== id));
+  };
+
+  const handleEditQueueItem = (id, field, value) => {
+    setUploadQueue(prev => prev.map(item => {
+      if (item.id === id) {
+        const updatedInfo = { ...item.extracted_info };
+        if (field.includes('.')) {
+          const [parent, child] = field.split('.');
+          updatedInfo[parent] = { ...updatedInfo[parent], [child]: parseFloat(value) || 0 };
+        } else {
+          updatedInfo[field] = field === 'month' ? value : parseFloat(value) || 0;
+        }
+        return { ...item, extracted_info: updatedInfo };
+      }
+      return item;
+    }));
   };
 
   const deletePayslipMutation = useMutation({
@@ -318,6 +295,135 @@ export default function PayslipsManagement() {
           <div className="space-y-3">
             {uploadQueue.map(item => (
               <div key={item.id} className="bg-white p-4 rounded-lg border border-gray-200">
+                {item.editing && item.status === 'matched' && (
+                  <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                    <h4 className="text-sm font-semibold text-blue-900 mb-3">Modifier les données extraites</h4>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="text-xs text-gray-700 block mb-1">Mois (YYYY-MM)</label>
+                        <Input
+                          type="text"
+                          value={item.extracted_info.month || ''}
+                          onChange={(e) => handleEditQueueItem(item.id, 'month', e.target.value)}
+                          className="text-sm"
+                          placeholder="2025-05"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-xs text-gray-700 block mb-1">Salaire brut (€)</label>
+                        <Input
+                          type="number"
+                          step="0.01"
+                          value={item.extracted_info.gross_salary || ''}
+                          onChange={(e) => handleEditQueueItem(item.id, 'gross_salary', e.target.value)}
+                          className="text-sm"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-xs text-gray-700 block mb-1">Net à payer (€)</label>
+                        <Input
+                          type="number"
+                          step="0.01"
+                          value={item.extracted_info.net_salary || ''}
+                          onChange={(e) => handleEditQueueItem(item.id, 'net_salary', e.target.value)}
+                          className="text-sm"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-xs text-gray-700 block mb-1">Cotisations salariales (€)</label>
+                        <Input
+                          type="number"
+                          step="0.01"
+                          value={item.extracted_info.employee_contributions || ''}
+                          onChange={(e) => handleEditQueueItem(item.id, 'employee_contributions', e.target.value)}
+                          className="text-sm"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-xs text-gray-700 block mb-1">Charges patronales (€)</label>
+                        <Input
+                          type="number"
+                          step="0.01"
+                          value={item.extracted_info.employer_contributions || ''}
+                          onChange={(e) => handleEditQueueItem(item.id, 'employer_contributions', e.target.value)}
+                          className="text-sm"
+                        />
+                      </div>
+                    </div>
+                    <div className="mt-3 pt-3 border-t border-blue-200">
+                      <h5 className="text-xs font-semibold text-gray-700 mb-2">Congés N-1 (jours)</h5>
+                      <div className="grid grid-cols-3 gap-2">
+                        <Input
+                          type="number"
+                          step="0.5"
+                          placeholder="Acquis"
+                          value={item.extracted_info.leave_n_minus_1?.acquired || ''}
+                          onChange={(e) => handleEditQueueItem(item.id, 'leave_n_minus_1.acquired', e.target.value)}
+                          className="text-sm"
+                        />
+                        <Input
+                          type="number"
+                          step="0.5"
+                          placeholder="Pris"
+                          value={item.extracted_info.leave_n_minus_1?.taken || ''}
+                          onChange={(e) => handleEditQueueItem(item.id, 'leave_n_minus_1.taken', e.target.value)}
+                          className="text-sm"
+                        />
+                        <Input
+                          type="number"
+                          step="0.5"
+                          placeholder="Solde"
+                          value={item.extracted_info.leave_n_minus_1?.balance || ''}
+                          onChange={(e) => handleEditQueueItem(item.id, 'leave_n_minus_1.balance', e.target.value)}
+                          className="text-sm"
+                        />
+                      </div>
+                    </div>
+                    <div className="mt-3">
+                      <h5 className="text-xs font-semibold text-gray-700 mb-2">Congés N (jours)</h5>
+                      <div className="grid grid-cols-3 gap-2">
+                        <Input
+                          type="number"
+                          step="0.5"
+                          placeholder="Acquis"
+                          value={item.extracted_info.leave_n?.acquired || ''}
+                          onChange={(e) => handleEditQueueItem(item.id, 'leave_n.acquired', e.target.value)}
+                          className="text-sm"
+                        />
+                        <Input
+                          type="number"
+                          step="0.5"
+                          placeholder="Pris"
+                          value={item.extracted_info.leave_n?.taken || ''}
+                          onChange={(e) => handleEditQueueItem(item.id, 'leave_n.taken', e.target.value)}
+                          className="text-sm"
+                        />
+                        <Input
+                          type="number"
+                          step="0.5"
+                          placeholder="Solde"
+                          value={item.extracted_info.leave_n?.balance || ''}
+                          onChange={(e) => handleEditQueueItem(item.id, 'leave_n.balance', e.target.value)}
+                          className="text-sm"
+                        />
+                      </div>
+                    </div>
+                    <Button
+                      size="sm"
+                      onClick={() => {
+                        const newQueue = [...uploadQueue];
+                        const idx = newQueue.findIndex(i => i.id === item.id);
+                        if (idx !== -1) {
+                          newQueue[idx].editing = false;
+                          setUploadQueue(newQueue);
+                        }
+                      }}
+                      className="mt-3 bg-blue-600 hover:bg-blue-700"
+                    >
+                      Terminé
+                    </Button>
+                  </div>
+                )}
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-2">
@@ -335,13 +441,60 @@ export default function PayslipsManagement() {
                     </div>
                     
                     {item.status === 'matched' && (
-                      <div className="text-sm space-y-1">
+                      <div className="text-sm space-y-2">
                         <p className="text-green-700">
                           ✓ Employé trouvé: <strong>{item.matched_employee.first_name} {item.matched_employee.last_name}</strong>
                         </p>
                         {item.extracted_info?.month && (
-                          <p className="text-gray-600">Mois détecté: {item.extracted_info.month}</p>
+                          <p className="text-gray-600">Mois: {item.extracted_info.month}</p>
                         )}
+                        
+                        {/* Données extraites à vérifier */}
+                        <div className="bg-yellow-50 border border-yellow-200 rounded p-3 mt-2">
+                          <p className="text-xs text-yellow-800 font-semibold mb-2">⚠️ VÉRIFIER LES DONNÉES EXTRAITES:</p>
+                          <div className="grid grid-cols-2 gap-2 text-xs">
+                            <div>
+                              <span className="text-gray-600">Brut:</span>
+                              <span className="ml-1 font-semibold">{item.extracted_info.gross_salary ? `${item.extracted_info.gross_salary}€` : 'N/A'}</span>
+                            </div>
+                            <div>
+                              <span className="text-gray-600">Net:</span>
+                              <span className="ml-1 font-semibold">{item.extracted_info.net_salary ? `${item.extracted_info.net_salary}€` : 'N/A'}</span>
+                            </div>
+                            <div>
+                              <span className="text-gray-600">Cotis. salariales:</span>
+                              <span className="ml-1 font-semibold">{item.extracted_info.employee_contributions ? `${item.extracted_info.employee_contributions}€` : 'N/A'}</span>
+                            </div>
+                            <div>
+                              <span className="text-gray-600">Charges patronales:</span>
+                              <span className="ml-1 font-semibold">{item.extracted_info.employer_contributions ? `${item.extracted_info.employer_contributions}€` : 'N/A'}</span>
+                            </div>
+                          </div>
+                          {(item.extracted_info.leave_n_minus_1 || item.extracted_info.leave_n) && (
+                            <div className="mt-2 pt-2 border-t border-yellow-200">
+                              <span className="text-gray-600 text-xs">Congés:</span>
+                              {item.extracted_info.leave_n_minus_1 && (
+                                <span className="ml-1 text-xs">N-1: {item.extracted_info.leave_n_minus_1.balance || 0}j</span>
+                              )}
+                              {item.extracted_info.leave_n && (
+                                <span className="ml-2 text-xs">N: {item.extracted_info.leave_n.balance || 0}j</span>
+                              )}
+                            </div>
+                          )}
+                          <button
+                            onClick={() => {
+                              const newQueue = [...uploadQueue];
+                              const idx = newQueue.findIndex(i => i.id === item.id);
+                              if (idx !== -1) {
+                                newQueue[idx].editing = true;
+                                setUploadQueue(newQueue);
+                              }
+                            }}
+                            className="mt-2 text-xs text-blue-600 hover:text-blue-800 underline"
+                          >
+                            Modifier les données
+                          </button>
+                        </div>
                       </div>
                     )}
                     
