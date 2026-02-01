@@ -43,17 +43,61 @@ export default function PayslipsManagement() {
         
         // Use AI to extract employee info
         const aiResponse = await base44.integrations.Core.InvokeLLM({
-          prompt: `Analyse cette fiche de paie française et extrait les informations suivantes:
-          - Nom et prénom de l'employé (salarié)
-          - Mois et année (format YYYY-MM)
-          - Salaire brut à payer
-          - Salaire net payé
-          - Cotisations salariales (total)
-          - Cotisations patronales (total)
-          - Congés N-1: acquis, pris, solde
-          - Congés N (année en cours): acquis, pris, solde
-          
-          Retourne un objet JSON structuré. Pour les nombres, utilise des valeurs numériques.`,
+          prompt: `Tu es un expert en analyse de bulletins de paie français. Examine attentivement ce bulletin de salaire et extrait les informations EXACTES suivantes:
+
+**IDENTITÉ DU SALARIÉ:**
+- Prénom (first_name): cherche dans l'en-tête, section "Salarié" ou "Employé"
+- Nom (last_name): cherche dans l'en-tête, section "Salarié" ou "Employé"
+- Période (month): format YYYY-MM (exemple: "2025-05" pour mai 2025)
+
+**SALAIRE BRUT (gross_salary):**
+- Cherche dans le tableau des rémunérations la ligne qui contient "Salaire brut" ou "Brut"
+- C'est le montant AVANT les cotisations salariales
+- Souvent affiché dans la colonne "Base" ou directement visible
+- Valeur en euros (nombre décimal)
+
+**NET À PAYER (net_salary):**
+- Cherche en BAS du bulletin la mention "Net à payer" ou "Net payé" ou "Net à payer avant impôt"
+- C'est le montant final que le salarié reçoit
+- Souvent mis en évidence en gros caractères
+- Valeur en euros (nombre décimal)
+
+**COTISATIONS SALARIALES (employee_contributions):**
+- Dans le tableau des cotisations, cherche la COLONNE intitulée "Part salariale" ou "Salarié" ou "Retenue salariale"
+- ADDITIONNE TOUS les montants de cette colonne (tous les chiffres de la colonne salariale)
+- C'est ce qui est déduit du salaire brut
+- Valeur totale en euros (nombre décimal)
+
+**CHARGES PATRONALES (employer_contributions):**
+- Dans le tableau des cotisations, cherche la COLONNE intitulée "Charges patronales" ou "Part patronale" ou "Employeur"
+- ADDITIONNE TOUS les montants de cette colonne (tous les chiffres de la colonne patronale)
+- C'est ce que l'employeur paie en plus
+- Valeur totale en euros (nombre décimal)
+
+**CONGÉS N-1 (année précédente - leave_n_minus_1):**
+- Cherche dans la section "Congés payés" ou "CP" la ligne marquée "N-1" ou "Solde N-1" ou "Année précédente"
+- Extrait:
+  * acquired (acquis): nombre de jours acquis l'année N-1
+  * taken (pris): nombre de jours pris de N-1
+  * balance (solde): nombre de jours restants de N-1
+- Valeurs en jours (nombres décimaux)
+- Si cette section n'existe pas, retourne null
+
+**CONGÉS N (année en cours - leave_n):**
+- Cherche dans la section "Congés payés" ou "CP" la ligne marquée "N" ou "Congés N" ou "Année en cours"
+- Extrait:
+  * acquired (acquis): nombre de jours acquis cette année
+  * taken (pris): nombre de jours pris cette année
+  * balance (solde): nombre de jours restants cette année
+- Valeurs en jours (nombres décimaux)
+- Si cette section n'existe pas, retourne null
+
+**INSTRUCTIONS IMPORTANTES:**
+- Enlève tous les symboles (€, j, jours) des valeurs
+- Convertis les valeurs en nombres décimaux
+- Si une information est absente, utilise null
+- Ne retourne QUE le JSON, aucun texte supplémentaire
+- Sois TRÈS PRÉCIS dans l'extraction des montants`,
           file_urls: [file_url],
           response_json_schema: {
             type: "object",
