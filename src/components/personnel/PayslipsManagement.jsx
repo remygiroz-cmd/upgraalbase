@@ -63,10 +63,9 @@ MONTANTS EN EUROS (enlève le symbole €):
 - Part patronale: TOTAL de la colonne charges patronales
 
 CONGÉS EN JOURS (enlève "j" ou "jours"):
-ATTENTION: Sur les bulletins français, les lignes sont souvent inversées.
-- Ce qui est étiqueté "N-1" dans le bulletin = mettre dans leave_n (année en cours)
-- Ce qui est étiqueté "N" dans le bulletin = mettre dans leave_n_minus_1 (année précédente)
-Pour chaque ligne: extraire acquis, pris, solde
+- Cherche la section congés payés
+- ADDITIONNE tous les soldes de congés (N-1 + N ou toutes lignes de solde)
+- Retourne le TOTAL en jours dans le champ total_leave
 
 Retourne uniquement le JSON sans texte supplémentaire.`,
           file_urls: [file_url],
@@ -81,22 +80,7 @@ Retourne uniquement le JSON sans texte supplémentaire.`,
               net_salary: { type: "number" },
               employee_contributions: { type: "number" },
               employer_contributions: { type: "number" },
-              leave_n_minus_1: {
-                type: "object",
-                properties: {
-                  acquired: { type: "number" },
-                  taken: { type: "number" },
-                  balance: { type: "number" }
-                }
-              },
-              leave_n: {
-                type: "object",
-                properties: {
-                  acquired: { type: "number" },
-                  taken: { type: "number" },
-                  balance: { type: "number" }
-                }
-              }
+              total_leave: { type: "number" }
             },
             required: ["first_name", "last_name"]
           }
@@ -147,8 +131,6 @@ Retourne uniquement le JSON sans texte supplémentaire.`,
       const emp = employees.find(e => e.id === employeeId);
       if (!emp) throw new Error('Employé non trouvé');
 
-      const totalLeave = (extractedData.leave_n_minus_1?.balance || 0) + (extractedData.leave_n?.balance || 0);
-
       const newPayslip = {
         month: extractedData.month || new Date().toISOString().slice(0, 7),
         file_url,
@@ -158,9 +140,7 @@ Retourne uniquement le JSON sans texte supplémentaire.`,
         net_salary: extractedData.net_salary,
         employee_contributions: extractedData.employee_contributions,
         employer_contributions: extractedData.employer_contributions,
-        leave_n_minus_1: extractedData.leave_n_minus_1,
-        leave_n: extractedData.leave_n,
-        total_leave: totalLeave
+        total_leave: extractedData.total_leave || 0
       };
 
       const updatedPayslips = [...(emp.payslips || []), newPayslip];
@@ -192,12 +172,7 @@ Retourne uniquement le JSON sans texte supplémentaire.`,
     setUploadQueue(prev => prev.map(item => {
       if (item.id === id) {
         const updatedInfo = { ...item.extracted_info };
-        if (field.includes('.')) {
-          const [parent, child] = field.split('.');
-          updatedInfo[parent] = { ...updatedInfo[parent], [child]: parseFloat(value) || 0 };
-        } else {
-          updatedInfo[field] = field === 'month' ? value : parseFloat(value) || 0;
-        }
+        updatedInfo[field] = field === 'month' ? value : parseFloat(value) || 0;
         return { ...item, extracted_info: updatedInfo };
       }
       return item;
@@ -369,62 +344,15 @@ Retourne uniquement le JSON sans texte supplémentaire.`,
                       </div>
                     </div>
                     <div className="mt-3 pt-3 border-t border-blue-200">
-                      <h5 className="text-xs font-semibold text-gray-700 mb-2">Congés N-1 (jours)</h5>
-                      <div className="grid grid-cols-3 gap-2">
-                        <Input
-                          type="number"
-                          step="0.5"
-                          placeholder="Acquis"
-                          value={item.extracted_info.leave_n_minus_1?.acquired || ''}
-                          onChange={(e) => handleEditQueueItem(item.id, 'leave_n_minus_1.acquired', e.target.value)}
-                          className="text-sm"
-                        />
-                        <Input
-                          type="number"
-                          step="0.5"
-                          placeholder="Pris"
-                          value={item.extracted_info.leave_n_minus_1?.taken || ''}
-                          onChange={(e) => handleEditQueueItem(item.id, 'leave_n_minus_1.taken', e.target.value)}
-                          className="text-sm"
-                        />
-                        <Input
-                          type="number"
-                          step="0.5"
-                          placeholder="Solde"
-                          value={item.extracted_info.leave_n_minus_1?.balance || ''}
-                          onChange={(e) => handleEditQueueItem(item.id, 'leave_n_minus_1.balance', e.target.value)}
-                          className="text-sm"
-                        />
-                      </div>
-                    </div>
-                    <div className="mt-3">
-                      <h5 className="text-xs font-semibold text-gray-700 mb-2">Congés N (jours)</h5>
-                      <div className="grid grid-cols-3 gap-2">
-                        <Input
-                          type="number"
-                          step="0.5"
-                          placeholder="Acquis"
-                          value={item.extracted_info.leave_n?.acquired || ''}
-                          onChange={(e) => handleEditQueueItem(item.id, 'leave_n.acquired', e.target.value)}
-                          className="text-sm"
-                        />
-                        <Input
-                          type="number"
-                          step="0.5"
-                          placeholder="Pris"
-                          value={item.extracted_info.leave_n?.taken || ''}
-                          onChange={(e) => handleEditQueueItem(item.id, 'leave_n.taken', e.target.value)}
-                          className="text-sm"
-                        />
-                        <Input
-                          type="number"
-                          step="0.5"
-                          placeholder="Solde"
-                          value={item.extracted_info.leave_n?.balance || ''}
-                          onChange={(e) => handleEditQueueItem(item.id, 'leave_n.balance', e.target.value)}
-                          className="text-sm"
-                        />
-                      </div>
+                      <h5 className="text-xs font-semibold text-gray-700 mb-2">Congés totaux (jours)</h5>
+                      <Input
+                        type="number"
+                        step="0.5"
+                        placeholder="Total des congés"
+                        value={item.extracted_info.total_leave || ''}
+                        onChange={(e) => handleEditQueueItem(item.id, 'total_leave', e.target.value)}
+                        className="text-sm"
+                      />
                     </div>
                     <Button
                       size="sm"
@@ -488,15 +416,10 @@ Retourne uniquement le JSON sans texte supplémentaire.`,
                               <span className="ml-1 font-semibold">{item.extracted_info.employer_contributions ? `${item.extracted_info.employer_contributions}€` : 'N/A'}</span>
                             </div>
                           </div>
-                          {(item.extracted_info.leave_n_minus_1 || item.extracted_info.leave_n) && (
+                          {item.extracted_info.total_leave && (
                             <div className="mt-2 pt-2 border-t border-yellow-200">
                               <span className="text-gray-600 text-xs">Congés:</span>
-                              {item.extracted_info.leave_n_minus_1 && (
-                                <span className="ml-1 text-xs">N-1: {item.extracted_info.leave_n_minus_1.balance || 0}j</span>
-                              )}
-                              {item.extracted_info.leave_n && (
-                                <span className="ml-2 text-xs">N: {item.extracted_info.leave_n.balance || 0}j</span>
-                              )}
+                              <span className="ml-1 text-xs font-semibold">{item.extracted_info.total_leave}j</span>
                             </div>
                           )}
                           <button
@@ -737,8 +660,6 @@ Retourne uniquement le JSON sans texte supplémentaire.`,
 }
 
 function PayslipDetailModal({ employee, payslip, onClose }) {
-  const totalLeave = payslip.total_leave || 0;
-
   return (
     <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
       <Card className="max-w-2xl w-full max-h-[90vh] overflow-y-auto bg-white">
@@ -809,76 +730,19 @@ function PayslipDetailModal({ employee, payslip, onClose }) {
           </div>
 
           {/* Congés */}
-          <div>
-            <h3 className="text-sm font-semibold text-gray-900 mb-3 uppercase tracking-wide">
-              Compteur de congés
-            </h3>
-            
-            {/* Congés N-1 */}
-            {payslip.leave_n_minus_1 && (
-              <div className="mb-4 bg-slate-50 p-4 rounded-lg border border-slate-200">
-                <p className="text-xs text-slate-600 mb-2 font-medium">Congés N-1</p>
-                <div className="grid grid-cols-3 gap-3">
-                  <div>
-                    <p className="text-xs text-slate-500">Acquis</p>
-                    <p className="text-lg font-bold text-slate-900">
-                      {payslip.leave_n_minus_1.acquired || 0} j
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-slate-500">Pris</p>
-                    <p className="text-lg font-bold text-slate-900">
-                      {payslip.leave_n_minus_1.taken || 0} j
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-slate-500">Solde</p>
-                    <p className="text-lg font-bold text-blue-600">
-                      {payslip.leave_n_minus_1.balance || 0} j
-                    </p>
-                  </div>
-                </div>
+          {payslip.total_leave !== undefined && (
+            <div>
+              <h3 className="text-sm font-semibold text-gray-900 mb-3 uppercase tracking-wide">
+                Compteur de congés
+              </h3>
+              <div className="bg-green-50 p-4 rounded-lg border-2 border-green-300">
+                <p className="text-xs text-green-600 mb-1 font-medium">Congés</p>
+                <p className="text-3xl font-bold text-green-900">
+                  {payslip.total_leave} jours
+                </p>
               </div>
-            )}
-
-            {/* Congés N */}
-            {payslip.leave_n && (
-              <div className="mb-4 bg-slate-50 p-4 rounded-lg border border-slate-200">
-                <p className="text-xs text-slate-600 mb-2 font-medium">Congés N (année en cours)</p>
-                <div className="grid grid-cols-3 gap-3">
-                  <div>
-                    <p className="text-xs text-slate-500">Acquis</p>
-                    <p className="text-lg font-bold text-slate-900">
-                      {payslip.leave_n.acquired || 0} j
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-slate-500">Pris</p>
-                    <p className="text-lg font-bold text-slate-900">
-                      {payslip.leave_n.taken || 0} j
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-slate-500">Solde</p>
-                    <p className="text-lg font-bold text-blue-600">
-                      {payslip.leave_n.balance || 0} j
-                    </p>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Total des congés */}
-            <div className="bg-green-50 p-4 rounded-lg border-2 border-green-300">
-              <p className="text-xs text-green-600 mb-1 font-medium">Total des congés disponibles</p>
-              <p className="text-3xl font-bold text-green-900">
-                {totalLeave} jours
-              </p>
-              <p className="text-xs text-green-600 mt-1">
-                Solde N-1 + Solde N
-              </p>
             </div>
-          </div>
+          )}
 
           {/* Métadonnées */}
           <div className="pt-4 border-t border-gray-200">
