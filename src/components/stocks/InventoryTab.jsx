@@ -117,9 +117,9 @@ export default function InventoryTab() {
 
   const currentDay = getCurrentDay();
 
-  // Filtrer les articles dont le jour de comptage correspond à aujourd'hui
+  // Filtrer les articles dont le jour de comptage correspond à aujourd'hui (et non masqués)
   const todayArticles = articles.filter(article => 
-    article.counting_days?.includes(currentDay)
+    article.counting_days?.includes(currentDay) && !article.is_hidden
   );
 
   // Filtrer les articles non remplis (sauf si showAll est activé)
