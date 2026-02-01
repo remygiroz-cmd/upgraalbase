@@ -214,7 +214,7 @@ export default function Historique() {
                     <span>Démarré par {session.started_by_name}</span>
                     }
                     {session.completed_at &&
-                    <span>Terminé à {format(new Date(session.completed_at), 'HH:mm')}</span>
+                    <span>Terminé à {format(new Date(session.completed_at), 'dd/MM/yyyy HH:mm')}</span>
                     }
                   </div>
                 </div>
@@ -359,13 +359,13 @@ function DayDetailModal({ day, onClose }) {
               {day.started_at &&
               <div className="flex justify-between">
                   <span className="text-gray-600">Heure de début :</span>
-                  <span className="text-gray-900">{format(new Date(day.started_at), 'HH:mm')}</span>
+                  <span className="text-gray-900">{format(new Date(day.started_at), 'dd/MM/yyyy HH:mm')}</span>
                 </div>
               }
               {day.completed_at &&
               <div className="flex justify-between">
                   <span className="text-gray-600">Heure de fin :</span>
-                  <span className="text-gray-900">{format(new Date(day.completed_at), 'HH:mm')}</span>
+                  <span className="text-gray-900">{format(new Date(day.completed_at), 'dd/MM/yyyy HH:mm')}</span>
                 </div>
               }
               {totalSeconds > 0 &&
@@ -448,7 +448,7 @@ function DayDetailModal({ day, onClose }) {
                             </h5>
                             {task.added_at &&
                         <p className="text-xs text-gray-500 mt-1">
-                                Ajouté à {format(new Date(task.added_at), 'HH:mm')}
+                                Ajouté à {format(new Date(task.added_at), 'dd/MM/yyyy HH:mm')}
                               </p>
                         }
                           </div>
@@ -459,7 +459,7 @@ function DayDetailModal({ day, onClose }) {
                                 <p className="text-sm text-gray-700">{task.completed_by_name}</p>
                                 {task.completed_at &&
                           <p className="text-xs text-slate-500">
-                                    {format(new Date(task.completed_at), 'HH:mm')}
+                                    {format(new Date(task.completed_at), 'dd/MM/yyyy HH:mm')}
                                   </p>
                           }
                               </div>
