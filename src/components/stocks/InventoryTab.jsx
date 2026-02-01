@@ -431,9 +431,11 @@ export default function InventoryTab() {
       setCart({});
       setStockValues({});
       setCompletedArticles(new Set());
+      setHiddenArticles(new Set());
       localStorage.removeItem('inventoryCart');
       localStorage.removeItem('inventoryStockValues');
       localStorage.removeItem('inventoryCompletedArticles');
+      localStorage.removeItem('inventoryHiddenArticles');
       
       setConflictInfo(null);
       toast.success('Commande remplacée avec succès');
