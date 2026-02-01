@@ -15,6 +15,7 @@ export default function PayslipsManagement() {
   const [selectedMonth, setSelectedMonth] = useState('');
   const [uploadQueue, setUploadQueue] = useState([]);
   const [processing, setProcessing] = useState(false);
+  const [selectedPayslips, setSelectedPayslips] = useState(new Set());
   const queryClient = useQueryClient();
 
   const { data: employees = [], isLoading: loadingEmployees } = useQuery({
@@ -157,6 +158,30 @@ export default function PayslipsManagement() {
     return payslips.length > 0;
   });
 
+  const allPayslipIds = employeesWithPayslips.flatMap(emp => 
+    (emp.payslips || [])
+      .filter(p => !selectedMonth || p.month === selectedMonth)
+      .map((_, idx) => `${emp.id}-${idx}`)
+  );
+
+  const handleTogglePayslip = (payslipId) => {
+    const newSelected = new Set(selectedPayslips);
+    if (newSelected.has(payslipId)) {
+      newSelected.delete(payslipId);
+    } else {
+      newSelected.add(payslipId);
+    }
+    setSelectedPayslips(newSelected);
+  };
+
+  const handleSelectAll = () => {
+    if (selectedPayslips.size === allPayslipIds.length) {
+      setSelectedPayslips(new Set());
+    } else {
+      setSelectedPayslips(new Set(allPayslipIds));
+    }
+  };
+
   if (loadingEmployees) {
     return <LoadingSpinner />;
   }
@@ -277,6 +302,36 @@ export default function PayslipsManagement() {
         </Card>
       )}
 
+      {/* Selection Bar */}
+      {selectedPayslips.size > 0 && (
+        <Card className="border-2 border-orange-600 bg-orange-50 p-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <span className="text-sm font-semibold text-gray-900">
+                {selectedPayslips.size} fiche{selectedPayslips.size > 1 ? 's' : ''} sélectionnée{selectedPayslips.size > 1 ? 's' : ''}
+              </span>
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => setSelectedPayslips(new Set())}
+                className="text-gray-600 hover:bg-white"
+              >
+                Tout désélectionner
+              </Button>
+            </div>
+            <div className="flex gap-2">
+              <Button
+                size="sm"
+                variant="outline"
+                className="border-gray-300"
+              >
+                Actions groupées
+              </Button>
+            </div>
+          </div>
+        </Card>
+      )}
+
       {/* Filters */}
       <div className="flex gap-3 flex-wrap">
         <div className="flex-1 min-w-[250px]">
@@ -322,6 +377,20 @@ export default function PayslipsManagement() {
         />
       ) : (
         <div className="space-y-4">
+          {allPayslipIds.length > 0 && (
+            <div className="flex items-center gap-2 px-4 py-2 bg-gray-100 rounded-lg">
+              <input
+                type="checkbox"
+                checked={selectedPayslips.size === allPayslipIds.length}
+                onChange={handleSelectAll}
+                className="w-4 h-4 text-orange-600 border-gray-300 rounded focus:ring-orange-500"
+              />
+              <span className="text-sm font-medium text-gray-700">
+                Tout sélectionner ({allPayslipIds.length})
+              </span>
+            </div>
+          )}
+
           {employeesWithPayslips.map(emp => {
             const employeePayslips = (emp.payslips || [])
               .filter(p => !selectedMonth || p.month === selectedMonth)
@@ -336,41 +405,58 @@ export default function PayslipsManagement() {
                 </div>
 
                 <div className="space-y-2">
-                  {employeePayslips.map((payslip, idx) => (
-                    <div key={idx} className="flex items-center justify-between bg-gray-50 p-3 rounded-lg border border-gray-200">
-                      <div className="flex-1">
-                        <p className="text-sm font-medium text-gray-900">{payslip.month || 'N/A'}</p>
-                        <p className="text-xs text-gray-500">
-                          Ajouté le {new Date(payslip.uploaded_at).toLocaleDateString('fr-FR')}
-                        </p>
+                  {employeePayslips.map((payslip, idx) => {
+                    const payslipId = `${emp.id}-${(emp.payslips || []).indexOf(payslip)}`;
+                    const isSelected = selectedPayslips.has(payslipId);
+                    
+                    return (
+                      <div 
+                        key={idx} 
+                        className={cn(
+                          "flex items-center gap-3 bg-gray-50 p-3 rounded-lg border transition-colors",
+                          isSelected ? "border-orange-600 bg-orange-50" : "border-gray-200"
+                        )}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={isSelected}
+                          onChange={() => handleTogglePayslip(payslipId)}
+                          className="w-4 h-4 text-orange-600 border-gray-300 rounded focus:ring-orange-500"
+                        />
+                        <div className="flex-1">
+                          <p className="text-sm font-medium text-gray-900">{payslip.month || 'N/A'}</p>
+                          <p className="text-xs text-gray-500">
+                            Ajouté le {new Date(payslip.uploaded_at).toLocaleDateString('fr-FR')}
+                          </p>
+                        </div>
+                        <div className="flex gap-2">
+                          <a
+                            href={payslip.file_url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="p-2 text-blue-600 hover:bg-blue-50 rounded transition-colors"
+                            title="Voir"
+                          >
+                            <Download className="w-4 h-4" />
+                          </a>
+                          <button
+                            onClick={() => {
+                              if (confirm('Êtes-vous sûr de vouloir supprimer cette fiche de paie ?')) {
+                                deletePayslipMutation.mutate({ 
+                                  employeeId: emp.id, 
+                                  payslipIndex: (emp.payslips || []).indexOf(payslip)
+                                });
+                              }
+                            }}
+                            className="p-2 text-red-600 hover:bg-red-50 rounded transition-colors"
+                            title="Supprimer"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
                       </div>
-                      <div className="flex gap-2">
-                        <a
-                          href={payslip.file_url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="p-2 text-blue-600 hover:bg-blue-50 rounded transition-colors"
-                          title="Voir"
-                        >
-                          <Download className="w-4 h-4" />
-                        </a>
-                        <button
-                          onClick={() => {
-                            if (confirm('Êtes-vous sûr de vouloir supprimer cette fiche de paie ?')) {
-                              deletePayslipMutation.mutate({ 
-                                employeeId: emp.id, 
-                                payslipIndex: (emp.payslips || []).indexOf(payslip)
-                              });
-                            }
-                          }}
-                          className="p-2 text-red-600 hover:bg-red-50 rounded transition-colors"
-                          title="Supprimer"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </Card>
             );
