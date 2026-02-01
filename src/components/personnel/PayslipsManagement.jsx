@@ -89,17 +89,24 @@ Retourne uniquement le JSON sans texte supplémentaire.`,
         // Find matching employee (with accent normalization)
         const normalizedAIFirstName = normalizeText(aiResponse.first_name);
         const normalizedAILastName = normalizeText(aiResponse.last_name);
-        
+
         const matchedEmployee = employees.find(emp => {
           const normalizedEmpFirstName = normalizeText(emp.first_name);
           const normalizedEmpLastName = normalizeText(emp.last_name);
-          
+          const normalizedEmpMarriedName = normalizeText(emp.married_name || '');
+
           const firstNameMatch = normalizedEmpFirstName.includes(normalizedAIFirstName) ||
                                 normalizedAIFirstName.includes(normalizedEmpFirstName);
+
+          // Check last_name OR married_name
           const lastNameMatch = normalizedEmpLastName.includes(normalizedAILastName) ||
                                normalizedAILastName.includes(normalizedEmpLastName);
-          
-          return firstNameMatch && lastNameMatch;
+          const marriedNameMatch = normalizedEmpMarriedName && (
+            normalizedEmpMarriedName.includes(normalizedAILastName) ||
+            normalizedAILastName.includes(normalizedEmpMarriedName)
+          );
+
+          return firstNameMatch && (lastNameMatch || marriedNameMatch);
         });
 
         newQueue.push({
