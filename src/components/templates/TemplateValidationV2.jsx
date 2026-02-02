@@ -207,7 +207,12 @@ export function validateTemplateV2(htmlContent, typeDocument, categorieDocument)
     // Catégorie A : Validation maximale (comme avant pour contrats)
     const required = REQUIRED_VARIABLES_BY_TYPE[typeDocument] || [];
     required.forEach(item => {
-      if (!htmlContent.includes(item.var)) {
+      // Exception pour {{heures}} : accepter {{heuresTotalesCDD}} comme alternative pour les CDD
+      if (item.var === '{{heures}}' && typeDocument === 'CDD') {
+        if (!htmlContent.includes('{{heures}}') && !htmlContent.includes('{{heuresTotalesCDD}}')) {
+          missing.push(`${item.label} ({{heures}} ou {{heuresTotalesCDD}}) - OBLIGATOIRE pour un ${typeDocument}`);
+        }
+      } else if (!htmlContent.includes(item.var)) {
         missing.push(`${item.label} (${item.var}) - OBLIGATOIRE pour un ${typeDocument}`);
       }
     });
