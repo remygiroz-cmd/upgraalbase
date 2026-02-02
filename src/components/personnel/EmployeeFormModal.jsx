@@ -154,23 +154,29 @@ export default function EmployeeFormModal({ open, onClose, employee, isManager =
 
   // Calcul automatique du salaire brut mensuel
   React.useEffect(() => {
-    if (formData.gross_hourly_rate && formData.contract_hours) {
+    if (formData.gross_hourly_rate) {
       const hourlyRate = parseFloat(formData.gross_hourly_rate);
-      const hoursMatch = formData.contract_hours.match(/^(\d+):(\d+)$/);
       
-      if (hoursMatch && !isNaN(hourlyRate)) {
-        const hours = parseInt(hoursMatch[1]);
-        const minutes = parseInt(hoursMatch[2]);
-        const totalHours = hours + (minutes / 60);
-        const calculatedSalary = totalHours * hourlyRate;
+      // Si contract_total_hours est renseigné (CDD courte durée), on l'utilise en priorité
+      const hoursToUse = formData.contract_total_hours || formData.contract_hours;
+      
+      if (hoursToUse) {
+        const hoursMatch = hoursToUse.match(/^(\d+):(\d+)$/);
         
-        setFormData(prev => ({
-          ...prev,
-          gross_salary: Math.round(calculatedSalary * 100) / 100
-        }));
+        if (hoursMatch && !isNaN(hourlyRate)) {
+          const hours = parseInt(hoursMatch[1]);
+          const minutes = parseInt(hoursMatch[2]);
+          const totalHours = hours + (minutes / 60);
+          const calculatedSalary = totalHours * hourlyRate;
+          
+          setFormData(prev => ({
+            ...prev,
+            gross_salary: Math.round(calculatedSalary * 100) / 100
+          }));
+        }
       }
     }
-  }, [formData.gross_hourly_rate, formData.contract_hours]);
+  }, [formData.gross_hourly_rate, formData.contract_hours, formData.contract_total_hours]);
 
   const handlePhotoUpload = async (e) => {
     const file = e.target.files?.[0];
@@ -750,6 +756,34 @@ ${currentUser.email || '-'}`;
                 />
               </div>
 
+              {/* Heures totales du contrat - Affiché seulement pour les CDD */}
+              {formData.contract_type === 'cdd' && (
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 space-y-3">
+                  <div>
+                    <Label className="text-gray-900 font-semibold flex items-center gap-2">
+                      💼 Heures totales du contrat CDD
+                      <span className="text-xs font-normal text-gray-600">(optionnel)</span>
+                    </Label>
+                    <p className="text-xs text-gray-600 mb-2">
+                      Pour les CDD de courte durée (moins d'un mois), indiquez le nombre total d'heures à effectuer sur toute la durée du contrat.
+                    </p>
+                    <Input
+                      type="text"
+                      value={formData.contract_total_hours || ''}
+                      onChange={(e) => setFormData({ ...formData, contract_total_hours: e.target.value })}
+                      className="bg-white border-gray-300 text-gray-900"
+                      placeholder="Ex: 80:00 (pour 80h sur tout le contrat)"
+                      disabled={!isManager}
+                    />
+                    {formData.contract_total_hours && (
+                      <p className="text-xs text-blue-700 mt-1 font-medium">
+                        ℹ️ Le salaire brut sera calculé sur cette base : {formData.contract_total_hours} × taux horaire
+                      </p>
+                    )}
+                  </div>
+                </div>
+              )}
+
               {/* Nombre de jours de travail par semaine */}
               <div>
                 <Label className="text-gray-900">Nombre de jours de travail par semaine</Label>
@@ -819,7 +853,11 @@ ${currentUser.email || '-'}`;
 
               {/* Salaire brut */}
               <div>
-                <Label className="text-gray-900">Salaire brut mensuel (€)</Label>
+                <Label className="text-gray-900">
+                  {formData.contract_type === 'cdd' && formData.contract_total_hours 
+                    ? 'Salaire brut total du CDD (€)' 
+                    : 'Salaire brut mensuel (€)'}
+                </Label>
                 <Input
                   type="number"
                   step="0.01"
@@ -830,7 +868,9 @@ ${currentUser.email || '-'}`;
                   disabled
                 />
                 <p className="text-xs text-gray-500 mt-1">
-                  Calculé à partir du taux horaire × heures contractuelles/mois
+                  {formData.contract_type === 'cdd' && formData.contract_total_hours
+                    ? '💼 Calculé à partir du taux horaire × heures totales du contrat'
+                    : 'Calculé à partir du taux horaire × heures contractuelles/mois'}
                 </p>
               </div>
 
