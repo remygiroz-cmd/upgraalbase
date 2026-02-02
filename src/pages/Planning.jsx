@@ -568,15 +568,20 @@ function ShiftModal({ open, onOpenChange, selectedCell, employees, shifts, onSav
     : [];
 
   React.useEffect(() => {
+    if (!open) {
+      setSelectedShiftId(null);
+      return;
+    }
+
     if (selectedShiftId) {
       const shift = existingShifts.find(s => s.id === selectedShiftId);
       if (shift) {
         setFormData({
-          start_time: shift.start_time,
-          end_time: shift.end_time,
+          start_time: shift.start_time || '09:00',
+          end_time: shift.end_time || '17:00',
           break_minutes: shift.break_minutes || 0,
           position: shift.position || '',
-          status: shift.status,
+          status: shift.status || 'planned',
           notes: shift.notes || ''
         });
       }
@@ -590,7 +595,7 @@ function ShiftModal({ open, onOpenChange, selectedCell, employees, shifts, onSav
         notes: ''
       });
     }
-  }, [selectedShiftId, existingShifts]);
+  }, [selectedShiftId, open]);
 
   const handleSubmit = (e) => {
     e.preventDefault();
