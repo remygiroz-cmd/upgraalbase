@@ -43,6 +43,8 @@ const getEmployeeContractVariables = () => {
     { var: '{{heuresTexte}}', label: 'Heures mensuelles (texte)', category: 'contract' },
     { var: '{{taux}}', label: 'Taux horaire', category: 'contract' },
     { var: '{{salaireBrut}}', label: 'Salaire brut mensuel', category: 'contract' },
+    { var: '{{heuresTotalesCDD}}', label: 'Heures totales du contrat CDD', category: 'contract' },
+    { var: '{{joursTravaillesCDD}}', label: 'Jours travaillés prévus (CDD)', category: 'contract' },
     { var: '{{periodeEssaiTexte}}', label: 'Période d\'essai (texte)', category: 'contract' },
     { var: '{{finEssai}}', label: 'Date de fin d\'essai', category: 'contract' },
     { var: '{{motifCDD}}', label: 'Motif du CDD', category: 'contract' }
@@ -100,6 +102,8 @@ const MOCK_DATA = {
   heuresTexte: '151,67',
   taux: '12,50',
   salaireBrut: '1 875,00',
+  heuresTotalesCDD: '80',
+  joursTravaillesCDD: '10',
   periodeEssaiTexte: '2 mois',
   finEssai: '31/03/2026',
   motifCDD: 'Accroissement temporaire d\'activité durant la période estivale',
