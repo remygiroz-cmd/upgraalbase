@@ -202,10 +202,32 @@ export default function TemplateBuilderModalV15({ open, onOpenChange, template, 
 
   const previewHtml = useMemo(() => {
     let html = formData.htmlContent;
+    
+    // Variables manuelles autorisées (ne doivent pas être surlignées en rouge)
+    const MANUAL_VARIABLES = new Set([
+      'dateFaits', 'descriptionFaits', 'motifSanction', 'typeSanction', 'dateIncident',
+      'dateNotification', 'dateConvocation', 'heureConvocation', 'lieuConvocation',
+      'motifModification', 'ancienneValeur', 'nouvelleValeur', 'dateEffet',
+      'dateRupture', 'motifRupture', 'dateFinContrat', 'indemnitePreavis', 'indemniteRupture',
+      'periodeAttestation', 'natureAttestation', 'objetCourrier', 'contenuCourrier',
+      'remarques', 'observations', 'clauseParticuliere', 'mentionSpeciale'
+    ]);
+    
+    // 1. Remplacer les variables résolues en orange
     Object.entries(ENHANCED_MOCK_DATA).forEach(([key, value]) => {
       const regex = new RegExp(`{{${key}}}`, 'g');
       html = html.replace(regex, `<strong class="text-orange-600">${value}</strong>`);
     });
+    
+    // 2. Surligner en rouge les variables automatiques NON résolues (sauf variables manuelles)
+    const regex = /{{([^}]+)}}/g;
+    html = html.replace(regex, (match, varName) => {
+      if (!MANUAL_VARIABLES.has(varName)) {
+        return `<mark style="background-color: #fee2e2; color: #dc2626; font-weight: bold; padding: 2px 4px; border-radius: 3px; border: 1px solid #fca5a5;">${match}</mark>`;
+      }
+      return match;
+    });
+    
     return html;
   }, [formData.htmlContent, ENHANCED_MOCK_DATA]);
 
