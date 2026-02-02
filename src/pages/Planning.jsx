@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
-import { Calendar, ChevronLeft, ChevronRight, Plus, Filter, GripVertical, Settings } from 'lucide-react';
+import { Calendar, ChevronLeft, ChevronRight, Plus, Filter, GripVertical, Settings, MoreVertical, Copy } from 'lucide-react';
 import PageHeader from '@/components/ui/PageHeader';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -13,6 +13,7 @@ import ShiftCard from '@/components/planning/ShiftCard';
 import ShiftFormModal from '@/components/planning/ShiftFormModal';
 import WeeklySummary from '@/components/planning/WeeklySummary';
 import PositionsManager from '@/components/planning/PositionsManager';
+import ApplyTemplateModal from '@/components/planning/ApplyTemplateModal';
 import { calculateShiftDuration, checkMinimumRest } from '@/components/planning/LegalChecks';
 
 const DAYS = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche'];
@@ -22,6 +23,8 @@ export default function Planning() {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [showShiftModal, setShowShiftModal] = useState(false);
   const [showPositionsManager, setShowPositionsManager] = useState(false);
+  const [showApplyTemplateModal, setShowApplyTemplateModal] = useState(false);
+  const [selectedEmployeeForTemplate, setSelectedEmployeeForTemplate] = useState(null);
   const [selectedCell, setSelectedCell] = useState(null);
   const [filterType, setFilterType] = useState('global');
   const [selectedTeam, setSelectedTeam] = useState('');
@@ -447,25 +450,36 @@ export default function Planning() {
                                   snapshot.isDragging && "bg-orange-100 shadow-2xl opacity-90"
                                 )}
                                 style={provided.draggableProps.style}
-                              >
-                                <div 
-                                  {...provided.dragHandleProps}
-                                  className="absolute left-1 top-1/2 -translate-y-1/2 cursor-grab active:cursor-grabbing text-gray-400 hover:text-orange-600 transition-colors"
                                 >
-                                  <GripVertical className="w-5 h-5" />
+                                <div 
+                                 {...provided.dragHandleProps}
+                                 className="absolute left-1 top-1/2 -translate-y-1/2 cursor-grab active:cursor-grabbing text-gray-400 hover:text-orange-600 transition-colors"
+                                >
+                                 <GripVertical className="w-5 h-5" />
                                 </div>
+                                <button
+                                 onClick={(e) => {
+                                   e.stopPropagation();
+                                   setSelectedEmployeeForTemplate(employee);
+                                   setShowApplyTemplateModal(true);
+                                 }}
+                                 className="absolute right-1 top-1 p-1 rounded hover:bg-gray-200 transition-colors text-gray-500 hover:text-orange-600"
+                                 title="Appliquer planning type"
+                                >
+                                 <Copy className="w-4 h-4" />
+                                </button>
                                 <div className="font-bold text-sm text-gray-900 truncate px-6">
-                                  {employee.first_name} {employee.last_name}
+                                 {employee.first_name} {employee.last_name}
                                 </div>
                                 {team && (
-                                  <div 
-                                    className="text-[10px] font-semibold text-white inline-block px-3 py-1 rounded-full mt-2 shadow-sm"
-                                    style={{ backgroundColor: team.color || '#3b82f6' }}
-                                  >
-                                    {team.name}
-                                  </div>
+                                 <div 
+                                   className="text-[10px] font-semibold text-white inline-block px-3 py-1 rounded-full mt-2 shadow-sm"
+                                   style={{ backgroundColor: team.color || '#3b82f6' }}
+                                 >
+                                   {team.name}
+                                 </div>
                                 )}
-                              </div>
+                                </div>
                             )}
                           </Draggable>
                         );
@@ -607,6 +621,14 @@ export default function Planning() {
       <PositionsManager
         open={showPositionsManager}
         onOpenChange={setShowPositionsManager}
+      />
+
+      {/* Apply Template Modal */}
+      <ApplyTemplateModal
+        open={showApplyTemplateModal}
+        onOpenChange={setShowApplyTemplateModal}
+        employeeId={selectedEmployeeForTemplate?.id}
+        employeeName={selectedEmployeeForTemplate ? `${selectedEmployeeForTemplate.first_name} ${selectedEmployeeForTemplate.last_name}` : ''}
       />
     </div>
   );
