@@ -11,6 +11,7 @@ import { toast } from 'sonner';
 import FreeAddModal from './FreeAddModal';
 import ExceptionalOrderModal from './ExceptionalOrderModal';
 import OrderConflictModal from './OrderConflictModal';
+import OrderSuccessModal from './OrderSuccessModal';
 
 export default function InventoryTab() {
   const [conflictInfo, setConflictInfo] = useState(null);
