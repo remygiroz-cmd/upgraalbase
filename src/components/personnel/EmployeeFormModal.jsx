@@ -160,13 +160,24 @@ export default function EmployeeFormModal({ open, onClose, employee, isManager =
       // Si contract_total_hours est renseigné (CDD courte durée), on l'utilise en priorité
       const hoursToUse = formData.contract_total_hours || formData.contract_hours;
       
-      if (hoursToUse) {
-        const hoursMatch = hoursToUse.match(/^(\d+):(\d+)$/);
+      if (hoursToUse && !isNaN(hourlyRate)) {
+        let totalHours = 0;
         
-        if (hoursMatch && !isNaN(hourlyRate)) {
-          const hours = parseInt(hoursMatch[1]);
-          const minutes = parseInt(hoursMatch[2]);
-          const totalHours = hours + (minutes / 60);
+        // Supporter plusieurs formats : "25:00", "25.5", "25"
+        if (hoursToUse.includes(':')) {
+          // Format HH:MM
+          const hoursMatch = hoursToUse.match(/^(\d+):(\d+)$/);
+          if (hoursMatch) {
+            const hours = parseInt(hoursMatch[1]);
+            const minutes = parseInt(hoursMatch[2]);
+            totalHours = hours + (minutes / 60);
+          }
+        } else {
+          // Format décimal ou entier
+          totalHours = parseFloat(hoursToUse);
+        }
+        
+        if (totalHours > 0) {
           const calculatedSalary = totalHours * hourlyRate;
           
           setFormData(prev => ({
@@ -772,7 +783,7 @@ ${currentUser.email || '-'}`;
                       value={formData.contract_total_hours || ''}
                       onChange={(e) => setFormData({ ...formData, contract_total_hours: e.target.value })}
                       className="bg-white border-gray-300 text-gray-900"
-                      placeholder="Ex: 80:00 (pour 80h sur tout le contrat)"
+                      placeholder="Ex: 80:00 ou 80 ou 80.5"
                       disabled={!isManager}
                     />
                     {formData.contract_total_hours && (
