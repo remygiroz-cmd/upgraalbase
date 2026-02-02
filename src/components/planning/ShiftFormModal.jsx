@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { base44 } from '@/api/base44Client';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -9,15 +11,6 @@ import { toast } from 'sonner';
 import { Plus, Copy, AlertTriangle, Clock } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { checkMinimumRest, checkDailyHours, calculateShiftDuration } from './LegalChecks';
-
-const POSITIONS = [
-  { value: 'cuisine', label: '🍳 Cuisine' },
-  { value: 'caisse', label: '💰 Caisse' },
-  { value: 'livraison', label: '🚗 Livraison' },
-  { value: 'service', label: '🍽️ Service' },
-  { value: 'plonge', label: '🧼 Plonge' },
-  { value: 'autre', label: '📋 Autre' }
-];
 
 const STATUSES = [
   { value: 'planned', label: '📋 Planifié', color: 'blue' },
@@ -35,6 +28,14 @@ export default function ShiftFormModal({
   onSave,
   currentUser 
 }) {
+  const { data: positions = [] } = useQuery({
+    queryKey: ['positions'],
+    queryFn: async () => {
+      const all = await base44.entities.Position.filter({ is_active: true });
+      return all.sort((a, b) => (a.order || 0) - (b.order || 0));
+    }
+  });
+
   const [formData, setFormData] = useState({
     position: '',
     start_time: '09:00',
@@ -265,11 +266,23 @@ export default function ShiftFormModal({
                   <SelectValue placeholder="Sélectionner..." />
                 </SelectTrigger>
                 <SelectContent>
-                  {POSITIONS.map(pos => (
-                    <SelectItem key={pos.value} value={pos.value}>
-                      {pos.label}
-                    </SelectItem>
-                  ))}
+                  {positions.length === 0 ? (
+                    <div className="px-3 py-2 text-sm text-gray-500">
+                      Aucun poste configuré
+                    </div>
+                  ) : (
+                    positions.map(pos => (
+                      <SelectItem key={pos.id} value={pos.label}>
+                        <div className="flex items-center gap-2">
+                          <div 
+                            className="w-3 h-3 rounded-full" 
+                            style={{ backgroundColor: pos.color }}
+                          />
+                          {pos.label}
+                        </div>
+                      </SelectItem>
+                    ))
+                  )}
                 </SelectContent>
               </Select>
             </div>
