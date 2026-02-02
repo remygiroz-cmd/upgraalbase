@@ -115,6 +115,17 @@ export default function Planning() {
     }
   });
 
+  const deleteShiftMutation = useMutation({
+    mutationFn: (shiftId) => base44.entities.Shift.delete(shiftId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['shifts'] });
+      toast.success('Shift supprimé');
+    },
+    onError: (error) => {
+      toast.error('Erreur lors de la suppression : ' + error.message);
+    }
+  });
+
   // Get days in month with week info
   const getDaysInMonth = () => {
     const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
@@ -240,6 +251,13 @@ export default function Planning() {
       year: date.getFullYear()
     });
     setShowShiftModal(true);
+  };
+
+  // Handle shift deletion
+  const handleDeleteShift = (shift) => {
+    if (window.confirm(`Supprimer ce shift de ${shift.start_time} à ${shift.end_time} ?`)) {
+      deleteShiftMutation.mutate(shift.id);
+    }
   };
 
   // Get week start date
@@ -501,6 +519,7 @@ export default function Planning() {
                                           e.stopPropagation();
                                           handleCellClick(employee.id, dateStr, dayInfo);
                                         }}
+                                        onDelete={handleDeleteShift}
                                         hasRestWarning={warnings.hasRestWarning}
                                         hasOvertimeWarning={warnings.hasOvertimeWarning}
                                       />

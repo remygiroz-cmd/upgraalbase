@@ -1,6 +1,6 @@
 import React from 'react';
 import { cn } from '@/lib/utils';
-import { Clock, Coffee, AlertTriangle } from 'lucide-react';
+import { Clock, Coffee, AlertTriangle, Trash2 } from 'lucide-react';
 
 const POSITION_COLORS = {
   'cuisine': { bg: 'bg-red-50', border: 'border-red-400', text: 'text-red-900' },
@@ -18,7 +18,7 @@ const STATUS_ICONS = {
   cancelled: '❌'
 };
 
-export default function ShiftCard({ shift, onClick, hasRestWarning, hasOvertimeWarning }) {
+export default function ShiftCard({ shift, onClick, onDelete, hasRestWarning, hasOvertimeWarning }) {
   const calculateDuration = () => {
     const [startH, startM] = shift.start_time.split(':').map(Number);
     const [endH, endM] = shift.end_time.split(':').map(Number);
@@ -51,6 +51,16 @@ export default function ShiftCard({ shift, onClick, hasRestWarning, hasOvertimeW
           <AlertTriangle className="w-3 h-3" />
         </div>
       )}
+      
+      <button
+        onClick={(e) => {
+          e.stopPropagation();
+          onDelete(shift);
+        }}
+        className="absolute -top-2 -left-2 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600 shadow-lg"
+      >
+        <Trash2 className="w-3 h-3" />
+      </button>
       
       <div className="flex items-center justify-between mb-1">
         <span className={cn("text-[10px] font-bold uppercase tracking-wider", colors.text)}>
