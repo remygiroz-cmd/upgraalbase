@@ -772,23 +772,42 @@ ${currentUser.email || '-'}`;
                 <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 space-y-3">
                   <div>
                     <Label className="text-gray-900 font-semibold flex items-center gap-2">
-                      💼 Heures totales du contrat CDD
+                      💼 CDD de courte durée
                       <span className="text-xs font-normal text-gray-600">(optionnel)</span>
                     </Label>
-                    <p className="text-xs text-gray-600 mb-2">
-                      Pour les CDD de courte durée (moins d'un mois), indiquez le nombre total d'heures à effectuer sur toute la durée du contrat.
+                    <p className="text-xs text-gray-600 mb-3">
+                      Pour les CDD de moins d'un mois, indiquez le nombre d'heures et de jours travaillés prévus sur toute la durée du contrat.
                     </p>
-                    <Input
-                      type="text"
-                      value={formData.contract_total_hours || ''}
-                      onChange={(e) => setFormData({ ...formData, contract_total_hours: e.target.value })}
-                      className="bg-white border-gray-300 text-gray-900"
-                      placeholder="Ex: 80:00 ou 80 ou 80.5"
-                      disabled={!isManager}
-                    />
+                    
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div>
+                        <Label className="text-sm text-gray-900">Heures totales</Label>
+                        <Input
+                          type="text"
+                          value={formData.contract_total_hours || ''}
+                          onChange={(e) => setFormData({ ...formData, contract_total_hours: e.target.value })}
+                          className="bg-white border-gray-300 text-gray-900 mt-1"
+                          placeholder="Ex: 80 ou 80.5"
+                          disabled={!isManager}
+                        />
+                      </div>
+                      <div>
+                        <Label className="text-sm text-gray-900">Jours travaillés</Label>
+                        <Input
+                          type="number"
+                          min="1"
+                          value={formData.contract_total_days || ''}
+                          onChange={(e) => setFormData({ ...formData, contract_total_days: parseFloat(e.target.value) || '' })}
+                          className="bg-white border-gray-300 text-gray-900 mt-1"
+                          placeholder="Ex: 10"
+                          disabled={!isManager}
+                        />
+                      </div>
+                    </div>
+                    
                     {formData.contract_total_hours && (
-                      <p className="text-xs text-blue-700 mt-1 font-medium">
-                        ℹ️ Le salaire brut sera calculé sur cette base : {formData.contract_total_hours} × taux horaire
+                      <p className="text-xs text-blue-700 mt-2 font-medium">
+                        ℹ️ Le salaire brut sera calculé sur cette base : {formData.contract_total_hours}h × taux horaire
                       </p>
                     )}
                   </div>
