@@ -14,6 +14,8 @@ import ShiftFormModal from '@/components/planning/ShiftFormModal';
 import WeeklySummary from '@/components/planning/WeeklySummary';
 import PositionsManager from '@/components/planning/PositionsManager';
 import ApplyTemplateModal from '@/components/planning/ApplyTemplateModal';
+import NonShiftTypesManager from '@/components/planning/NonShiftTypesManager';
+import NonShiftCard from '@/components/planning/NonShiftCard';
 import { calculateShiftDuration, checkMinimumRest } from '@/components/planning/LegalChecks';
 
 const DAYS = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche'];
@@ -23,6 +25,7 @@ export default function Planning() {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [showShiftModal, setShowShiftModal] = useState(false);
   const [showPositionsManager, setShowPositionsManager] = useState(false);
+  const [showNonShiftTypesManager, setShowNonShiftTypesManager] = useState(false);
   const [showApplyTemplateModal, setShowApplyTemplateModal] = useState(false);
   const [selectedEmployeeForTemplate, setSelectedEmployeeForTemplate] = useState(null);
   const [selectedCell, setSelectedCell] = useState(null);
@@ -100,6 +103,27 @@ export default function Planning() {
       
       const allShifts = await base44.entities.Shift.list();
       return allShifts.filter(s => s.date >= firstDay && s.date <= lastDay);
+    }
+  });
+
+  // Fetch non-shift events for current month
+  const { data: nonShiftEvents = [] } = useQuery({
+    queryKey: ['nonShiftEvents', currentYear, currentMonth],
+    queryFn: async () => {
+      const firstDay = new Date(currentYear, currentMonth, 1).toISOString().split('T')[0];
+      const lastDay = new Date(currentYear, currentMonth + 1, 0).toISOString().split('T')[0];
+      
+      const allEvents = await base44.entities.NonShiftEvent.list();
+      return allEvents.filter(e => e.date >= firstDay && e.date <= lastDay);
+    }
+  });
+
+  // Fetch non-shift types
+  const { data: nonShiftTypes = [] } = useQuery({
+    queryKey: ['nonShiftTypes'],
+    queryFn: async () => {
+      const types = await base44.entities.NonShiftType.filter({ is_active: true });
+      return types.sort((a, b) => (a.order || 0) - (b.order || 0));
     }
   });
 
@@ -248,6 +272,11 @@ export default function Planning() {
       });
   };
 
+  // Get non-shift events for employee and date
+  const getNonShiftsForEmployeeAndDate = (employeeId, dateStr) => {
+    return nonShiftEvents.filter(e => e.employee_id === employeeId && e.date === dateStr);
+  };
+
   // Handle cell click
   const handleCellClick = (employeeId, dateStr, dayInfo) => {
     const employee = employees.find(e => e.id === employeeId);
@@ -320,14 +349,24 @@ export default function Planning() {
           title="Planning mensuel"
           subtitle="Gestion des horaires de travail"
         />
-        <Button
-          onClick={() => setShowPositionsManager(true)}
-          variant="outline"
-          size="icon"
-          className="border-2 border-gray-300 hover:border-orange-500 hover:bg-orange-50"
-        >
-          <Settings className="w-5 h-5" />
-        </Button>
+        <div className="flex gap-2">
+          <Button
+            onClick={() => setShowNonShiftTypesManager(true)}
+            variant="outline"
+            className="border-2 border-gray-300 hover:border-blue-500 hover:bg-blue-50"
+          >
+            <Calendar className="w-4 h-4 mr-2" />
+            Statuts
+          </Button>
+          <Button
+            onClick={() => setShowPositionsManager(true)}
+            variant="outline"
+            size="icon"
+            className="border-2 border-gray-300 hover:border-orange-500 hover:bg-orange-50"
+          >
+            <Settings className="w-5 h-5" />
+          </Button>
+        </div>
       </div>
 
       {/* Month Navigation & Filters */}
@@ -554,7 +593,8 @@ export default function Planning() {
                           {employees.map(employee => {
                             const dateStr = dayInfo.date.toISOString().split('T')[0];
                             const employeeShifts = getShiftsForEmployeeAndDate(employee.id, dateStr);
-                            
+                            const employeeNonShifts = getNonShiftsForEmployeeAndDate(employee.id, dateStr);
+
                             return (
                               <div
                                 key={employee.id}
@@ -565,6 +605,28 @@ export default function Planning() {
                                 )}
                               >
                                 <div className="space-y-1.5 min-h-[60px]">
+                                  {employeeNonShifts.map((nonShift) => {
+                                    const type = nonShiftTypes.find(t => t.id === nonShift.non_shift_type_id);
+                                    return (
+                                      <NonShiftCard
+                                        key={nonShift.id}
+                                        nonShift={nonShift}
+                                        nonShiftType={type}
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          handleCellClick(employee.id, dateStr, dayInfo);
+                                        }}
+                                        onDelete={(ns) => {
+                                          if (window.confirm('Supprimer cet événement ?')) {
+                                            base44.entities.NonShiftEvent.delete(ns.id).then(() => {
+                                              queryClient.invalidateQueries({ queryKey: ['nonShiftEvents'] });
+                                              toast.success('Événement supprimé');
+                                            });
+                                          }
+                                        }}
+                                      />
+                                    );
+                                  })}
                                   {employeeShifts.map((shift) => {
                                     const warnings = getShiftWarnings(shift, employeeShifts);
                                     return (
@@ -581,7 +643,7 @@ export default function Planning() {
                                       />
                                     );
                                   })}
-                                  {employeeShifts.length === 0 && (
+                                  {employeeShifts.length === 0 && employeeNonShifts.length === 0 && (
                                     <div className="flex items-center justify-center h-full min-h-[60px] text-gray-300 group-hover:text-orange-400 transition-colors">
                                       <Plus className="w-6 h-6" />
                                     </div>
@@ -638,6 +700,7 @@ export default function Planning() {
         }}
         selectedCell={selectedCell}
         existingShifts={selectedCell ? getShiftsForEmployeeAndDate(selectedCell.employeeId, selectedCell.date) : []}
+        existingNonShifts={selectedCell ? getNonShiftsForEmployeeAndDate(selectedCell.employeeId, selectedCell.date) : []}
         allShifts={shifts}
         onSave={(id, data) => saveShiftMutation.mutate({ id, data })}
         currentUser={currentUser}
@@ -647,6 +710,12 @@ export default function Planning() {
       <PositionsManager
         open={showPositionsManager}
         onOpenChange={setShowPositionsManager}
+      />
+
+      {/* Non-Shift Types Manager */}
+      <NonShiftTypesManager
+        open={showNonShiftTypesManager}
+        onOpenChange={setShowNonShiftTypesManager}
       />
 
       {/* Apply Template Modal */}
