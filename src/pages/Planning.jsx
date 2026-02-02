@@ -270,6 +270,31 @@ export default function Planning() {
     }
   };
 
+  // Handle week deletion
+  const handleDeleteWeek = async (employeeId, weekStart) => {
+    const weekEnd = new Date(weekStart);
+    weekEnd.setDate(weekEnd.getDate() + 6);
+    
+    const weekStartStr = weekStart.toISOString().split('T')[0];
+    const weekEndStr = weekEnd.toISOString().split('T')[0];
+
+    const weekShifts = shifts.filter(s => 
+      s.employee_id === employeeId && 
+      s.date >= weekStartStr && 
+      s.date <= weekEndStr
+    );
+
+    if (weekShifts.length === 0) return;
+
+    try {
+      await Promise.all(weekShifts.map(s => base44.entities.Shift.delete(s.id)));
+      queryClient.invalidateQueries({ queryKey: ['shifts'] });
+      toast.success(`${weekShifts.length} shift(s) supprimé(s)`);
+    } catch (error) {
+      toast.error('Erreur lors de la suppression : ' + error.message);
+    }
+  };
+
   // Get week start date
   const getWeekStart = (date) => {
     const d = new Date(date);
@@ -585,6 +610,7 @@ export default function Planning() {
                                     employee={employee}
                                     shifts={shifts}
                                     weekStart={weekStart}
+                                    onDeleteWeek={handleDeleteWeek}
                                   />
                                 </div>
                               );
