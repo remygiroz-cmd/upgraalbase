@@ -474,7 +474,7 @@ export default function Planning() {
                                 )}
                               >
                                 <div className="space-y-1.5 min-h-[60px]">
-                                  {employeeShifts.map((shift) => (
+                                  {employeeShifts.slice(0, 3).map((shift) => (
                                     <div
                                       key={shift.id}
                                       className={cn(
@@ -554,7 +554,6 @@ export default function Planning() {
 // Shift Modal Component
 function ShiftModal({ open, onOpenChange, selectedCell, employees, shifts, onSave, onUpdate, onDelete }) {
   const [selectedShiftId, setSelectedShiftId] = useState(null);
-  const [multiShiftMode, setMultiShiftMode] = useState(false);
   const [formData, setFormData] = useState({
     start_time: '09:00',
     end_time: '17:00',
@@ -563,9 +562,6 @@ function ShiftModal({ open, onOpenChange, selectedCell, employees, shifts, onSav
     status: 'planned',
     notes: ''
   });
-  const [shiftForms, setShiftForms] = useState([
-    { start_time: '09:00', end_time: '17:00', break_minutes: 0, position: '', status: 'planned', notes: '' }
-  ]);
 
   const existingShifts = selectedCell 
     ? shifts.filter(s => s.employee_id === selectedCell.employeeId && s.date === selectedCell.date)
@@ -574,8 +570,6 @@ function ShiftModal({ open, onOpenChange, selectedCell, employees, shifts, onSav
   React.useEffect(() => {
     if (!open) {
       setSelectedShiftId(null);
-      setMultiShiftMode(false);
-      setShiftForms([{ start_time: '09:00', end_time: '17:00', break_minutes: 0, position: '', status: 'planned', notes: '' }]);
       return;
     }
 
@@ -610,44 +604,25 @@ function ShiftModal({ open, onOpenChange, selectedCell, employees, shifts, onSav
 
     const employee = employees.find(e => e.id === selectedCell.employeeId);
     
-    if (multiShiftMode) {
-      // Créer tous les shifts remplis
-      shiftForms.forEach((form) => {
-        if (form.position) { // Ne créer que si le poste est rempli
-          const shiftData = {
-            ...form,
-            date: selectedCell.date,
-            employee_id: selectedCell.employeeId,
-            employee_name: employee ? `${employee.first_name} ${employee.last_name}` : '',
-            team: employee?.team || ''
-          };
-          onSave(shiftData);
-        }
-      });
-      setMultiShiftMode(false);
-      setShiftForms([{ start_time: '09:00', end_time: '17:00', break_minutes: 0, position: '', status: 'planned', notes: '' }]);
+    const shiftData = {
+      ...formData,
+      date: selectedCell.date,
+      employee_id: selectedCell.employeeId,
+      employee_name: employee ? `${employee.first_name} ${employee.last_name}` : '',
+      team: employee?.team || ''
+    };
+
+    if (selectedShiftId) {
+      onUpdate(selectedShiftId, shiftData);
     } else {
-      const shiftData = {
-        ...formData,
-        date: selectedCell.date,
-        employee_id: selectedCell.employeeId,
-        employee_name: employee ? `${employee.first_name} ${employee.last_name}` : '',
-        team: employee?.team || ''
-      };
-
-      if (selectedShiftId) {
-        onUpdate(selectedShiftId, shiftData);
-      } else {
-        onSave(shiftData);
-      }
-
-      setSelectedShiftId(null);
+      onSave(shiftData);
     }
+
+    setSelectedShiftId(null);
   };
 
   const handleNewShift = () => {
     setSelectedShiftId(null);
-    setMultiShiftMode(false);
     setFormData({
       start_time: '09:00',
       end_time: '17:00',
@@ -656,28 +631,6 @@ function ShiftModal({ open, onOpenChange, selectedCell, employees, shifts, onSav
       status: 'planned',
       notes: ''
     });
-  };
-
-  const handleMultiShiftMode = () => {
-    setSelectedShiftId(null);
-    setMultiShiftMode(true);
-    setShiftForms([{ start_time: '09:00', end_time: '17:00', break_minutes: 0, position: '', status: 'planned', notes: '' }]);
-  };
-
-  const addShiftForm = () => {
-    setShiftForms(prev => [...prev, { start_time: '09:00', end_time: '17:00', break_minutes: 0, position: '', status: 'planned', notes: '' }]);
-  };
-
-  const removeShiftForm = (index) => {
-    if (shiftForms.length > 1) {
-      setShiftForms(prev => prev.filter((_, i) => i !== index));
-    }
-  };
-
-  const updateShiftForm = (index, field, value) => {
-    setShiftForms(prev => prev.map((form, i) => 
-      i === index ? { ...form, [field]: value } : form
-    ));
   };
 
   return (
@@ -705,7 +658,7 @@ function ShiftModal({ open, onOpenChange, selectedCell, employees, shifts, onSav
             <div className="flex items-center justify-between">
               <h3 className="text-sm font-bold text-gray-900">Shifts existants</h3>
               <span className="text-xs font-semibold px-2 py-1 bg-orange-100 text-orange-700 rounded-full">
-                {existingShifts.length} shift{existingShifts.length > 1 ? 's' : ''}
+                {existingShifts.length}/3
               </span>
             </div>
             <div className="space-y-2">
@@ -764,18 +717,18 @@ function ShiftModal({ open, onOpenChange, selectedCell, employees, shifts, onSav
           </div>
         )}
 
-        {!selectedShiftId && !multiShiftMode && (
+        {existingShifts.length < 3 && !selectedShiftId && (
           <Button
             type="button"
-            onClick={handleMultiShiftMode}
+            onClick={handleNewShift}
             className="w-full bg-gradient-to-r from-green-600 to-green-500 hover:from-green-700 hover:to-green-600 text-white font-semibold py-6 shadow-lg"
           >
             <Plus className="w-5 h-5 mr-2" />
-            Ajouter des shifts
+            Ajouter un nouveau shift
           </Button>
         )}
 
-        {selectedShiftId && (
+        {(selectedShiftId || existingShifts.length === 0) && (
           <form onSubmit={handleSubmit} className="space-y-4 mt-4">
             <div className="bg-gradient-to-br from-gray-50 to-white rounded-xl p-5 space-y-4 border-2 border-gray-200">
               <div>
@@ -854,133 +807,21 @@ function ShiftModal({ open, onOpenChange, selectedCell, employees, shifts, onSav
             </div>
 
             <div className="flex gap-3 pt-2">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={handleNewShift}
-                className="flex-1 h-12 border-2 font-semibold"
-              >
-                Annuler
-              </Button>
+              {selectedShiftId && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={handleNewShift}
+                  className="flex-1 h-12 border-2 font-semibold"
+                >
+                  Annuler
+                </Button>
+              )}
               <Button 
                 type="submit" 
                 className="flex-1 h-12 bg-gradient-to-r from-orange-600 to-orange-500 hover:from-orange-700 hover:to-orange-600 text-white font-bold shadow-lg"
               >
-                ✏️ Modifier
-              </Button>
-            </div>
-          </form>
-        )}
-
-        {multiShiftMode && (
-          <form onSubmit={handleSubmit} className="space-y-4 mt-4">
-            <div className="space-y-3">
-              {shiftForms.map((form, index) => (
-                <div key={index} className="bg-gradient-to-br from-gray-50 to-white rounded-xl p-5 border-2 border-gray-200 space-y-4">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-sm font-bold text-gray-900">Shift #{index + 1}</span>
-                    {shiftForms.length > 1 && (
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => removeShiftForm(index)}
-                        className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                      >
-                        <X className="w-4 h-4" />
-                      </Button>
-                    )}
-                  </div>
-                  
-                  <div>
-                    <Label className="text-sm font-semibold text-gray-700 mb-2 block">Poste</Label>
-                    <Input
-                      value={form.position}
-                      onChange={(e) => updateShiftForm(index, 'position', e.target.value)}
-                      placeholder="Ex: Service, Plonge, Cuisine..."
-                      className="h-11 border-2 border-gray-300 focus:border-orange-500"
-                    />
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <Label className="text-sm font-semibold text-gray-700 mb-2 block">Heure début</Label>
-                      <Input
-                        type="time"
-                        value={form.start_time}
-                        onChange={(e) => updateShiftForm(index, 'start_time', e.target.value)}
-                        className="h-11 border-2 border-gray-300 focus:border-orange-500"
-                      />
-                    </div>
-                    <div>
-                      <Label className="text-sm font-semibold text-gray-700 mb-2 block">Heure fin</Label>
-                      <Input
-                        type="time"
-                        value={form.end_time}
-                        onChange={(e) => updateShiftForm(index, 'end_time', e.target.value)}
-                        className="h-11 border-2 border-gray-300 focus:border-orange-500"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <Label className="text-sm font-semibold text-gray-700 mb-2 block">Pause (minutes)</Label>
-                      <Input
-                        type="number"
-                        value={form.break_minutes}
-                        onChange={(e) => updateShiftForm(index, 'break_minutes', parseInt(e.target.value) || 0)}
-                        className="h-11 border-2 border-gray-300 focus:border-orange-500"
-                        min="0"
-                        placeholder="0"
-                      />
-                    </div>
-                    <div>
-                      <Label className="text-sm font-semibold text-gray-700 mb-2 block">Statut</Label>
-                      <Select
-                        value={form.status}
-                        onValueChange={(value) => updateShiftForm(index, 'status', value)}
-                      >
-                        <SelectTrigger className="h-11 border-2 border-gray-300 focus:border-orange-500">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="planned">📋 Planifié</SelectItem>
-                          <SelectItem value="confirmed">✅ Confirmé</SelectItem>
-                          <SelectItem value="absent">❌ Absent</SelectItem>
-                          <SelectItem value="leave">🏖️ Congé</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-                </div>
-              ))}
-
-              <Button
-                type="button"
-                onClick={addShiftForm}
-                variant="outline"
-                className="w-full h-12 border-2 border-dashed border-gray-300 hover:border-green-500 hover:bg-green-50 text-gray-700 hover:text-green-700 font-semibold"
-              >
-                <Plus className="w-5 h-5 mr-2" />
-                Ajouter un autre shift
-              </Button>
-            </div>
-
-            <div className="flex gap-3 pt-2">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => setMultiShiftMode(false)}
-                className="flex-1 h-12 border-2 font-semibold"
-              >
-                Annuler
-              </Button>
-              <Button 
-                type="submit" 
-                className="flex-1 h-12 bg-gradient-to-r from-green-600 to-green-500 hover:from-green-700 hover:to-green-600 text-white font-bold shadow-lg"
-              >
-                ➕ Créer tous les shifts
+                {selectedShiftId ? '✏️ Modifier' : '➕ Ajouter'}
               </Button>
             </div>
           </form>
