@@ -34,36 +34,32 @@ export default function Planning() {
     queryFn: () => base44.entities.Employee.filter({ is_active: true })
   });
 
+  // Fetch teams
+  const { data: allTeams = [] } = useQuery({
+    queryKey: ['teams'],
+    queryFn: () => base44.entities.Team.filter({ is_active: true })
+  });
+
   // Sort employees by team order
   const sortedEmployees = React.useMemo(() => {
     return [...allEmployees].sort((a, b) => {
-      const teamA = (a.team || '').toLowerCase();
-      const teamB = (b.team || '').toLowerCase();
+      const teamA = allTeams.find(t => t.id === a.team_id);
+      const teamB = allTeams.find(t => t.id === b.team_id);
       
-      const indexA = TEAM_ORDER.indexOf(teamA);
-      const indexB = TEAM_ORDER.indexOf(teamB);
-      
-      const orderA = indexA === -1 ? 999 : indexA;
-      const orderB = indexB === -1 ? 999 : indexB;
+      const orderA = teamA?.order ?? 999;
+      const orderB = teamB?.order ?? 999;
       
       if (orderA !== orderB) return orderA - orderB;
       
       // Same team, sort by name
       return (a.first_name || '').localeCompare(b.first_name || '');
     });
-  }, [allEmployees]);
+  }, [allEmployees, allTeams]);
 
-  // Get unique teams
+  // Get teams sorted by order
   const teams = React.useMemo(() => {
-    const teamSet = new Set(allEmployees.map(e => e.team).filter(Boolean));
-    return Array.from(teamSet).sort((a, b) => {
-      const indexA = TEAM_ORDER.indexOf(a.toLowerCase());
-      const indexB = TEAM_ORDER.indexOf(b.toLowerCase());
-      const orderA = indexA === -1 ? 999 : indexA;
-      const orderB = indexB === -1 ? 999 : indexB;
-      return orderA - orderB;
-    });
-  }, [allEmployees]);
+    return [...allTeams].sort((a, b) => (a.order || 0) - (b.order || 0));
+  }, [allTeams]);
 
   // Filter employees based on selection
   const employees = React.useMemo(() => {
@@ -71,7 +67,7 @@ export default function Planning() {
       return sortedEmployees.filter(e => e.id === selectedEmployee);
     }
     if (filterType === 'team' && selectedTeam) {
-      return sortedEmployees.filter(e => e.team === selectedTeam);
+      return sortedEmployees.filter(e => e.team_id === selectedTeam);
     }
     return sortedEmployees;
   }, [sortedEmployees, filterType, selectedEmployee, selectedTeam]);
@@ -224,8 +220,8 @@ export default function Planning() {
                 </SelectTrigger>
                 <SelectContent>
                   {teams.map(team => (
-                    <SelectItem key={team} value={team}>
-                      {team}
+                    <SelectItem key={team.id} value={team.id}>
+                      {team.name}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -241,11 +237,14 @@ export default function Planning() {
                   <SelectValue placeholder="Sélectionner un employé" />
                 </SelectTrigger>
                 <SelectContent>
-                  {sortedEmployees.map(emp => (
-                    <SelectItem key={emp.id} value={emp.id}>
-                      {emp.first_name} {emp.last_name} {emp.team && `(${emp.team})`}
-                    </SelectItem>
-                  ))}
+                  {sortedEmployees.map(emp => {
+                    const team = allTeams.find(t => t.id === emp.team_id);
+                    return (
+                      <SelectItem key={emp.id} value={emp.id}>
+                        {emp.first_name} {emp.last_name} {team && `(${team.name})`}
+                      </SelectItem>
+                    );
+                  })}
                 </SelectContent>
               </Select>
             </div>
@@ -262,19 +261,25 @@ export default function Planning() {
                 <th className="sticky left-0 z-10 bg-gray-100 border-r border-gray-300 px-3 py-3 text-left text-sm font-semibold text-gray-900 min-w-[120px]">
                   Jour
                 </th>
-                {employees.map(employee => (
-                  <th
-                    key={employee.id}
-                    className="border-r border-gray-200 px-2 py-2 text-center text-sm font-semibold text-gray-900 min-w-[160px]"
-                  >
-                    <div>{employee.first_name} {employee.last_name}</div>
-                    {employee.team && (
-                      <div className="text-xs font-normal text-blue-600 bg-blue-50 inline-block px-2 py-0.5 rounded mt-1">
-                        {employee.team}
-                      </div>
-                    )}
-                  </th>
-                ))}
+                {employees.map(employee => {
+                  const team = allTeams.find(t => t.id === employee.team_id);
+                  return (
+                    <th
+                      key={employee.id}
+                      className="border-r border-gray-200 px-2 py-2 text-center text-sm font-semibold text-gray-900 min-w-[160px]"
+                    >
+                      <div>{employee.first_name} {employee.last_name}</div>
+                      {team && (
+                        <div 
+                          className="text-xs font-normal text-white inline-block px-2 py-0.5 rounded mt-1"
+                          style={{ backgroundColor: team.color || '#3b82f6' }}
+                        >
+                          {team.name}
+                        </div>
+                      )}
+                    </th>
+                  );
+                })}
               </tr>
             </thead>
             <tbody>
