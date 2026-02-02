@@ -13,6 +13,7 @@ export const calculateShiftDuration = (shift) => {
 
 export const checkMinimumRest = (shifts, newShift) => {
   // Vérifier 11h de repos entre shifts
+  // Note: Le repos de 11h s'applique uniquement entre des jours différents
   const sortedShifts = [...shifts, newShift].sort((a, b) => {
     const dateA = new Date(a.date + 'T' + a.end_time);
     const dateB = new Date(b.date + 'T' + b.end_time);
@@ -22,6 +23,11 @@ export const checkMinimumRest = (shifts, newShift) => {
   for (let i = 0; i < sortedShifts.length - 1; i++) {
     const current = sortedShifts[i];
     const next = sortedShifts[i + 1];
+    
+    // Si les shifts sont le même jour, pas besoin de vérifier le repos de 11h
+    if (current.date === next.date) {
+      continue;
+    }
     
     const currentEnd = new Date(current.date + 'T' + current.end_time);
     const nextStart = new Date(next.date + 'T' + next.start_time);
