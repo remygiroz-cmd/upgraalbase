@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { toast } from 'sonner';
 import { Trash2, Archive, Upload, User, FileText, Download, Send, BookOpen } from 'lucide-react';
 import ConfirmDialog from '@/components/ui/ConfirmDialog';
+import TemplateWeeksManager from './TemplateWeeksManager';
 
 export default function EmployeeFormModal({ open, onClose, employee, isManager = false }) {
   const queryClient = useQueryClient();
@@ -331,11 +332,12 @@ ${currentUser.email || '-'}`;
           </div>
 
           <Tabs defaultValue="infos" className="w-full">
-            <TabsList className="grid w-full grid-cols-4 bg-gray-100">
+            <TabsList className="grid w-full grid-cols-5 bg-gray-100">
               <TabsTrigger value="infos" className="data-[state=active]:bg-white text-xs sm:text-sm">Informations</TabsTrigger>
               <TabsTrigger value="contrat" className="data-[state=active]:bg-white text-xs sm:text-sm">Contrat</TabsTrigger>
               <TabsTrigger value="remuneration" className="data-[state=active]:bg-white text-xs sm:text-sm">Rémunération</TabsTrigger>
               <TabsTrigger value="documents" className="data-[state=active]:bg-white text-xs sm:text-sm">Documents</TabsTrigger>
+              <TabsTrigger value="planning_type" className="data-[state=active]:bg-white text-xs sm:text-sm" disabled={!employee}>Planning type</TabsTrigger>
             </TabsList>
 
             <TabsContent value="infos" className="space-y-4 mt-4">
@@ -1183,6 +1185,16 @@ ${currentUser.email || '-'}`;
                   Avertissements, Courriers, DPAE, Visites médicales, etc.
                 </p>
               </div>
+            </TabsContent>
+
+            <TabsContent value="planning_type" className="space-y-4 mt-4">
+              {employee ? (
+                <TemplateWeeksManager employeeId={employee.id} />
+              ) : (
+                <div className="text-center py-8 text-gray-500">
+                  <p>Enregistrez d'abord l'employé pour gérer ses plannings types</p>
+                </div>
+              )}
             </TabsContent>
           </Tabs>
 
