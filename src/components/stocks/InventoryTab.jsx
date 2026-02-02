@@ -53,6 +53,10 @@ export default function InventoryTab() {
 
   const [showFreeAddModal, setShowFreeAddModal] = useState(false);
   const [showExceptionalOrderModal, setShowExceptionalOrderModal] = useState(false);
+  const [orderSuccessModal, setOrderSuccessModal] = useState({
+    open: false,
+    results: []
+  });
 
   const queryClient = useQueryClient();
 
@@ -60,7 +64,6 @@ export default function InventoryTab() {
     mutationFn: (orderData) => base44.entities.Order.create(orderData),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['orders'] });
-      toast.success('Commande créée avec succès');
     }
   });
 
@@ -68,7 +71,6 @@ export default function InventoryTab() {
     mutationFn: ({ id, data }) => base44.entities.Order.update(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['orders'] });
-      toast.success('Commande mise à jour');
     }
   });
 
@@ -414,6 +416,8 @@ export default function InventoryTab() {
 
   const createOrders = async (ordersBySupplier, today) => {
     try {
+      const results = [];
+      
       for (const order of Object.values(ordersBySupplier)) {
         // Trouver le fournisseur et déterminer le jour de livraison souhaité
         const supplier = suppliers.find(s => s.id === order.supplier_id);
@@ -425,6 +429,12 @@ export default function InventoryTab() {
           delivery_date: today,
           desired_delivery_day: desiredDeliveryDay,
           status: 'en_cours'
+        });
+
+        results.push({
+          type: 'created',
+          supplierName: order.supplier_name,
+          itemCount: order.items.length
         });
       }
       
@@ -438,7 +448,7 @@ export default function InventoryTab() {
       localStorage.removeItem('inventoryCompletedArticles');
       localStorage.removeItem('inventoryHiddenArticles');
       
-      toast.success(`${Object.keys(ordersBySupplier).length} commande(s) créée(s)`);
+      setOrderSuccessModal({ open: true, results });
     } catch (error) {
       toast.error('Erreur lors de la création des commandes');
     }
@@ -448,6 +458,7 @@ export default function InventoryTab() {
     if (!conflictInfo) return;
     
     const today = new Date().toISOString().split('T')[0];
+    const results = [];
     
     try {
       // Supprimer l'ancienne commande
@@ -465,10 +476,33 @@ export default function InventoryTab() {
         desired_delivery_day: desiredDeliveryDay,
         status: 'en_cours'
       });
+
+      results.push({
+        type: 'replaced',
+        supplierName: conflictInfo.supplierName,
+        itemCount: conflictInfo.newOrder.items.length
+      });
       
       // Créer les commandes sans conflit
       if (conflictInfo.ordersWithoutConflict && Object.keys(conflictInfo.ordersWithoutConflict).length > 0) {
-        await createOrders(conflictInfo.ordersWithoutConflict, today);
+        for (const order of Object.values(conflictInfo.ordersWithoutConflict)) {
+          const supplierForOrder = suppliers.find(s => s.id === order.supplier_id);
+          const deliveryDay = supplierForOrder ? getNextDeliveryDay(supplierForOrder.preferred_delivery_days) : '';
+          
+          await createOrderMutation.mutateAsync({
+            ...order,
+            date: today,
+            delivery_date: today,
+            desired_delivery_day: deliveryDay,
+            status: 'en_cours'
+          });
+
+          results.push({
+            type: 'created',
+            supplierName: order.supplier_name,
+            itemCount: order.items.length
+          });
+        }
       }
       
       // S'il reste des conflits, traiter le suivant
@@ -492,7 +526,7 @@ export default function InventoryTab() {
       localStorage.removeItem('inventoryHiddenArticles');
       
       setConflictInfo(null);
-      toast.success('Commande(s) créée(s) avec succès');
+      setOrderSuccessModal({ open: true, results });
     } catch (error) {
       toast.error('Erreur lors du remplacement de la commande');
     }
@@ -500,6 +534,8 @@ export default function InventoryTab() {
 
   const handleConflictMerge = async () => {
     if (!conflictInfo) return;
+    
+    const results = [];
     
     try {
       // Fusionner les articles
@@ -531,12 +567,35 @@ export default function InventoryTab() {
         id: conflictInfo.existingOrder.id,
         data: { items: mergedItems }
       });
+
+      results.push({
+        type: 'merged',
+        supplierName: conflictInfo.supplierName,
+        itemCount: newItems.length
+      });
       
       const today = new Date().toISOString().split('T')[0];
       
       // Créer les commandes sans conflit
       if (conflictInfo.ordersWithoutConflict && Object.keys(conflictInfo.ordersWithoutConflict).length > 0) {
-        await createOrders(conflictInfo.ordersWithoutConflict, today);
+        for (const order of Object.values(conflictInfo.ordersWithoutConflict)) {
+          const supplier = suppliers.find(s => s.id === order.supplier_id);
+          const desiredDeliveryDay = supplier ? getNextDeliveryDay(supplier.preferred_delivery_days) : '';
+          
+          await createOrderMutation.mutateAsync({
+            ...order,
+            date: today,
+            delivery_date: today,
+            desired_delivery_day: desiredDeliveryDay,
+            status: 'en_cours'
+          });
+
+          results.push({
+            type: 'created',
+            supplierName: order.supplier_name,
+            itemCount: order.items.length
+          });
+        }
       }
       
       // S'il reste des conflits, traiter le suivant
@@ -560,7 +619,7 @@ export default function InventoryTab() {
       localStorage.removeItem('inventoryHiddenArticles');
       
       setConflictInfo(null);
-      toast.success('Commande(s) créée(s) avec succès');
+      setOrderSuccessModal({ open: true, results });
     } catch (error) {
       toast.error('Erreur lors de la fusion des commandes');
     }
@@ -1003,6 +1062,13 @@ export default function InventoryTab() {
           onCancel={handleConflictCancel}
         />
       )}
+
+      {/* Order Success Modal */}
+      <OrderSuccessModal
+        open={orderSuccessModal.open}
+        onOpenChange={(open) => setOrderSuccessModal({ open, results: [] })}
+        results={orderSuccessModal.results}
+      />
     </div>
   );
 }
