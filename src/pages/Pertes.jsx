@@ -1,7 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
-import { PackageMinus, Plus, Search, ShoppingCart, Trash2, Download, History, X, Upload, Sparkles, Loader2, Share2, Mail, MessageSquare, Send, Calendar, ChevronLeft, ChevronRight } from 'lucide-react';
+import { PackageMinus, Plus, Search, ShoppingCart, Trash2, Download, History, X, Upload, Sparkles, Loader2, Share2, Mail, MessageSquare, Send } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -21,7 +21,6 @@ export default function Pertes() {
   const queryClient = useQueryClient();
   const today = format(new Date(), 'yyyy-MM-dd');
   const [activeTab, setActiveTab] = useState('pos');
-  const [planningView, setPlanningView] = useState('week');
   const [searchQuery, setSearchQuery] = useState('');
   const [cart, setCart] = useState([]);
   const [showProductForm, setShowProductForm] = useState(false);
@@ -327,16 +326,11 @@ export default function Pertes() {
       />
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="mb-6">
-        <TabsList className="bg-slate-800 p-1 grid grid-cols-5">
+        <TabsList className="bg-slate-800 p-1 grid grid-cols-4">
           <TabsTrigger value="pos" className="data-[state=active]:bg-slate-700">
             <ShoppingCart className="w-4 h-4 mr-2" />
             <span className="hidden sm:inline">Saisie POS</span>
             <span className="sm:hidden">POS</span>
-          </TabsTrigger>
-          <TabsTrigger value="planning" className="data-[state=active]:bg-slate-700">
-            <Calendar className="w-4 h-4 mr-2" />
-            <span className="hidden sm:inline">Planning</span>
-            <span className="sm:hidden">Plan</span>
           </TabsTrigger>
           <TabsTrigger value="recap" className="data-[state=active]:bg-slate-700">
             <Download className="w-4 h-4 mr-2" />
@@ -356,64 +350,7 @@ export default function Pertes() {
         </TabsList>
       </Tabs>
 
-      {activeTab === 'planning' ? (
-        <div className="space-y-6">
-          {/* View Selector */}
-          <div className="flex items-center justify-between bg-white rounded-xl border-2 border-gray-300 p-4">
-            <h3 className="font-semibold text-gray-900">Planning Caisse</h3>
-            <div className="flex gap-2">
-              <Button
-                variant={planningView === 'week' ? 'default' : 'outline'}
-                size="sm"
-                onClick={() => setPlanningView('week')}
-                className={planningView === 'week' ? 'bg-orange-600 hover:bg-orange-700' : 'border-gray-300 text-gray-900'}
-              >
-                Semaine
-              </Button>
-              <Button
-                variant={planningView === 'month' ? 'default' : 'outline'}
-                size="sm"
-                onClick={() => setPlanningView('month')}
-                className={planningView === 'month' ? 'bg-orange-600 hover:bg-orange-700' : 'border-gray-300 text-gray-900'}
-              >
-                Mois
-              </Button>
-            </div>
-          </div>
-
-          {/* Coming Soon State */}
-          <div className="bg-gradient-to-br from-orange-50 to-orange-100 rounded-2xl border-2 border-orange-300 p-12 text-center">
-            <div className="max-w-md mx-auto">
-              <div className="w-20 h-20 bg-orange-200 rounded-full flex items-center justify-center mx-auto mb-6">
-                <Calendar className="w-10 h-10 text-orange-600" />
-              </div>
-              <h3 className="text-2xl font-bold text-gray-900 mb-3">Planning en développement</h3>
-              <p className="text-gray-700 mb-6">
-                Cette fonctionnalité vous permettra de gérer le planning des équipes caisse, 
-                planifier les horaires et optimiser la gestion du personnel.
-              </p>
-              <div className="bg-white rounded-xl p-4 space-y-2 text-left border border-orange-200">
-                <p className="text-sm text-gray-700 flex items-center gap-2">
-                  <span className="w-2 h-2 bg-orange-600 rounded-full"></span>
-                  Planification des horaires
-                </p>
-                <p className="text-sm text-gray-700 flex items-center gap-2">
-                  <span className="w-2 h-2 bg-orange-600 rounded-full"></span>
-                  Gestion des équipes
-                </p>
-                <p className="text-sm text-gray-700 flex items-center gap-2">
-                  <span className="w-2 h-2 bg-orange-600 rounded-full"></span>
-                  Vue hebdomadaire et mensuelle
-                </p>
-                <p className="text-sm text-gray-700 flex items-center gap-2">
-                  <span className="w-2 h-2 bg-orange-600 rounded-full"></span>
-                  Notifications automatiques
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-      ) : activeTab === 'pos' ? (
+      {activeTab === 'pos' ? (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Product catalog */}
           <div className="lg:col-span-2">
