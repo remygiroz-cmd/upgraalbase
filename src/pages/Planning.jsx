@@ -526,20 +526,18 @@ export default function Planning() {
                               📊 Récap. semaine
                             </div>
                           </div>
-                          <div className="flex flex-1">
-                            {employees.map(employee => {
-                              const weekStart = getWeekStart(dayInfo.date);
-                              return (
-                                <div key={employee.id} className="border-r border-gray-300 min-w-[140px] sm:min-w-[180px]">
-                                  <WeeklySummary
-                                    employee={employee}
-                                    shifts={shifts}
-                                    weekStart={weekStart}
-                                  />
-                                </div>
-                              );
-                            })}
-                          </div>
+                          {employees.map(employee => {
+                            const weekStart = getWeekStart(dayInfo.date);
+                            return (
+                              <div key={employee.id} className="border-r border-gray-300 min-w-[140px] sm:min-w-[180px]">
+                                <WeeklySummary
+                                  employee={employee}
+                                  shifts={shifts}
+                                  weekStart={weekStart}
+                                />
+                              </div>
+                            );
+                          })}
                         </div>
                       )}
                     </React.Fragment>
