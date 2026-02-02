@@ -306,13 +306,16 @@ export default function Planning() {
   const handleCellClick = (employeeId, dateStr, dayInfo) => {
     const employee = employees.find(e => e.id === employeeId);
     const date = new Date(dateStr);
+    const cellAbove = getLastNonEmptyCellAbove(employeeId, dateStr);
+    
     setSelectedCell({ 
       employeeId, 
       employeeName: employee ? `${employee.first_name} ${employee.last_name}` : '',
       date: dateStr,
       dayInfo,
       monthName: MONTHS[date.getMonth()],
-      year: date.getFullYear()
+      year: date.getFullYear(),
+      cellAbove
     });
     setShowShiftModal(true);
   };
