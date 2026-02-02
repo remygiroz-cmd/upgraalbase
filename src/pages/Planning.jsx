@@ -1,16 +1,18 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
-import { Calendar, ChevronLeft, ChevronRight, Plus, X, Edit2, Trash2, Filter, GripVertical } from 'lucide-react';
+import { Calendar, ChevronLeft, ChevronRight, Plus, Filter, GripVertical } from 'lucide-react';
 import PageHeader from '@/components/ui/PageHeader';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
+import ShiftCard from '@/components/planning/ShiftCard';
+import ShiftFormModal from '@/components/planning/ShiftFormModal';
+import WeeklySummary from '@/components/planning/WeeklySummary';
+import { calculateShiftDuration, checkMinimumRest } from '@/components/planning/LegalChecks';
 
 const DAYS = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche'];
 const MONTHS = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'];
@@ -19,10 +21,16 @@ export default function Planning() {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [showShiftModal, setShowShiftModal] = useState(false);
   const [selectedCell, setSelectedCell] = useState(null);
-  const [filterType, setFilterType] = useState('global'); // global, team, employee
+  const [filterType, setFilterType] = useState('global');
   const [selectedTeam, setSelectedTeam] = useState('');
   const [selectedEmployee, setSelectedEmployee] = useState('');
   const queryClient = useQueryClient();
+
+  // Fetch current user
+  const { data: currentUser } = useQuery({
+    queryKey: ['currentUser'],
+    queryFn: () => base44.auth.me()
+  });
 
   const currentMonth = currentDate.getMonth();
   const currentYear = currentDate.getFullYear();
@@ -90,31 +98,20 @@ export default function Planning() {
     }
   });
 
-  const createShiftMutation = useMutation({
-    mutationFn: (shiftData) => base44.entities.Shift.create(shiftData),
+  const saveShiftMutation = useMutation({
+    mutationFn: ({ id, data }) => {
+      if (id) {
+        return base44.entities.Shift.update(id, data);
+      } else {
+        return base44.entities.Shift.create(data);
+      }
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['shifts'] });
-      toast.success('Shift créé');
-      setShowShiftModal(false);
-      setSelectedCell(null);
-    }
-  });
-
-  const updateShiftMutation = useMutation({
-    mutationFn: ({ id, data }) => base44.entities.Shift.update(id, data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['shifts'] });
-      toast.success('Shift modifié');
-      setShowShiftModal(false);
-      setSelectedCell(null);
-    }
-  });
-
-  const deleteShiftMutation = useMutation({
-    mutationFn: (id) => base44.entities.Shift.delete(id),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['shifts'] });
-      toast.success('Shift supprimé');
+      toast.success('Shift enregistré');
+    },
+    onError: (error) => {
+      toast.error('Erreur lors de l\'enregistrement : ' + error.message);
     }
   });
 
@@ -233,13 +230,33 @@ export default function Planning() {
   // Handle cell click
   const handleCellClick = (employeeId, dateStr, dayInfo) => {
     const employee = employees.find(e => e.id === employeeId);
+    const date = new Date(dateStr);
     setSelectedCell({ 
       employeeId, 
       employeeName: employee ? `${employee.first_name} ${employee.last_name}` : '',
       date: dateStr,
-      dayInfo 
+      dayInfo,
+      monthName: MONTHS[date.getMonth()],
+      year: date.getFullYear()
     });
     setShowShiftModal(true);
+  };
+
+  // Get week start date
+  const getWeekStart = (date) => {
+    const d = new Date(date);
+    const day = d.getDay();
+    const diff = d.getDate() - day + (day === 0 ? -6 : 1); // Monday
+    return new Date(d.setDate(diff));
+  };
+
+  // Check for legal warnings
+  const getShiftWarnings = (shift, employeeShifts) => {
+    const restCheck = checkMinimumRest(employeeShifts, shift);
+    return {
+      hasRestWarning: !restCheck.valid,
+      hasOvertimeWarning: false // calculated in summary
+    };
   };
 
   return (
@@ -474,25 +491,21 @@ export default function Planning() {
                                 )}
                               >
                                 <div className="space-y-1.5 min-h-[60px]">
-                                  {employeeShifts.slice(0, 3).map((shift) => (
-                                    <div
-                                      key={shift.id}
-                                      className={cn(
-                                        "text-xs px-3 py-2 rounded-lg border-2 shadow-sm hover:shadow-md transition-all",
-                                        shift.status === 'confirmed' && "bg-gradient-to-r from-green-50 to-green-100 border-green-400 text-green-900",
-                                        shift.status === 'planned' && "bg-gradient-to-r from-blue-50 to-blue-100 border-blue-400 text-blue-900",
-                                        shift.status === 'absent' && "bg-gradient-to-r from-red-50 to-red-100 border-red-400 text-red-900",
-                                        shift.status === 'leave' && "bg-gradient-to-r from-orange-50 to-orange-100 border-orange-400 text-orange-900"
-                                      )}
-                                    >
-                                      <div className="font-bold text-[10px] uppercase tracking-wider mb-1 opacity-80">
-                                        {shift.position || 'Poste'}
-                                      </div>
-                                      <div className="font-bold text-xs">
-                                        {shift.start_time} - {shift.end_time}
-                                      </div>
-                                    </div>
-                                  ))}
+                                  {employeeShifts.map((shift) => {
+                                    const warnings = getShiftWarnings(shift, employeeShifts);
+                                    return (
+                                      <ShiftCard
+                                        key={shift.id}
+                                        shift={shift}
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          handleCellClick(employee.id, dateStr, dayInfo);
+                                        }}
+                                        hasRestWarning={warnings.hasRestWarning}
+                                        hasOvertimeWarning={warnings.hasOvertimeWarning}
+                                      />
+                                    );
+                                  })}
                                   {employeeShifts.length === 0 && (
                                     <div className="flex items-center justify-center h-full min-h-[60px] text-gray-300 group-hover:text-orange-400 transition-colors">
                                       <Plus className="w-6 h-6" />
@@ -514,11 +527,18 @@ export default function Planning() {
                             </div>
                           </div>
                           <div className="flex flex-1">
-                            {employees.map(employee => (
-                              <div key={employee.id} className="border-r border-gray-300 px-2 py-2 text-xs text-gray-600 text-center italic min-w-[140px] sm:min-w-[180px]">
-                                À calculer
-                              </div>
-                            ))}
+                            {employees.map(employee => {
+                              const weekStart = getWeekStart(dayInfo.date);
+                              return (
+                                <div key={employee.id} className="border-r border-gray-300 min-w-[140px] sm:min-w-[180px]">
+                                  <WeeklySummary
+                                    employee={employee}
+                                    shifts={shifts}
+                                    weekStart={weekStart}
+                                  />
+                                </div>
+                              );
+                            })}
                           </div>
                         </div>
                       )}
@@ -532,7 +552,7 @@ export default function Planning() {
       </div>
 
       {/* Shift Modal */}
-      <ShiftModal
+      <ShiftFormModal
         open={showShiftModal}
         onOpenChange={(open) => {
           setShowShiftModal(open);
@@ -541,292 +561,11 @@ export default function Planning() {
           }
         }}
         selectedCell={selectedCell}
-        employees={sortedEmployees}
-        shifts={shifts}
-        onSave={(data) => createShiftMutation.mutate(data)}
-        onUpdate={(id, data) => updateShiftMutation.mutate({ id, data })}
-        onDelete={(id) => deleteShiftMutation.mutate(id)}
+        existingShifts={selectedCell ? getShiftsForEmployeeAndDate(selectedCell.employeeId, selectedCell.date) : []}
+        allShifts={shifts}
+        onSave={(id, data) => saveShiftMutation.mutate({ id, data })}
+        currentUser={currentUser}
       />
     </div>
-  );
-}
-
-// Shift Modal Component
-function ShiftModal({ open, onOpenChange, selectedCell, employees, shifts, onSave, onUpdate, onDelete }) {
-  const [selectedShiftId, setSelectedShiftId] = useState(null);
-  const [formData, setFormData] = useState({
-    start_time: '09:00',
-    end_time: '17:00',
-    break_minutes: 0,
-    position: '',
-    status: 'planned',
-    notes: ''
-  });
-
-  const existingShifts = selectedCell 
-    ? shifts.filter(s => s.employee_id === selectedCell.employeeId && s.date === selectedCell.date)
-    : [];
-
-  React.useEffect(() => {
-    if (!open) {
-      setSelectedShiftId(null);
-      return;
-    }
-
-    if (selectedShiftId) {
-      const shift = existingShifts.find(s => s.id === selectedShiftId);
-      if (shift) {
-        setFormData({
-          start_time: shift.start_time || '09:00',
-          end_time: shift.end_time || '17:00',
-          break_minutes: shift.break_minutes || 0,
-          position: shift.position || '',
-          status: shift.status || 'planned',
-          notes: shift.notes || ''
-        });
-      }
-    } else {
-      setFormData({
-        start_time: '09:00',
-        end_time: '17:00',
-        break_minutes: 0,
-        position: '',
-        status: 'planned',
-        notes: ''
-      });
-    }
-  }, [selectedShiftId, open]);
-
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    
-    if (!selectedCell) return;
-
-    const employee = employees.find(e => e.id === selectedCell.employeeId);
-    
-    const shiftData = {
-      ...formData,
-      date: selectedCell.date,
-      employee_id: selectedCell.employeeId,
-      employee_name: employee ? `${employee.first_name} ${employee.last_name}` : '',
-      team: employee?.team || ''
-    };
-
-    if (selectedShiftId) {
-      onUpdate(selectedShiftId, shiftData);
-    } else {
-      onSave(shiftData);
-    }
-
-    setSelectedShiftId(null);
-  };
-
-  const handleNewShift = () => {
-    setSelectedShiftId(null);
-    setFormData({
-      start_time: '09:00',
-      end_time: '17:00',
-      break_minutes: 0,
-      position: '',
-      status: 'planned',
-      notes: ''
-    });
-  };
-
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle className="text-xl font-bold bg-gradient-to-r from-orange-600 to-orange-500 bg-clip-text text-transparent">
-            Gestion des shifts
-          </DialogTitle>
-          {selectedCell && (
-            <div className="bg-gradient-to-r from-orange-50 to-orange-100 rounded-lg px-4 py-2 mt-2">
-              <p className="text-sm font-semibold text-gray-900">
-                {selectedCell.employeeName}
-              </p>
-              <p className="text-xs text-gray-600">
-                {selectedCell.dayInfo?.dayName} {selectedCell.dayInfo?.day} {MONTHS[new Date(selectedCell.date).getMonth()]} {new Date(selectedCell.date).getFullYear()}
-              </p>
-            </div>
-          )}
-        </DialogHeader>
-
-        {/* Existing Shifts */}
-        {existingShifts.length > 0 && (
-          <div className="space-y-3 my-4">
-            <div className="flex items-center justify-between">
-              <h3 className="text-sm font-bold text-gray-900">Shifts existants</h3>
-              <span className="text-xs font-semibold px-2 py-1 bg-orange-100 text-orange-700 rounded-full">
-                {existingShifts.length}/3
-              </span>
-            </div>
-            <div className="space-y-2">
-              {existingShifts.map((shift) => (
-                <div
-                  key={shift.id}
-                  onClick={() => setSelectedShiftId(shift.id)}
-                  className={cn(
-                    "p-4 rounded-xl border-2 cursor-pointer transition-all hover:shadow-lg",
-                    selectedShiftId === shift.id 
-                      ? "border-orange-500 bg-orange-50 shadow-md" 
-                      : "border-gray-200 hover:border-orange-300 bg-white"
-                  )}
-                >
-                  <div className="flex items-center justify-between">
-                    <div className="flex-1">
-                      <div className="font-bold text-gray-900 mb-1">{shift.position || 'Sans poste'}</div>
-                      <div className="flex items-center gap-3 text-sm text-gray-600">
-                        <span className="font-semibold">{shift.start_time} - {shift.end_time}</span>
-                        {shift.break_minutes > 0 && (
-                          <span className="text-xs bg-gray-100 px-2 py-0.5 rounded">
-                            Pause: {shift.break_minutes}min
-                          </span>
-                        )}
-                        <span className={cn(
-                          "text-xs px-2 py-0.5 rounded font-semibold",
-                          shift.status === 'confirmed' && "bg-green-100 text-green-700",
-                          shift.status === 'planned' && "bg-blue-100 text-blue-700",
-                          shift.status === 'absent' && "bg-red-100 text-red-700",
-                          shift.status === 'leave' && "bg-orange-100 text-orange-700"
-                        )}>
-                          {shift.status === 'planned' && 'Planifié'}
-                          {shift.status === 'confirmed' && 'Confirmé'}
-                          {shift.status === 'absent' && 'Absent'}
-                          {shift.status === 'leave' && 'Congé'}
-                        </span>
-                      </div>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        if (confirm('Supprimer ce shift ?')) {
-                          onDelete(shift.id);
-                          setSelectedShiftId(null);
-                        }
-                      }}
-                      className="p-2.5 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                    >
-                      <Trash2 className="w-5 h-5" />
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {existingShifts.length < 3 && !selectedShiftId && (
-          <Button
-            type="button"
-            onClick={handleNewShift}
-            className="w-full bg-gradient-to-r from-green-600 to-green-500 hover:from-green-700 hover:to-green-600 text-white font-semibold py-6 shadow-lg"
-          >
-            <Plus className="w-5 h-5 mr-2" />
-            Ajouter un nouveau shift
-          </Button>
-        )}
-
-        {(selectedShiftId || existingShifts.length === 0) && (
-          <form onSubmit={handleSubmit} className="space-y-4 mt-4">
-            <div className="bg-gradient-to-br from-gray-50 to-white rounded-xl p-5 space-y-4 border-2 border-gray-200">
-              <div>
-                <Label className="text-sm font-semibold text-gray-700 mb-2 block">Poste</Label>
-                <Input
-                  value={formData.position || ''}
-                  onChange={(e) => setFormData(prev => ({ ...prev, position: e.target.value }))}
-                  placeholder="Ex: Service, Plonge, Cuisine..."
-                  className="h-11 border-2 border-gray-300 focus:border-orange-500"
-                  required
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label className="text-sm font-semibold text-gray-700 mb-2 block">Heure début</Label>
-                  <Input
-                    type="time"
-                    value={formData.start_time || ''}
-                    onChange={(e) => setFormData(prev => ({ ...prev, start_time: e.target.value }))}
-                    className="h-11 border-2 border-gray-300 focus:border-orange-500"
-                    required
-                  />
-                </div>
-                <div>
-                  <Label className="text-sm font-semibold text-gray-700 mb-2 block">Heure fin</Label>
-                  <Input
-                    type="time"
-                    value={formData.end_time || ''}
-                    onChange={(e) => setFormData(prev => ({ ...prev, end_time: e.target.value }))}
-                    className="h-11 border-2 border-gray-300 focus:border-orange-500"
-                    required
-                  />
-                </div>
-              </div>
-
-              <div>
-                <Label className="text-sm font-semibold text-gray-700 mb-2 block">Pause (minutes)</Label>
-                <Input
-                  type="number"
-                  value={formData.break_minutes || 0}
-                  onChange={(e) => setFormData(prev => ({ ...prev, break_minutes: parseInt(e.target.value) || 0 }))}
-                  className="h-11 border-2 border-gray-300 focus:border-orange-500"
-                  min="0"
-                  placeholder="0"
-                />
-              </div>
-
-              <div>
-                <Label className="text-sm font-semibold text-gray-700 mb-2 block">Statut</Label>
-                <Select
-                  value={formData.status}
-                  onValueChange={(value) => setFormData(prev => ({ ...prev, status: value }))}
-                >
-                  <SelectTrigger className="h-11 border-2 border-gray-300 focus:border-orange-500">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="planned">📋 Planifié</SelectItem>
-                    <SelectItem value="confirmed">✅ Confirmé</SelectItem>
-                    <SelectItem value="absent">❌ Absent</SelectItem>
-                    <SelectItem value="leave">🏖️ Congé</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div>
-                <Label className="text-sm font-semibold text-gray-700 mb-2 block">Notes</Label>
-                <Input
-                  value={formData.notes || ''}
-                  onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value }))}
-                  placeholder="Notes optionnelles..."
-                  className="h-11 border-2 border-gray-300 focus:border-orange-500"
-                />
-              </div>
-            </div>
-
-            <div className="flex gap-3 pt-2">
-              {selectedShiftId && (
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={handleNewShift}
-                  className="flex-1 h-12 border-2 font-semibold"
-                >
-                  Annuler
-                </Button>
-              )}
-              <Button 
-                type="submit" 
-                className="flex-1 h-12 bg-gradient-to-r from-orange-600 to-orange-500 hover:from-orange-700 hover:to-orange-600 text-white font-bold shadow-lg"
-              >
-                {selectedShiftId ? '✏️ Modifier' : '➕ Ajouter'}
-              </Button>
-            </div>
-          </form>
-        )}
-      </DialogContent>
-    </Dialog>
   );
 }
