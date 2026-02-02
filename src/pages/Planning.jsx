@@ -233,9 +233,14 @@ export default function Planning() {
     };
   }, [employees.length]);
 
-  // Get shifts for employee and date
+  // Get shifts for employee and date (sorted chronologically)
   const getShiftsForEmployeeAndDate = (employeeId, dateStr) => {
-    return shifts.filter(s => s.employee_id === employeeId && s.date === dateStr);
+    return shifts
+      .filter(s => s.employee_id === employeeId && s.date === dateStr)
+      .sort((a, b) => {
+        // Sort by start_time
+        return a.start_time.localeCompare(b.start_time);
+      });
   };
 
   // Handle cell click
