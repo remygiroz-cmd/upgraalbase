@@ -594,7 +594,7 @@ export default function Planning() {
                       </div>
                       
                       {/* Week summary row */}
-                      {dayInfo.isLastDayOfWeek && index < daysArray.length - 1 && (
+                      {(dayInfo.isLastDayOfWeek || index === daysArray.length - 1) && (
                         <div className="bg-gradient-to-r from-gray-200 to-gray-100 border-b-2 border-gray-400 flex">
                           <div className="sticky left-0 z-10 bg-gradient-to-r from-gray-200 to-gray-100 border-r-2 border-gray-400 px-4 py-3 shadow-sm w-[120px]">
                             <div className="text-xs font-bold text-gray-700 uppercase tracking-wide">
