@@ -358,8 +358,8 @@ export default function Planning() {
       {/* Sticky Scrollbar */}
       <div 
         ref={scrollbarRef}
-        className="bg-gray-100 border-2 border-gray-200 border-t-0 rounded-b-xl overflow-x-auto sticky top-0 z-30 mb-4"
-        style={{ height: '20px' }}
+        className="bg-gray-100 border-2 border-gray-200 rounded-t-xl overflow-x-auto sticky top-0 z-30 mb-2"
+        style={{ height: '16px' }}
       >
         <div style={{ height: '1px' }}></div>
       </div>
@@ -367,38 +367,42 @@ export default function Planning() {
       {/* Calendar Grid */}
       <div className="bg-white border-2 border-gray-200 rounded-xl shadow-xl overflow-hidden">
         <div ref={tableContainerRef} className="overflow-x-auto">
-          <DragDropContext onDragEnd={handleTeamDragEnd}>
-            <table className="w-full border-collapse">
-              <Droppable droppableId="employees" direction="horizontal">
-                {(provided) => (
-                  <thead ref={provided.innerRef} {...provided.droppableProps}>
-                    <tr className="bg-gradient-to-r from-gray-100 to-gray-50">
-                      <th className="sticky left-0 z-20 bg-gradient-to-r from-gray-100 to-gray-50 border-r-2 border-gray-300 px-4 py-4 text-left text-sm font-bold text-gray-900 min-w-[100px] shadow-md">
-                        <div className="flex items-center gap-2">
-                          <Calendar className="w-4 h-4 text-orange-600" />
-                          Jour
-                        </div>
-                      </th>
+          <div className="inline-block min-w-full">
+            {/* Header */}
+            <DragDropContext onDragEnd={handleTeamDragEnd}>
+              <div className="bg-gradient-to-r from-gray-100 to-gray-50 flex border-b-2 border-gray-300">
+                <div className="sticky left-0 z-20 bg-gradient-to-r from-gray-100 to-gray-50 border-r-2 border-gray-300 px-4 py-4 text-left text-sm font-bold text-gray-900 min-w-[100px] shadow-md flex items-center gap-2">
+                  <Calendar className="w-4 h-4 text-orange-600" />
+                  Jour
+                </div>
+                <Droppable droppableId="employees" direction="horizontal">
+                  {(provided) => (
+                    <div 
+                      ref={provided.innerRef} 
+                      {...provided.droppableProps}
+                      className="flex"
+                    >
                       {employees.map((employee, index) => {
                         const team = allTeams.find(t => t.id === employee.team_id);
                         return (
                           <Draggable key={employee.id} draggableId={employee.id} index={index}>
                             {(provided, snapshot) => (
-                              <th
+                              <div
                                 ref={provided.innerRef}
                                 {...provided.draggableProps}
                                 className={cn(
                                   "border-r border-gray-200 px-3 py-3 text-center min-w-[140px] sm:min-w-[180px] relative",
-                                  snapshot.isDragging && "bg-orange-100 shadow-2xl z-50"
+                                  snapshot.isDragging && "bg-orange-100 shadow-2xl opacity-90"
                                 )}
+                                style={provided.draggableProps.style}
                               >
                                 <div 
                                   {...provided.dragHandleProps}
-                                  className="absolute left-1 top-1/2 -translate-y-1/2 cursor-grab active:cursor-grabbing text-gray-400 hover:text-orange-600"
+                                  className="absolute left-1 top-1/2 -translate-y-1/2 cursor-grab active:cursor-grabbing text-gray-400 hover:text-orange-600 transition-colors"
                                 >
-                                  <GripVertical className="w-4 h-4" />
+                                  <GripVertical className="w-5 h-5" />
                                 </div>
-                                <div className="font-bold text-sm text-gray-900 truncate">
+                                <div className="font-bold text-sm text-gray-900 truncate px-6">
                                   {employee.first_name} {employee.last_name}
                                 </div>
                                 {team && (
@@ -409,35 +413,36 @@ export default function Planning() {
                                     {team.name}
                                   </div>
                                 )}
-                              </th>
+                              </div>
                             )}
                           </Draggable>
                         );
                       })}
                       {provided.placeholder}
-                    </tr>
-                  </thead>
-                )}
-              </Droppable>
-            <tbody>
+                    </div>
+                  )}
+                </Droppable>
+              </div>
+            </DragDropContext>
+
+            {/* Body */}
+            <div>
               {daysArray.length === 0 ? (
-                <tr>
-                  <td colSpan={employees.length + 1} className="px-4 py-16 text-center text-gray-500">
-                    <Calendar className="w-12 h-12 mx-auto mb-4 text-gray-300" />
-                    <p className="text-lg">Aucun jour à afficher</p>
-                  </td>
-                </tr>
+                <div className="px-4 py-16 text-center text-gray-500">
+                  <Calendar className="w-12 h-12 mx-auto mb-4 text-gray-300" />
+                  <p className="text-lg">Aucun jour à afficher</p>
+                </div>
               ) : (
                 <>
                   {daysArray.map((dayInfo, index) => (
                     <React.Fragment key={dayInfo.day}>
-                      <tr className={cn(
-                        "border-b border-gray-200 hover:bg-gray-50/50 transition-colors",
+                      <div className={cn(
+                        "flex border-b border-gray-200 hover:bg-gray-50/50 transition-colors",
                         dayInfo.isWeekend && "bg-orange-50/30",
                         dayInfo.isToday && "bg-blue-50/80"
                       )}>
-                        <td className={cn(
-                          "sticky left-0 z-10 border-r-2 border-gray-300 px-4 py-3 shadow-sm",
+                        <div className={cn(
+                          "sticky left-0 z-10 border-r-2 border-gray-300 px-4 py-3 shadow-sm min-w-[100px]",
                           dayInfo.isWeekend && "bg-orange-50/30",
                           dayInfo.isToday && "bg-gradient-to-r from-blue-100 to-blue-50 border-l-4 border-l-blue-500"
                         )}>
@@ -453,73 +458,76 @@ export default function Planning() {
                           )}>
                             {dayInfo.day}
                           </div>
-                        </td>
-                        {employees.map(employee => {
-                          const dateStr = dayInfo.date.toISOString().split('T')[0];
-                          const employeeShifts = getShiftsForEmployeeAndDate(employee.id, dateStr);
-                          
-                          return (
-                            <td
-                              key={employee.id}
-                              onClick={() => handleCellClick(employee.id, dateStr, dayInfo)}
-                              className={cn(
-                                "border-r border-gray-200 px-2 py-2 cursor-pointer hover:bg-orange-50 transition-all align-top group relative",
-                                dayInfo.isWeekend && "bg-orange-50/20"
-                              )}
-                            >
-                              <div className="space-y-1.5 min-h-[60px]">
-                                {employeeShifts.slice(0, 3).map((shift) => (
-                                  <div
-                                    key={shift.id}
-                                    className={cn(
-                                      "text-xs px-3 py-2 rounded-lg border-2 shadow-sm hover:shadow-md transition-all",
-                                      shift.status === 'confirmed' && "bg-gradient-to-r from-green-50 to-green-100 border-green-400 text-green-900",
-                                      shift.status === 'planned' && "bg-gradient-to-r from-blue-50 to-blue-100 border-blue-400 text-blue-900",
-                                      shift.status === 'absent' && "bg-gradient-to-r from-red-50 to-red-100 border-red-400 text-red-900",
-                                      shift.status === 'leave' && "bg-gradient-to-r from-orange-50 to-orange-100 border-orange-400 text-orange-900"
-                                    )}
-                                  >
-                                    <div className="font-bold text-[10px] uppercase tracking-wider mb-1 opacity-80">
-                                      {shift.position || 'Poste'}
-                                    </div>
-                                    <div className="font-bold text-xs">
-                                      {shift.start_time} - {shift.end_time}
-                                    </div>
-                                  </div>
-                                ))}
-                                {employeeShifts.length === 0 && (
-                                  <div className="flex items-center justify-center h-full min-h-[60px] text-gray-300 group-hover:text-orange-400 transition-colors">
-                                    <Plus className="w-6 h-6" />
-                                  </div>
+                        </div>
+                        <div className="flex flex-1">
+                          {employees.map(employee => {
+                            const dateStr = dayInfo.date.toISOString().split('T')[0];
+                            const employeeShifts = getShiftsForEmployeeAndDate(employee.id, dateStr);
+                            
+                            return (
+                              <div
+                                key={employee.id}
+                                onClick={() => handleCellClick(employee.id, dateStr, dayInfo)}
+                                className={cn(
+                                  "border-r border-gray-200 px-2 py-2 cursor-pointer hover:bg-orange-50 transition-all group relative min-w-[140px] sm:min-w-[180px]",
+                                  dayInfo.isWeekend && "bg-orange-50/20"
                                 )}
+                              >
+                                <div className="space-y-1.5 min-h-[60px]">
+                                  {employeeShifts.slice(0, 3).map((shift) => (
+                                    <div
+                                      key={shift.id}
+                                      className={cn(
+                                        "text-xs px-3 py-2 rounded-lg border-2 shadow-sm hover:shadow-md transition-all",
+                                        shift.status === 'confirmed' && "bg-gradient-to-r from-green-50 to-green-100 border-green-400 text-green-900",
+                                        shift.status === 'planned' && "bg-gradient-to-r from-blue-50 to-blue-100 border-blue-400 text-blue-900",
+                                        shift.status === 'absent' && "bg-gradient-to-r from-red-50 to-red-100 border-red-400 text-red-900",
+                                        shift.status === 'leave' && "bg-gradient-to-r from-orange-50 to-orange-100 border-orange-400 text-orange-900"
+                                      )}
+                                    >
+                                      <div className="font-bold text-[10px] uppercase tracking-wider mb-1 opacity-80">
+                                        {shift.position || 'Poste'}
+                                      </div>
+                                      <div className="font-bold text-xs">
+                                        {shift.start_time} - {shift.end_time}
+                                      </div>
+                                    </div>
+                                  ))}
+                                  {employeeShifts.length === 0 && (
+                                    <div className="flex items-center justify-center h-full min-h-[60px] text-gray-300 group-hover:text-orange-400 transition-colors">
+                                      <Plus className="w-6 h-6" />
+                                    </div>
+                                  )}
+                                </div>
                               </div>
-                            </td>
-                          );
-                        })}
-                      </tr>
+                            );
+                          })}
+                        </div>
+                      </div>
                       
                       {/* Week summary row */}
                       {dayInfo.isLastDayOfWeek && index < daysArray.length - 1 && (
-                        <tr className="bg-gradient-to-r from-gray-200 to-gray-100 border-b-2 border-gray-400">
-                          <td className="sticky left-0 z-10 bg-gradient-to-r from-gray-200 to-gray-100 border-r-2 border-gray-400 px-4 py-2 shadow-sm">
+                        <div className="bg-gradient-to-r from-gray-200 to-gray-100 border-b-2 border-gray-400 flex">
+                          <div className="sticky left-0 z-10 bg-gradient-to-r from-gray-200 to-gray-100 border-r-2 border-gray-400 px-4 py-2 shadow-sm min-w-[100px]">
                             <div className="text-xs font-bold text-gray-700 uppercase tracking-wide">
                               📊 Récap. semaine
                             </div>
-                          </td>
-                          {employees.map(employee => (
-                            <td key={employee.id} className="border-r border-gray-300 px-2 py-2 text-xs text-gray-600 text-center italic">
-                              À calculer
-                            </td>
-                          ))}
-                        </tr>
+                          </div>
+                          <div className="flex flex-1">
+                            {employees.map(employee => (
+                              <div key={employee.id} className="border-r border-gray-300 px-2 py-2 text-xs text-gray-600 text-center italic min-w-[140px] sm:min-w-[180px]">
+                                À calculer
+                              </div>
+                            ))}
+                          </div>
+                        </div>
                       )}
                     </React.Fragment>
                   ))}
                 </>
               )}
-            </tbody>
-          </table>
-          </DragDropContext>
+            </div>
+          </div>
         </div>
       </div>
 
