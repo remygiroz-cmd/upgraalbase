@@ -277,6 +277,31 @@ export default function Planning() {
     return nonShiftEvents.filter(e => e.employee_id === employeeId && e.date === dateStr);
   };
 
+  // Find the last non-empty cell above for copying
+  const getLastNonEmptyCellAbove = (employeeId, dateStr) => {
+    const currentDate = new Date(dateStr);
+    
+    // Look backwards day by day
+    for (let i = 1; i <= 60; i++) { // Max 60 days back
+      const checkDate = new Date(currentDate);
+      checkDate.setDate(checkDate.getDate() - i);
+      const checkDateStr = checkDate.toISOString().split('T')[0];
+      
+      const shiftsAbove = getShiftsForEmployeeAndDate(employeeId, checkDateStr);
+      const nonShiftsAbove = getNonShiftsForEmployeeAndDate(employeeId, checkDateStr);
+      
+      if (shiftsAbove.length > 0 || nonShiftsAbove.length > 0) {
+        return {
+          date: checkDateStr,
+          shifts: shiftsAbove,
+          nonShifts: nonShiftsAbove
+        };
+      }
+    }
+    
+    return null;
+  };
+
   // Handle cell click
   const handleCellClick = (employeeId, dateStr, dayInfo) => {
     const employee = employees.find(e => e.id === employeeId);

@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from 'sonner';
-import { Plus, Copy, AlertTriangle, Clock } from 'lucide-react';
+import { Plus, Copy, AlertTriangle, Clock, ArrowUp } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import NonShiftCard from './NonShiftCard';
 import { checkMinimumRest, checkDailyHours, calculateShiftDuration } from './LegalChecks';
@@ -33,6 +33,7 @@ export default function ShiftFormModal({
 }) {
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState('shifts');
+  const [showCopyConfirm, setShowCopyConfirm] = useState(false);
 
   const { data: positions = [] } = useQuery({
     queryKey: ['positions'],
@@ -244,6 +245,55 @@ export default function ShiftFormModal({
     }
   };
 
+  const handleCopyFromAbove = () => {
+    if (!selectedCell?.cellAbove) {
+      toast.error('Aucune case non vide au-dessus');
+      return;
+    }
+
+    const hasExisting = existingShifts.length > 0 || existingNonShifts.length > 0;
+    
+    if (hasExisting && !showCopyConfirm) {
+      setShowCopyConfirm(true);
+      return;
+    }
+
+    const { shifts, nonShifts } = selectedCell.cellAbove;
+    
+    // Copy shifts
+    shifts.forEach(shift => {
+      const shiftData = {
+        position: shift.position,
+        start_time: shift.start_time,
+        end_time: shift.end_time,
+        break_minutes: shift.break_minutes,
+        status: 'planned',
+        notes: shift.notes || '',
+        date: selectedCell.date,
+        employee_id: selectedCell.employeeId,
+        employee_name: selectedCell.employeeName
+      };
+      onSave(null, shiftData);
+    });
+
+    // Copy non-shifts
+    nonShifts.forEach(ns => {
+      const data = {
+        employee_id: selectedCell.employeeId,
+        employee_name: selectedCell.employeeName,
+        date: selectedCell.date,
+        non_shift_type_id: ns.non_shift_type_id,
+        non_shift_type_label: ns.non_shift_type_label,
+        notes: ns.notes || ''
+      };
+      saveNonShiftMutation.mutate(data);
+    });
+
+    toast.success('Case copiée avec succès');
+    setShowCopyConfirm(false);
+    onOpenChange(false);
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
@@ -255,6 +305,56 @@ export default function ShiftFormModal({
             {selectedCell?.dayInfo?.dayName} {selectedCell?.dayInfo?.day} {selectedCell?.monthName} {selectedCell?.year}
           </p>
         </DialogHeader>
+
+        {/* Copy from above button */}
+        {selectedCell?.cellAbove && (
+          <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border-2 border-blue-200 rounded-lg p-3">
+            {showCopyConfirm ? (
+              <div className="space-y-3">
+                <div className="flex items-start gap-2">
+                  <AlertTriangle className="w-5 h-5 text-orange-600 flex-shrink-0 mt-0.5" />
+                  <div>
+                    <p className="font-semibold text-gray-900 text-sm">
+                      Cette case contient déjà des éléments
+                    </p>
+                    <p className="text-xs text-gray-600 mt-1">
+                      Voulez-vous tout remplacer par le contenu de la case du dessus ?
+                    </p>
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                  <Button
+                    onClick={() => setShowCopyConfirm(false)}
+                    variant="outline"
+                    size="sm"
+                    className="flex-1"
+                  >
+                    Annuler
+                  </Button>
+                  <Button
+                    onClick={handleCopyFromAbove}
+                    size="sm"
+                    className="flex-1 bg-blue-600 hover:bg-blue-700"
+                  >
+                    Confirmer et remplacer
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <Button
+                onClick={handleCopyFromAbove}
+                variant="outline"
+                className="w-full border-2 border-blue-400 bg-white hover:bg-blue-50 hover:border-blue-500"
+              >
+                <ArrowUp className="w-4 h-4 mr-2" />
+                Copier la case du dessus
+                <span className="ml-2 text-xs text-gray-600">
+                  ({selectedCell.cellAbove.shifts.length} shift(s) + {selectedCell.cellAbove.nonShifts.length} événement(s))
+                </span>
+              </Button>
+            )}
+          </div>
+        )}
 
         <Tabs value={activeTab} onValueChange={setActiveTab}>
           <TabsList className="grid w-full grid-cols-2">
