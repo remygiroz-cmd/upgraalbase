@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
-import { Calendar, ChevronLeft, ChevronRight, Plus, X, Edit2, Trash2, Filter } from 'lucide-react';
+import { Calendar, ChevronLeft, ChevronRight, Plus, X, Edit2, Trash2, Filter, GripVertical } from 'lucide-react';
 import PageHeader from '@/components/ui/PageHeader';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -10,11 +10,10 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
+import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 
 const DAYS = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche'];
 const MONTHS = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'];
-
-const TEAM_ORDER = ['caisse', 'livraison', 'polyvalents', 'cuisine', 'gérants'];
 
 export default function Planning() {
   const [currentDate, setCurrentDate] = useState(new Date());
@@ -38,6 +37,13 @@ export default function Planning() {
   const { data: allTeams = [] } = useQuery({
     queryKey: ['teams'],
     queryFn: () => base44.entities.Team.filter({ is_active: true })
+  });
+
+  const updateTeamMutation = useMutation({
+    mutationFn: ({ id, data }) => base44.entities.Team.update(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['teams'] });
+    }
   });
 
   // Sort employees by team order
@@ -151,6 +157,73 @@ export default function Planning() {
   const nextMonth = () => {
     setCurrentDate(new Date(currentYear, currentMonth + 1, 1));
   };
+
+  // Handle team reordering
+  const handleTeamDragEnd = async (result) => {
+    if (!result.destination) return;
+
+    const items = Array.from(employees);
+    const [reorderedItem] = items.splice(result.source.index, 1);
+    items.splice(result.destination.index, 0, reorderedItem);
+
+    // Group by teams to update their order
+    const teamOrderMap = new Map();
+    items.forEach((emp, index) => {
+      if (emp.team_id) {
+        if (!teamOrderMap.has(emp.team_id)) {
+          teamOrderMap.set(emp.team_id, index);
+        }
+      }
+    });
+
+    // Update team orders
+    const updatePromises = [];
+    teamOrderMap.forEach((order, teamId) => {
+      const team = allTeams.find(t => t.id === teamId);
+      if (team && team.order !== order) {
+        updatePromises.push(
+          updateTeamMutation.mutateAsync({ id: teamId, data: { order } })
+        );
+      }
+    });
+
+    await Promise.all(updatePromises);
+    toast.success('Ordre des équipes mis à jour');
+  };
+
+  // Sticky scrollbar
+  const tableContainerRef = useRef(null);
+  const scrollbarRef = useRef(null);
+
+  useEffect(() => {
+    const container = tableContainerRef.current;
+    const scrollbar = scrollbarRef.current;
+    if (!container || !scrollbar) return;
+
+    const handleScroll = () => {
+      scrollbar.scrollLeft = container.scrollLeft;
+    };
+
+    const handleScrollbarScroll = () => {
+      container.scrollLeft = scrollbar.scrollLeft;
+    };
+
+    container.addEventListener('scroll', handleScroll);
+    scrollbar.addEventListener('scroll', handleScrollbarScroll);
+
+    // Set scrollbar width
+    const updateScrollbarWidth = () => {
+      scrollbar.querySelector('div').style.width = container.scrollWidth + 'px';
+    };
+    updateScrollbarWidth();
+    window.addEventListener('resize', updateScrollbarWidth);
+
+    return () => {
+      container.removeEventListener('scroll', handleScroll);
+      scrollbar.removeEventListener('scroll', handleScrollbarScroll);
+      window.removeEventListener('resize', updateScrollbarWidth);
+    };
+  }, [employees.length]);
 
   // Get shifts for employee and date
   const getShiftsForEmployeeAndDate = (employeeId, dateStr) => {
@@ -282,41 +355,70 @@ export default function Planning() {
         </div>
       </div>
 
+      {/* Sticky Scrollbar */}
+      <div 
+        ref={scrollbarRef}
+        className="bg-gray-100 border-2 border-gray-200 border-t-0 rounded-b-xl overflow-x-auto sticky top-0 z-30 mb-4"
+        style={{ height: '20px' }}
+      >
+        <div style={{ height: '1px' }}></div>
+      </div>
+
       {/* Calendar Grid */}
       <div className="bg-white border-2 border-gray-200 rounded-xl shadow-xl overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full border-collapse">
-            <thead>
-              <tr className="bg-gradient-to-r from-gray-100 to-gray-50">
-                <th className="sticky left-0 z-20 bg-gradient-to-r from-gray-100 to-gray-50 border-r-2 border-gray-300 px-4 py-4 text-left text-sm font-bold text-gray-900 min-w-[100px] shadow-md">
-                  <div className="flex items-center gap-2">
-                    <Calendar className="w-4 h-4 text-orange-600" />
-                    Jour
-                  </div>
-                </th>
-                {employees.map(employee => {
-                  const team = allTeams.find(t => t.id === employee.team_id);
-                  return (
-                    <th
-                      key={employee.id}
-                      className="border-r border-gray-200 px-3 py-3 text-center min-w-[140px] sm:min-w-[180px]"
-                    >
-                      <div className="font-bold text-sm text-gray-900 truncate">
-                        {employee.first_name} {employee.last_name}
-                      </div>
-                      {team && (
-                        <div 
-                          className="text-[10px] font-semibold text-white inline-block px-3 py-1 rounded-full mt-2 shadow-sm"
-                          style={{ backgroundColor: team.color || '#3b82f6' }}
-                        >
-                          {team.name}
+        <div ref={tableContainerRef} className="overflow-x-auto">
+          <DragDropContext onDragEnd={handleTeamDragEnd}>
+            <table className="w-full border-collapse">
+              <Droppable droppableId="employees" direction="horizontal">
+                {(provided) => (
+                  <thead ref={provided.innerRef} {...provided.droppableProps}>
+                    <tr className="bg-gradient-to-r from-gray-100 to-gray-50">
+                      <th className="sticky left-0 z-20 bg-gradient-to-r from-gray-100 to-gray-50 border-r-2 border-gray-300 px-4 py-4 text-left text-sm font-bold text-gray-900 min-w-[100px] shadow-md">
+                        <div className="flex items-center gap-2">
+                          <Calendar className="w-4 h-4 text-orange-600" />
+                          Jour
                         </div>
-                      )}
-                    </th>
-                  );
-                })}
-              </tr>
-            </thead>
+                      </th>
+                      {employees.map((employee, index) => {
+                        const team = allTeams.find(t => t.id === employee.team_id);
+                        return (
+                          <Draggable key={employee.id} draggableId={employee.id} index={index}>
+                            {(provided, snapshot) => (
+                              <th
+                                ref={provided.innerRef}
+                                {...provided.draggableProps}
+                                className={cn(
+                                  "border-r border-gray-200 px-3 py-3 text-center min-w-[140px] sm:min-w-[180px] relative",
+                                  snapshot.isDragging && "bg-orange-100 shadow-2xl z-50"
+                                )}
+                              >
+                                <div 
+                                  {...provided.dragHandleProps}
+                                  className="absolute left-1 top-1/2 -translate-y-1/2 cursor-grab active:cursor-grabbing text-gray-400 hover:text-orange-600"
+                                >
+                                  <GripVertical className="w-4 h-4" />
+                                </div>
+                                <div className="font-bold text-sm text-gray-900 truncate">
+                                  {employee.first_name} {employee.last_name}
+                                </div>
+                                {team && (
+                                  <div 
+                                    className="text-[10px] font-semibold text-white inline-block px-3 py-1 rounded-full mt-2 shadow-sm"
+                                    style={{ backgroundColor: team.color || '#3b82f6' }}
+                                  >
+                                    {team.name}
+                                  </div>
+                                )}
+                              </th>
+                            )}
+                          </Draggable>
+                        );
+                      })}
+                      {provided.placeholder}
+                    </tr>
+                  </thead>
+                )}
+              </Droppable>
             <tbody>
               {daysArray.length === 0 ? (
                 <tr>
@@ -417,6 +519,7 @@ export default function Planning() {
               )}
             </tbody>
           </table>
+          </DragDropContext>
         </div>
       </div>
 
