@@ -443,7 +443,7 @@ export default function Planning() {
                                 ref={provided.innerRef}
                                 {...provided.draggableProps}
                                 className={cn(
-                                  "border-r border-gray-200 px-3 py-3 text-center min-w-[140px] sm:min-w-[180px] relative",
+                                  "border-r border-gray-200 px-3 py-3 text-center w-[140px] sm:w-[180px] relative",
                                   snapshot.isDragging && "bg-orange-100 shadow-2xl opacity-90"
                                 )}
                                 style={provided.draggableProps.style}
@@ -521,7 +521,7 @@ export default function Planning() {
                                 key={employee.id}
                                 onClick={() => handleCellClick(employee.id, dateStr, dayInfo)}
                                 className={cn(
-                                  "border-r border-gray-200 px-2 py-2 cursor-pointer hover:bg-orange-50 transition-all group relative min-w-[140px] sm:min-w-[180px]",
+                                  "border-r border-gray-200 px-2 py-2 cursor-pointer hover:bg-orange-50 transition-all group relative w-[140px] sm:w-[180px]",
                                   dayInfo.isWeekend && "bg-orange-50/20"
                                 )}
                               >
@@ -566,7 +566,7 @@ export default function Planning() {
                             {employees.map(employee => {
                               const weekStart = getWeekStart(dayInfo.date);
                               return (
-                                <div key={employee.id} className="border-r border-gray-200 min-w-[140px] sm:min-w-[180px]">
+                                <div key={employee.id} className="border-r border-gray-200 w-[140px] sm:w-[180px]">
                                   <WeeklySummary
                                     employee={employee}
                                     shifts={shifts}
