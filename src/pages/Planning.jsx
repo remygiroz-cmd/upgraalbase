@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
-import { Calendar, ChevronLeft, ChevronRight, Plus, X, Edit2, Trash2 } from 'lucide-react';
+import { Calendar, ChevronLeft, ChevronRight, Plus, X, Edit2, Trash2, Filter } from 'lucide-react';
 import PageHeader from '@/components/ui/PageHeader';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -14,20 +14,67 @@ import { toast } from 'sonner';
 const DAYS = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche'];
 const MONTHS = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'];
 
+const TEAM_ORDER = ['caisse', 'livraison', 'polyvalents', 'cuisine', 'gérants'];
+
 export default function Planning() {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [showShiftModal, setShowShiftModal] = useState(false);
   const [selectedCell, setSelectedCell] = useState(null);
+  const [filterType, setFilterType] = useState('global'); // global, team, employee
+  const [selectedTeam, setSelectedTeam] = useState('');
+  const [selectedEmployee, setSelectedEmployee] = useState('');
   const queryClient = useQueryClient();
 
   const currentMonth = currentDate.getMonth();
   const currentYear = currentDate.getFullYear();
 
   // Fetch employees
-  const { data: employees = [] } = useQuery({
+  const { data: allEmployees = [] } = useQuery({
     queryKey: ['employees'],
     queryFn: () => base44.entities.Employee.filter({ is_active: true })
   });
+
+  // Sort employees by team order
+  const sortedEmployees = React.useMemo(() => {
+    return [...allEmployees].sort((a, b) => {
+      const teamA = (a.team || '').toLowerCase();
+      const teamB = (b.team || '').toLowerCase();
+      
+      const indexA = TEAM_ORDER.indexOf(teamA);
+      const indexB = TEAM_ORDER.indexOf(teamB);
+      
+      const orderA = indexA === -1 ? 999 : indexA;
+      const orderB = indexB === -1 ? 999 : indexB;
+      
+      if (orderA !== orderB) return orderA - orderB;
+      
+      // Same team, sort by name
+      return (a.first_name || '').localeCompare(b.first_name || '');
+    });
+  }, [allEmployees]);
+
+  // Get unique teams
+  const teams = React.useMemo(() => {
+    const teamSet = new Set(allEmployees.map(e => e.team).filter(Boolean));
+    return Array.from(teamSet).sort((a, b) => {
+      const indexA = TEAM_ORDER.indexOf(a.toLowerCase());
+      const indexB = TEAM_ORDER.indexOf(b.toLowerCase());
+      const orderA = indexA === -1 ? 999 : indexA;
+      const orderB = indexB === -1 ? 999 : indexB;
+      return orderA - orderB;
+    });
+  }, [allEmployees]);
+
+  // Filter employees based on selection
+  const employees = React.useMemo(() => {
+    if (filterType === 'employee' && selectedEmployee) {
+      return sortedEmployees.filter(e => e.id === selectedEmployee);
+    }
+    if (filterType === 'team' && selectedTeam) {
+      return sortedEmployees.filter(e => e.team === selectedTeam);
+    }
+    return sortedEmployees;
+  }, [sortedEmployees, filterType, selectedEmployee, selectedTeam]);
 
   // Fetch shifts for current month
   const { data: shifts = [] } = useQuery({
@@ -134,17 +181,76 @@ export default function Planning() {
         subtitle="Gestion des horaires de travail"
       />
 
-      {/* Month Navigation */}
-      <div className="bg-white border border-gray-300 rounded-lg p-4 mb-6 flex items-center justify-between">
-        <Button onClick={previousMonth} variant="outline" size="sm">
-          <ChevronLeft className="w-4 h-4" />
-        </Button>
-        <h2 className="text-xl font-bold text-gray-900">
-          {MONTHS[currentMonth]} {currentYear}
-        </h2>
-        <Button onClick={nextMonth} variant="outline" size="sm">
-          <ChevronRight className="w-4 h-4" />
-        </Button>
+      {/* Month Navigation & Filters */}
+      <div className="bg-white border border-gray-300 rounded-lg p-4 mb-6">
+        <div className="flex items-center justify-between mb-4">
+          <Button onClick={previousMonth} variant="outline" size="sm">
+            <ChevronLeft className="w-4 h-4" />
+          </Button>
+          <h2 className="text-xl font-bold text-gray-900">
+            {MONTHS[currentMonth]} {currentYear}
+          </h2>
+          <Button onClick={nextMonth} variant="outline" size="sm">
+            <ChevronRight className="w-4 h-4" />
+          </Button>
+        </div>
+
+        {/* Filters */}
+        <div className="flex flex-wrap gap-3 items-end">
+          <div className="flex-1 min-w-[200px]">
+            <Label className="text-xs text-gray-600 mb-1">Vue</Label>
+            <Select value={filterType} onValueChange={(value) => {
+              setFilterType(value);
+              setSelectedTeam('');
+              setSelectedEmployee('');
+            }}>
+              <SelectTrigger className="h-9">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="global">Vue globale</SelectItem>
+                <SelectItem value="team">Par équipe</SelectItem>
+                <SelectItem value="employee">Par employé</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          {filterType === 'team' && (
+            <div className="flex-1 min-w-[200px]">
+              <Label className="text-xs text-gray-600 mb-1">Équipe</Label>
+              <Select value={selectedTeam} onValueChange={setSelectedTeam}>
+                <SelectTrigger className="h-9">
+                  <SelectValue placeholder="Sélectionner une équipe" />
+                </SelectTrigger>
+                <SelectContent>
+                  {teams.map(team => (
+                    <SelectItem key={team} value={team}>
+                      {team}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+
+          {filterType === 'employee' && (
+            <div className="flex-1 min-w-[200px]">
+              <Label className="text-xs text-gray-600 mb-1">Employé</Label>
+              <Select value={selectedEmployee} onValueChange={setSelectedEmployee}>
+                <SelectTrigger className="h-9">
+                  <SelectValue placeholder="Sélectionner un employé" />
+                </SelectTrigger>
+                <SelectContent>
+                  {sortedEmployees.map(emp => (
+                    <SelectItem key={emp.id} value={emp.id}>
+                      {emp.first_name} {emp.last_name} {emp.team && `(${emp.team})`}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Calendar Grid */}
@@ -162,8 +268,10 @@ export default function Planning() {
                     className="border-r border-gray-200 px-2 py-2 text-center text-sm font-semibold text-gray-900 min-w-[160px]"
                   >
                     <div>{employee.first_name} {employee.last_name}</div>
-                    {employee.position && (
-                      <div className="text-xs font-normal text-gray-500">{employee.position}</div>
+                    {employee.team && (
+                      <div className="text-xs font-normal text-blue-600 bg-blue-50 inline-block px-2 py-0.5 rounded mt-1">
+                        {employee.team}
+                      </div>
                     )}
                   </th>
                 ))}
@@ -269,7 +377,7 @@ export default function Planning() {
           }
         }}
         selectedCell={selectedCell}
-        employees={employees}
+        employees={sortedEmployees}
         shifts={shifts}
         onSave={(data) => createShiftMutation.mutate(data)}
         onUpdate={(id, data) => updateShiftMutation.mutate({ id, data })}
