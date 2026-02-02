@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
-import { Calendar, ChevronLeft, ChevronRight, Plus, Filter, GripVertical } from 'lucide-react';
+import { Calendar, ChevronLeft, ChevronRight, Plus, Filter, GripVertical, Settings } from 'lucide-react';
 import PageHeader from '@/components/ui/PageHeader';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -12,6 +12,7 @@ import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import ShiftCard from '@/components/planning/ShiftCard';
 import ShiftFormModal from '@/components/planning/ShiftFormModal';
 import WeeklySummary from '@/components/planning/WeeklySummary';
+import PositionsManager from '@/components/planning/PositionsManager';
 import { calculateShiftDuration, checkMinimumRest } from '@/components/planning/LegalChecks';
 
 const DAYS = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche'];
@@ -20,6 +21,7 @@ const MONTHS = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet'
 export default function Planning() {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [showShiftModal, setShowShiftModal] = useState(false);
+  const [showPositionsManager, setShowPositionsManager] = useState(false);
   const [selectedCell, setSelectedCell] = useState(null);
   const [filterType, setFilterType] = useState('global');
   const [selectedTeam, setSelectedTeam] = useState('');
@@ -284,11 +286,21 @@ export default function Planning() {
 
   return (
     <div className="space-y-4 sm:space-y-6">
-      <PageHeader
-        icon={Calendar}
-        title="Planning mensuel"
-        subtitle="Gestion des horaires de travail"
-      />
+      <div className="flex items-center justify-between">
+        <PageHeader
+          icon={Calendar}
+          title="Planning mensuel"
+          subtitle="Gestion des horaires de travail"
+        />
+        <Button
+          onClick={() => setShowPositionsManager(true)}
+          variant="outline"
+          size="icon"
+          className="border-2 border-gray-300 hover:border-orange-500 hover:bg-orange-50"
+        >
+          <Settings className="w-5 h-5" />
+        </Button>
+      </div>
 
       {/* Month Navigation & Filters */}
       <div className="bg-gradient-to-br from-white to-gray-50 border-2 border-gray-200 rounded-xl shadow-lg p-4 sm:p-6">
@@ -589,6 +601,12 @@ export default function Planning() {
         allShifts={shifts}
         onSave={(id, data) => saveShiftMutation.mutate({ id, data })}
         currentUser={currentUser}
+      />
+
+      {/* Positions Manager */}
+      <PositionsManager
+        open={showPositionsManager}
+        onOpenChange={setShowPositionsManager}
       />
     </div>
   );

@@ -1,14 +1,16 @@
 import React from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { base44 } from '@/api/base44Client';
 import { cn } from '@/lib/utils';
 import { Clock, Coffee, AlertTriangle, Trash2 } from 'lucide-react';
 
-const POSITION_COLORS = {
-  'cuisine': { bg: 'bg-red-50', border: 'border-red-400', text: 'text-red-900' },
-  'caisse': { bg: 'bg-blue-50', border: 'border-blue-400', text: 'text-blue-900' },
-  'livraison': { bg: 'bg-purple-50', border: 'border-purple-400', text: 'text-purple-900' },
-  'service': { bg: 'bg-green-50', border: 'border-green-400', text: 'text-green-900' },
-  'plonge': { bg: 'bg-gray-50', border: 'border-gray-400', text: 'text-gray-900' },
-  'autre': { bg: 'bg-orange-50', border: 'border-orange-400', text: 'text-orange-900' }
+const hexToRgb = (hex) => {
+  const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+  return result ? {
+    r: parseInt(result[1], 16),
+    g: parseInt(result[2], 16),
+    b: parseInt(result[3], 16)
+  } : { r: 59, g: 130, b: 246 };
 };
 
 const STATUS_ICONS = {
@@ -19,6 +21,14 @@ const STATUS_ICONS = {
 };
 
 export default function ShiftCard({ shift, onClick, onDelete, hasRestWarning, hasOvertimeWarning }) {
+  const { data: positions = [] } = useQuery({
+    queryKey: ['positions'],
+    queryFn: async () => {
+      const all = await base44.entities.Position.filter({ is_active: true });
+      return all;
+    }
+  });
+
   const calculateDuration = () => {
     const [startH, startM] = shift.start_time.split(':').map(Number);
     const [endH, endM] = shift.end_time.split(':').map(Number);
@@ -33,18 +43,27 @@ export default function ShiftCard({ shift, onClick, onDelete, hasRestWarning, ha
     return `${hours}h${minutes > 0 ? minutes.toString().padStart(2, '0') : ''}`;
   };
 
-  const positionKey = shift.position?.toLowerCase() || 'autre';
-  const colors = POSITION_COLORS[positionKey] || POSITION_COLORS.autre;
+  const position = positions.find(p => p.label === shift.position);
+  const positionColor = position?.color || '#3b82f6';
+  const rgb = hexToRgb(positionColor);
+  
+  const colors = {
+    bg: `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.1)`,
+    border: positionColor,
+    text: positionColor
+  };
 
   return (
     <div
       onClick={onClick}
       className={cn(
         "relative rounded-lg border-2 p-2 cursor-pointer transition-all hover:shadow-md group",
-        colors.bg,
-        colors.border,
         shift.status === 'cancelled' && "opacity-50"
       )}
+      style={{ 
+        backgroundColor: colors.bg,
+        borderColor: colors.border
+      }}
     >
       {(hasRestWarning || hasOvertimeWarning) && (
         <div className="absolute -top-1 -right-1 bg-orange-500 text-white rounded-full p-0.5">
@@ -64,8 +83,8 @@ export default function ShiftCard({ shift, onClick, onDelete, hasRestWarning, ha
       
       <div className="flex items-center justify-between gap-1">
         <div className="flex items-center gap-1">
-          <Clock className="w-3 h-3" />
-          <span className={cn("text-[11px] font-bold", colors.text)}>
+          <Clock className="w-3 h-3" style={{ color: colors.text }} />
+          <span className="text-[11px] font-bold" style={{ color: colors.text }}>
             {shift.start_time} - {shift.end_time}
           </span>
         </div>
@@ -73,15 +92,15 @@ export default function ShiftCard({ shift, onClick, onDelete, hasRestWarning, ha
       </div>
       
       <div className="flex items-center justify-between text-[10px] mt-0.5">
-        <span className={cn("font-semibold uppercase tracking-wide", colors.text)}>
+        <span className="font-semibold uppercase tracking-wide" style={{ color: colors.text }}>
           {shift.position || 'Autre'}
         </span>
         <div className="flex items-center gap-1.5">
-          <span className={cn("font-semibold", colors.text)}>
+          <span className="font-semibold" style={{ color: colors.text }}>
             {calculateDuration()}
           </span>
           {shift.break_minutes > 0 && (
-            <span className={cn("flex items-center gap-0.5", colors.text)}>
+            <span className="flex items-center gap-0.5" style={{ color: colors.text }}>
               <Coffee className="w-2.5 h-2.5" />
               {shift.break_minutes}min
             </span>
