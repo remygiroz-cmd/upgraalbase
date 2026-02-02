@@ -62,28 +62,31 @@ export default function ShiftCard({ shift, onClick, onDelete, hasRestWarning, ha
         <Trash2 className="w-3 h-3" />
       </button>
       
-      <div className="flex items-center justify-between mb-1">
-        <span className={cn("text-[10px] font-bold uppercase tracking-wider", colors.text)}>
-          {shift.position || 'Autre'}
-        </span>
+      <div className="flex items-center justify-between gap-1">
+        <div className="flex items-center gap-1">
+          <Clock className="w-3 h-3" />
+          <span className={cn("text-[11px] font-bold", colors.text)}>
+            {shift.start_time} - {shift.end_time}
+          </span>
+        </div>
         <span className="text-xs">{STATUS_ICONS[shift.status] || '📋'}</span>
       </div>
       
-      <div className={cn("text-xs font-bold mb-1 flex items-center gap-1", colors.text)}>
-        <Clock className="w-3 h-3" />
-        {shift.start_time} - {shift.end_time}
-      </div>
-      
-      <div className="flex items-center justify-between text-[10px]">
-        <span className={cn("font-semibold", colors.text)}>
-          {calculateDuration()}
+      <div className="flex items-center justify-between text-[10px] mt-0.5">
+        <span className={cn("font-semibold uppercase tracking-wide", colors.text)}>
+          {shift.position || 'Autre'}
         </span>
-        {shift.break_minutes > 0 && (
-          <span className={cn("flex items-center gap-0.5", colors.text)}>
-            <Coffee className="w-2.5 h-2.5" />
-            {shift.break_minutes}min
+        <div className="flex items-center gap-1.5">
+          <span className={cn("font-semibold", colors.text)}>
+            {calculateDuration()}
           </span>
-        )}
+          {shift.break_minutes > 0 && (
+            <span className={cn("flex items-center gap-0.5", colors.text)}>
+              <Coffee className="w-2.5 h-2.5" />
+              {shift.break_minutes}min
+            </span>
+          )}
+        </div>
       </div>
     </div>
   );
