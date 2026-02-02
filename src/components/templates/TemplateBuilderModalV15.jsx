@@ -341,20 +341,12 @@ export default function TemplateBuilderModalV15({ open, onOpenChange, template, 
       return;
     }
 
-    // Note : les variables non résolues sont autorisées (warning seulement)
+    // Note : les variables non résolues et artefacts HTML sont autorisés (warning seulement)
     if (unresolvedVariables.length > 0) {
       console.warn(`${unresolvedVariables.length} variable(s) non résolue(s):`, unresolvedVariables);
     }
-
-    // Blocage si artefacts HTML techniques détectés
     if (htmlArtifacts.length > 0) {
-      toast.error(
-        `⛔ Impossible de sauvegarder : Artefacts HTML techniques détectés\n\n` +
-        `Le template contient des éléments interdits :\n${htmlArtifacts.map(a => `• ${a.message}`).join('\n')}\n\n` +
-        `👉 Ces éléments doivent être supprimés. La mise en page est appliquée automatiquement par le système.`,
-        { duration: 8000 }
-      );
-      return;
+      console.warn(`${htmlArtifacts.length} artefact(s) HTML détecté(s):`, htmlArtifacts);
     }
 
     // Warning pour les éléments recommandés
@@ -997,8 +989,7 @@ export default function TemplateBuilderModalV15({ open, onOpenChange, template, 
             disabled={
               updateMutation.isPending || 
               validationResult.errors.length > 0 || 
-              validationResult.missing.length > 0 ||
-              htmlArtifacts.length > 0
+              validationResult.missing.length > 0
             }
             className="bg-orange-600 hover:bg-orange-700 disabled:bg-gray-400"
           >
@@ -1006,7 +997,6 @@ export default function TemplateBuilderModalV15({ open, onOpenChange, template, 
             {updateMutation.isPending ? 'Sauvegarde...' : 
              validationResult.errors.length > 0 ? '⛔ Erreurs à corriger' :
              validationResult.missing.length > 0 ? '⚠️ Éléments manquants' :
-             htmlArtifacts.length > 0 ? '⛔ Artefacts HTML détectés' :
              'Sauvegarder'}
           </Button>
         </div>
