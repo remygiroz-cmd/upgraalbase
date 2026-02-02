@@ -474,7 +474,7 @@ export default function Planning() {
                                 )}
                               >
                                 <div className="space-y-1.5 min-h-[60px]">
-                                  {employeeShifts.slice(0, 3).map((shift) => (
+                                  {employeeShifts.map((shift) => (
                                     <div
                                       key={shift.id}
                                       className={cn(
@@ -705,7 +705,7 @@ function ShiftModal({ open, onOpenChange, selectedCell, employees, shifts, onSav
             <div className="flex items-center justify-between">
               <h3 className="text-sm font-bold text-gray-900">Shifts existants</h3>
               <span className="text-xs font-semibold px-2 py-1 bg-orange-100 text-orange-700 rounded-full">
-                {existingShifts.length}/3
+                {existingShifts.length} shift{existingShifts.length > 1 ? 's' : ''}
               </span>
             </div>
             <div className="space-y-2">
@@ -764,7 +764,7 @@ function ShiftModal({ open, onOpenChange, selectedCell, employees, shifts, onSav
           </div>
         )}
 
-        {existingShifts.length === 0 && !selectedShiftId && !multiShiftMode && (
+        {!selectedShiftId && !multiShiftMode && (
           <Button
             type="button"
             onClick={handleMultiShiftMode}
