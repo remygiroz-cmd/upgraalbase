@@ -727,10 +727,10 @@ function ShiftModal({ open, onOpenChange, selectedCell, employees, shifts, onSav
           <form onSubmit={handleSubmit} className="space-y-4 mt-4">
             <div className="bg-gradient-to-br from-gray-50 to-white rounded-xl p-5 space-y-4 border-2 border-gray-200">
               <div>
-                <Label className="text-sm font-semibold text-gray-700 mb-2">Poste</Label>
+                <Label className="text-sm font-semibold text-gray-700 mb-2 block">Poste</Label>
                 <Input
-                  value={formData.position}
-                  onChange={(e) => setFormData({ ...formData, position: e.target.value })}
+                  value={formData.position || ''}
+                  onChange={(e) => setFormData(prev => ({ ...prev, position: e.target.value }))}
                   placeholder="Ex: Service, Plonge, Cuisine..."
                   className="h-11 border-2 border-gray-300 focus:border-orange-500"
                   required
@@ -739,21 +739,21 @@ function ShiftModal({ open, onOpenChange, selectedCell, employees, shifts, onSav
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <Label className="text-sm font-semibold text-gray-700 mb-2">Heure début</Label>
+                  <Label className="text-sm font-semibold text-gray-700 mb-2 block">Heure début</Label>
                   <Input
                     type="time"
-                    value={formData.start_time}
-                    onChange={(e) => setFormData({ ...formData, start_time: e.target.value })}
+                    value={formData.start_time || ''}
+                    onChange={(e) => setFormData(prev => ({ ...prev, start_time: e.target.value }))}
                     className="h-11 border-2 border-gray-300 focus:border-orange-500"
                     required
                   />
                 </div>
                 <div>
-                  <Label className="text-sm font-semibold text-gray-700 mb-2">Heure fin</Label>
+                  <Label className="text-sm font-semibold text-gray-700 mb-2 block">Heure fin</Label>
                   <Input
                     type="time"
-                    value={formData.end_time}
-                    onChange={(e) => setFormData({ ...formData, end_time: e.target.value })}
+                    value={formData.end_time || ''}
+                    onChange={(e) => setFormData(prev => ({ ...prev, end_time: e.target.value }))}
                     className="h-11 border-2 border-gray-300 focus:border-orange-500"
                     required
                   />
@@ -761,11 +761,11 @@ function ShiftModal({ open, onOpenChange, selectedCell, employees, shifts, onSav
               </div>
 
               <div>
-                <Label className="text-sm font-semibold text-gray-700 mb-2">Pause (minutes)</Label>
+                <Label className="text-sm font-semibold text-gray-700 mb-2 block">Pause (minutes)</Label>
                 <Input
                   type="number"
-                  value={formData.break_minutes}
-                  onChange={(e) => setFormData({ ...formData, break_minutes: parseInt(e.target.value) || 0 })}
+                  value={formData.break_minutes || 0}
+                  onChange={(e) => setFormData(prev => ({ ...prev, break_minutes: parseInt(e.target.value) || 0 }))}
                   className="h-11 border-2 border-gray-300 focus:border-orange-500"
                   min="0"
                   placeholder="0"
@@ -773,10 +773,10 @@ function ShiftModal({ open, onOpenChange, selectedCell, employees, shifts, onSav
               </div>
 
               <div>
-                <Label className="text-sm font-semibold text-gray-700 mb-2">Statut</Label>
+                <Label className="text-sm font-semibold text-gray-700 mb-2 block">Statut</Label>
                 <Select
                   value={formData.status}
-                  onValueChange={(value) => setFormData({ ...formData, status: value })}
+                  onValueChange={(value) => setFormData(prev => ({ ...prev, status: value }))}
                 >
                   <SelectTrigger className="h-11 border-2 border-gray-300 focus:border-orange-500">
                     <SelectValue />
@@ -791,10 +791,10 @@ function ShiftModal({ open, onOpenChange, selectedCell, employees, shifts, onSav
               </div>
 
               <div>
-                <Label className="text-sm font-semibold text-gray-700 mb-2">Notes</Label>
+                <Label className="text-sm font-semibold text-gray-700 mb-2 block">Notes</Label>
                 <Input
-                  value={formData.notes}
-                  onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                  value={formData.notes || ''}
+                  onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value }))}
                   placeholder="Notes optionnelles..."
                   className="h-11 border-2 border-gray-300 focus:border-orange-500"
                 />
