@@ -388,7 +388,7 @@ export default function Planning() {
             {/* Header */}
             <DragDropContext onDragEnd={handleTeamDragEnd}>
               <div className="bg-gradient-to-r from-gray-100 to-gray-50 flex border-b-2 border-gray-300">
-                <div className="sticky left-0 z-20 bg-gradient-to-r from-gray-100 to-gray-50 border-r-2 border-gray-300 px-4 py-4 text-left text-sm font-bold text-gray-900 min-w-[100px] shadow-md flex items-center gap-2">
+                <div className="sticky left-0 z-20 bg-gradient-to-r from-gray-100 to-gray-50 border-r-2 border-gray-300 px-4 py-4 text-left text-sm font-bold text-gray-900 w-[120px] shadow-md flex items-center gap-2">
                   <Calendar className="w-4 h-4 text-orange-600" />
                   Jour
                 </div>
@@ -459,7 +459,7 @@ export default function Planning() {
                         dayInfo.isToday && "bg-blue-50/80"
                       )}>
                         <div className={cn(
-                          "sticky left-0 z-10 border-r-2 border-gray-300 px-4 py-3 shadow-sm min-w-[100px]",
+                          "sticky left-0 z-10 border-r-2 border-gray-300 px-4 py-3 shadow-sm w-[120px]",
                           dayInfo.isWeekend && "bg-orange-50/30",
                           dayInfo.isToday && "bg-gradient-to-r from-blue-100 to-blue-50 border-l-4 border-l-blue-500"
                         )}>
@@ -521,7 +521,7 @@ export default function Planning() {
                       {/* Week summary row */}
                       {dayInfo.isLastDayOfWeek && index < daysArray.length - 1 && (
                         <div className="bg-gradient-to-r from-gray-200 to-gray-100 border-b-2 border-gray-400 flex">
-                          <div className="sticky left-0 z-10 bg-gradient-to-r from-gray-200 to-gray-100 border-r-2 border-gray-400 px-4 py-2 shadow-sm min-w-[100px]">
+                          <div className="sticky left-0 z-10 bg-gradient-to-r from-gray-200 to-gray-100 border-r-2 border-gray-400 px-4 py-3 shadow-sm w-[120px]">
                             <div className="text-xs font-bold text-gray-700 uppercase tracking-wide">
                               📊 Récap. semaine
                             </div>
