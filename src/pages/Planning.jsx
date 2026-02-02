@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
-import { Calendar, ChevronLeft, ChevronRight, Plus, X, Clock, Edit2, Trash2 } from 'lucide-react';
+import { Calendar, ChevronLeft, ChevronRight, Plus, X, Edit2, Trash2 } from 'lucide-react';
 import PageHeader from '@/components/ui/PageHeader';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -11,14 +11,13 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
 
-const DAYS = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'];
+const DAYS = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche'];
 const MONTHS = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'];
 
 export default function Planning() {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [showShiftModal, setShowShiftModal] = useState(false);
   const [selectedCell, setSelectedCell] = useState(null);
-  const [editingShift, setEditingShift] = useState(null);
   const queryClient = useQueryClient();
 
   const currentMonth = currentDate.getMonth();
@@ -49,7 +48,6 @@ export default function Planning() {
       toast.success('Shift créé');
       setShowShiftModal(false);
       setSelectedCell(null);
-      setEditingShift(null);
     }
   });
 
@@ -60,7 +58,6 @@ export default function Planning() {
       toast.success('Shift modifié');
       setShowShiftModal(false);
       setSelectedCell(null);
-      setEditingShift(null);
     }
   });
 
@@ -69,21 +66,39 @@ export default function Planning() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['shifts'] });
       toast.success('Shift supprimé');
-      setShowShiftModal(false);
-      setEditingShift(null);
     }
   });
 
-  // Get days in month
+  // Get days in month with week info
   const getDaysInMonth = () => {
     const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
-    const firstDayOfMonth = new Date(currentYear, currentMonth, 1).getDay();
-    const adjustedFirstDay = firstDayOfMonth === 0 ? 6 : firstDayOfMonth - 1; // Adjust so Monday = 0
+    const days = [];
     
-    return { daysInMonth, adjustedFirstDay };
+    for (let day = 1; day <= daysInMonth; day++) {
+      const date = new Date(currentYear, currentMonth, day);
+      const dayOfWeek = date.getDay();
+      const adjustedDay = dayOfWeek === 0 ? 6 : dayOfWeek - 1; // Monday = 0, Sunday = 6
+      const isFirstDayOfWeek = adjustedDay === 0;
+      const isLastDayOfWeek = adjustedDay === 6;
+      
+      days.push({
+        day,
+        date,
+        dayOfWeek: adjustedDay,
+        dayName: DAYS[adjustedDay],
+        isFirstDayOfWeek,
+        isLastDayOfWeek,
+        isWeekend: dayOfWeek === 0 || dayOfWeek === 6,
+        isToday: day === new Date().getDate() && 
+                 currentMonth === new Date().getMonth() && 
+                 currentYear === new Date().getFullYear()
+      });
+    }
+    
+    return days;
   };
 
-  const { daysInMonth, adjustedFirstDay } = getDaysInMonth();
+  const daysArray = getDaysInMonth();
 
   // Navigate months
   const previousMonth = () => {
@@ -95,31 +110,19 @@ export default function Planning() {
   };
 
   // Get shifts for employee and date
-  const getShiftsForEmployeeAndDate = (employeeId, day) => {
-    const date = new Date(currentYear, currentMonth, day).toISOString().split('T')[0];
-    return shifts.filter(s => s.employee_id === employeeId && s.date === date);
+  const getShiftsForEmployeeAndDate = (employeeId, dateStr) => {
+    return shifts.filter(s => s.employee_id === employeeId && s.date === dateStr);
   };
 
   // Handle cell click
-  const handleCellClick = (employeeId, day) => {
+  const handleCellClick = (employeeId, dateStr, dayInfo) => {
     const employee = employees.find(e => e.id === employeeId);
-    const date = new Date(currentYear, currentMonth, day).toISOString().split('T')[0];
-    setSelectedCell({ employeeId, employeeName: employee?.first_name + ' ' + employee?.last_name, date, day });
-    setShowShiftModal(true);
-  };
-
-  // Handle shift edit
-  const handleShiftEdit = (shift, e) => {
-    e.stopPropagation();
-    const employee = employees.find(emp => emp.id === shift.employee_id);
-    const day = new Date(shift.date).getDate();
     setSelectedCell({ 
-      employeeId: shift.employee_id, 
-      employeeName: employee?.first_name + ' ' + employee?.last_name, 
-      date: shift.date,
-      day 
+      employeeId, 
+      employeeName: employee ? `${employee.first_name} ${employee.last_name}` : '',
+      date: dateStr,
+      dayInfo 
     });
-    setEditingShift(shift);
     setShowShiftModal(true);
   };
 
@@ -150,94 +153,106 @@ export default function Planning() {
           <table className="w-full border-collapse">
             <thead>
               <tr className="bg-gray-100 border-b-2 border-gray-300">
-                <th className="sticky left-0 z-10 bg-gray-100 border-r border-gray-300 px-3 py-3 text-left text-sm font-semibold text-gray-900 min-w-[150px]">
-                  Employé
+                <th className="sticky left-0 z-10 bg-gray-100 border-r border-gray-300 px-3 py-3 text-left text-sm font-semibold text-gray-900 min-w-[120px]">
+                  Jour
                 </th>
-                {Array.from({ length: daysInMonth }, (_, i) => i + 1).map(day => {
-                  const date = new Date(currentYear, currentMonth, day);
-                  const dayOfWeek = date.getDay();
-                  const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
-                  const isToday = 
-                    day === new Date().getDate() && 
-                    currentMonth === new Date().getMonth() && 
-                    currentYear === new Date().getFullYear();
-                  
-                  return (
-                    <th
-                      key={day}
-                      className={cn(
-                        "border-r border-gray-200 px-2 py-2 text-center text-xs font-medium min-w-[80px]",
-                        isWeekend && "bg-gray-50",
-                        isToday && "bg-blue-100 text-blue-900"
-                      )}
-                    >
-                      <div>{DAYS[(dayOfWeek + 6) % 7]}</div>
-                      <div className="text-lg font-bold">{day}</div>
-                    </th>
-                  );
-                })}
+                {employees.map(employee => (
+                  <th
+                    key={employee.id}
+                    className="border-r border-gray-200 px-2 py-2 text-center text-sm font-semibold text-gray-900 min-w-[160px]"
+                  >
+                    <div>{employee.first_name} {employee.last_name}</div>
+                    {employee.position && (
+                      <div className="text-xs font-normal text-gray-500">{employee.position}</div>
+                    )}
+                  </th>
+                ))}
               </tr>
             </thead>
             <tbody>
-              {employees.length === 0 ? (
+              {daysArray.length === 0 ? (
                 <tr>
-                  <td colSpan={daysInMonth + 1} className="px-4 py-12 text-center text-gray-500">
-                    Aucun employé actif
+                  <td colSpan={employees.length + 1} className="px-4 py-12 text-center text-gray-500">
+                    Aucun jour à afficher
                   </td>
                 </tr>
               ) : (
-                employees.map((employee) => (
-                  <tr key={employee.id} className="border-b border-gray-200 hover:bg-gray-50">
-                    <td className="sticky left-0 z-10 bg-white border-r border-gray-300 px-3 py-2 text-sm font-medium text-gray-900">
-                      <div className="flex items-center gap-2">
-                        <div>
-                          <div>{employee.first_name} {employee.last_name}</div>
-                          {employee.position && (
-                            <div className="text-xs text-gray-500">{employee.position}</div>
-                          )}
-                        </div>
-                      </div>
-                    </td>
-                    {Array.from({ length: daysInMonth }, (_, i) => i + 1).map(day => {
-                      const date = new Date(currentYear, currentMonth, day);
-                      const dayOfWeek = date.getDay();
-                      const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
-                      const dayShifts = getShiftsForEmployeeAndDate(employee.id, day);
-                      
-                      return (
-                        <td
-                          key={day}
-                          onClick={() => handleCellClick(employee.id, day)}
-                          className={cn(
-                            "border-r border-gray-200 px-1 py-1 cursor-pointer hover:bg-blue-50 transition-colors",
-                            isWeekend && "bg-gray-50"
-                          )}
-                        >
-                          <div className="space-y-1">
-                            {dayShifts.map(shift => (
-                              <div
-                                key={shift.id}
-                                onClick={(e) => handleShiftEdit(shift, e)}
-                                className={cn(
-                                  "text-xs px-2 py-1 rounded text-white font-medium cursor-pointer hover:opacity-80",
-                                  shift.status === 'confirmed' && "bg-green-600",
-                                  shift.status === 'planned' && "bg-blue-600",
-                                  shift.status === 'absent' && "bg-red-600",
-                                  shift.status === 'leave' && "bg-orange-500"
-                                )}
-                              >
-                                <div className="flex items-center gap-1">
-                                  <Clock className="w-3 h-3" />
-                                  <span>{shift.start_time} - {shift.end_time}</span>
-                                </div>
-                              </div>
-                            ))}
-                          </div>
+                <>
+                  {daysArray.map((dayInfo, index) => (
+                    <React.Fragment key={dayInfo.day}>
+                      <tr className={cn(
+                        "border-b border-gray-200",
+                        dayInfo.isWeekend && "bg-gray-50",
+                        dayInfo.isToday && "bg-blue-50"
+                      )}>
+                        <td className={cn(
+                          "sticky left-0 z-10 border-r border-gray-300 px-3 py-2 text-sm font-medium",
+                          dayInfo.isWeekend && "bg-gray-50",
+                          dayInfo.isToday && "bg-blue-100 text-blue-900"
+                        )}>
+                          <div className="font-bold">{dayInfo.dayName}</div>
+                          <div className="text-lg">{dayInfo.day}</div>
                         </td>
-                      );
-                    })}
-                  </tr>
-                ))
+                        {employees.map(employee => {
+                          const dateStr = dayInfo.date.toISOString().split('T')[0];
+                          const employeeShifts = getShiftsForEmployeeAndDate(employee.id, dateStr);
+                          
+                          return (
+                            <td
+                              key={employee.id}
+                              onClick={() => handleCellClick(employee.id, dateStr, dayInfo)}
+                              className={cn(
+                                "border-r border-gray-200 px-2 py-2 cursor-pointer hover:bg-blue-50 transition-colors align-top",
+                                dayInfo.isWeekend && "bg-gray-50"
+                              )}
+                            >
+                              <div className="space-y-1">
+                                {employeeShifts.slice(0, 3).map((shift, idx) => (
+                                  <div
+                                    key={shift.id}
+                                    className={cn(
+                                      "text-xs px-2 py-1.5 rounded border",
+                                      shift.status === 'confirmed' && "bg-green-50 border-green-300 text-green-900",
+                                      shift.status === 'planned' && "bg-blue-50 border-blue-300 text-blue-900",
+                                      shift.status === 'absent' && "bg-red-50 border-red-300 text-red-900",
+                                      shift.status === 'leave' && "bg-orange-50 border-orange-300 text-orange-900"
+                                    )}
+                                  >
+                                    <div className="font-semibold text-[10px] uppercase tracking-wide mb-0.5">
+                                      {shift.position || 'Poste'}
+                                    </div>
+                                    <div className="font-medium">
+                                      {shift.start_time} - {shift.end_time}
+                                    </div>
+                                  </div>
+                                ))}
+                                {employeeShifts.length === 0 && (
+                                  <div className="text-xs text-gray-400 text-center py-3">
+                                    <Plus className="w-4 h-4 mx-auto opacity-50" />
+                                  </div>
+                                )}
+                              </div>
+                            </td>
+                          );
+                        })}
+                      </tr>
+                      
+                      {/* Week summary row - shown after last day of week */}
+                      {dayInfo.isLastDayOfWeek && index < daysArray.length - 1 && (
+                        <tr className="bg-gray-100 border-b-2 border-gray-300">
+                          <td className="sticky left-0 z-10 bg-gray-100 border-r border-gray-300 px-3 py-2 text-xs font-semibold text-gray-600 italic">
+                            Récap. semaine
+                          </td>
+                          {employees.map(employee => (
+                            <td key={employee.id} className="border-r border-gray-200 px-2 py-2 text-xs text-gray-500 text-center">
+                              À venir
+                            </td>
+                          ))}
+                        </tr>
+                      )}
+                    </React.Fragment>
+                  ))}
+                </>
               )}
             </tbody>
           </table>
@@ -251,19 +266,13 @@ export default function Planning() {
           setShowShiftModal(open);
           if (!open) {
             setSelectedCell(null);
-            setEditingShift(null);
           }
         }}
         selectedCell={selectedCell}
-        editingShift={editingShift}
         employees={employees}
-        onSave={(data) => {
-          if (editingShift) {
-            updateShiftMutation.mutate({ id: editingShift.id, data });
-          } else {
-            createShiftMutation.mutate(data);
-          }
-        }}
+        shifts={shifts}
+        onSave={(data) => createShiftMutation.mutate(data)}
+        onUpdate={(id, data) => updateShiftMutation.mutate({ id, data })}
         onDelete={(id) => deleteShiftMutation.mutate(id)}
       />
     </div>
@@ -271,170 +280,233 @@ export default function Planning() {
 }
 
 // Shift Modal Component
-function ShiftModal({ open, onOpenChange, selectedCell, editingShift, employees, onSave, onDelete }) {
+function ShiftModal({ open, onOpenChange, selectedCell, employees, shifts, onSave, onUpdate, onDelete }) {
+  const [selectedShiftId, setSelectedShiftId] = useState(null);
   const [formData, setFormData] = useState({
-    employee_id: '',
     start_time: '09:00',
     end_time: '17:00',
     break_minutes: 0,
+    position: '',
     status: 'planned',
     notes: ''
   });
 
+  const existingShifts = selectedCell 
+    ? shifts.filter(s => s.employee_id === selectedCell.employeeId && s.date === selectedCell.date)
+    : [];
+
   React.useEffect(() => {
-    if (editingShift) {
+    if (selectedShiftId) {
+      const shift = existingShifts.find(s => s.id === selectedShiftId);
+      if (shift) {
+        setFormData({
+          start_time: shift.start_time,
+          end_time: shift.end_time,
+          break_minutes: shift.break_minutes || 0,
+          position: shift.position || '',
+          status: shift.status,
+          notes: shift.notes || ''
+        });
+      }
+    } else {
       setFormData({
-        employee_id: editingShift.employee_id,
-        start_time: editingShift.start_time,
-        end_time: editingShift.end_time,
-        break_minutes: editingShift.break_minutes || 0,
-        status: editingShift.status,
-        notes: editingShift.notes || ''
-      });
-    } else if (selectedCell) {
-      setFormData({
-        employee_id: selectedCell.employeeId,
         start_time: '09:00',
         end_time: '17:00',
         break_minutes: 0,
+        position: '',
         status: 'planned',
         notes: ''
       });
     }
-  }, [editingShift, selectedCell]);
+  }, [selectedShiftId, existingShifts]);
 
   const handleSubmit = (e) => {
     e.preventDefault();
     
-    const employee = employees.find(e => e.id === formData.employee_id);
+    if (!selectedCell) return;
+
+    const employee = employees.find(e => e.id === selectedCell.employeeId);
     
-    onSave({
+    const shiftData = {
       ...formData,
-      date: selectedCell?.date,
+      date: selectedCell.date,
+      employee_id: selectedCell.employeeId,
       employee_name: employee ? `${employee.first_name} ${employee.last_name}` : '',
-      position: employee?.position || '',
       team: employee?.team || ''
+    };
+
+    if (selectedShiftId) {
+      onUpdate(selectedShiftId, shiftData);
+    } else {
+      onSave(shiftData);
+    }
+
+    setSelectedShiftId(null);
+  };
+
+  const handleNewShift = () => {
+    setSelectedShiftId(null);
+    setFormData({
+      start_time: '09:00',
+      end_time: '17:00',
+      break_minutes: 0,
+      position: '',
+      status: 'planned',
+      notes: ''
     });
   };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>
-            {editingShift ? 'Modifier le shift' : 'Ajouter un shift'}
+            Gestion des shifts
           </DialogTitle>
           {selectedCell && (
             <p className="text-sm text-gray-500">
-              {selectedCell.employeeName} - {new Date(selectedCell.date).toLocaleDateString('fr-FR')}
+              {selectedCell.employeeName} - {selectedCell.dayInfo?.dayName} {selectedCell.dayInfo?.day} {MONTHS[new Date(selectedCell.date).getMonth()]}
             </p>
           )}
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <Label>Employé</Label>
-            <Select
-              value={formData.employee_id}
-              onValueChange={(value) => setFormData({ ...formData, employee_id: value })}
-              disabled={!!editingShift}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Sélectionner un employé" />
-              </SelectTrigger>
-              <SelectContent>
-                {employees.map(emp => (
-                  <SelectItem key={emp.id} value={emp.id}>
-                    {emp.first_name} {emp.last_name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <Label>Heure début</Label>
-              <Input
-                type="time"
-                value={formData.start_time}
-                onChange={(e) => setFormData({ ...formData, start_time: e.target.value })}
-                required
-              />
-            </div>
-            <div>
-              <Label>Heure fin</Label>
-              <Input
-                type="time"
-                value={formData.end_time}
-                onChange={(e) => setFormData({ ...formData, end_time: e.target.value })}
-                required
-              />
-            </div>
-          </div>
-
-          <div>
-            <Label>Pause (minutes)</Label>
-            <Input
-              type="number"
-              value={formData.break_minutes}
-              onChange={(e) => setFormData({ ...formData, break_minutes: parseInt(e.target.value) || 0 })}
-              min="0"
-            />
-          </div>
-
-          <div>
-            <Label>Statut</Label>
-            <Select
-              value={formData.status}
-              onValueChange={(value) => setFormData({ ...formData, status: value })}
-            >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="planned">Planifié</SelectItem>
-                <SelectItem value="confirmed">Confirmé</SelectItem>
-                <SelectItem value="absent">Absent</SelectItem>
-                <SelectItem value="leave">Congé</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div>
-            <Label>Notes</Label>
-            <Input
-              value={formData.notes}
-              onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-              placeholder="Notes optionnelles..."
-            />
-          </div>
-
-          <div className="flex justify-between gap-2 pt-4">
-            {editingShift && (
-              <Button
-                type="button"
-                variant="destructive"
-                onClick={() => {
-                  if (confirm('Supprimer ce shift ?')) {
-                    onDelete(editingShift.id);
-                  }
-                }}
+        {/* Existing Shifts */}
+        {existingShifts.length > 0 && (
+          <div className="space-y-2 mb-4">
+            <h3 className="text-sm font-semibold text-gray-700">Shifts existants ({existingShifts.length}/3)</h3>
+            {existingShifts.map((shift) => (
+              <div
+                key={shift.id}
+                onClick={() => setSelectedShiftId(shift.id)}
+                className={cn(
+                  "p-3 rounded-lg border-2 cursor-pointer transition-all",
+                  selectedShiftId === shift.id 
+                    ? "border-blue-500 bg-blue-50" 
+                    : "border-gray-200 hover:border-gray-300"
+                )}
               >
-                <Trash2 className="w-4 h-4 mr-2" />
-                Supprimer
-              </Button>
-            )}
-            <div className="flex gap-2 ml-auto">
-              <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-                Annuler
-              </Button>
-              <Button type="submit" className="bg-blue-600 hover:bg-blue-700">
-                {editingShift ? 'Modifier' : 'Ajouter'}
+                <div className="flex items-center justify-between">
+                  <div className="flex-1">
+                    <div className="font-semibold text-sm">{shift.position || 'Sans poste'}</div>
+                    <div className="text-sm text-gray-600">{shift.start_time} - {shift.end_time}</div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (confirm('Supprimer ce shift ?')) {
+                        onDelete(shift.id);
+                        setSelectedShiftId(null);
+                      }
+                    }}
+                    className="p-2 text-red-600 hover:bg-red-50 rounded"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {existingShifts.length < 3 && !selectedShiftId && (
+          <Button
+            type="button"
+            onClick={handleNewShift}
+            className="w-full bg-green-600 hover:bg-green-700 mb-4"
+          >
+            <Plus className="w-4 h-4 mr-2" />
+            Ajouter un nouveau shift
+          </Button>
+        )}
+
+        {(selectedShiftId || existingShifts.length === 0) && (
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div>
+              <Label>Poste</Label>
+              <Input
+                value={formData.position}
+                onChange={(e) => setFormData({ ...formData, position: e.target.value })}
+                placeholder="Ex: Service, Plonge, Cuisine..."
+                required
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label>Heure début</Label>
+                <Input
+                  type="time"
+                  value={formData.start_time}
+                  onChange={(e) => setFormData({ ...formData, start_time: e.target.value })}
+                  required
+                />
+              </div>
+              <div>
+                <Label>Heure fin</Label>
+                <Input
+                  type="time"
+                  value={formData.end_time}
+                  onChange={(e) => setFormData({ ...formData, end_time: e.target.value })}
+                  required
+                />
+              </div>
+            </div>
+
+            <div>
+              <Label>Pause (minutes)</Label>
+              <Input
+                type="number"
+                value={formData.break_minutes}
+                onChange={(e) => setFormData({ ...formData, break_minutes: parseInt(e.target.value) || 0 })}
+                min="0"
+              />
+            </div>
+
+            <div>
+              <Label>Statut</Label>
+              <Select
+                value={formData.status}
+                onValueChange={(value) => setFormData({ ...formData, status: value })}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="planned">Planifié</SelectItem>
+                  <SelectItem value="confirmed">Confirmé</SelectItem>
+                  <SelectItem value="absent">Absent</SelectItem>
+                  <SelectItem value="leave">Congé</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <Label>Notes</Label>
+              <Input
+                value={formData.notes}
+                onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                placeholder="Notes optionnelles..."
+              />
+            </div>
+
+            <div className="flex gap-2 pt-4">
+              {selectedShiftId && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={handleNewShift}
+                  className="flex-1"
+                >
+                  Annuler
+                </Button>
+              )}
+              <Button type="submit" className="flex-1 bg-blue-600 hover:bg-blue-700">
+                {selectedShiftId ? 'Modifier' : 'Ajouter'}
               </Button>
             </div>
-          </div>
-        </form>
+          </form>
+        )}
       </DialogContent>
     </Dialog>
   );
