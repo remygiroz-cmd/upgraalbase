@@ -341,18 +341,9 @@ export default function TemplateBuilderModalV15({ open, onOpenChange, template, 
       return;
     }
 
-    // Blocage si variables AUTOMATIQUES non résolues dans l'aperçu
-    // Note : les variables manuelles (saisie libre) sont autorisées
+    // Note : les variables non résolues sont autorisées (warning seulement)
     if (unresolvedVariables.length > 0) {
-      toast.error(
-        `⛔ Variables automatiques non configurées\n\n` +
-        `${unresolvedVariables.length} variable${unresolvedVariables.length > 1 ? 's' : ''} automatique${unresolvedVariables.length > 1 ? 's' : ''} (employé/établissement) non résolue${unresolvedVariables.length > 1 ? 's' : ''} :\n\n` +
-        `${unresolvedVariables.map(v => `• {{${v}}}`).join('\n')}\n\n` +
-        `💡 Ces variables doivent avoir des valeurs de test dans l'aperçu.\n` +
-        `Les variables de saisie libre (ex: descriptionFaits, motifSanction) sont autorisées.`,
-        { duration: 7000 }
-      );
-      return;
+      console.warn(`${unresolvedVariables.length} variable(s) non résolue(s):`, unresolvedVariables);
     }
 
     // Blocage si artefacts HTML techniques détectés
@@ -1007,7 +998,6 @@ export default function TemplateBuilderModalV15({ open, onOpenChange, template, 
               updateMutation.isPending || 
               validationResult.errors.length > 0 || 
               validationResult.missing.length > 0 ||
-              unresolvedVariables.length > 0 ||
               htmlArtifacts.length > 0
             }
             className="bg-orange-600 hover:bg-orange-700 disabled:bg-gray-400"
@@ -1016,7 +1006,6 @@ export default function TemplateBuilderModalV15({ open, onOpenChange, template, 
             {updateMutation.isPending ? 'Sauvegarde...' : 
              validationResult.errors.length > 0 ? '⛔ Erreurs à corriger' :
              validationResult.missing.length > 0 ? '⚠️ Éléments manquants' :
-             unresolvedVariables.length > 0 ? '⛔ Variables non résolues' :
              htmlArtifacts.length > 0 ? '⛔ Artefacts HTML détectés' :
              'Sauvegarder'}
           </Button>
