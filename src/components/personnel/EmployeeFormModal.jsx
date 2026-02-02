@@ -28,6 +28,11 @@ export default function EmployeeFormModal({ open, onClose, employee, isManager =
     queryFn: () => base44.auth.me()
   });
 
+  const { data: jobRoles = [] } = useQuery({
+    queryKey: ['jobRoles'],
+    queryFn: () => base44.entities.JobRoles.filter({ isActive: true })
+  });
+
   const [formData, setFormData] = useState(employee || {
     first_name: '',
     last_name: '',
@@ -523,13 +528,28 @@ ${currentUser.email || '-'}`;
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <Label className="text-gray-900">Poste</Label>
-                  <Input
-                    value={formData.position || ''}
-                    onChange={(e) => setFormData({ ...formData, position: e.target.value })}
-                    placeholder="Ex: Cuisinier, Livreur..."
-                    className="bg-white border-gray-300 text-gray-900"
+                  <Select 
+                    value={formData.position || ''} 
+                    onValueChange={(value) => setFormData({...formData, position: value})}
                     disabled={!isManager}
-                  />
+                  >
+                    <SelectTrigger className="bg-white border-gray-300 text-gray-900">
+                      <SelectValue placeholder="Sélectionner un poste..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {(jobRoles || []).map(role => {
+                        let label = role.label;
+                        if (formData.gender === 'female' && role.labelFeminin) {
+                          label = role.labelFeminin;
+                        }
+                        return (
+                          <SelectItem key={role.id} value={role.label}>
+                            {label}
+                          </SelectItem>
+                        );
+                      })}
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div>
                   <Label className="text-gray-900">Équipe</Label>
