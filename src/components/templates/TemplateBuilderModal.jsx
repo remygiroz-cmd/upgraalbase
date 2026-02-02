@@ -39,6 +39,8 @@ const VARIABLES = {
     { label: 'Nombre d\'heures mensuelles (texte)', value: '{{heuresTexte}}' },
     { label: 'Taux horaire brut', value: '{{taux}}' },
     { label: 'Salaire brut mensuel', value: '{{salaireBrut}}' },
+    { label: 'Heures totales du contrat CDD', value: '{{heuresTotalesCDD}}' },
+    { label: 'Jours travaillés prévus (CDD)', value: '{{joursTravaillesCDD}}' },
   ],
   'Période d\'essai': [
     { label: 'Durée de la période d\'essai (texte)', value: '{{periodeEssaiTexte}}' },
@@ -66,6 +68,8 @@ const MOCK_DATA = {
   heuresTexte: '151,67',
   taux: '12,50',
   salaireBrut: '1 875,00',
+  heuresTotalesCDD: '80',
+  joursTravaillesCDD: '10',
   periodeEssaiTexte: '2 mois',
   finEssai: '31/03/2026',
   motifCDD: 'Accroissement temporaire d\'activité durant la période estivale',
