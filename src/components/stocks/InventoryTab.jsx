@@ -15,6 +15,7 @@ import OrderSuccessModal from './OrderSuccessModal';
 
 export default function InventoryTab() {
   const [conflictInfo, setConflictInfo] = useState(null);
+  const [accumulatedResults, setAccumulatedResults] = useState([]);
   // Charger l'état depuis localStorage
   const [inventorySubTab, setInventorySubTab] = useState(() => {
     const saved = localStorage.getItem('inventorySubTab');
@@ -458,7 +459,7 @@ export default function InventoryTab() {
     if (!conflictInfo) return;
     
     const today = new Date().toISOString().split('T')[0];
-    const results = [];
+    const newResults = [...accumulatedResults];
     
     try {
       // Supprimer l'ancienne commande
@@ -477,13 +478,13 @@ export default function InventoryTab() {
         status: 'en_cours'
       });
 
-      results.push({
+      newResults.push({
         type: 'replaced',
         supplierName: conflictInfo.supplierName,
         itemCount: conflictInfo.newOrder.items.length
       });
       
-      // Créer les commandes sans conflit
+      // Créer les commandes sans conflit (seulement au premier passage)
       if (conflictInfo.ordersWithoutConflict && Object.keys(conflictInfo.ordersWithoutConflict).length > 0) {
         for (const order of Object.values(conflictInfo.ordersWithoutConflict)) {
           const supplierForOrder = suppliers.find(s => s.id === order.supplier_id);
@@ -497,7 +498,7 @@ export default function InventoryTab() {
             status: 'en_cours'
           });
 
-          results.push({
+          newResults.push({
             type: 'created',
             supplierName: order.supplier_name,
             itemCount: order.items.length
@@ -507,6 +508,7 @@ export default function InventoryTab() {
       
       // S'il reste des conflits, traiter le suivant
       if (conflictInfo.remainingConflicts && conflictInfo.remainingConflicts.length > 0) {
+        setAccumulatedResults(newResults);
         setConflictInfo({
           ...conflictInfo.remainingConflicts[0],
           remainingConflicts: conflictInfo.remainingConflicts.slice(1),
@@ -526,7 +528,8 @@ export default function InventoryTab() {
       localStorage.removeItem('inventoryHiddenArticles');
       
       setConflictInfo(null);
-      setOrderSuccessModal({ open: true, results });
+      setAccumulatedResults([]);
+      setOrderSuccessModal({ open: true, results: newResults });
     } catch (error) {
       toast.error('Erreur lors du remplacement de la commande');
     }
@@ -535,7 +538,7 @@ export default function InventoryTab() {
   const handleConflictMerge = async () => {
     if (!conflictInfo) return;
     
-    const results = [];
+    const newResults = [...accumulatedResults];
     
     try {
       // Fusionner les articles
@@ -568,7 +571,7 @@ export default function InventoryTab() {
         data: { items: mergedItems }
       });
 
-      results.push({
+      newResults.push({
         type: 'merged',
         supplierName: conflictInfo.supplierName,
         itemCount: newItems.length
@@ -576,7 +579,7 @@ export default function InventoryTab() {
       
       const today = new Date().toISOString().split('T')[0];
       
-      // Créer les commandes sans conflit
+      // Créer les commandes sans conflit (seulement au premier passage)
       if (conflictInfo.ordersWithoutConflict && Object.keys(conflictInfo.ordersWithoutConflict).length > 0) {
         for (const order of Object.values(conflictInfo.ordersWithoutConflict)) {
           const supplier = suppliers.find(s => s.id === order.supplier_id);
@@ -590,7 +593,7 @@ export default function InventoryTab() {
             status: 'en_cours'
           });
 
-          results.push({
+          newResults.push({
             type: 'created',
             supplierName: order.supplier_name,
             itemCount: order.items.length
@@ -600,6 +603,7 @@ export default function InventoryTab() {
       
       // S'il reste des conflits, traiter le suivant
       if (conflictInfo.remainingConflicts && conflictInfo.remainingConflicts.length > 0) {
+        setAccumulatedResults(newResults);
         setConflictInfo({
           ...conflictInfo.remainingConflicts[0],
           remainingConflicts: conflictInfo.remainingConflicts.slice(1),
@@ -619,7 +623,8 @@ export default function InventoryTab() {
       localStorage.removeItem('inventoryHiddenArticles');
       
       setConflictInfo(null);
-      setOrderSuccessModal({ open: true, results });
+      setAccumulatedResults([]);
+      setOrderSuccessModal({ open: true, results: newResults });
     } catch (error) {
       toast.error('Erreur lors de la fusion des commandes');
     }
@@ -627,6 +632,7 @@ export default function InventoryTab() {
 
   const handleConflictCancel = () => {
     setConflictInfo(null);
+    setAccumulatedResults([]);
   };
 
     return (
