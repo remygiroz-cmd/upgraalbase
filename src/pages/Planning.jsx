@@ -870,6 +870,15 @@ export default function Planning() {
                             const isCPDeducted = cpInfo?.isDeducted || false;
                             const isCPLastDay = cpInfo?.isLastDay || false;
 
+                            if (debugCPMode && employee.first_name === 'Enzo') {
+                              console.log(`🏖️ [${dateStr}] ENZO:`, {
+                                isInCPPeriod,
+                                isCPDeducted,
+                                isCPLastDay,
+                                cpInfo
+                              });
+                            }
+
                             return (
                               <div
                                 key={employee.id}
@@ -883,10 +892,10 @@ export default function Planning() {
                                 <div className="space-y-1.5 w-full flex flex-col" style={{ minHeight: `${Math.max(60, maxEventsInRow * 52)}px` }}>
                                   {/* CP Deducted Badge on Last Day */}
                                   {isCPLastDay && cpInfo && (
-                                    <div className="bg-green-600 text-white text-[10px] font-bold px-2 py-1 rounded-md text-center shadow-md">
-                                      {cpInfo.period.workableDaysDeducted} CP décomptés
+                                    <div className="bg-green-600 text-white text-[10px] font-bold px-2 py-1 rounded-md text-center shadow-md animate-pulse">
+                                      🏖️ {cpInfo.period.workableDaysDeducted} CP décompté{cpInfo.period.workableDaysDeducted > 1 ? 's' : ''}
                                       {cpInfo.period.isProvisional && (
-                                        <div className="text-[8px] opacity-80">provisoire</div>
+                                        <div className="text-[8px] opacity-80 mt-0.5">* provisoire</div>
                                       )}
                                     </div>
                                   )}
