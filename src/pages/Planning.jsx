@@ -928,6 +928,8 @@ export default function Planning() {
                                       ? () => handleCopyEmployeeWeekFromAbove(employee.id, weekStart)
                                       : null
                                     }
+                                    nonShiftEvents={nonShiftEvents}
+                                    nonShiftTypes={nonShiftTypes}
                                   />
                                 </div>
                               );
