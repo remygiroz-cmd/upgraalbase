@@ -695,8 +695,8 @@ export default function Planning() {
       </div>
 
       {/* Calendar Grid */}
-      <div className="bg-white border-2 border-gray-200 rounded-xl shadow-xl overflow-hidden">
-        <div ref={tableContainerRef} className="overflow-x-auto overflow-y-visible">
+      <div className="bg-white border-2 border-gray-200 rounded-xl shadow-xl">
+        <div ref={tableContainerRef} className="overflow-x-auto">
           <div className="inline-block min-w-full">
             {/* Header */}
             <DragDropContext onDragEnd={handleTeamDragEnd}>
