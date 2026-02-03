@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { cn } from '@/lib/utils';
-import { AlertTriangle, Trash2, ArrowDown } from 'lucide-react';
+import { AlertTriangle, Trash2, ArrowDown, Bug } from 'lucide-react';
 import { calculateWeeklyHours } from './LegalChecks';
 import { calculateWeeklyEmployeeHours } from './OvertimeCalculations';
 import { useQuery } from '@tanstack/react-query';
@@ -8,6 +8,7 @@ import { base44 } from '@/api/base44Client';
 
 export default function WeeklySummary({ employee, shifts, weekStart, onDeleteWeek, onCopyFromAbove }) {
   const [showConfirm, setShowConfirm] = useState(false);
+  const [debugMode, setDebugMode] = useState(false);
 
   // Fetch calculation mode
   const { data: settings = [] } = useQuery({
@@ -22,10 +23,10 @@ export default function WeeklySummary({ employee, shifts, weekStart, onDeleteWee
   // Calculate hours based on mode
   let weekHours;
   if (calculationMode === 'weekly') {
-    weekHours = calculateWeeklyEmployeeHours(shifts, employee.id, weekStart, employee);
+    weekHours = calculateWeeklyEmployeeHours(shifts, employee.id, weekStart, employee, debugMode);
   } else {
     // Fallback to basic calculation
-    weekHours = calculateWeeklyHours(shifts, employee.id, weekStart);
+    weekHours = calculateWeeklyHours(shifts, employee.id, weekStart, debugMode);
   }
 
   const handleDelete = () => {
@@ -61,9 +62,40 @@ export default function WeeklySummary({ employee, shifts, weekStart, onDeleteWee
         </button>
       )}
       
+      <button
+        onClick={(e) => {
+          e.stopPropagation();
+          setDebugMode(!debugMode);
+        }}
+        className={cn(
+          "absolute bottom-1 right-1 p-1 rounded transition-colors opacity-0 group-hover:opacity-100",
+          debugMode ? "bg-purple-200" : "hover:bg-gray-200"
+        )}
+        title="Mode debug"
+      >
+        <Bug className="w-3 h-3 text-purple-600" />
+      </button>
+      
       <div className="text-lg font-bold text-gray-900">
         {weekHours.total.toFixed(1)}h
       </div>
+      
+      {debugMode && weekHours.debugInfo && (
+        <div className="absolute left-0 top-full mt-1 bg-white border-2 border-purple-500 rounded p-2 shadow-lg z-50 text-[9px] w-48">
+          <div className="font-bold text-purple-900 mb-1">Debug shifts:</div>
+          {weekHours.debugInfo.map((info, i) => (
+            <div key={i} className={cn(
+              "font-mono",
+              info.included ? "text-green-700" : "text-red-500"
+            )}>
+              {info.date}: {info.durationMinutes}min {info.included ? '✓' : '✗'}
+            </div>
+          ))}
+          <div className="border-t border-purple-300 mt-1 pt-1 font-bold text-purple-900">
+            Total: {weekHours.total.toFixed(2)}h
+          </div>
+        </div>
+      )}
       
       {/* Mode hebdomadaire activé */}
       {calculationMode === 'weekly' && weekHours.type === 'full_time' && weekHours.total_overtime > 0 && (

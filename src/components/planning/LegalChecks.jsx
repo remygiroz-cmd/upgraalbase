@@ -1,4 +1,5 @@
 // Vérifications juridiques pour la convention HCR
+import { parseLocalDate, formatLocalDate } from './dateUtils';
 
 export const calculateShiftDuration = (shift) => {
   const [startH, startM] = shift.start_time.split(':').map(Number);
@@ -59,24 +60,57 @@ export const checkDailyHours = (shifts) => {
   return { warning: false };
 };
 
-export const calculateWeeklyHours = (shifts, employeeId, weekStart) => {
-  // Calculer heures hebdomadaires
+export const calculateWeeklyHours = (shifts, employeeId, weekStart, debug = false) => {
+  // Calculer heures hebdomadaires (Lundi → Dimanche inclus)
   const weekEnd = new Date(weekStart);
   weekEnd.setDate(weekEnd.getDate() + 6);
   
+  const weekStartStr = formatLocalDate(weekStart);
+  const weekEndStr = formatLocalDate(weekEnd);
+  
+  const debugInfo = [];
+  
+  // Filter shifts in week range - using string comparison for date-only
   const weekShifts = shifts.filter(s => {
     if (s.employee_id !== employeeId) return false;
-    const shiftDate = new Date(s.date);
-    return shiftDate >= weekStart && shiftDate <= weekEnd;
+    
+    // Compare dates as strings (YYYY-MM-DD) - no timezone issues
+    const included = s.date >= weekStartStr && s.date <= weekEndStr;
+    
+    if (debug) {
+      const duration = included ? calculateShiftDuration(s) : 0;
+      debugInfo.push({
+        date: s.date,
+        duration: duration.toFixed(2),
+        durationMinutes: included ? Math.round(duration * 60) : 0,
+        included
+      });
+    }
+    
+    return included;
   });
   
   const totalHours = weekShifts.reduce((sum, shift) => sum + calculateShiftDuration(shift), 0);
+  
+  if (debug) {
+    const totalMinutes = weekShifts.reduce((sum, shift) => sum + calculateShiftDuration(shift) * 60, 0);
+    console.log('🔍 WEEKLY HOURS DEBUG:', {
+      weekStart: weekStartStr,
+      weekEnd: weekEndStr,
+      employeeId,
+      totalShifts: weekShifts.length,
+      shifts: debugInfo,
+      totalMinutes: Math.round(totalMinutes),
+      totalHours: totalHours.toFixed(2)
+    });
+  }
   
   return {
     total: totalHours,
     normal: Math.min(totalHours, 35),
     overtime: Math.max(0, totalHours - 35),
-    hasOvertime: totalHours > 35
+    hasOvertime: totalHours > 35,
+    debugInfo: debug ? debugInfo : null
   };
 };
 
