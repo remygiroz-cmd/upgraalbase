@@ -688,7 +688,7 @@ export default function Planning() {
       {/* Sticky Scrollbar */}
       <div 
         ref={scrollbarRef}
-        className="bg-gray-100 border-2 border-gray-200 rounded-t-xl overflow-x-auto sticky top-0 z-30 mb-2"
+        className="bg-gray-100 border-2 border-gray-200 rounded-t-xl overflow-x-auto sticky top-[72px] lg:top-0 z-30 mb-2"
         style={{ height: '16px' }}
       >
         <div style={{ height: '1px' }}></div>
@@ -700,7 +700,7 @@ export default function Planning() {
           <div className="inline-block min-w-full">
             {/* Header */}
             <DragDropContext onDragEnd={handleTeamDragEnd}>
-              <div className="bg-gradient-to-r from-gray-100 to-gray-50 flex border-b-2 border-gray-300 sticky top-0 lg:top-4 z-30">
+              <div className="bg-gradient-to-r from-gray-100 to-gray-50 flex border-b-2 border-gray-300 sticky top-[72px] lg:top-0 z-30">
                 <div className="sticky left-0 z-20 bg-gradient-to-r from-gray-100 to-gray-50 border-r-2 border-gray-300 px-4 py-4 text-left text-sm font-bold text-gray-900 w-[120px] shadow-md flex items-center gap-2">
                   <Calendar className="w-4 h-4 text-orange-600" />
                   Jour
@@ -721,7 +721,7 @@ export default function Planning() {
                                 ref={provided.innerRef}
                                 {...provided.draggableProps}
                                 className={cn(
-                                  "border-r border-gray-200 px-3 py-3 text-center w-[140px] sm:w-[180px] relative",
+                                  "border-r border-gray-200 px-3 py-3 text-center min-w-[140px] w-[140px] sm:w-[180px] relative",
                                   snapshot.isDragging && "bg-orange-100 shadow-2xl opacity-90"
                                 )}
                                 style={provided.draggableProps.style}
@@ -743,12 +743,12 @@ export default function Planning() {
                                 >
                                  <Copy className="w-4 h-4" />
                                 </button>
-                                <div className="font-bold text-sm text-gray-900 whitespace-nowrap px-6">
-                                  {employee.first_name} {employee.last_name}
+                                <div className="font-bold text-xs sm:text-sm text-gray-900 whitespace-nowrap overflow-hidden text-ellipsis px-6">
+                                 {employee.first_name} {employee.last_name}
                                 </div>
                                 {team && (
                                  <div 
-                                   className="text-[10px] font-semibold text-white inline-block px-3 py-1 rounded-full mt-2 shadow-sm"
+                                   className="text-[9px] sm:text-[10px] font-semibold text-white inline-block px-2 sm:px-3 py-0.5 sm:py-1 rounded-full mt-1 sm:mt-2 shadow-sm"
                                    style={{ backgroundColor: team.color || '#3b82f6' }}
                                  >
                                    {team.name}
@@ -823,7 +823,7 @@ export default function Planning() {
                                 key={employee.id}
                                 onClick={() => handleCellClick(employee.id, dateStr, dayInfo)}
                                 className={cn(
-                                  "border-r border-gray-200 px-2 py-2 cursor-pointer hover:bg-orange-50 transition-all group relative w-[140px] sm:w-[180px] flex",
+                                  "border-r border-gray-200 px-2 py-2 cursor-pointer hover:bg-orange-50 transition-all group relative min-w-[140px] w-[140px] sm:w-[180px] flex",
                                   dayInfo.isWeekend && "bg-orange-50/20"
                                 )}
                               >
@@ -916,7 +916,7 @@ export default function Planning() {
                                                               eventsAbove.nonShifts.some(ns => ns.employee_id === employee.id);
                               
                               return (
-                                <div key={employee.id} className="border-r border-gray-200 w-[140px] sm:w-[180px]">
+                                <div key={employee.id} className="border-r border-gray-200 min-w-[140px] w-[140px] sm:w-[180px]">
                                   <WeeklySummary
                                     employee={employee}
                                     shifts={shifts}
