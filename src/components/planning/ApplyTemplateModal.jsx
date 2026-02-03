@@ -80,17 +80,39 @@ export default function ApplyTemplateModal({ open, onOpenChange, employeeId, emp
       logs.push({ type: 'template_info', data: templateInfo });
       console.log('🔍 APPLY TEMPLATE - Start:', templateInfo);
 
-      const start = new Date(startDate);
-      const end = new Date(endDate);
+      // 1️⃣ AVANT APPLICATION : LISTER L'EXISTANT
+      const existingLog = {
+        count: existingShifts.length,
+        shifts: existingShifts.map(s => ({
+          id: s.id,
+          date: s.date,
+          startTime: s.start_time,
+          endTime: s.end_time,
+          position: s.position
+        }))
+      };
+      logs.push({ type: 'existing_shifts', data: existingLog });
+      console.log('🔍 EXISTING SHIFTS:', existingLog);
+
+      // Parse dates LOCALEMENT pour éviter le décalage UTC
+      const [startY, startM, startD] = startDate.split('-').map(Number);
+      const [endY, endM, endD] = endDate.split('-').map(Number);
+      const start = new Date(startY, startM - 1, startD);
+      const end = new Date(endY, endM - 1, endD);
       const shifts = [];
 
-      // Generate shifts for each day in range
+      // 2️⃣ PENDANT APPLICATION : GÉNÉRATION DES SHIFTS
       for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
         // JavaScript getDay: 0=Dimanche, 1=Lundi, 2=Mardi, 3=Mercredi, 4=Jeudi, 5=Vendredi, 6=Samedi
         // Notre système: 1=Lundi, 2=Mardi, 3=Mercredi, 4=Jeudi, 5=Vendredi, 6=Samedi, 7=Dimanche
         const jsDay = d.getDay(); // 0-6
         const dayOfWeek = jsDay === 0 ? 7 : jsDay; // Convertir 0 (Dimanche) en 7, garder 1-6 tel quel
-        const dateStr = d.toISOString().split('T')[0];
+        
+        // Créer dateStr en LOCAL pour éviter décalage UTC
+        const year = d.getFullYear();
+        const month = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        const dateStr = `${year}-${month}-${day}`;
 
         const dayNames = ['Dimanche', 'Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi'];
         const dayLabel = dayNames[jsDay];
@@ -110,13 +132,19 @@ export default function ApplyTemplateModal({ open, onOpenChange, employeeId, emp
             start_time: t.start_time,
             end_time: t.end_time,
             position: t.position
-          }))
+          })),
+          dateObject: {
+            year: d.getFullYear(),
+            month: d.getMonth() + 1,
+            day: d.getDate()
+          }
         };
         logs.push({ type: 'date_match', data: dateLog });
         console.log('🔍 APPLY TEMPLATE - Processing date:', dateLog);
 
+        // 2️⃣.1 LOG CRÉATION POUR CHAQUE SHIFT
         for (const template of dayTemplates) {
-          shifts.push({
+          const shiftPayload = {
             employee_id: employeeId,
             employee_name: employeeName,
             date: dateStr,
@@ -126,21 +154,77 @@ export default function ApplyTemplateModal({ open, onOpenChange, employeeId, emp
             position: template.position,
             notes: template.notes || '',
             status: 'planned'
+          };
+          
+          shifts.push(shiftPayload);
+          
+          logs.push({ 
+            type: 'shift_creation', 
+            data: {
+              dateSaved: dateStr,
+              dateObject: { year, month: d.getMonth() + 1, day: d.getDate() },
+              payload: shiftPayload
+            }
           });
         }
       }
 
-      // If replace mode, delete existing shifts first
+      // 3️⃣ SUPPRESSION SI MODE REPLACE
       if (mode === 'replace' && existingShifts.length > 0) {
+        const deletedIds = existingShifts.map(s => s.id);
         await Promise.all(existingShifts.map(s => base44.entities.Shift.delete(s.id)));
+        logs.push({ 
+          type: 'deletion', 
+          data: { 
+            mode: 'replace', 
+            deletedCount: deletedIds.length,
+            deletedIds 
+          }
+        });
+        console.log('🔍 DELETED SHIFTS:', deletedIds.length);
       }
 
-      // Create new shifts
+      // 4️⃣ CRÉATION DES NOUVEAUX SHIFTS
       if (shifts.length > 0) {
         await base44.entities.Shift.bulkCreate(shifts);
+        console.log('🔍 CREATED SHIFTS:', shifts.length);
       }
 
+      // 5️⃣ APRÈS APPLICATION : VÉRIFIER LE RÉSULTAT EN BASE
       if (debugMode) {
+        // Attendre un peu pour que la base soit à jour
+        await new Promise(resolve => setTimeout(resolve, 500));
+        
+        const allShiftsAfter = await base44.entities.Shift.list();
+        const createdShifts = allShiftsAfter.filter(s => 
+          s.employee_id === employeeId && 
+          s.date >= startDate && 
+          s.date <= endDate
+        );
+        
+        const verificationLog = {
+          count: createdShifts.length,
+          shifts: createdShifts.map(s => {
+            const dateParts = s.date.split('-').map(Number);
+            const dateObj = new Date(dateParts[0], dateParts[1] - 1, dateParts[2]);
+            const jsDay = dateObj.getDay();
+            const isoDow = jsDay === 0 ? 7 : jsDay;
+            
+            return {
+              id: s.id,
+              dateSaved: s.date,
+              jsGetDay: jsDay,
+              isoDow,
+              startTime: s.start_time,
+              endTime: s.end_time,
+              position: s.position
+            };
+          })
+        };
+        
+        logs.push({ type: 'verification', data: verificationLog });
+        console.log('🔍 VERIFICATION AFTER SAVE:', verificationLog);
+        
         setDebugLogs(logs);
       }
 
@@ -172,24 +256,70 @@ export default function ApplyTemplateModal({ open, onOpenChange, employeeId, emp
     const dayLabels = ['', 'Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche'];
     
     let text = '=== DEBUG LOGS - PLANNING TYPE ===\n\n';
-    text += `Employé: ${employeeName} (${employeeId})\n\n`;
+    text += `Employé: ${employeeName} (${employeeId})\n`;
+    text += `Période: ${startDate} → ${endDate}\n\n`;
     
-    text += '--- TEMPLATE SHIFTS STOCKÉS ---\n';
+    // 1️⃣ SHIFTS EXISTANTS AVANT
+    const existingLog = debugLogs.find(l => l.type === 'existing_shifts');
+    if (existingLog) {
+      text += '--- 1️⃣ SHIFTS EXISTANTS AVANT APPLICATION ---\n';
+      text += `Total: ${existingLog.data.count}\n`;
+      existingLog.data.shifts.forEach(s => {
+        text += `  [${s.id}] ${s.date} | ${s.startTime}-${s.endTime} | ${s.position}\n`;
+      });
+      text += '\n';
+    }
+    
+    // 2️⃣ TEMPLATE SHIFTS STOCKÉS
+    text += '--- 2️⃣ TEMPLATE SHIFTS STOCKÉS ---\n';
     templateShifts.forEach(ts => {
       text += `day_of_week: ${ts.day_of_week} (${dayLabels[ts.day_of_week] || 'inconnu'}) | ${ts.start_time}-${ts.end_time} | ${ts.position}\n`;
     });
+    text += '\n';
     
-    text += '\n--- APPLICATION SUR PÉRIODE ---\n';
+    // 3️⃣ MATCHING PAR DATE
+    text += '--- 3️⃣ MATCHING PAR DATE ---\n';
     debugLogs.filter(log => log.type === 'date_match').forEach(log => {
       const d = log.data;
-      text += `\n${d.date} | jsGetDay=${d.jsGetDay} | computed=${d.computedDayOfWeek} | ${d.dayLabel}\n`;
-      text += `  → Shifts matchés: ${d.matchedTemplates}\n`;
+      text += `\n${d.date} (${d.dayLabel})\n`;
+      text += `  jsGetDay: ${d.jsGetDay} | computed: ${d.computedDayOfWeek}\n`;
+      text += `  Shifts matchés: ${d.matchedTemplates}\n`;
       if (d.templateDetails.length > 0) {
         d.templateDetails.forEach(td => {
-          text += `    - day_of_week=${td.day_of_week} | ${td.start_time}-${td.end_time} | ${td.position}\n`;
+          text += `    → day_of_week=${td.day_of_week} | ${td.start_time}-${td.end_time} | ${td.position}\n`;
         });
       }
     });
+    text += '\n';
+    
+    // 4️⃣ SHIFTS CRÉÉS (PAYLOAD)
+    const creationLogs = debugLogs.filter(l => l.type === 'shift_creation');
+    if (creationLogs.length > 0) {
+      text += '--- 4️⃣ SHIFTS CRÉÉS (PAYLOAD) ---\n';
+      text += `Total: ${creationLogs.length}\n`;
+      creationLogs.forEach((log, i) => {
+        const d = log.data;
+        text += `  [${i+1}] dateSaved: ${d.dateSaved} | ${d.payload.start_time}-${d.payload.end_time} | ${d.payload.position}\n`;
+      });
+      text += '\n';
+    }
+    
+    // 5️⃣ SUPPRESSION (si replace)
+    const deletionLog = debugLogs.find(l => l.type === 'deletion');
+    if (deletionLog) {
+      text += '--- 5️⃣ SUPPRESSION (MODE REPLACE) ---\n';
+      text += `Shifts supprimés: ${deletionLog.data.deletedCount}\n\n`;
+    }
+    
+    // 6️⃣ VÉRIFICATION APRÈS SAUVEGARDE
+    const verificationLog = debugLogs.find(l => l.type === 'verification');
+    if (verificationLog) {
+      text += '--- 6️⃣ VÉRIFICATION APRÈS SAUVEGARDE (RELECTURE DB) ---\n';
+      text += `Total en base: ${verificationLog.data.count}\n`;
+      verificationLog.data.shifts.forEach(s => {
+        text += `  [${s.id}] ${s.dateSaved} (jsGetDay=${s.jsGetDay}, isoDow=${s.isoDow}) | ${s.startTime}-${s.endTime} | ${s.position}\n`;
+      });
+    }
     
     navigator.clipboard.writeText(text);
     toast.success('Logs copiés dans le presse-papier');
@@ -455,7 +585,7 @@ export default function ApplyTemplateModal({ open, onOpenChange, employeeId, emp
           {debugMode && debugLogs.length > 0 && (
             <div className="border-2 border-purple-300 rounded-lg p-4 bg-purple-50 space-y-3">
               <div className="flex items-center justify-between">
-                <h3 className="font-bold text-purple-900">🔍 Debug Logs</h3>
+                <h3 className="font-bold text-purple-900">🔍 Debug Logs Complets</h3>
                 <Button
                   onClick={copyDebugLogs}
                   size="sm"
@@ -466,41 +596,92 @@ export default function ApplyTemplateModal({ open, onOpenChange, employeeId, emp
                 </Button>
               </div>
 
-              <div className="space-y-2 max-h-[400px] overflow-y-auto">
-                <div className="bg-white border border-purple-200 rounded p-3">
-                  <p className="text-xs font-bold text-purple-900 mb-2">Template Shifts stockés:</p>
-                  <div className="space-y-1 text-[10px] font-mono">
+              <div className="space-y-2 max-h-[500px] overflow-y-auto text-[10px]">
+                {/* 1️⃣ Shifts existants avant */}
+                {debugLogs.find(l => l.type === 'existing_shifts') && (
+                  <div className="bg-yellow-50 border border-yellow-300 rounded p-2">
+                    <p className="font-bold text-yellow-900 mb-1">1️⃣ Shifts existants AVANT</p>
+                    <div className="font-mono text-yellow-800">
+                      Total: {debugLogs.find(l => l.type === 'existing_shifts').data.count}
+                      {debugLogs.find(l => l.type === 'existing_shifts').data.shifts.slice(0, 5).map((s, i) => (
+                        <div key={i} className="ml-2">{s.date} | {s.startTime}-{s.endTime}</div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* 2️⃣ Template shifts */}
+                <div className="bg-blue-50 border border-blue-300 rounded p-2">
+                  <p className="font-bold text-blue-900 mb-1">2️⃣ Template stocké</p>
+                  <div className="space-y-0.5 font-mono text-blue-800">
                     {templateShifts.map((ts, idx) => {
-                      const dayLabels = ['', 'Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche'];
+                      const dayLabels = ['', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'];
                       return (
-                        <div key={idx} className="text-gray-700">
-                          day_of_week: <span className="font-bold text-purple-700">{ts.day_of_week}</span> ({dayLabels[ts.day_of_week]}) | {ts.start_time}-{ts.end_time} | {ts.position}
+                        <div key={idx}>
+                          day={ts.day_of_week} ({dayLabels[ts.day_of_week]}) | {ts.start_time}-{ts.end_time}
                         </div>
                       );
                     })}
                   </div>
                 </div>
 
-                {debugLogs.filter(log => log.type === 'date_match').map((log, idx) => {
-                  const d = log.data;
-                  return (
-                    <div key={idx} className="bg-white border border-purple-200 rounded p-2 text-[10px]">
-                      <div className="font-bold text-purple-900 mb-1">
-                        {d.date} | {d.dayLabel}
-                      </div>
-                      <div className="font-mono text-gray-600 space-y-0.5">
-                        <div>jsGetDay: {d.jsGetDay}</div>
-                        <div>computed day_of_week: <span className="font-bold text-purple-700">{d.computedDayOfWeek}</span></div>
-                        <div>Shifts matchés: <span className="font-bold">{d.matchedTemplates}</span></div>
-                        {d.templateDetails.map((td, i) => (
-                          <div key={i} className="ml-4 text-green-700">
-                            → Match: day_of_week={td.day_of_week} | {td.start_time}-{td.end_time}
+                {/* 3️⃣ Matching par date */}
+                <div className="bg-purple-50 border border-purple-300 rounded p-2">
+                  <p className="font-bold text-purple-900 mb-1">3️⃣ Matching par date</p>
+                  <div className="space-y-1 font-mono text-purple-800">
+                    {debugLogs.filter(log => log.type === 'date_match').map((log, idx) => {
+                      const d = log.data;
+                      return (
+                        <div key={idx} className="border-l-2 border-purple-400 pl-2">
+                          <div className="font-bold">{d.date} ({d.dayLabel})</div>
+                          <div className="ml-2 text-gray-600">
+                            jsDay={d.jsGetDay} → computed={d.computedDayOfWeek} → matchés: {d.matchedTemplates}
                           </div>
-                        ))}
-                      </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* 4️⃣ Shifts créés */}
+                {debugLogs.filter(l => l.type === 'shift_creation').length > 0 && (
+                  <div className="bg-green-50 border border-green-300 rounded p-2">
+                    <p className="font-bold text-green-900 mb-1">4️⃣ Shifts créés (payload)</p>
+                    <div className="font-mono text-green-800">
+                      Total: {debugLogs.filter(l => l.type === 'shift_creation').length}
+                      {debugLogs.filter(l => l.type === 'shift_creation').slice(0, 5).map((log, i) => (
+                        <div key={i} className="ml-2">
+                          {log.data.dateSaved} | {log.data.payload.start_time}-{log.data.payload.end_time}
+                        </div>
+                      ))}
                     </div>
-                  );
-                })}
+                  </div>
+                )}
+
+                {/* 5️⃣ Suppression */}
+                {debugLogs.find(l => l.type === 'deletion') && (
+                  <div className="bg-red-50 border border-red-300 rounded p-2">
+                    <p className="font-bold text-red-900 mb-1">5️⃣ Suppression (replace)</p>
+                    <div className="font-mono text-red-800">
+                      Shifts supprimés: {debugLogs.find(l => l.type === 'deletion').data.deletedCount}
+                    </div>
+                  </div>
+                )}
+
+                {/* 6️⃣ Vérification après sauvegarde */}
+                {debugLogs.find(l => l.type === 'verification') && (
+                  <div className="bg-orange-50 border border-orange-300 rounded p-2">
+                    <p className="font-bold text-orange-900 mb-1">6️⃣ Vérification DB après save</p>
+                    <div className="font-mono text-orange-800">
+                      Total en base: {debugLogs.find(l => l.type === 'verification').data.count}
+                      {debugLogs.find(l => l.type === 'verification').data.shifts.slice(0, 5).map((s, i) => (
+                        <div key={i} className="ml-2">
+                          {s.dateSaved} (jsDay={s.jsGetDay}, isoDow={s.isoDow}) | {s.startTime}-{s.endTime}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           )}
