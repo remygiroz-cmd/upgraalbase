@@ -144,6 +144,161 @@ export default function NonShiftTypesManager({ open, onOpenChange, embeddedMode 
     }
   };
 
+  const handleDelete = (id) => {
+    if (window.confirm('Supprimer ce type ?')) {
+      deleteTypeMutation.mutate(id);
+    }
+  };
+
+  const hasTypes = types.length > 0;
+
+  if (embeddedMode) {
+    return (
+      <div className="space-y-4">
+        {!hasTypes && (
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+            <p className="text-sm text-blue-900 mb-3">
+              Aucun type configuré. Voulez-vous initialiser les types par défaut ?
+            </p>
+            <Button onClick={initializeDefaultTypes} className="bg-blue-600 hover:bg-blue-700">
+              Initialiser les types par défaut
+            </Button>
+          </div>
+        )}
+
+        <form onSubmit={handleSubmit} className="bg-white border-2 border-gray-200 rounded-lg p-4 space-y-4">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div>
+              <Label>Libellé</Label>
+              <Input
+                value={formData.label}
+                onChange={(e) => setFormData({ ...formData, label: e.target.value })}
+                placeholder="Ex: Congés payés"
+                required
+              />
+            </div>
+            <div>
+              <Label>Icône (emoji)</Label>
+              <Input
+                value={formData.icon}
+                onChange={(e) => setFormData({ ...formData, icon: e.target.value })}
+                placeholder="🏖️"
+                maxLength={2}
+              />
+            </div>
+            <div>
+              <Label>Couleur</Label>
+              <Input
+                type="color"
+                value={formData.color}
+                onChange={(e) => setFormData({ ...formData, color: e.target.value })}
+                className="h-10"
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+            <div className="flex items-center gap-2">
+              <Switch
+                checked={formData.generates_work_hours}
+                onCheckedChange={(checked) => setFormData({ ...formData, generates_work_hours: checked })}
+              />
+              <Label className="text-xs">Génère des heures</Label>
+            </div>
+            <div className="flex items-center gap-2">
+              <Switch
+                checked={formData.is_paid}
+                onCheckedChange={(checked) => setFormData({ ...formData, is_paid: checked })}
+              />
+              <Label className="text-xs">Payé</Label>
+            </div>
+            <div className="flex items-center gap-2">
+              <Switch
+                checked={formData.blocks_shifts}
+                onCheckedChange={(checked) => setFormData({ ...formData, blocks_shifts: checked })}
+              />
+              <Label className="text-xs">Bloque les shifts</Label>
+            </div>
+            <div className="flex items-center gap-2">
+              <Switch
+                checked={formData.impacts_payroll}
+                onCheckedChange={(checked) => setFormData({ ...formData, impacts_payroll: checked })}
+              />
+              <Label className="text-xs">Impacte la paie</Label>
+            </div>
+            <div className="flex items-center gap-2">
+              <Switch
+                checked={formData.visible_in_recap}
+                onCheckedChange={(checked) => setFormData({ ...formData, visible_in_recap: checked })}
+              />
+              <Label className="text-xs">Visible récap</Label>
+            </div>
+          </div>
+
+          <div className="flex gap-2">
+            <Button type="submit" className="bg-orange-600 hover:bg-orange-700">
+              {editingType ? 'Mettre à jour' : 'Ajouter'}
+            </Button>
+            {editingType && (
+              <Button type="button" variant="outline" onClick={resetForm}>
+                Annuler
+              </Button>
+            )}
+          </div>
+        </form>
+
+        <div className="space-y-2">
+          {types.map((type) => (
+            <div
+              key={type.id}
+              className="bg-white border-2 rounded-lg p-3 flex items-center gap-3"
+              style={{ borderColor: type.color }}
+            >
+              <span className="text-xl">{type.icon}</span>
+              <div className="flex-1">
+                <div className="font-semibold" style={{ color: type.color }}>
+                  {type.label}
+                </div>
+                <div className="flex gap-2 mt-1 flex-wrap">
+                  {type.generates_work_hours && (
+                    <span className="text-[10px] bg-blue-100 text-blue-800 px-2 py-0.5 rounded">Heures</span>
+                  )}
+                  {type.is_paid && (
+                    <span className="text-[10px] bg-green-100 text-green-800 px-2 py-0.5 rounded">Payé</span>
+                  )}
+                  {type.blocks_shifts && (
+                    <span className="text-[10px] bg-red-100 text-red-800 px-2 py-0.5 rounded">Bloquant</span>
+                  )}
+                  {type.impacts_payroll && (
+                    <span className="text-[10px] bg-purple-100 text-purple-800 px-2 py-0.5 rounded">Paie</span>
+                  )}
+                  {type.visible_in_recap && (
+                    <span className="text-[10px] bg-gray-100 text-gray-800 px-2 py-0.5 rounded">Récap</span>
+                  )}
+                </div>
+              </div>
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => handleEdit(type)}
+              >
+                <Pencil className="w-4 h-4" />
+              </Button>
+              <Button
+                size="sm"
+                variant="ghost"
+                className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                onClick={() => handleDelete(type.id)}
+              >
+                <Trash2 className="w-4 h-4" />
+              </Button>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
