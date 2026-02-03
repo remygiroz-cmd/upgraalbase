@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
 import { cn } from '@/lib/utils';
-import { AlertTriangle, Trash2 } from 'lucide-react';
+import { AlertTriangle, Trash2, ArrowDown } from 'lucide-react';
 import { calculateWeeklyHours } from './LegalChecks';
 
-export default function WeeklySummary({ employee, shifts, weekStart, onDeleteWeek }) {
+export default function WeeklySummary({ employee, shifts, weekStart, onDeleteWeek, onCopyFromAbove }) {
   const weekHours = calculateWeeklyHours(shifts, employee.id, weekStart);
   const [showConfirm, setShowConfirm] = useState(false);
 
@@ -52,6 +52,20 @@ export default function WeeklySummary({ employee, shifts, weekStart, onDeleteWee
         <div className="text-[10px] text-gray-500">
           Normal
         </div>
+      )}
+
+      {onCopyFromAbove && (
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            onCopyFromAbove();
+          }}
+          className="mt-1 text-[9px] px-1.5 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded flex items-center gap-1 font-semibold shadow-sm transition-colors mx-auto"
+          title="Copier ma semaine du dessus"
+        >
+          <ArrowDown className="w-3 h-3" />
+          Copier ↑
+        </button>
       )}
 
       {showConfirm && (
