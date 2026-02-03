@@ -21,6 +21,7 @@ import PlanningSettingsModal from '@/components/planning/PlanningSettingsModal';
 import { calculateShiftDuration, checkMinimumRest } from '@/components/planning/LegalChecks';
 import { parseLocalDate, formatLocalDate } from '@/components/planning/dateUtils';
 import { detectPaidLeavePeriods, isDateInPaidLeavePeriod } from '@/components/planning/PaidLeaveDetection';
+import CPDebugPanel from '@/components/planning/CPDebugPanel';
 
 const DAYS = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche'];
 const MONTHS = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'];
@@ -38,6 +39,7 @@ export default function Planning() {
   const [copyWeekModal, setCopyWeekModal] = useState({ open: false, weekStart: null, weekAbove: null });
   const [weekConflictMode, setWeekConflictMode] = useState('replace');
   const [debugCPMode, setDebugCPMode] = useState(false);
+  const [showCPDebugPanel, setShowCPDebugPanel] = useState(null);
   const queryClient = useQueryClient();
 
   // Fetch current user
@@ -984,7 +986,21 @@ export default function Planning() {
                                                               eventsAbove.nonShifts.some(ns => ns.employee_id === employee.id);
                               
                               return (
-                                <div key={employee.id} className="border-r border-gray-200 min-w-[140px] w-[140px] sm:w-[180px]">
+                                <div key={employee.id} className="border-r border-gray-200 min-w-[140px] w-[140px] sm:w-[180px] relative">
+                                  {/* CP Debug button */}
+                                  {cpPeriodsByEmployee.has(employee.id) && (
+                                    <button
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        setShowCPDebugPanel(employee);
+                                      }}
+                                      className="absolute top-1 right-1 z-10 bg-purple-600 hover:bg-purple-700 text-white text-[9px] px-1.5 py-0.5 rounded font-bold shadow"
+                                      title="Debug CP"
+                                    >
+                                      🏖️ DEBUG
+                                    </button>
+                                  )}
+                                  
                                   <WeeklySummary
                                     employee={employee}
                                     shifts={shifts}
@@ -1067,6 +1083,15 @@ export default function Planning() {
         employeeName={selectedEmployeeForTemplate ? `${selectedEmployeeForTemplate.first_name} ${selectedEmployeeForTemplate.last_name}` : ''}
       />
 
+      {/* CP Debug Panel */}
+      {showCPDebugPanel && (
+        <CPDebugPanel
+          employee={showCPDebugPanel}
+          cpPeriods={cpPeriodsByEmployee.get(showCPDebugPanel.id) || []}
+          onClose={() => setShowCPDebugPanel(null)}
+        />
+      )}
+      
       {/* Copy Week Modal */}
       <Dialog open={copyWeekModal.open} onOpenChange={(open) => !open && setCopyWeekModal({ open: false, weekStart: null, weekAbove: null })}>
         <DialogContent className="max-w-md">
