@@ -2,10 +2,31 @@ import React, { useState } from 'react';
 import { cn } from '@/lib/utils';
 import { AlertTriangle, Trash2, ArrowDown } from 'lucide-react';
 import { calculateWeeklyHours } from './LegalChecks';
+import { calculateWeeklyEmployeeHours } from './OvertimeCalculations';
+import { useQuery } from '@tanstack/react-query';
+import { base44 } from '@/api/base44Client';
 
 export default function WeeklySummary({ employee, shifts, weekStart, onDeleteWeek, onCopyFromAbove }) {
-  const weekHours = calculateWeeklyHours(shifts, employee.id, weekStart);
   const [showConfirm, setShowConfirm] = useState(false);
+
+  // Fetch calculation mode
+  const { data: settings = [] } = useQuery({
+    queryKey: ['appSettings', 'planning_calculation_mode'],
+    queryFn: async () => {
+      return await base44.entities.AppSettings.filter({ setting_key: 'planning_calculation_mode' });
+    }
+  });
+
+  const calculationMode = settings[0]?.planning_calculation_mode || 'disabled';
+
+  // Calculate hours based on mode
+  let weekHours;
+  if (calculationMode === 'weekly') {
+    weekHours = calculateWeeklyEmployeeHours(shifts, employee.id, weekStart, employee);
+  } else {
+    // Fallback to basic calculation
+    weekHours = calculateWeeklyHours(shifts, employee.id, weekStart);
+  }
 
   const handleDelete = () => {
     if (onDeleteWeek) {
@@ -14,12 +35,14 @@ export default function WeeklySummary({ employee, shifts, weekStart, onDeleteWee
     setShowConfirm(false);
   };
 
+  const hasOvertime = weekHours.total_overtime > 0 || weekHours.total_complementary > 0 || weekHours.exceeds_limit;
+
   return (
     <div className={cn(
       "px-2 py-3 text-center relative group",
-      weekHours.hasOvertime && "bg-orange-100"
+      hasOvertime && "bg-orange-100"
     )}>
-      {weekHours.hasOvertime && (
+      {hasOvertime && (
         <div className="absolute top-1 right-1">
           <AlertTriangle className="w-4 h-4 text-orange-600" />
         </div>
@@ -42,15 +65,53 @@ export default function WeeklySummary({ employee, shifts, weekStart, onDeleteWee
         {weekHours.total.toFixed(1)}h
       </div>
       
-      {weekHours.hasOvertime && (
-        <div className="text-[10px] text-orange-700 font-semibold">
-          +{weekHours.overtime.toFixed(1)}h supp.
+      {/* Mode hebdomadaire activé */}
+      {calculationMode === 'weekly' && weekHours.type === 'full_time' && weekHours.total_overtime > 0 && (
+        <div className="text-[10px] space-y-0.5">
+          {weekHours.overtime_25 > 0 && (
+            <div className="text-orange-700 font-semibold">
+              +{weekHours.overtime_25.toFixed(1)}h (+25%)
+            </div>
+          )}
+          {weekHours.overtime_50 > 0 && (
+            <div className="text-red-700 font-semibold">
+              +{weekHours.overtime_50.toFixed(1)}h (+50%)
+            </div>
+          )}
         </div>
       )}
-      
-      {!weekHours.hasOvertime && weekHours.total > 0 && (
+
+      {calculationMode === 'weekly' && weekHours.type === 'part_time' && weekHours.total_complementary > 0 && (
+        <div className="text-[10px] space-y-0.5">
+          {weekHours.complementary_10 > 0 && (
+            <div className="text-green-700 font-semibold">
+              +{weekHours.complementary_10.toFixed(1)}h (+10%)
+            </div>
+          )}
+          {weekHours.complementary_25 > 0 && (
+            <div className="text-orange-700 font-semibold">
+              +{weekHours.complementary_25.toFixed(1)}h (+25%)
+            </div>
+          )}
+          {weekHours.exceeds_limit && (
+            <div className="text-red-700 font-bold">
+              ⚠️ Plafond dépassé
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Mode désactivé - affichage simple */}
+      {calculationMode === 'disabled' && weekHours.total > 0 && (
         <div className="text-[10px] text-gray-500">
-          Normal
+          {weekHours.hasOvertime ? `+${weekHours.overtime?.toFixed(1)}h` : 'Normal'}
+        </div>
+      )}
+
+      {/* Mode mensuel - info uniquement */}
+      {calculationMode === 'monthly' && weekHours.total > 0 && (
+        <div className="text-[10px] text-gray-500">
+          Calcul mensuel
         </div>
       )}
 
