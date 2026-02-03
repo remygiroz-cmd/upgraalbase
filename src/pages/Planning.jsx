@@ -427,16 +427,31 @@ export default function Planning() {
   };
 
   // Execute copy week
-  const executeCopyWeek = async (targetWeekStart, sourceWeekStart, mode) => {
+  const executeCopyWeek = async (targetWeekStart, sourceWeekStart, mode, employeeId = null) => {
     try {
       const sourceEvents = getWeekEvents(sourceWeekStart);
       const targetEvents = getWeekEvents(targetWeekStart);
 
+      // Filter by employee if specified
+      const sourceShifts = employeeId 
+        ? sourceEvents.shifts.filter(s => s.employee_id === employeeId)
+        : sourceEvents.shifts;
+      const sourceNonShifts = employeeId
+        ? sourceEvents.nonShifts.filter(ns => ns.employee_id === employeeId)
+        : sourceEvents.nonShifts;
+
+      const targetShifts = employeeId
+        ? targetEvents.shifts.filter(s => s.employee_id === employeeId)
+        : targetEvents.shifts;
+      const targetNonShifts = employeeId
+        ? targetEvents.nonShifts.filter(ns => ns.employee_id === employeeId)
+        : targetEvents.nonShifts;
+
       // Delete existing events if replace mode
       if (mode === 'replace') {
         const deletePromises = [
-          ...targetEvents.shifts.map(s => base44.entities.Shift.delete(s.id)),
-          ...targetEvents.nonShifts.map(ns => base44.entities.NonShiftEvent.delete(ns.id))
+          ...targetShifts.map(s => base44.entities.Shift.delete(s.id)),
+          ...targetNonShifts.map(ns => base44.entities.NonShiftEvent.delete(ns.id))
         ];
         await Promise.all(deletePromises);
       }
@@ -445,7 +460,7 @@ export default function Planning() {
       const dayOffset = Math.floor((targetWeekStart - sourceWeekStart) / (1000 * 60 * 60 * 24));
 
       // Copy shifts
-      const shiftPromises = sourceEvents.shifts.map(shift => {
+      const shiftPromises = sourceShifts.map(shift => {
         const sourceDate = new Date(shift.date);
         const targetDate = new Date(sourceDate);
         targetDate.setDate(targetDate.getDate() + dayOffset);
@@ -453,7 +468,7 @@ export default function Planning() {
 
         // Skip if merge mode and event exists on that day
         if (mode === 'merge') {
-          const existsOnDay = targetEvents.shifts.some(
+          const existsOnDay = targetShifts.some(
             s => s.employee_id === shift.employee_id && s.date === targetDateStr
           );
           if (existsOnDay) return null;
@@ -473,7 +488,7 @@ export default function Planning() {
       }).filter(Boolean);
 
       // Copy non-shifts
-      const nonShiftPromises = sourceEvents.nonShifts.map(ns => {
+      const nonShiftPromises = sourceNonShifts.map(ns => {
         const sourceDate = new Date(ns.date);
         const targetDate = new Date(sourceDate);
         targetDate.setDate(targetDate.getDate() + dayOffset);
@@ -481,7 +496,7 @@ export default function Planning() {
 
         // Skip if merge mode and event exists on that day
         if (mode === 'merge') {
-          const existsOnDay = targetEvents.nonShifts.some(
+          const existsOnDay = targetNonShifts.some(
             e => e.employee_id === ns.employee_id && e.date === targetDateStr
           );
           if (existsOnDay) return null;
@@ -508,6 +523,34 @@ export default function Planning() {
       setCopyWeekModal({ open: false, weekStart: null, weekAbove: null });
     } catch (error) {
       toast.error('Erreur lors de la copie : ' + error.message);
+    }
+  };
+
+  // Copy employee week from above
+  const handleCopyEmployeeWeekFromAbove = async (employeeId, targetWeekStart) => {
+    const weekAbove = getWeekAbove(targetWeekStart);
+    
+    // Check if employee has data in week above
+    const eventsAbove = getWeekEvents(weekAbove);
+    const employeeShiftsAbove = eventsAbove.shifts.filter(s => s.employee_id === employeeId);
+    const employeeNonShiftsAbove = eventsAbove.nonShifts.filter(ns => ns.employee_id === employeeId);
+    
+    if (employeeShiftsAbove.length === 0 && employeeNonShiftsAbove.length === 0) {
+      toast.error('Aucune donnée dans la semaine du dessus pour cet employé');
+      return;
+    }
+
+    // Check if employee has data in target week
+    const targetEvents = getWeekEvents(targetWeekStart);
+    const hasEmployeeEvents = targetEvents.shifts.some(s => s.employee_id === employeeId) ||
+                               targetEvents.nonShifts.some(ns => ns.employee_id === employeeId);
+
+    if (hasEmployeeEvents) {
+      if (window.confirm('Cet employé a déjà des événements cette semaine. Remplacer ?')) {
+        await executeCopyWeek(targetWeekStart, weekAbove, 'replace', employeeId);
+      }
+    } else {
+      await executeCopyWeek(targetWeekStart, weekAbove, 'replace', employeeId);
     }
   };
 
@@ -864,6 +907,11 @@ export default function Planning() {
                           <div className="flex flex-1">
                             {employees.map(employee => {
                               const weekStart = getWeekStart(dayInfo.date);
+                              const weekAbove = getWeekAbove(weekStart);
+                              const eventsAbove = getWeekEvents(weekAbove);
+                              const hasEmployeeEventsAbove = eventsAbove.shifts.some(s => s.employee_id === employee.id) ||
+                                                              eventsAbove.nonShifts.some(ns => ns.employee_id === employee.id);
+                              
                               return (
                                 <div key={employee.id} className="border-r border-gray-200 w-[140px] sm:w-[180px]">
                                   <WeeklySummary
@@ -871,6 +919,10 @@ export default function Planning() {
                                     shifts={shifts}
                                     weekStart={weekStart}
                                     onDeleteWeek={handleDeleteWeek}
+                                    onCopyFromAbove={hasEmployeeEventsAbove && weekAbove.getMonth() >= new Date(currentYear, currentMonth, 1).getMonth() 
+                                      ? () => handleCopyEmployeeWeekFromAbove(employee.id, weekStart)
+                                      : null
+                                    }
                                   />
                                 </div>
                               );
