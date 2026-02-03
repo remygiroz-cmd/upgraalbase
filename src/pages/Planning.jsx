@@ -19,6 +19,7 @@ import ApplyTemplateModal from '@/components/planning/ApplyTemplateModal';
 import NonShiftCard from '@/components/planning/NonShiftCard';
 import PlanningSettingsModal from '@/components/planning/PlanningSettingsModal';
 import { calculateShiftDuration, checkMinimumRest } from '@/components/planning/LegalChecks';
+import { parseLocalDate, formatLocalDate } from '@/components/planning/dateUtils';
 
 const DAYS = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche'];
 const MONTHS = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'];
@@ -101,8 +102,8 @@ export default function Planning() {
   const { data: shifts = [] } = useQuery({
     queryKey: ['shifts', currentYear, currentMonth],
     queryFn: async () => {
-      const firstDay = new Date(currentYear, currentMonth, 1).toISOString().split('T')[0];
-      const lastDay = new Date(currentYear, currentMonth + 1, 0).toISOString().split('T')[0];
+      const firstDay = formatLocalDate(new Date(currentYear, currentMonth, 1));
+      const lastDay = formatLocalDate(new Date(currentYear, currentMonth + 1, 0));
       
       const allShifts = await base44.entities.Shift.list();
       return allShifts.filter(s => s.date >= firstDay && s.date <= lastDay);
@@ -113,8 +114,8 @@ export default function Planning() {
   const { data: nonShiftEvents = [] } = useQuery({
     queryKey: ['nonShiftEvents', currentYear, currentMonth],
     queryFn: async () => {
-      const firstDay = new Date(currentYear, currentMonth, 1).toISOString().split('T')[0];
-      const lastDay = new Date(currentYear, currentMonth + 1, 0).toISOString().split('T')[0];
+      const firstDay = formatLocalDate(new Date(currentYear, currentMonth, 1));
+      const lastDay = formatLocalDate(new Date(currentYear, currentMonth + 1, 0));
       
       const allEvents = await base44.entities.NonShiftEvent.list();
       return allEvents.filter(e => e.date >= firstDay && e.date <= lastDay);
@@ -289,13 +290,13 @@ export default function Planning() {
 
   // Find the last non-empty cell above for copying
   const getLastNonEmptyCellAbove = (employeeId, dateStr) => {
-    const currentDate = new Date(dateStr);
+    const currentDate = parseLocalDate(dateStr);
     
     // Look backwards day by day
     for (let i = 1; i <= 60; i++) { // Max 60 days back
       const checkDate = new Date(currentDate);
       checkDate.setDate(checkDate.getDate() - i);
-      const checkDateStr = checkDate.toISOString().split('T')[0];
+      const checkDateStr = formatLocalDate(checkDate);
       
       const shiftsAbove = getShiftsForEmployeeAndDate(employeeId, checkDateStr);
       const nonShiftsAbove = getNonShiftsForEmployeeAndDate(employeeId, checkDateStr);
@@ -315,7 +316,7 @@ export default function Planning() {
   // Handle cell click
   const handleCellClick = (employeeId, dateStr, dayInfo) => {
     const employee = employees.find(e => e.id === employeeId);
-    const date = new Date(dateStr);
+    const date = parseLocalDate(dateStr);
     const cellAbove = getLastNonEmptyCellAbove(employeeId, dateStr);
     
     setSelectedCell({ 
@@ -342,8 +343,8 @@ export default function Planning() {
     const weekEnd = new Date(weekStart);
     weekEnd.setDate(weekEnd.getDate() + 6);
     
-    const weekStartStr = weekStart.toISOString().split('T')[0];
-    const weekEndStr = weekEnd.toISOString().split('T')[0];
+    const weekStartStr = formatLocalDate(weekStart);
+    const weekEndStr = formatLocalDate(weekEnd);
 
     const weekShifts = shifts.filter(s => 
       s.employee_id === employeeId && 
@@ -382,8 +383,8 @@ export default function Planning() {
     const weekEnd = new Date(weekStart);
     weekEnd.setDate(weekEnd.getDate() + 6);
     
-    const weekStartStr = weekStart.toISOString().split('T')[0];
-    const weekEndStr = weekEnd.toISOString().split('T')[0];
+    const weekStartStr = formatLocalDate(weekStart);
+    const weekEndStr = formatLocalDate(weekEnd);
 
     const weekShifts = shifts.filter(s => 
       s.date >= weekStartStr && s.date <= weekEndStr
@@ -460,10 +461,10 @@ export default function Planning() {
 
       // Copy shifts
       const shiftPromises = sourceShifts.map(shift => {
-        const sourceDate = new Date(shift.date);
+        const sourceDate = parseLocalDate(shift.date);
         const targetDate = new Date(sourceDate);
         targetDate.setDate(targetDate.getDate() + dayOffset);
-        const targetDateStr = targetDate.toISOString().split('T')[0];
+        const targetDateStr = formatLocalDate(targetDate);
 
         // Skip if merge mode and event exists on that day
         if (mode === 'merge') {
@@ -488,10 +489,10 @@ export default function Planning() {
 
       // Copy non-shifts
       const nonShiftPromises = sourceNonShifts.map(ns => {
-        const sourceDate = new Date(ns.date);
+        const sourceDate = parseLocalDate(ns.date);
         const targetDate = new Date(sourceDate);
         targetDate.setDate(targetDate.getDate() + dayOffset);
-        const targetDateStr = targetDate.toISOString().split('T')[0];
+        const targetDateStr = formatLocalDate(targetDate);
 
         // Skip if merge mode and event exists on that day
         if (mode === 'merge') {
@@ -778,7 +779,7 @@ export default function Planning() {
                 <>
                   {daysArray.map((dayInfo, index) => {
                     // Calculate max events for this row across all employees
-                    const dateStr = dayInfo.date.toISOString().split('T')[0];
+                    const dateStr = formatLocalDate(dayInfo.date);
                     const maxEventsInRow = Math.max(
                       1,
                       ...employees.map(emp => {
