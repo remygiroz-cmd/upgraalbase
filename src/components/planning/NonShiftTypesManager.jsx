@@ -26,7 +26,7 @@ const PRESET_COLORS = [
   '#ec4899', '#06b6d4', '#10b981', '#f97316', '#6b7280'
 ];
 
-export default function NonShiftTypesManager({ open, onOpenChange }) {
+export default function NonShiftTypesManager({ open, onOpenChange, embeddedMode = false }) {
   const [editingType, setEditingType] = useState(null);
   const [formData, setFormData] = useState({
     label: '',

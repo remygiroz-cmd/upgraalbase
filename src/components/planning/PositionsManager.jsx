@@ -10,7 +10,7 @@ import { toast } from 'sonner';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import { cn } from '@/lib/utils';
 
-export default function PositionsManager({ open, onOpenChange }) {
+export default function PositionsManager({ open, onOpenChange, embeddedMode = false }) {
   const [editingPosition, setEditingPosition] = useState(null);
   const [formData, setFormData] = useState({ label: '', color: '#3b82f6' });
   const queryClient = useQueryClient();

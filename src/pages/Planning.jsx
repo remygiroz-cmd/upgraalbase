@@ -14,10 +14,9 @@ import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import ShiftCard from '@/components/planning/ShiftCard';
 import ShiftFormModal from '@/components/planning/ShiftFormModal';
 import WeeklySummary from '@/components/planning/WeeklySummary';
-import PositionsManager from '@/components/planning/PositionsManager';
 import ApplyTemplateModal from '@/components/planning/ApplyTemplateModal';
-import NonShiftTypesManager from '@/components/planning/NonShiftTypesManager';
 import NonShiftCard from '@/components/planning/NonShiftCard';
+import PlanningSettingsModal from '@/components/planning/PlanningSettingsModal';
 import { calculateShiftDuration, checkMinimumRest } from '@/components/planning/LegalChecks';
 
 const DAYS = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche'];
@@ -26,8 +25,7 @@ const MONTHS = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet'
 export default function Planning() {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [showShiftModal, setShowShiftModal] = useState(false);
-  const [showPositionsManager, setShowPositionsManager] = useState(false);
-  const [showNonShiftTypesManager, setShowNonShiftTypesManager] = useState(false);
+  const [showPlanningSettings, setShowPlanningSettings] = useState(false);
   const [showApplyTemplateModal, setShowApplyTemplateModal] = useState(false);
   const [selectedEmployeeForTemplate, setSelectedEmployeeForTemplate] = useState(null);
   const [selectedCell, setSelectedCell] = useState(null);
@@ -571,24 +569,15 @@ export default function Planning() {
           title="Planning mensuel"
           subtitle="Gestion des horaires de travail"
         />
-        <div className="flex gap-2">
-          <Button
-            onClick={() => setShowNonShiftTypesManager(true)}
-            variant="outline"
-            className="border-2 border-gray-300 hover:border-blue-500 hover:bg-blue-50"
-          >
-            <Calendar className="w-4 h-4 mr-2" />
-            Statuts
-          </Button>
-          <Button
-            onClick={() => setShowPositionsManager(true)}
-            variant="outline"
-            size="icon"
-            className="border-2 border-gray-300 hover:border-orange-500 hover:bg-orange-50"
-          >
-            <Settings className="w-5 h-5" />
-          </Button>
-        </div>
+        <Button
+          onClick={() => setShowPlanningSettings(true)}
+          variant="outline"
+          size="icon"
+          className="border-2 border-gray-300 hover:border-orange-500 hover:bg-orange-50"
+          title="Paramètres du planning"
+        >
+          <Settings className="w-5 h-5" />
+        </Button>
       </div>
 
       {/* Month Navigation & Filters */}
@@ -971,16 +960,10 @@ export default function Planning() {
         currentUser={currentUser}
       />
 
-      {/* Positions Manager */}
-      <PositionsManager
-        open={showPositionsManager}
-        onOpenChange={setShowPositionsManager}
-      />
-
-      {/* Non-Shift Types Manager */}
-      <NonShiftTypesManager
-        open={showNonShiftTypesManager}
-        onOpenChange={setShowNonShiftTypesManager}
+      {/* Planning Settings Modal */}
+      <PlanningSettingsModal
+        open={showPlanningSettings}
+        onOpenChange={setShowPlanningSettings}
       />
 
       {/* Apply Template Modal */}
