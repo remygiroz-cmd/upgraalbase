@@ -700,7 +700,7 @@ export default function Planning() {
           <div className="inline-block min-w-full">
             {/* Header */}
             <DragDropContext onDragEnd={handleTeamDragEnd}>
-              <div className="bg-gradient-to-r from-gray-100 to-gray-50 flex border-b-2 border-gray-300">
+              <div className="bg-gradient-to-r from-gray-100 to-gray-50 flex border-b-2 border-gray-300 sticky top-0 lg:top-4 z-30">
                 <div className="sticky left-0 z-20 bg-gradient-to-r from-gray-100 to-gray-50 border-r-2 border-gray-300 px-4 py-4 text-left text-sm font-bold text-gray-900 w-[120px] shadow-md flex items-center gap-2">
                   <Calendar className="w-4 h-4 text-orange-600" />
                   Jour
@@ -743,8 +743,8 @@ export default function Planning() {
                                 >
                                  <Copy className="w-4 h-4" />
                                 </button>
-                                <div className="font-bold text-sm text-gray-900 truncate px-6">
-                                 {employee.first_name} {employee.last_name}
+                                <div className="font-bold text-sm text-gray-900 whitespace-nowrap px-6">
+                                  {employee.first_name} {employee.last_name}
                                 </div>
                                 {team && (
                                  <div 
