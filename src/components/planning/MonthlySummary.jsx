@@ -65,6 +65,19 @@ export default function MonthlySummary({ employee, shifts, nonShiftEvents, nonSh
   const weeks = days / 7;
   const autoContractHours = contractHoursWeekly * weeks;
 
+  // Detect CP periods
+  const cpPeriods = detectPaidLeavePeriods(
+    shifts,
+    nonShiftEvents,
+    nonShiftTypes,
+    employee.id,
+    monthStart,
+    monthEnd,
+    debugMode
+  );
+  
+  const totalCPDays = getTotalPaidLeaveDays(cpPeriods);
+  
   // Overtime/complementary calculation
   let monthlyHours = { type: 'unknown', total: autoTotalHours };
   if (calculationMode === 'monthly') {
