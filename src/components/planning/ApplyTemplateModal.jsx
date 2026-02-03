@@ -450,6 +450,60 @@ export default function ApplyTemplateModal({ open, onOpenChange, employeeId, emp
               </div>
             </div>
           )}
+
+          {/* Debug Panel */}
+          {debugMode && debugLogs.length > 0 && (
+            <div className="border-2 border-purple-300 rounded-lg p-4 bg-purple-50 space-y-3">
+              <div className="flex items-center justify-between">
+                <h3 className="font-bold text-purple-900">🔍 Debug Logs</h3>
+                <Button
+                  onClick={copyDebugLogs}
+                  size="sm"
+                  variant="outline"
+                  className="border-purple-400 text-purple-700"
+                >
+                  📋 Copier les logs
+                </Button>
+              </div>
+
+              <div className="space-y-2 max-h-[400px] overflow-y-auto">
+                <div className="bg-white border border-purple-200 rounded p-3">
+                  <p className="text-xs font-bold text-purple-900 mb-2">Template Shifts stockés:</p>
+                  <div className="space-y-1 text-[10px] font-mono">
+                    {templateShifts.map((ts, idx) => {
+                      const dayLabels = ['', 'Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche'];
+                      return (
+                        <div key={idx} className="text-gray-700">
+                          day_of_week: <span className="font-bold text-purple-700">{ts.day_of_week}</span> ({dayLabels[ts.day_of_week]}) | {ts.start_time}-{ts.end_time} | {ts.position}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {debugLogs.filter(log => log.type === 'date_match').map((log, idx) => {
+                  const d = log.data;
+                  return (
+                    <div key={idx} className="bg-white border border-purple-200 rounded p-2 text-[10px]">
+                      <div className="font-bold text-purple-900 mb-1">
+                        {d.date} | {d.dayLabel}
+                      </div>
+                      <div className="font-mono text-gray-600 space-y-0.5">
+                        <div>jsGetDay: {d.jsGetDay}</div>
+                        <div>computed day_of_week: <span className="font-bold text-purple-700">{d.computedDayOfWeek}</span></div>
+                        <div>Shifts matchés: <span className="font-bold">{d.matchedTemplates}</span></div>
+                        {d.templateDetails.map((td, i) => (
+                          <div key={i} className="ml-4 text-green-700">
+                            → Match: day_of_week={td.day_of_week} | {td.start_time}-{td.end_time}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
         </div>
 
         <DialogFooter>
