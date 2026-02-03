@@ -9,7 +9,7 @@ export default function NonShiftCard({ nonShift, nonShiftType, onClick, onDelete
     <div
       onClick={onClick}
       className={cn(
-        "relative rounded-md p-2 text-xs cursor-pointer transition-all hover:shadow-md group border-2",
+        "relative rounded-md p-2 text-xs cursor-pointer transition-all hover:shadow-md group border-2 h-full",
         "flex items-center gap-2"
       )}
       style={{ 

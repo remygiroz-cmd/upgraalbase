@@ -57,7 +57,7 @@ export default function ShiftCard({ shift, onClick, onDelete, hasRestWarning, ha
     <div
       onClick={onClick}
       className={cn(
-        "relative rounded-lg border-2 p-2 cursor-pointer transition-all hover:shadow-md group",
+        "relative rounded-lg border-2 p-2 cursor-pointer transition-all hover:shadow-md group h-full flex flex-col justify-center",
         shift.status === 'cancelled' && "opacity-50"
       )}
       style={{ 
