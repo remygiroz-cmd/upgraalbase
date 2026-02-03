@@ -69,7 +69,10 @@ export default function ApplyTemplateModal({ open, onOpenChange, employeeId, emp
 
       // Generate shifts for each day in range
       for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
-        const dayOfWeek = d.getDay() === 0 ? 7 : d.getDay(); // 1=Lundi, 7=Dimanche
+        // JavaScript getDay: 0=Dimanche, 1=Lundi, 2=Mardi, 3=Mercredi, 4=Jeudi, 5=Vendredi, 6=Samedi
+        // Notre système: 1=Lundi, 2=Mardi, 3=Mercredi, 4=Jeudi, 5=Vendredi, 6=Samedi, 7=Dimanche
+        const jsDay = d.getDay(); // 0-6
+        const dayOfWeek = jsDay === 0 ? 7 : jsDay; // Convertir 0 (Dimanche) en 7, garder 1-6 tel quel
         const dateStr = d.toISOString().split('T')[0];
 
         // Find template shifts for this day
