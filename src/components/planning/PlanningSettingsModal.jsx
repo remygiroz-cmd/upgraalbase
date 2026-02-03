@@ -146,7 +146,7 @@ export default function PlanningSettingsModal({ open, onOpenChange }) {
                       Toutes les cellules d'une même journée ont la même hauteur (activé)
                     </p>
                   </div>
-                  <Switch checked={true} disabled />
+                  <Switch checked={true} onCheckedChange={() => {}} />
                 </div>
 
                 <div className="flex items-center justify-between">
@@ -204,7 +204,7 @@ export default function PlanningSettingsModal({ open, onOpenChange }) {
                       Permet de dupliquer le contenu de la dernière case non vide (activé)
                     </p>
                   </div>
-                  <Switch checked={true} disabled />
+                  <Switch checked={true} onCheckedChange={() => {}} />
                 </div>
 
                 <div className="flex items-center justify-between">
@@ -214,7 +214,7 @@ export default function PlanningSettingsModal({ open, onOpenChange }) {
                       Bouton "Copier ↑" dans les récaps de semaine (activé)
                     </p>
                   </div>
-                  <Switch checked={true} disabled />
+                  <Switch checked={true} onCheckedChange={() => {}} />
                 </div>
 
                 <div className="flex items-center justify-between">
@@ -224,7 +224,7 @@ export default function PlanningSettingsModal({ open, onOpenChange }) {
                       Demander confirmation si des données existent déjà (activé)
                     </p>
                   </div>
-                  <Switch checked={true} disabled />
+                  <Switch checked={true} onCheckedChange={() => {}} />
                 </div>
 
                 <div className="flex items-center justify-between">
