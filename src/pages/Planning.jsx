@@ -786,7 +786,19 @@ export default function Planning() {
                 </div>
               ) : (
                 <>
-                  {daysArray.map((dayInfo, index) => (
+                  {daysArray.map((dayInfo, index) => {
+                    // Calculate max events for this row across all employees
+                    const dateStr = dayInfo.date.toISOString().split('T')[0];
+                    const maxEventsInRow = Math.max(
+                      1,
+                      ...employees.map(emp => {
+                        const shifts = getShiftsForEmployeeAndDate(emp.id, dateStr);
+                        const nonShifts = getNonShiftsForEmployeeAndDate(emp.id, dateStr);
+                        return shifts.length + nonShifts.length;
+                      })
+                    );
+
+                    return (
                     <React.Fragment key={dayInfo.day}>
                       <div className={cn(
                         "flex border-b border-gray-200 hover:bg-gray-50/50 transition-colors",
@@ -794,7 +806,7 @@ export default function Planning() {
                         dayInfo.isToday && "bg-blue-50/80"
                       )}>
                         <div className={cn(
-                          "sticky left-0 z-10 border-r-2 border-gray-300 px-4 py-3 shadow-sm w-[120px]",
+                          "sticky left-0 z-10 border-r-2 border-gray-300 px-4 py-3 shadow-sm w-[120px] flex flex-col justify-center",
                           dayInfo.isWeekend && "bg-orange-50/30",
                           dayInfo.isToday && "bg-gradient-to-r from-blue-100 to-blue-50 border-l-4 border-l-blue-500"
                         )}>
@@ -813,60 +825,62 @@ export default function Planning() {
                         </div>
                         <div className="flex flex-1">
                           {employees.map(employee => {
-                            const dateStr = dayInfo.date.toISOString().split('T')[0];
                             const employeeShifts = getShiftsForEmployeeAndDate(employee.id, dateStr);
                             const employeeNonShifts = getNonShiftsForEmployeeAndDate(employee.id, dateStr);
+                            const totalEvents = employeeShifts.length + employeeNonShifts.length;
 
                             return (
                               <div
                                 key={employee.id}
                                 onClick={() => handleCellClick(employee.id, dateStr, dayInfo)}
                                 className={cn(
-                                  "border-r border-gray-200 px-2 py-2 cursor-pointer hover:bg-orange-50 transition-all group relative w-[140px] sm:w-[180px]",
+                                  "border-r border-gray-200 px-2 py-2 cursor-pointer hover:bg-orange-50 transition-all group relative w-[140px] sm:w-[180px] flex",
                                   dayInfo.isWeekend && "bg-orange-50/20"
                                 )}
                               >
-                                <div className="space-y-1.5 min-h-[60px]">
+                                <div className="space-y-1.5 w-full flex flex-col" style={{ minHeight: `${Math.max(60, maxEventsInRow * 52)}px` }}>
                                   {employeeNonShifts.map((nonShift) => {
                                     const type = nonShiftTypes.find(t => t.id === nonShift.non_shift_type_id);
                                     return (
-                                      <NonShiftCard
-                                        key={nonShift.id}
-                                        nonShift={nonShift}
-                                        nonShiftType={type}
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          handleCellClick(employee.id, dateStr, dayInfo);
-                                        }}
-                                        onDelete={(ns) => {
-                                          if (window.confirm('Supprimer cet événement ?')) {
-                                            base44.entities.NonShiftEvent.delete(ns.id).then(() => {
-                                              queryClient.invalidateQueries({ queryKey: ['nonShiftEvents'] });
-                                              toast.success('Événement supprimé');
-                                            });
-                                          }
-                                        }}
-                                      />
+                                      <div key={nonShift.id} className={totalEvents === 1 ? "flex-1" : ""}>
+                                        <NonShiftCard
+                                          nonShift={nonShift}
+                                          nonShiftType={type}
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            handleCellClick(employee.id, dateStr, dayInfo);
+                                          }}
+                                          onDelete={(ns) => {
+                                            if (window.confirm('Supprimer cet événement ?')) {
+                                              base44.entities.NonShiftEvent.delete(ns.id).then(() => {
+                                                queryClient.invalidateQueries({ queryKey: ['nonShiftEvents'] });
+                                                toast.success('Événement supprimé');
+                                              });
+                                            }
+                                          }}
+                                        />
+                                      </div>
                                     );
                                   })}
                                   {employeeShifts.map((shift) => {
                                     const warnings = getShiftWarnings(shift, employeeShifts);
                                     return (
-                                      <ShiftCard
-                                        key={shift.id}
-                                        shift={shift}
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          handleCellClick(employee.id, dateStr, dayInfo);
-                                        }}
-                                        onDelete={handleDeleteShift}
-                                        hasRestWarning={warnings.hasRestWarning}
-                                        hasOvertimeWarning={warnings.hasOvertimeWarning}
-                                      />
+                                      <div key={shift.id} className={totalEvents === 1 ? "flex-1" : ""}>
+                                        <ShiftCard
+                                          shift={shift}
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            handleCellClick(employee.id, dateStr, dayInfo);
+                                          }}
+                                          onDelete={handleDeleteShift}
+                                          hasRestWarning={warnings.hasRestWarning}
+                                          hasOvertimeWarning={warnings.hasOvertimeWarning}
+                                        />
+                                      </div>
                                     );
                                   })}
                                   {employeeShifts.length === 0 && employeeNonShifts.length === 0 && (
-                                    <div className="flex items-center justify-center h-full min-h-[60px] text-gray-300 group-hover:text-orange-400 transition-colors">
+                                    <div className="flex items-center justify-center flex-1 text-gray-300 group-hover:text-orange-400 transition-colors">
                                       <Plus className="w-6 h-6" />
                                     </div>
                                   )}
