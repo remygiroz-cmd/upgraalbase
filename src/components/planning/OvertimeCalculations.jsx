@@ -2,6 +2,7 @@
 // Convention collective restauration rapide
 
 import { calculateShiftDuration } from './LegalChecks';
+import { parseLocalDate, formatLocalDate } from './dateUtils';
 
 /**
  * Calcule les heures supplémentaires en mode hebdomadaire
@@ -64,18 +65,51 @@ export const calculateWeeklyComplementary = (weeklyHours, contractHoursWeekly) =
 
 /**
  * Calcule les heures pour un employé sur une semaine (mode hebdomadaire)
+ * Semaine = Lundi → Dimanche (ISO week)
  */
-export const calculateWeeklyEmployeeHours = (shifts, employeeId, weekStart, employee) => {
+export const calculateWeeklyEmployeeHours = (shifts, employeeId, weekStart, employee, debug = false) => {
   const weekEnd = new Date(weekStart);
   weekEnd.setDate(weekEnd.getDate() + 6);
   
+  const weekStartStr = formatLocalDate(weekStart);
+  const weekEndStr = formatLocalDate(weekEnd);
+  
+  const debugInfo = [];
+  
+  // Filter shifts in week range - using string comparison for date-only (no timezone issues)
   const weekShifts = shifts.filter(s => {
     if (s.employee_id !== employeeId) return false;
-    const shiftDate = new Date(s.date);
-    return shiftDate >= weekStart && shiftDate <= weekEnd;
+    
+    // Compare dates as strings (YYYY-MM-DD) - inclusive range [weekStartStr, weekEndStr]
+    const included = s.date >= weekStartStr && s.date <= weekEndStr;
+    
+    if (debug) {
+      const duration = included ? calculateShiftDuration(s) : 0;
+      debugInfo.push({
+        date: s.date,
+        duration: duration.toFixed(2),
+        durationMinutes: included ? Math.round(duration * 60) : 0,
+        included
+      });
+    }
+    
+    return included;
   });
   
   const totalHours = weekShifts.reduce((sum, shift) => sum + calculateShiftDuration(shift), 0);
+  
+  if (debug) {
+    const totalMinutes = weekShifts.reduce((sum, shift) => sum + calculateShiftDuration(shift) * 60, 0);
+    console.log('🔍 WEEKLY EMPLOYEE HOURS DEBUG (mode hebdomadaire):', {
+      weekStart: weekStartStr,
+      weekEnd: weekEndStr,
+      employeeId,
+      totalShifts: weekShifts.length,
+      shifts: debugInfo,
+      totalMinutes: Math.round(totalMinutes),
+      totalHours: totalHours.toFixed(2)
+    });
+  }
   
   // Déterminer si temps plein ou partiel
   const isFullTime = employee?.work_time_type === 'full_time';
@@ -88,6 +122,7 @@ export const calculateWeeklyEmployeeHours = (shifts, employeeId, weekStart, empl
     return {
       type: 'full_time',
       total: totalHours,
+      debugInfo: debug ? debugInfo : null,
       ...overtime
     };
   } else if (contractHoursWeekly > 0) {
@@ -96,6 +131,7 @@ export const calculateWeeklyEmployeeHours = (shifts, employeeId, weekStart, empl
       type: 'part_time',
       total: totalHours,
       contract_hours: contractHoursWeekly,
+      debugInfo: debug ? debugInfo : null,
       ...complementary
     };
   }
@@ -103,7 +139,8 @@ export const calculateWeeklyEmployeeHours = (shifts, employeeId, weekStart, empl
   return {
     type: 'unknown',
     total: totalHours,
-    normal: totalHours
+    normal: totalHours,
+    debugInfo: debug ? debugInfo : null
   };
 };
 
