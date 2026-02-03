@@ -63,6 +63,17 @@ export default function ApplyTemplateModal({ open, onOpenChange, employeeId, emp
         throw new Error('Données incomplètes');
       }
 
+      console.log('🔍 APPLY TEMPLATE - Start:', {
+        employeeId,
+        employeeName,
+        templateId: selectedTemplateId,
+        totalTemplateShifts: templateShifts.length,
+        templateShiftsByDay: templateShifts.reduce((acc, ts) => {
+          acc[ts.day_of_week] = (acc[ts.day_of_week] || 0) + 1;
+          return acc;
+        }, {})
+      });
+
       const start = new Date(startDate);
       const end = new Date(endDate);
       const shifts = [];
@@ -75,8 +86,20 @@ export default function ApplyTemplateModal({ open, onOpenChange, employeeId, emp
         const dayOfWeek = jsDay === 0 ? 7 : jsDay; // Convertir 0 (Dimanche) en 7, garder 1-6 tel quel
         const dateStr = d.toISOString().split('T')[0];
 
+        const dayNames = ['Dimanche', 'Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi'];
+        const dayLabel = dayNames[jsDay];
+
         // Find template shifts for this day
         const dayTemplates = templateShifts.filter(ts => ts.day_of_week === dayOfWeek);
+
+        console.log('🔍 APPLY TEMPLATE - Processing date:', {
+          date: dateStr,
+          jsGetDay: jsDay,
+          computedDayOfWeek: dayOfWeek,
+          dayLabel,
+          matchedTemplates: dayTemplates.length,
+          templateDays: dayTemplates.map(t => t.day_of_week)
+        });
 
         for (const template of dayTemplates) {
           shifts.push({

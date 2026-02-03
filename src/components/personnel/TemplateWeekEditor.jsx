@@ -98,6 +98,16 @@ export default function TemplateWeekEditor({ week, onClose }) {
       return;
     }
 
+    const dayLabel = DAYS.find(d => d.value === selectedDay)?.label;
+    console.log('🔍 TEMPLATE EDITOR - Enregistrement shift:', {
+      dayLabel,
+      day_of_week: selectedDay,
+      template_week_id: week.id,
+      position: shiftForm.position,
+      start_time: shiftForm.start_time,
+      end_time: shiftForm.end_time
+    });
+
     saveShiftMutation.mutate({
       id: editingShift?.id,
       data: {
