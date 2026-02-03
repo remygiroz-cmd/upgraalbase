@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { cn } from '@/lib/utils';
 import { Edit2, Check, X } from 'lucide-react';
 import { calculateMonthlyEmployeeHours } from './OvertimeCalculations';
+import { detectPaidLeavePeriods, getTotalPaidLeaveDays } from './PaidLeaveDetection';
 import { calculateShiftDuration } from './LegalChecks';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
@@ -13,6 +14,7 @@ import { toast } from 'sonner';
 
 export default function MonthlySummary({ employee, shifts, nonShiftEvents, nonShiftTypes, monthStart, monthEnd }) {
   const [showEditDialog, setShowEditDialog] = useState(false);
+  const [debugMode, setDebugMode] = useState(false);
   const queryClient = useQueryClient();
 
   const year = monthStart.getFullYear();

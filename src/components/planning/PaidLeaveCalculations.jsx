@@ -65,7 +65,7 @@ function getMovableHolidays(year) {
 /**
  * Vérifie si une date est un jour férié
  */
-function isPublicHoliday(dateStr) {
+export function isPublicHoliday(dateStr) {
   const date = parseLocalDate(dateStr);
   const year = date.getFullYear();
   const monthDay = dateStr.substring(5); // "MM-DD"
