@@ -26,6 +26,8 @@ export default function ApplyTemplateModal({ open, onOpenChange, employeeId, emp
   const [endDate, setEndDate] = useState('');
   const [conflicts, setConflicts] = useState(null);
   const [conflictMode, setConflictMode] = useState('replace'); // replace, add, cancel
+  const [debugMode, setDebugMode] = useState(false);
+  const [debugLogs, setDebugLogs] = useState([]);
   const queryClient = useQueryClient();
 
   const { data: templateWeeks = [] } = useQuery({
@@ -63,7 +65,9 @@ export default function ApplyTemplateModal({ open, onOpenChange, employeeId, emp
         throw new Error('Données incomplètes');
       }
 
-      console.log('🔍 APPLY TEMPLATE - Start:', {
+      const logs = [];
+      
+      const templateInfo = {
         employeeId,
         employeeName,
         templateId: selectedTemplateId,
@@ -72,7 +76,9 @@ export default function ApplyTemplateModal({ open, onOpenChange, employeeId, emp
           acc[ts.day_of_week] = (acc[ts.day_of_week] || 0) + 1;
           return acc;
         }, {})
-      });
+      };
+      logs.push({ type: 'template_info', data: templateInfo });
+      console.log('🔍 APPLY TEMPLATE - Start:', templateInfo);
 
       const start = new Date(startDate);
       const end = new Date(endDate);
@@ -92,14 +98,22 @@ export default function ApplyTemplateModal({ open, onOpenChange, employeeId, emp
         // Find template shifts for this day
         const dayTemplates = templateShifts.filter(ts => ts.day_of_week === dayOfWeek);
 
-        console.log('🔍 APPLY TEMPLATE - Processing date:', {
+        const dateLog = {
           date: dateStr,
           jsGetDay: jsDay,
           computedDayOfWeek: dayOfWeek,
           dayLabel,
           matchedTemplates: dayTemplates.length,
-          templateDays: dayTemplates.map(t => t.day_of_week)
-        });
+          templateDays: dayTemplates.map(t => t.day_of_week),
+          templateDetails: dayTemplates.map(t => ({
+            day_of_week: t.day_of_week,
+            start_time: t.start_time,
+            end_time: t.end_time,
+            position: t.position
+          }))
+        };
+        logs.push({ type: 'date_match', data: dateLog });
+        console.log('🔍 APPLY TEMPLATE - Processing date:', dateLog);
 
         for (const template of dayTemplates) {
           shifts.push({
@@ -126,13 +140,19 @@ export default function ApplyTemplateModal({ open, onOpenChange, employeeId, emp
         await base44.entities.Shift.bulkCreate(shifts);
       }
 
+      if (debugMode) {
+        setDebugLogs(logs);
+      }
+
       return shifts.length;
     },
     onSuccess: (count) => {
       queryClient.invalidateQueries({ queryKey: ['shifts'] });
       toast.success(`${count} shift(s) appliqué(s)`);
-      onOpenChange(false);
-      resetForm();
+      if (!debugMode) {
+        onOpenChange(false);
+        resetForm();
+      }
     },
     onError: (error) => {
       toast.error('Erreur : ' + error.message);
@@ -145,6 +165,34 @@ export default function ApplyTemplateModal({ open, onOpenChange, employeeId, emp
     setEndDate('');
     setConflicts(null);
     setConflictMode('replace');
+    setDebugLogs([]);
+  };
+
+  const copyDebugLogs = () => {
+    const dayLabels = ['', 'Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche'];
+    
+    let text = '=== DEBUG LOGS - PLANNING TYPE ===\n\n';
+    text += `Employé: ${employeeName} (${employeeId})\n\n`;
+    
+    text += '--- TEMPLATE SHIFTS STOCKÉS ---\n';
+    templateShifts.forEach(ts => {
+      text += `day_of_week: ${ts.day_of_week} (${dayLabels[ts.day_of_week] || 'inconnu'}) | ${ts.start_time}-${ts.end_time} | ${ts.position}\n`;
+    });
+    
+    text += '\n--- APPLICATION SUR PÉRIODE ---\n';
+    debugLogs.filter(log => log.type === 'date_match').forEach(log => {
+      const d = log.data;
+      text += `\n${d.date} | jsGetDay=${d.jsGetDay} | computed=${d.computedDayOfWeek} | ${d.dayLabel}\n`;
+      text += `  → Shifts matchés: ${d.matchedTemplates}\n`;
+      if (d.templateDetails.length > 0) {
+        d.templateDetails.forEach(td => {
+          text += `    - day_of_week=${td.day_of_week} | ${td.start_time}-${td.end_time} | ${td.position}\n`;
+        });
+      }
+    });
+    
+    navigator.clipboard.writeText(text);
+    toast.success('Logs copiés dans le presse-papier');
   };
 
   const handlePreview = () => {
@@ -199,9 +247,20 @@ export default function ApplyTemplateModal({ open, onOpenChange, employeeId, emp
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2 text-xl text-orange-600">
-            <Calendar className="w-6 h-6" />
-            Appliquer un planning type
+          <DialogTitle className="flex items-center justify-between">
+            <div className="flex items-center gap-2 text-xl text-orange-600">
+              <Calendar className="w-6 h-6" />
+              Appliquer un planning type
+            </div>
+            <label className="flex items-center gap-2 text-xs cursor-pointer">
+              <input
+                type="checkbox"
+                checked={debugMode}
+                onChange={(e) => setDebugMode(e.target.checked)}
+                className="w-4 h-4"
+              />
+              <span className="text-gray-600">Mode debug</span>
+            </label>
           </DialogTitle>
           <p className="text-sm text-gray-600">
             {employeeName}
