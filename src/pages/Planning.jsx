@@ -799,7 +799,7 @@ export default function Planning() {
                     );
 
                     return (
-                    <React.Fragment key={dayInfo.day}>
+                      <React.Fragment key={dayInfo.day}>
                       <div className={cn(
                         "flex border-b border-gray-200 hover:bg-gray-50/50 transition-colors",
                         dayInfo.isWeekend && "bg-orange-50/30",
@@ -944,8 +944,9 @@ export default function Planning() {
                           </div>
                         </div>
                       )}
-                    </React.Fragment>
-                  ))}
+                      </React.Fragment>
+                    );
+                  })}
                 </>
               )}
             </div>
