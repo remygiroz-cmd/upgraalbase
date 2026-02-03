@@ -88,11 +88,119 @@ export default function PositionsManager({ open, onOpenChange, embeddedMode = fa
     await Promise.all(updatePromises);
   };
 
+  const handleDelete = (id) => {
+    const position = positions.find(p => p.id === id);
+    if (window.confirm(`Supprimer le poste "${position?.label}" ?`)) {
+      deleteMutation.mutate(id);
+    }
+  };
+
   const PRESET_COLORS = [
     '#ef4444', '#f97316', '#f59e0b', '#84cc16', 
     '#10b981', '#14b8a6', '#06b6d4', '#3b82f6',
     '#6366f1', '#8b5cf6', '#a855f7', '#ec4899'
   ];
+
+  if (embeddedMode) {
+    return (
+      <div className="space-y-4">
+        <form onSubmit={handleSubmit} className="bg-white border-2 border-gray-200 rounded-lg p-4 space-y-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <Label>Nom du poste</Label>
+              <Input
+                value={formData.label}
+                onChange={(e) => setFormData({ ...formData, label: e.target.value })}
+                placeholder="Ex: Cuisine, Caisse..."
+                required
+              />
+            </div>
+            <div>
+              <Label>Couleur</Label>
+              <div className="flex gap-2 flex-wrap mt-1">
+                {PRESET_COLORS.slice(0, 6).map(color => (
+                  <button
+                    key={color}
+                    type="button"
+                    onClick={() => setFormData({ ...formData, color })}
+                    className={cn(
+                      "w-8 h-8 rounded-lg border-2 transition-all",
+                      formData.color === color ? "border-gray-900 scale-110" : "border-gray-300"
+                    )}
+                    style={{ backgroundColor: color }}
+                  />
+                ))}
+              </div>
+            </div>
+          </div>
+          <div className="flex gap-2">
+            <Button type="submit" className="bg-orange-600 hover:bg-orange-700">
+              {editingPosition ? 'Mettre à jour' : 'Ajouter'}
+            </Button>
+            {editingPosition && (
+              <Button type="button" variant="outline" onClick={resetForm}>
+                Annuler
+              </Button>
+            )}
+          </div>
+        </form>
+
+        <DragDropContext onDragEnd={handleDragEnd}>
+          <Droppable droppableId="positions">
+            {(provided) => (
+              <div
+                ref={provided.innerRef}
+                {...provided.droppableProps}
+                className="space-y-2"
+              >
+                {positions.map((position, index) => (
+                  <Draggable key={position.id} draggableId={position.id} index={index}>
+                    {(provided, snapshot) => (
+                      <div
+                        ref={provided.innerRef}
+                        {...provided.draggableProps}
+                        className={cn(
+                          "bg-white border-2 rounded-lg p-3 flex items-center gap-3 transition-all",
+                          snapshot.isDragging && "shadow-2xl border-orange-400"
+                        )}
+                      >
+                        <div {...provided.dragHandleProps} className="cursor-grab active:cursor-grabbing">
+                          <GripVertical className="w-5 h-5 text-gray-400" />
+                        </div>
+                        <div
+                          className="w-6 h-6 rounded-full border-2 border-gray-300"
+                          style={{ backgroundColor: position.color }}
+                        />
+                        <span className="flex-1 font-semibold">{position.label}</span>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => handleEdit(position)}
+                        >
+                          Modifier
+                        </Button>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="ghost"
+                          className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                          onClick={() => handleDelete(position.id)}
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    )}
+                  </Draggable>
+                ))}
+                {provided.placeholder}
+              </div>
+            )}
+          </Droppable>
+        </DragDropContext>
+      </div>
+    );
+  }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
