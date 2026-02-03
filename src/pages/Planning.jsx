@@ -14,6 +14,7 @@ import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import ShiftCard from '@/components/planning/ShiftCard';
 import ShiftFormModal from '@/components/planning/ShiftFormModal';
 import WeeklySummary from '@/components/planning/WeeklySummary';
+import MonthlySummary from '@/components/planning/MonthlySummary';
 import ApplyTemplateModal from '@/components/planning/ApplyTemplateModal';
 import NonShiftCard from '@/components/planning/NonShiftCard';
 import PlanningSettingsModal from '@/components/planning/PlanningSettingsModal';
@@ -936,6 +937,29 @@ export default function Planning() {
                       </React.Fragment>
                     );
                   })}
+
+                  {/* Monthly Summary Row */}
+                  <div className="bg-gradient-to-r from-blue-100 to-blue-50 border-t-4 border-blue-500 flex">
+                    <div className="sticky left-0 z-10 bg-gradient-to-r from-blue-100 to-blue-50 border-r-2 border-blue-300 px-2 py-3 shadow-sm w-[120px]">
+                      <div className="text-[11px] font-bold text-blue-900 uppercase tracking-wide text-center">
+                        📊 Récap mensuel
+                      </div>
+                    </div>
+                    <div className="flex flex-1">
+                      {employees.map(employee => (
+                        <div key={employee.id} className="border-r border-blue-200 min-w-[140px] w-[140px] sm:w-[180px]">
+                          <MonthlySummary
+                            employee={employee}
+                            shifts={shifts}
+                            nonShiftEvents={nonShiftEvents}
+                            nonShiftTypes={nonShiftTypes}
+                            monthStart={new Date(currentYear, currentMonth, 1)}
+                            monthEnd={new Date(currentYear, currentMonth + 1, 0)}
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
                 </>
               )}
             </div>
