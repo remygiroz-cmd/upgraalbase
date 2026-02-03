@@ -6,7 +6,7 @@ import { calculateWeeklyEmployeeHours } from './OvertimeCalculations';
 import { useQuery } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 
-export default function WeeklySummary({ employee, shifts, weekStart, onDeleteWeek, onCopyFromAbove }) {
+export default function WeeklySummary({ employee, shifts, weekStart, onDeleteWeek, onCopyFromAbove, nonShiftEvents = [], nonShiftTypes = [] }) {
   const [showConfirm, setShowConfirm] = useState(false);
   const [debugMode, setDebugMode] = useState(false);
 
@@ -23,10 +23,10 @@ export default function WeeklySummary({ employee, shifts, weekStart, onDeleteWee
   // Calculate hours based on mode
   let weekHours;
   if (calculationMode === 'weekly') {
-    weekHours = calculateWeeklyEmployeeHours(shifts, employee.id, weekStart, employee, debugMode);
+    weekHours = calculateWeeklyEmployeeHours(shifts, employee.id, weekStart, employee, debugMode, nonShiftEvents, nonShiftTypes);
   } else {
     // Fallback to basic calculation
-    weekHours = calculateWeeklyHours(shifts, employee.id, weekStart, debugMode);
+    weekHours = calculateWeeklyHours(shifts, employee.id, weekStart, debugMode, nonShiftEvents, nonShiftTypes, employee);
   }
 
   const handleDelete = () => {
@@ -81,18 +81,48 @@ export default function WeeklySummary({ employee, shifts, weekStart, onDeleteWee
       </div>
       
       {debugMode && weekHours.debugInfo && (
-        <div className="absolute left-0 top-full mt-1 bg-white border-2 border-purple-500 rounded p-2 shadow-lg z-50 text-[9px] w-48">
-          <div className="font-bold text-purple-900 mb-1">Debug shifts:</div>
-          {weekHours.debugInfo.map((info, i) => (
-            <div key={i} className={cn(
-              "font-mono",
-              info.included ? "text-green-700" : "text-red-500"
-            )}>
-              {info.date}: {info.durationMinutes}min {info.included ? '✓' : '✗'}
+        <div className="absolute left-0 top-full mt-1 bg-white border-2 border-purple-500 rounded p-2 shadow-lg z-50 text-[9px] w-64 max-h-96 overflow-y-auto">
+          <div className="font-bold text-purple-900 mb-1">Debug:</div>
+          
+          <div className="mb-2">
+            <div className="font-semibold text-gray-700">Shifts:</div>
+            {weekHours.debugInfo.filter(i => i.type === 'shift').map((info, i) => (
+              <div key={i} className={cn(
+                "font-mono",
+                info.included ? "text-green-700" : "text-red-500"
+              )}>
+                {info.date}: {info.durationMinutes}min {info.included ? '✓' : '✗'}
+              </div>
+            ))}
+          </div>
+          
+          {weekHours.debugInfo.filter(i => i.type === 'non-shift').length > 0 && (
+            <div className="mb-2 border-t border-purple-200 pt-1">
+              <div className="font-semibold text-blue-700">Non-shifts (génère heures):</div>
+              {weekHours.debugInfo.filter(i => i.type === 'non-shift').map((info, i) => (
+                <div key={i} className={cn(
+                  "font-mono text-[8px]",
+                  info.generatesHours ? "text-blue-600" : "text-gray-400"
+                )}>
+                  {info.date}: {info.label}<br/>
+                  {info.generatesHours ? `✓ ${info.hoursGenerated.toFixed(2)}h (${info.method})` : '✗ Pas d\'heures'}
+                </div>
+              ))}
             </div>
-          ))}
-          <div className="border-t border-purple-300 mt-1 pt-1 font-bold text-purple-900">
-            Total: {weekHours.total.toFixed(2)}h
+          )}
+          
+          <div className="border-t border-purple-300 mt-1 pt-1">
+            <div className="font-bold text-green-700">
+              Shifts: {(weekHours.total - (weekHours.nonShiftHours || 0)).toFixed(2)}h
+            </div>
+            {weekHours.nonShiftHours > 0 && (
+              <div className="font-bold text-blue-700">
+                Non-shifts: {weekHours.nonShiftHours.toFixed(2)}h
+              </div>
+            )}
+            <div className="font-bold text-purple-900">
+              Total: {weekHours.total.toFixed(2)}h
+            </div>
           </div>
         </div>
       )}
