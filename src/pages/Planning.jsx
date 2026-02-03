@@ -1,13 +1,15 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
-import { Calendar, ChevronLeft, ChevronRight, Plus, Filter, GripVertical, Settings, MoreVertical, Copy } from 'lucide-react';
+import { Calendar, ChevronLeft, ChevronRight, Plus, Filter, GripVertical, Settings, MoreVertical, Copy, ArrowDown } from 'lucide-react';
 import PageHeader from '@/components/ui/PageHeader';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { toast } from 'sonner';
+import { AlertTriangle } from 'lucide-react';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import ShiftCard from '@/components/planning/ShiftCard';
 import ShiftFormModal from '@/components/planning/ShiftFormModal';
@@ -32,6 +34,8 @@ export default function Planning() {
   const [filterType, setFilterType] = useState('global');
   const [selectedTeam, setSelectedTeam] = useState('');
   const [selectedEmployee, setSelectedEmployee] = useState('');
+  const [copyWeekModal, setCopyWeekModal] = useState({ open: false, weekStart: null, weekAbove: null });
+  const [weekConflictMode, setWeekConflictMode] = useState('replace');
   const queryClient = useQueryClient();
 
   // Fetch current user
@@ -152,6 +156,13 @@ export default function Planning() {
     },
     onError: (error) => {
       toast.error('Erreur lors de la suppression : ' + error.message);
+    }
+  });
+
+  const saveNonShiftMutation = useMutation({
+    mutationFn: (data) => base44.entities.NonShiftEvent.create(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['nonShiftEvents'] });
     }
   });
 
@@ -358,6 +369,146 @@ export default function Planning() {
     const day = d.getDay();
     const diff = d.getDate() - day + (day === 0 ? -6 : 1); // Monday
     return new Date(d.setDate(diff));
+  };
+
+  // Get week above
+  const getWeekAbove = (weekStart) => {
+    const weekAbove = new Date(weekStart);
+    weekAbove.setDate(weekAbove.getDate() - 7);
+    return weekAbove;
+  };
+
+  // Get all events in a week
+  const getWeekEvents = (weekStart) => {
+    const weekEnd = new Date(weekStart);
+    weekEnd.setDate(weekEnd.getDate() + 6);
+    
+    const weekStartStr = weekStart.toISOString().split('T')[0];
+    const weekEndStr = weekEnd.toISOString().split('T')[0];
+
+    const weekShifts = shifts.filter(s => 
+      s.date >= weekStartStr && s.date <= weekEndStr
+    );
+
+    const weekNonShifts = nonShiftEvents.filter(e =>
+      e.date >= weekStartStr && e.date <= weekEndStr
+    );
+
+    return { shifts: weekShifts, nonShifts: weekNonShifts };
+  };
+
+  // Check if week has any events
+  const hasWeekEvents = (weekStart) => {
+    const events = getWeekEvents(weekStart);
+    return events.shifts.length > 0 || events.nonShifts.length > 0;
+  };
+
+  // Copy week from above
+  const handleCopyWeekFromAbove = async (targetWeekStart) => {
+    const weekAbove = getWeekAbove(targetWeekStart);
+    const hasEvents = hasWeekEvents(targetWeekStart);
+
+    // Check if week above has data
+    const eventsAbove = getWeekEvents(weekAbove);
+    if (eventsAbove.shifts.length === 0 && eventsAbove.nonShifts.length === 0) {
+      toast.error('Aucune donnée dans la semaine du dessus');
+      return;
+    }
+
+    if (hasEvents) {
+      setCopyWeekModal({
+        open: true,
+        weekStart: targetWeekStart,
+        weekAbove: weekAbove
+      });
+    } else {
+      await executeCopyWeek(targetWeekStart, weekAbove, 'replace');
+    }
+  };
+
+  // Execute copy week
+  const executeCopyWeek = async (targetWeekStart, sourceWeekStart, mode) => {
+    try {
+      const sourceEvents = getWeekEvents(sourceWeekStart);
+      const targetEvents = getWeekEvents(targetWeekStart);
+
+      // Delete existing events if replace mode
+      if (mode === 'replace') {
+        const deletePromises = [
+          ...targetEvents.shifts.map(s => base44.entities.Shift.delete(s.id)),
+          ...targetEvents.nonShifts.map(ns => base44.entities.NonShiftEvent.delete(ns.id))
+        ];
+        await Promise.all(deletePromises);
+      }
+
+      // Calculate day offset
+      const dayOffset = Math.floor((targetWeekStart - sourceWeekStart) / (1000 * 60 * 60 * 24));
+
+      // Copy shifts
+      const shiftPromises = sourceEvents.shifts.map(shift => {
+        const sourceDate = new Date(shift.date);
+        const targetDate = new Date(sourceDate);
+        targetDate.setDate(targetDate.getDate() + dayOffset);
+        const targetDateStr = targetDate.toISOString().split('T')[0];
+
+        // Skip if merge mode and event exists on that day
+        if (mode === 'merge') {
+          const existsOnDay = targetEvents.shifts.some(
+            s => s.employee_id === shift.employee_id && s.date === targetDateStr
+          );
+          if (existsOnDay) return null;
+        }
+
+        return base44.entities.Shift.create({
+          employee_id: shift.employee_id,
+          employee_name: shift.employee_name,
+          date: targetDateStr,
+          start_time: shift.start_time,
+          end_time: shift.end_time,
+          break_minutes: shift.break_minutes,
+          position: shift.position,
+          status: 'planned',
+          notes: shift.notes
+        });
+      }).filter(Boolean);
+
+      // Copy non-shifts
+      const nonShiftPromises = sourceEvents.nonShifts.map(ns => {
+        const sourceDate = new Date(ns.date);
+        const targetDate = new Date(sourceDate);
+        targetDate.setDate(targetDate.getDate() + dayOffset);
+        const targetDateStr = targetDate.toISOString().split('T')[0];
+
+        // Skip if merge mode and event exists on that day
+        if (mode === 'merge') {
+          const existsOnDay = targetEvents.nonShifts.some(
+            e => e.employee_id === ns.employee_id && e.date === targetDateStr
+          );
+          if (existsOnDay) return null;
+        }
+
+        return base44.entities.NonShiftEvent.create({
+          employee_id: ns.employee_id,
+          employee_name: ns.employee_name,
+          date: targetDateStr,
+          non_shift_type_id: ns.non_shift_type_id,
+          non_shift_type_label: ns.non_shift_type_label,
+          notes: ns.notes
+        });
+      }).filter(Boolean);
+
+      await Promise.all([...shiftPromises, ...nonShiftPromises]);
+
+      queryClient.invalidateQueries({ queryKey: ['shifts'] });
+      queryClient.invalidateQueries({ queryKey: ['nonShiftEvents'] });
+      
+      const total = shiftPromises.length + nonShiftPromises.length;
+      toast.success(`${total} événement(s) copié(s)`);
+      
+      setCopyWeekModal({ open: false, weekStart: null, weekAbove: null });
+    } catch (error) {
+      toast.error('Erreur lors de la copie : ' + error.message);
+    }
   };
 
   // Check for legal warnings
@@ -686,10 +837,29 @@ export default function Planning() {
                       {/* Week summary row */}
                       {(dayInfo.isLastDayOfWeek || index === daysArray.length - 1) && (
                         <div className="bg-gradient-to-r from-gray-200 to-gray-100 border-b-2 border-gray-400 flex">
-                          <div className="sticky left-0 z-10 bg-gradient-to-r from-gray-200 to-gray-100 border-r-2 border-gray-400 px-4 py-3 shadow-sm w-[120px]">
-                            <div className="text-xs font-bold text-gray-700 uppercase tracking-wide">
+                          <div className="sticky left-0 z-10 bg-gradient-to-r from-gray-200 to-gray-100 border-r-2 border-gray-400 px-2 py-3 shadow-sm w-[120px]">
+                            <div className="text-[10px] font-bold text-gray-700 uppercase tracking-wide mb-1">
                               📊 Récap. semaine
                             </div>
+                            {(() => {
+                              const weekStart = getWeekStart(dayInfo.date);
+                              const weekAbove = getWeekAbove(weekStart);
+                              const hasEventsAbove = hasWeekEvents(weekAbove);
+                              
+                              if (hasEventsAbove && weekAbove.getMonth() >= new Date(currentYear, currentMonth, 1).getMonth()) {
+                                return (
+                                  <button
+                                    onClick={() => handleCopyWeekFromAbove(weekStart)}
+                                    className="text-[9px] px-1.5 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded flex items-center gap-1 w-full justify-center font-semibold shadow-sm transition-colors"
+                                    title="Copier la semaine du dessus"
+                                  >
+                                    <ArrowDown className="w-3 h-3" />
+                                    Copier ↑
+                                  </button>
+                                );
+                              }
+                              return null;
+                            })()}
                           </div>
                           <div className="flex flex-1">
                             {employees.map(employee => {
@@ -753,6 +923,96 @@ export default function Planning() {
         employeeId={selectedEmployeeForTemplate?.id}
         employeeName={selectedEmployeeForTemplate ? `${selectedEmployeeForTemplate.first_name} ${selectedEmployeeForTemplate.last_name}` : ''}
       />
+
+      {/* Copy Week Modal */}
+      <Dialog open={copyWeekModal.open} onOpenChange={(open) => !open && setCopyWeekModal({ open: false, weekStart: null, weekAbove: null })}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-lg font-bold text-orange-600">
+              Copier la semaine du dessus
+            </DialogTitle>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            <div className="bg-yellow-50 border-2 border-yellow-200 rounded-lg p-3 flex items-start gap-2">
+              <AlertTriangle className="w-5 h-5 text-yellow-600 flex-shrink-0 mt-0.5" />
+              <div>
+                <p className="font-semibold text-yellow-900 text-sm">
+                  Cette semaine contient déjà des données
+                </p>
+                <p className="text-xs text-yellow-700 mt-1">
+                  Choisissez comment gérer les événements existants :
+                </p>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <label className="flex items-start gap-3 p-3 border-2 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors">
+                <input
+                  type="radio"
+                  name="mode"
+                  value="replace"
+                  checked={weekConflictMode === 'replace'}
+                  onChange={(e) => setWeekConflictMode(e.target.value)}
+                  className="mt-1"
+                />
+                <div>
+                  <div className="font-semibold text-sm text-gray-900">🔁 Remplacer</div>
+                  <div className="text-xs text-gray-600">
+                    Supprimer tous les événements existants et les remplacer par ceux de la semaine du dessus
+                  </div>
+                </div>
+              </label>
+
+              <label className="flex items-start gap-3 p-3 border-2 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors">
+                <input
+                  type="radio"
+                  name="mode"
+                  value="merge"
+                  checked={weekConflictMode === 'merge'}
+                  onChange={(e) => setWeekConflictMode(e.target.value)}
+                  className="mt-1"
+                />
+                <div>
+                  <div className="font-semibold text-sm text-gray-900">➕ Fusionner</div>
+                  <div className="text-xs text-gray-600">
+                    Conserver les événements existants et ajouter uniquement ceux qui ne créent pas de doublon
+                  </div>
+                </div>
+              </label>
+            </div>
+
+            {copyWeekModal.weekAbove && (
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-xs">
+                {(() => {
+                  const events = getWeekEvents(copyWeekModal.weekAbove);
+                  return (
+                    <p className="text-blue-900">
+                      <strong>{events.shifts.length} shift(s)</strong> et <strong>{events.nonShifts.length} événement(s)</strong> seront copiés
+                    </p>
+                  );
+                })()}
+              </div>
+            )}
+
+            <div className="flex gap-3 pt-2">
+              <Button
+                onClick={() => setCopyWeekModal({ open: false, weekStart: null, weekAbove: null })}
+                variant="outline"
+                className="flex-1"
+              >
+                Annuler
+              </Button>
+              <Button
+                onClick={() => executeCopyWeek(copyWeekModal.weekStart, copyWeekModal.weekAbove, weekConflictMode)}
+                className="flex-1 bg-orange-600 hover:bg-orange-700"
+              >
+                Confirmer
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
