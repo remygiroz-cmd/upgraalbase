@@ -8,9 +8,45 @@ import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { base44 } from '@/api/base44Client';
+import { toast } from 'sonner';
 
 export default function PlanningSettingsModal({ open, onOpenChange }) {
   const [activeTab, setActiveTab] = useState('statuts');
+  const queryClient = useQueryClient();
+
+  // Fetch calculation mode setting
+  const { data: settings = [] } = useQuery({
+    queryKey: ['appSettings', 'planning_calculation_mode'],
+    queryFn: async () => {
+      return await base44.entities.AppSettings.filter({ setting_key: 'planning_calculation_mode' });
+    }
+  });
+
+  const currentSetting = settings[0];
+  const calculationMode = currentSetting?.planning_calculation_mode || 'disabled';
+
+  // Mutation to save calculation mode
+  const saveModeMutation = useMutation({
+    mutationFn: async (mode) => {
+      if (currentSetting) {
+        return await base44.entities.AppSettings.update(currentSetting.id, {
+          planning_calculation_mode: mode
+        });
+      } else {
+        return await base44.entities.AppSettings.create({
+          setting_key: 'planning_calculation_mode',
+          planning_calculation_mode: mode
+        });
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['appSettings'] });
+      toast.success('Mode de calcul enregistré');
+    }
+  });
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -93,37 +129,151 @@ export default function PlanningSettingsModal({ open, onOpenChange }) {
 
           {/* Tab 3: Règles de calcul */}
           <TabsContent value="calculs" className="mt-6 space-y-4">
-            <Alert className="bg-yellow-50 border-yellow-300">
-              <Badge variant="outline" className="mb-2">En cours de définition</Badge>
+            <Alert className="bg-blue-50 border-blue-300">
+              <Badge variant="outline" className="mb-2 bg-blue-100 text-blue-900">Fonctionnel</Badge>
               <AlertDescription className="text-sm text-gray-700">
-                Les règles de calcul des heures et des récapitulatifs sont en cours de conception.
-                Ces paramètres seront disponibles dans une prochaine version.
+                <strong>Mode de calcul des heures supplémentaires et complémentaires</strong>
+                <br />
+                Choisissez le mode adapté à votre organisation. Le changement est immédiat et réversible.
               </AlertDescription>
             </Alert>
 
-            <div className="bg-gray-50 border border-gray-200 rounded-lg p-6 space-y-4">
-              <div>
-                <h3 className="font-semibold text-gray-900 mb-3">📊 Calcul des récapitulatifs</h3>
-                <div className="space-y-2 text-sm text-gray-600">
-                  <p>• Récap hebdomadaire (semaine complète)</p>
-                  <p>• Récap semaine incomplète (fin de mois)</p>
-                  <p>• Récap mensuel</p>
-                  <p>• Distinction heures normales / complémentaires / supplémentaires</p>
+            {/* Sélecteur de mode */}
+            <div className="bg-white border-2 border-orange-200 rounded-lg p-6 space-y-4">
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <h3 className="font-bold text-gray-900 text-lg">🔀 Mode de calcul des heures</h3>
+                  <p className="text-sm text-gray-600 mt-1">
+                    Sélectionnez le mode qui correspond à votre convention collective
+                  </p>
                 </div>
+                <Badge className={
+                  calculationMode === 'disabled' ? 'bg-gray-400' :
+                  calculationMode === 'weekly' ? 'bg-blue-600' :
+                  'bg-purple-600'
+                }>
+                  {calculationMode === 'disabled' ? 'Désactivé' :
+                   calculationMode === 'weekly' ? 'Hebdomadaire' :
+                   'Mensuel'}
+                </Badge>
               </div>
 
+              <div className="space-y-3">
+                {/* Désactivé */}
+                <label className={`flex items-start gap-3 p-4 border-2 rounded-lg cursor-pointer transition-all ${
+                  calculationMode === 'disabled' 
+                    ? 'bg-gray-50 border-gray-400' 
+                    : 'hover:bg-gray-50 border-gray-200'
+                }`}>
+                  <input
+                    type="radio"
+                    name="calculation_mode"
+                    value="disabled"
+                    checked={calculationMode === 'disabled'}
+                    onChange={(e) => saveModeMutation.mutate(e.target.value)}
+                    className="mt-1"
+                  />
+                  <div className="flex-1">
+                    <div className="font-semibold text-gray-900 flex items-center gap-2">
+                      ⊗ Désactivé (par défaut)
+                    </div>
+                    <div className="text-xs text-gray-600 mt-1">
+                      Aucun calcul d'heures supplémentaires ou complémentaires. Affichage informatif uniquement.
+                    </div>
+                    <div className="mt-2 text-xs bg-gray-100 rounded px-2 py-1 text-gray-700">
+                      ✓ Aucun impact paie • Mode sécurisé par défaut
+                    </div>
+                  </div>
+                </label>
+
+                {/* Mode hebdomadaire */}
+                <label className={`flex items-start gap-3 p-4 border-2 rounded-lg cursor-pointer transition-all ${
+                  calculationMode === 'weekly' 
+                    ? 'bg-blue-50 border-blue-500' 
+                    : 'hover:bg-blue-50 border-gray-200'
+                }`}>
+                  <input
+                    type="radio"
+                    name="calculation_mode"
+                    value="weekly"
+                    checked={calculationMode === 'weekly'}
+                    onChange={(e) => saveModeMutation.mutate(e.target.value)}
+                    className="mt-1"
+                  />
+                  <div className="flex-1">
+                    <div className="font-semibold text-gray-900 flex items-center gap-2">
+                      📅 Calcul hebdomadaire (classique)
+                    </div>
+                    <div className="text-xs text-gray-600 mt-1">
+                      Les heures sont calculées semaine par semaine, puis agrégées sur le mois.
+                    </div>
+                    <div className="mt-2 space-y-1 text-xs">
+                      <div className="bg-blue-100 rounded px-2 py-1 text-blue-900">
+                        <strong>Temps plein (35h/semaine) :</strong> Supp. +25% (36-43h), +50% (>43h)
+                      </div>
+                      <div className="bg-green-100 rounded px-2 py-1 text-green-900">
+                        <strong>Temps partiel :</strong> Compl. +10% (≤10% contrat), +25% (>10%) • Max 1/3 contrat
+                      </div>
+                    </div>
+                  </div>
+                </label>
+
+                {/* Mode mensuel */}
+                <label className={`flex items-start gap-3 p-4 border-2 rounded-lg cursor-pointer transition-all ${
+                  calculationMode === 'monthly' 
+                    ? 'bg-purple-50 border-purple-500' 
+                    : 'hover:bg-purple-50 border-gray-200'
+                }`}>
+                  <input
+                    type="radio"
+                    name="calculation_mode"
+                    value="monthly"
+                    checked={calculationMode === 'monthly'}
+                    onChange={(e) => saveModeMutation.mutate(e.target.value)}
+                    className="mt-1"
+                  />
+                  <div className="flex-1">
+                    <div className="font-semibold text-gray-900 flex items-center gap-2">
+                      📊 Calcul mensuel (lissage)
+                    </div>
+                    <div className="text-xs text-gray-600 mt-1">
+                      Les heures sont calculées sur l'ensemble du mois. Lisse les variations hebdomadaires.
+                    </div>
+                    <div className="mt-2 space-y-1 text-xs">
+                      <div className="bg-purple-100 rounded px-2 py-1 text-purple-900">
+                        <strong>Principe :</strong> Les dépassements hebdomadaires sont compensés si le total mensuel respecte le contrat
+                      </div>
+                      <div className="bg-purple-100 rounded px-2 py-1 text-purple-900">
+                        <strong>Majorations :</strong> Identiques au mode hebdomadaire, calculées sur le mois
+                      </div>
+                    </div>
+                  </div>
+                </label>
+              </div>
+
+              <Alert className="bg-orange-50 border-orange-200 mt-4">
+                <AlertDescription className="text-xs text-gray-700">
+                  ⚠️ <strong>Important :</strong> Le changement de mode est immédiat et recalcule automatiquement tous les récapitulatifs. 
+                  Les données sources (shifts) ne sont jamais modifiées. Le choix est réversible à tout moment.
+                </AlertDescription>
+              </Alert>
+            </div>
+
+            {/* Règles additionnelles */}
+            <div className="bg-gray-50 border border-gray-200 rounded-lg p-6 space-y-4">
               <div className="border-t pt-4">
-                <h3 className="font-semibold text-gray-900 mb-3">⚠️ Règles d'alertes</h3>
+                <h3 className="font-semibold text-gray-900 mb-3">⚠️ Règles d'alertes légales</h3>
                 <div className="space-y-2 text-sm text-gray-600">
-                  <p>• Repos minimum entre deux shifts</p>
-                  <p>• Dépassement de la durée journalière légale</p>
-                  <p>• Dépassement de la durée hebdomadaire</p>
-                  <p>• Conflits d'absences</p>
+                  <p>• Repos minimum entre deux shifts (11h minimum)</p>
+                  <p>• Dépassement de la durée journalière légale (10h recommandé)</p>
+                  <p>• Plafond des heures complémentaires (1/3 du contrat)</p>
+                  <p>• Conflits avec absences planifiées</p>
                 </div>
               </div>
 
               <div className="bg-blue-50 border border-blue-200 rounded p-3 text-xs text-blue-800">
-                💡 Ces règles seront paramétrables et ajustables selon vos besoins métier.
+                💡 Ces règles de calcul constituent une première implémentation fonctionnelle, 
+                destinée à être ajustable selon votre convention collective et vos accords d'entreprise.
               </div>
             </div>
           </TabsContent>
