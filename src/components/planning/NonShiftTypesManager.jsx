@@ -397,6 +397,18 @@ export default function NonShiftTypesManager({ open, onOpenChange, embeddedMode 
                     onChange={(e) => setFormData({ ...formData, icon: e.target.value })}
                     placeholder="Ex: 🏖️"
                   />
+                  <div className="flex gap-1 flex-wrap mt-2">
+                    {['🏖️', '🤒', '❌', '🎉', '📚', '💤', '🔄', '📌', '✈️', '🏥', '👶', '⚠️', '🎓', '🏃', '🍽️', '⏰'].map(emoji => (
+                      <button
+                        key={emoji}
+                        type="button"
+                        onClick={() => setFormData({ ...formData, icon: emoji })}
+                        className="w-8 h-8 rounded border-2 border-gray-300 hover:border-orange-500 hover:bg-orange-50 transition-all text-lg"
+                      >
+                        {emoji}
+                      </button>
+                    ))}
+                  </div>
                 </div>
                 <div>
                   <Label>Couleur</Label>
