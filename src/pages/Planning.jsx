@@ -696,11 +696,11 @@ export default function Planning() {
 
       {/* Calendar Grid */}
       <div className="bg-white border-2 border-gray-200 rounded-xl shadow-xl overflow-hidden">
-        <div ref={tableContainerRef} className="overflow-x-auto">
+        <div ref={tableContainerRef} className="overflow-x-auto overflow-y-visible">
           <div className="inline-block min-w-full">
             {/* Header */}
             <DragDropContext onDragEnd={handleTeamDragEnd}>
-              <div className="bg-gradient-to-r from-gray-100 to-gray-50 flex border-b-2 border-gray-300 sticky top-[72px] lg:top-0 z-30">
+              <div className="bg-gradient-to-r from-gray-100 to-gray-50 flex border-b-2 border-gray-300 sticky top-[68px] lg:top-0 z-30 shadow-md">
                 <div className="sticky left-0 z-20 bg-gradient-to-r from-gray-100 to-gray-50 border-r-2 border-gray-300 px-4 py-4 text-left text-sm font-bold text-gray-900 w-[120px] shadow-md flex items-center gap-2">
                   <Calendar className="w-4 h-4 text-orange-600" />
                   Jour
