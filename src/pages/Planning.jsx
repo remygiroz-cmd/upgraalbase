@@ -20,8 +20,6 @@ import NonShiftCard from '@/components/planning/NonShiftCard';
 import PlanningSettingsModal from '@/components/planning/PlanningSettingsModal';
 import { calculateShiftDuration, checkMinimumRest } from '@/components/planning/LegalChecks';
 import { parseLocalDate, formatLocalDate } from '@/components/planning/dateUtils';
-import { detectPaidLeavePeriods, isDateInPaidLeavePeriod } from '@/components/planning/PaidLeaveDetection';
-import CPDebugPanel from '@/components/planning/CPDebugPanel';
 
 const DAYS = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche'];
 const MONTHS = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'];
@@ -38,8 +36,6 @@ export default function Planning() {
   const [selectedEmployee, setSelectedEmployee] = useState('');
   const [copyWeekModal, setCopyWeekModal] = useState({ open: false, weekStart: null, weekAbove: null });
   const [weekConflictMode, setWeekConflictMode] = useState('replace');
-  const [debugCPMode, setDebugCPMode] = useState(false);
-  const [showCPDebugPanel, setShowCPDebugPanel] = useState(null);
   const queryClient = useQueryClient();
 
   // Fetch current user
@@ -567,29 +563,6 @@ export default function Planning() {
     };
   };
 
-  // Detect CP periods for all employees
-  const cpPeriodsByEmployee = React.useMemo(() => {
-    const map = new Map();
-    
-    for (const employee of employees) {
-      const periods = detectPaidLeavePeriods(
-        shifts,
-        nonShiftEvents,
-        nonShiftTypes,
-        employee.id,
-        new Date(currentYear, currentMonth, 1),
-        new Date(currentYear, currentMonth + 1, 0),
-        debugCPMode
-      );
-      
-      if (periods.length > 0) {
-        map.set(employee.id, periods);
-      }
-    }
-    
-    return map;
-  }, [shifts, nonShiftEvents, nonShiftTypes, employees, currentYear, currentMonth, debugCPMode]);
-
   return (
     <div className="space-y-4 sm:space-y-6">
       <div className="flex items-center justify-between">
@@ -598,31 +571,15 @@ export default function Planning() {
           title="Planning mensuel"
           subtitle="Gestion des horaires de travail"
         />
-        <div className="flex gap-2">
-          <Button
-            onClick={() => setDebugCPMode(!debugCPMode)}
-            variant="outline"
-            size="sm"
-            className={cn(
-              "border-2 transition-all",
-              debugCPMode 
-                ? "border-purple-500 bg-purple-50 text-purple-900" 
-                : "border-gray-300 hover:border-purple-400"
-            )}
-            title="Debug CP"
-          >
-            🏖️ {debugCPMode ? 'ON' : 'OFF'}
-          </Button>
-          <Button
-            onClick={() => setShowPlanningSettings(true)}
-            variant="outline"
-            size="icon"
-            className="border-2 border-gray-300 hover:border-orange-500 hover:bg-orange-50"
-            title="Paramètres du planning"
-          >
-            <Settings className="w-5 h-5" />
-          </Button>
-        </div>
+        <Button
+          onClick={() => setShowPlanningSettings(true)}
+          variant="outline"
+          size="icon"
+          className="border-2 border-gray-300 hover:border-orange-500 hover:bg-orange-50"
+          title="Paramètres du planning"
+        >
+          <Settings className="w-5 h-5" />
+        </Button>
       </div>
 
       {/* Month Navigation & Filters */}
@@ -862,22 +819,6 @@ export default function Planning() {
                             const employeeShifts = getShiftsForEmployeeAndDate(employee.id, dateStr);
                             const employeeNonShifts = getNonShiftsForEmployeeAndDate(employee.id, dateStr);
                             const totalEvents = employeeShifts.length + employeeNonShifts.length;
-                            
-                            // Check if date is in a CP period
-                            const cpPeriods = cpPeriodsByEmployee.get(employee.id) || [];
-                            const cpInfo = isDateInPaidLeavePeriod(dateStr, cpPeriods);
-                            const isInCPPeriod = cpInfo !== null;
-                            const isCPDeducted = cpInfo?.isDeducted || false;
-                            const isCPLastDay = cpInfo?.isLastDay || false;
-
-                            if (debugCPMode && employee.first_name === 'Enzo') {
-                              console.log(`🏖️ [${dateStr}] ENZO:`, {
-                                isInCPPeriod,
-                                isCPDeducted,
-                                isCPLastDay,
-                                cpInfo
-                              });
-                            }
 
                             return (
                               <div
@@ -885,21 +826,10 @@ export default function Planning() {
                                 onClick={() => handleCellClick(employee.id, dateStr, dayInfo)}
                                 className={cn(
                                   "border-r border-gray-200 px-2 py-2 cursor-pointer hover:bg-orange-50 transition-all group relative min-w-[140px] w-[140px] sm:w-[180px] flex",
-                                  dayInfo.isWeekend && "bg-orange-50/20",
-                                  isCPDeducted && "bg-green-100/40 hover:bg-green-100/60"
+                                  dayInfo.isWeekend && "bg-orange-50/20"
                                 )}
                               >
                                 <div className="space-y-1.5 w-full flex flex-col" style={{ minHeight: `${Math.max(60, maxEventsInRow * 52)}px` }}>
-                                  {/* CP Deducted Badge on Last Day */}
-                                  {isCPLastDay && cpInfo && (
-                                    <div className="bg-green-600 text-white text-[10px] font-bold px-2 py-1 rounded-md text-center shadow-md animate-pulse">
-                                      🏖️ {cpInfo.period.workableDaysDeducted} CP décompté{cpInfo.period.workableDaysDeducted > 1 ? 's' : ''}
-                                      {cpInfo.period.isProvisional && (
-                                        <div className="text-[8px] opacity-80 mt-0.5">* provisoire</div>
-                                      )}
-                                    </div>
-                                  )}
-                                  
                                   {employeeNonShifts.map((nonShift) => {
                                     const type = nonShiftTypes.find(t => t.id === nonShift.non_shift_type_id);
                                     return (
@@ -940,16 +870,9 @@ export default function Planning() {
                                       </div>
                                     );
                                   })}
-                                  {employeeShifts.length === 0 && employeeNonShifts.length === 0 && !isCPLastDay && (
+                                  {employeeShifts.length === 0 && employeeNonShifts.length === 0 && (
                                     <div className="flex items-center justify-center flex-1 text-gray-300 group-hover:text-orange-400 transition-colors">
                                       <Plus className="w-6 h-6" />
-                                    </div>
-                                  )}
-                                  
-                                  {/* Debug CP info */}
-                                  {debugCPMode && isInCPPeriod && (
-                                    <div className="absolute top-0 right-0 bg-purple-900 text-white text-[7px] px-1 rounded-bl z-10">
-                                      {isCPDeducted ? '✓ Décompté' : '✗ Non décompté'}
                                     </div>
                                   )}
                                 </div>
@@ -995,21 +918,7 @@ export default function Planning() {
                                                               eventsAbove.nonShifts.some(ns => ns.employee_id === employee.id);
                               
                               return (
-                                <div key={employee.id} className="border-r border-gray-200 min-w-[140px] w-[140px] sm:w-[180px] relative">
-                                  {/* CP Debug button */}
-                                  {cpPeriodsByEmployee.has(employee.id) && (
-                                    <button
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        setShowCPDebugPanel(employee);
-                                      }}
-                                      className="absolute top-1 right-1 z-10 bg-purple-600 hover:bg-purple-700 text-white text-[9px] px-1.5 py-0.5 rounded font-bold shadow"
-                                      title="Debug CP"
-                                    >
-                                      🏖️ DEBUG
-                                    </button>
-                                  )}
-                                  
+                                <div key={employee.id} className="border-r border-gray-200 min-w-[140px] w-[140px] sm:w-[180px]">
                                   <WeeklySummary
                                     employee={employee}
                                     shifts={shifts}
@@ -1092,15 +1001,6 @@ export default function Planning() {
         employeeName={selectedEmployeeForTemplate ? `${selectedEmployeeForTemplate.first_name} ${selectedEmployeeForTemplate.last_name}` : ''}
       />
 
-      {/* CP Debug Panel */}
-      {showCPDebugPanel && (
-        <CPDebugPanel
-          employee={showCPDebugPanel}
-          cpPeriods={cpPeriodsByEmployee.get(showCPDebugPanel.id) || []}
-          onClose={() => setShowCPDebugPanel(null)}
-        />
-      )}
-      
       {/* Copy Week Modal */}
       <Dialog open={copyWeekModal.open} onOpenChange={(open) => !open && setCopyWeekModal({ open: false, weekStart: null, weekAbove: null })}>
         <DialogContent className="max-w-md">
