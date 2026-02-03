@@ -175,6 +175,14 @@ export default function MonthlySummary({ employee, shifts, nonShiftEvents, nonSh
         hasManualOverride && "bg-blue-50"
       )}>
         <button
+          onClick={() => setDebugMode(!debugMode)}
+          className="absolute top-1 left-1 p-1 rounded hover:bg-purple-200 transition-colors opacity-0 group-hover:opacity-100"
+          title="Debug CP"
+        >
+          <span className="text-[10px]">{debugMode ? '🐛' : '🏖️'}</span>
+        </button>
+        
+        <button
           onClick={() => setShowEditDialog(true)}
           className="absolute top-1 right-1 p-1 rounded hover:bg-gray-200 transition-colors opacity-0 group-hover:opacity-100"
           title="Éditer le récapitulatif"
@@ -238,6 +246,38 @@ export default function MonthlySummary({ employee, shifts, nonShiftEvents, nonSh
           </div>
         )}
 
+        {/* CP Deducted */}
+        {totalCPDays > 0 && (
+          <div className="mt-2 pt-2 border-t border-green-300 bg-green-50 -mx-2 px-2 pb-2">
+            <div className="text-[10px] font-bold text-green-900 mb-1">
+              🏖️ Congés payés
+            </div>
+            <div className="text-sm font-bold text-green-900">
+              {totalCPDays} jour{totalCPDays > 1 ? 's' : ''}
+            </div>
+            {cpPeriods.some(p => p.isProvisional) && (
+              <div className="text-[8px] text-green-700 italic mt-0.5">
+                * Provisoire
+              </div>
+            )}
+            
+            {debugMode && (
+              <div className="text-[7px] text-green-800 mt-2 space-y-1 bg-white/50 p-1 rounded">
+                {cpPeriods.map((period, i) => (
+                  <div key={i} className="border-b border-green-200 pb-1 last:border-0">
+                    <div className="font-bold">Période {i + 1}:</div>
+                    <div>CP posés: {period.firstCPPosted} → {period.lastCPPosted}</div>
+                    <div>Bornes: {period.startCP} → {period.endCP}</div>
+                    <div>Shift avant: {period.lastShiftBefore || 'aucun'}</div>
+                    <div>Shift après: {period.firstShiftAfter || 'aucun'}</div>
+                    <div className="font-bold text-green-900">✓ {period.workableDaysDeducted}j</div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+        
         {/* Non-shifts count */}
         {Object.keys(nonShiftsCounts).length > 0 && (
           <div className="mt-2 pt-2 border-t border-gray-200 text-[10px] text-gray-600 space-y-0.5">
