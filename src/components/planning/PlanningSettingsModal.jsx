@@ -13,7 +13,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { toast } from 'sonner';
 
-export default function PlanningSettingsModal({ open, onOpenChange }) {
+export default function PlanningSettingsModal({ open, onOpenChange, displayMode, setDisplayMode }) {
   const [activeTab, setActiveTab] = useState('statuts');
   const queryClient = useQueryClient();
 
@@ -280,10 +280,10 @@ export default function PlanningSettingsModal({ open, onOpenChange }) {
 
           {/* Tab 4: Affichage & ergonomie */}
           <TabsContent value="affichage" className="mt-6 space-y-4">
-            <Alert className="bg-yellow-50 border-yellow-300">
-              <Badge variant="outline" className="mb-2">En cours de définition</Badge>
+            <Alert className="bg-blue-50 border-blue-200">
+              <Badge variant="outline" className="mb-2 bg-blue-100 text-blue-900">Fonctionnel</Badge>
               <AlertDescription className="text-sm text-gray-700">
-                Les options d'affichage sont en cours de développement et pourront évoluer.
+                Options d'affichage pour personnaliser l'apparence du planning.
               </AlertDescription>
             </Alert>
 
@@ -297,16 +297,6 @@ export default function PlanningSettingsModal({ open, onOpenChange }) {
                     </p>
                   </div>
                   <Switch checked={true} onCheckedChange={() => {}} />
-                </div>
-
-                <div className="flex items-center justify-between">
-                  <div>
-                    <Label className="font-semibold text-gray-900">Mode compact</Label>
-                    <p className="text-xs text-gray-600 mt-1">
-                      Réduire l'espacement et la taille des éléments (prochainement)
-                    </p>
-                  </div>
-                  <Switch disabled />
                 </div>
 
                 <div className="flex items-center justify-between">

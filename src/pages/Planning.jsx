@@ -798,7 +798,7 @@ export default function Planning() {
                         dayInfo.isToday && "bg-blue-50/80"
                       )}>
                         <div className={cn(
-                          "sticky left-0 z-10 border-r-2 border-gray-300 px-4 py-3 shadow-sm w-[120px] flex flex-col justify-center",
+                          "sticky left-0 z-20 border-r-2 border-gray-300 px-4 py-3 shadow-sm w-[120px] flex flex-col justify-center bg-white",
                           dayInfo.isWeekend && "bg-orange-50/30",
                           dayInfo.isToday && "bg-gradient-to-r from-blue-100 to-blue-50 border-l-4 border-l-blue-500"
                         )}>
@@ -909,7 +909,7 @@ export default function Planning() {
                       {/* Week summary row */}
                       {(dayInfo.isLastDayOfWeek || index === daysArray.length - 1) && (
                         <div className="bg-gradient-to-r from-gray-200 to-gray-100 border-b-2 border-gray-400 flex">
-                          <div className="sticky left-0 z-10 bg-gradient-to-r from-gray-200 to-gray-100 border-r-2 border-gray-400 px-2 py-3 shadow-sm w-[120px]">
+                          <div className="sticky left-0 z-20 bg-gradient-to-r from-gray-200 to-gray-100 border-r-2 border-gray-400 px-2 py-3 shadow-sm w-[120px]">
                             <div className="text-[10px] font-bold text-gray-700 uppercase tracking-wide mb-1">
                               📊 Récap. semaine
                             </div>
@@ -967,7 +967,7 @@ export default function Planning() {
 
                   {/* Monthly Summary Row */}
                   <div className="bg-gradient-to-r from-blue-100 to-blue-50 border-t-4 border-blue-500 flex">
-                    <div className="sticky left-0 z-10 bg-gradient-to-r from-blue-100 to-blue-50 border-r-2 border-blue-300 px-2 py-3 shadow-sm w-[120px]">
+                    <div className="sticky left-0 z-20 bg-gradient-to-r from-blue-100 to-blue-50 border-r-2 border-blue-300 px-2 py-3 shadow-sm w-[120px]">
                       <div className="text-[11px] font-bold text-blue-900 uppercase tracking-wide text-center">
                         📊 Récap mensuel
                       </div>
@@ -1016,6 +1016,8 @@ export default function Planning() {
       <PlanningSettingsModal
         open={showPlanningSettings}
         onOpenChange={setShowPlanningSettings}
+        displayMode={displayMode}
+        setDisplayMode={setDisplayMode}
       />
 
       {/* Apply Template Modal */}
