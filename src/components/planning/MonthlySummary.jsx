@@ -327,7 +327,7 @@ export default function MonthlySummary({ employee, shifts, nonShiftEvents, nonSh
   );
 }
 
-function EditMonthlyRecapDialog({ open, onOpenChange, employee, year, month, autoValues, currentRecap, monthlyHoursType }) {
+function EditMonthlyRecapDialog({ open, onOpenChange, employee, year, month, autoValues, currentRecap }) {
   const queryClient = useQueryClient();
   const [formData, setFormData] = useState({});
 
@@ -338,10 +338,6 @@ function EditMonthlyRecapDialog({ open, onOpenChange, employee, year, month, aut
         manual_total_hours: currentRecap?.manual_total_hours ?? '',
         manual_deducted_hours: currentRecap?.manual_deducted_hours ?? '',
         manual_contract_hours: currentRecap?.manual_contract_hours ?? '',
-        manual_overtime_25: currentRecap?.manual_overtime_25 ?? '',
-        manual_overtime_50: currentRecap?.manual_overtime_50 ?? '',
-        manual_complementary_10: currentRecap?.manual_complementary_10 ?? '',
-        manual_complementary_25: currentRecap?.manual_complementary_25 ?? '',
         manual_cp_days: currentRecap?.manual_cp_days ?? '',
         notes: currentRecap?.notes || ''
       });
