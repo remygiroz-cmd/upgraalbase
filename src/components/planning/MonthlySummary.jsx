@@ -171,7 +171,7 @@ export default function MonthlySummary({ employee, shifts, nonShiftEvents, nonSh
   const autoCPDays = calculateMonthlyCPTotal(cpPeriods, monthStart, monthEnd);
 
   // Holiday hours calculation
-  const holidayHoursData = calculateHolidayHours(employeeShifts, employee, monthStart, monthEnd, holidayDates);
+  const holidayHoursData = calculateHolidayHours(employeeShifts, employee, monthStart, monthEnd, holidayDates) || { count: 0, dates: [], workedHours: 0, paidBonus: 0 };
 
   // Apply manual overrides
   const daysWorked = manualRecap?.manual_days_worked ?? autoDaysWorked;
