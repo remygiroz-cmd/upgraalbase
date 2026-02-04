@@ -148,10 +148,6 @@ export default function ExportComptaModal({ open, onOpenChange, monthStart, mont
       if (employeeRecap.manual_complementary_25 !== undefined) complementary_25 = employeeRecap.manual_complementary_25;
     }
 
-    // Add holiday bonus to total paid
-    const holidayBonus = holidayHoursData.paidBonus || 0;
-    const totalPaidHours = paidBaseHours + overtime_25 + overtime_50 + complementary_10 + complementary_25 + holidayBonus;
-
     // Non-shifts visible in recap
     const autoNonShiftsCounts = {};
     employeeNonShifts.forEach(ns => {
@@ -168,6 +164,10 @@ export default function ExportComptaModal({ open, onOpenChange, monthStart, mont
 
     // Holiday hours
     const holidayHoursData = calculateHolidayHours(employeeShifts, employee, monthStart, monthEnd, holidayDates);
+
+    // Add holiday bonus to total paid
+    const holidayBonus = holidayHoursData.paidBonus || 0;
+    const totalPaidHours = paidBaseHours + overtime_25 + overtime_50 + complementary_10 + complementary_25 + holidayBonus;
 
     return {
       employee,
