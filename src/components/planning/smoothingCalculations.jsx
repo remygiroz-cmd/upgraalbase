@@ -215,12 +215,23 @@ export const calculateWeeklySaldeForSmoothing = (
 };
 
 /**
+ * Génère une clé unique pour une semaine (ISO 8601 lundi)
+ */
+const getWeekKey = (weekStart) => {
+  const monday = new Date(weekStart);
+  const day = monday.getDay();
+  const diff = monday.getDate() - day + (day === 0 ? -6 : 1);
+  monday.setDate(diff);
+  return formatLocalDate(monday);
+};
+
+/**
  * Calcule les heures pour un mois complet en mode lissage
  * Basé sur le CONTRAT (pas planning type)
  * 
  * PROCESSUS :
  * 1) Calculer solde semaine par semaine avec base contrat + prorata
- * 2) Sommer les soldes → totalSalde
+ * 2) Sommer les soldes → totalSalde (une seule fois par semaine unique)
  * 3) Appliquer lissage : smoothedSalde = max(0, totalSalde)
  * 4) Appliquer majorations (25%, 50% ou 10%, 25%) selon type
  */
@@ -266,8 +277,11 @@ export const calculateMonthlyEmployeeHoursSmoothing = (
   const totalHours = uniqueShifts.reduce((sum, shift) => sum + calculateShiftDuration(shift), 0);
 
   // Calculer les soldes semaine par semaine (avec base CONTRAT)
+  // ANTI DOUBLON : tracker par weekKey (date du lundi ISO)
   let totalSalde = 0;
   const weekSaldes = [];
+  const processedWeekKeys = new Set(); // NOUVEAU : tracker les semaines déjà traitées
+  const weekKeyDetails = []; // DEBUG : détail des semaines traitées
 
   let currentDate = new Date(monthStart);
   while (currentDate <= monthEnd) {
@@ -281,6 +295,17 @@ export const calculateMonthlyEmployeeHoursSmoothing = (
     const weekEnd = new Date(weekStart);
     weekEnd.setDate(weekEnd.getDate() + 6);
     if (weekEnd > monthEnd) weekEnd.setTime(monthEnd.getTime());
+
+    // Générer clé unique pour cette semaine
+    const weekKey = getWeekKey(weekStart);
+    
+    // Vérifier si cette semaine a déjà été traitée (ANTI DOUBLON)
+    if (processedWeekKeys.has(weekKey)) {
+      console.warn(`[ANTI DOUBLON] Semaine ${weekKey} déjà traitée, skip`);
+      currentDate = new Date(weekEnd);
+      currentDate.setDate(currentDate.getDate() + 1);
+      continue;
+    }
 
     const weekData = calculateWeeklySaldeForSmoothing(
       shifts,
@@ -296,11 +321,29 @@ export const calculateMonthlyEmployeeHoursSmoothing = (
     if (weekData.status === 'calculated') {
       weekSaldes.push(weekData);
       totalSalde += weekData.salde;
+      processedWeekKeys.add(weekKey);
+      
+      // DEBUG : enregistrer le détail
+      weekKeyDetails.push({
+        weekKey,
+        salde: weekData.salde,
+        expectedWeek: weekData.expectedWeek,
+        workedWeek: weekData.workedWeek
+      });
     }
 
     currentDate = new Date(weekEnd);
     currentDate.setDate(currentDate.getDate() + 1);
   }
+
+  // DEBUG : log du détail des semaines
+  console.log(`[calculateMonthlyEmployeeHoursSmoothing] Employee ${employee.id} - Détail des semaines:`, {
+    monthStart: startStr,
+    monthEnd: endStr,
+    weekCount: weekKeyDetails.length,
+    weekDetails: weekKeyDetails,
+    totalSalde
+  });
 
   // Lissage : si salde <= 0 => 0 heures supp/comp
   const smoothedSalde = Math.max(0, totalSalde);
