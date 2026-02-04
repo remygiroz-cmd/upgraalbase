@@ -3,7 +3,7 @@ import { cn } from '@/lib/utils';
 import { AlertTriangle, Trash2, ArrowDown, Bug } from 'lucide-react';
 import { calculateWeeklyHours } from './LegalChecks';
 import { calculateWeeklyEmployeeHours } from './OvertimeCalculations';
-import { calculateWeeklySaldeForSmoothing } from './smoothingCalculations';
+import { getWeeklySummaryDataForMonth } from './smoothingCalculations';
 import { useQuery } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 
