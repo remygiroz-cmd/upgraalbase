@@ -249,17 +249,18 @@ export default function MonthlySummary({ employee, shifts, nonShiftEvents, nonSh
 
         {/* Overtime/Complementary details */}
         {calculationMode !== 'disabled' && (
-          <div className="mt-2 space-y-0.5 text-[10px]">
+          <div className="mt-2 pt-2 border-t border-gray-200 space-y-0.5 text-[10px]">
             {monthlyHours.type === 'full_time' && (overtime_25 > 0 || overtime_50 > 0) && (
               <>
+                <div className="text-[9px] text-gray-600 uppercase font-semibold mb-1">Heures supp.</div>
                 {overtime_25 > 0 && (
                   <div className="text-orange-700 font-semibold">
-                    {overtime_25.toFixed(1)}h (+25%)
+                    + {overtime_25.toFixed(1)}h (+25%)
                   </div>
                 )}
                 {overtime_50 > 0 && (
                   <div className="text-red-700 font-semibold">
-                    {overtime_50.toFixed(1)}h (+50%)
+                    + {overtime_50.toFixed(1)}h (+50%)
                   </div>
                 )}
               </>
@@ -267,17 +268,25 @@ export default function MonthlySummary({ employee, shifts, nonShiftEvents, nonSh
 
             {monthlyHours.type === 'part_time' && (complementary_10 > 0 || complementary_25 > 0) && (
               <>
+                <div className="text-[9px] text-gray-600 uppercase font-semibold mb-1">Heures compl.</div>
                 {complementary_10 > 0 && (
                   <div className="text-green-700 font-semibold">
-                    {complementary_10.toFixed(1)}h (+10%)
+                    + {complementary_10.toFixed(1)}h (+10%)
                   </div>
                 )}
                 {complementary_25 > 0 && (
                   <div className="text-orange-700 font-semibold">
-                    {complementary_25.toFixed(1)}h (+25%)
+                    + {complementary_25.toFixed(1)}h (+25%)
                   </div>
                 )}
               </>
+            )}
+
+            {/* Total payé */}
+            {(overtime_25 > 0 || overtime_50 > 0 || complementary_10 > 0 || complementary_25 > 0) && (
+              <div className="pt-1 mt-1 border-t border-gray-300 text-blue-900 font-bold">
+                = {(contractHoursPaid + overtime_25 + overtime_50 + complementary_10 + complementary_25).toFixed(1)}h payées
+              </div>
             )}
           </div>
         )}
