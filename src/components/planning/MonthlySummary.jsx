@@ -63,18 +63,38 @@ export default function MonthlySummary({ employee, shifts, nonShiftEvents, nonSh
   const daysWithShifts = new Set(employeeShifts.map(s => s.date));
   const autoDaysWorked = daysWithShifts.size;
 
-  // Total hours
+  // Total hours (shifts only)
   const autoTotalHours = employeeShifts.reduce((sum, shift) => sum + calculateShiftDuration(shift), 0);
 
-  // Contract hours
+  // Deducted hours (from non-shifts with deducts_hours flag)
+  const { totalHours: autoDeductedHours } = calculateNonShiftDeductedHours(
+    employeeNonShifts,
+    nonShiftTypes,
+    employee,
+    false
+  );
+
+  // Contract hours monthly (from employee record)
+  const parseContractHours = (hoursStr) => {
+    if (!hoursStr) return 0;
+    const str = String(hoursStr).trim();
+    if (str.includes(':')) {
+      const [h, m] = str.split(':').map(Number);
+      return h + (m / 60);
+    }
+    return parseFloat(str) || 0;
+  };
+
+  const monthlyContractHours = parseContractHours(employee?.contract_hours);
+  
+  // Base contractuelle payée = contract hours - deducted hours
+  const autoContractHoursPaid = Math.max(0, monthlyContractHours - autoDeductedHours);
+
+  // For overtime/complementary calculations
   const isFullTime = employee?.work_time_type === 'full_time';
   const contractHoursWeekly = employee?.contract_hours_weekly 
     ? parseFloat(employee.contract_hours_weekly.replace(':', '.').replace(/h/g, ''))
     : (isFullTime ? 35 : 0);
-  
-  const days = Math.ceil((monthEnd - monthStart) / (1000 * 60 * 60 * 24)) + 1;
-  const weeks = days / 7;
-  const autoContractHours = contractHoursWeekly * weeks;
 
   // Overtime/complementary calculation
   let monthlyHours = { type: 'unknown', total: autoTotalHours };
