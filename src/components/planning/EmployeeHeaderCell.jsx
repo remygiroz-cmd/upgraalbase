@@ -8,15 +8,17 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { cn } from '@/lib/utils';
 
-export default function EmployeeHeaderCell({
+const EmployeeHeaderCell = React.forwardRef(({
   employee,
   team,
   onAddCP,
   onApplyTemplate,
   isDragging,
   dragHandleProps,
-  displayMode
-}) {
+  displayMode,
+  style,
+  ...props
+}, ref) => {
   const [showTooltip, setShowTooltip] = useState(false);
   const fullName = `${employee.first_name} ${employee.last_name}`;
   
@@ -24,6 +26,9 @@ export default function EmployeeHeaderCell({
 
   return (
     <div
+      ref={ref}
+      {...props}
+      style={style}
       className={cn(
         "border-r border-gray-200 px-2 py-2 text-center min-w-[140px] w-[140px] sm:w-[180px] relative group",
         displayMode === 'compact' ? 'py-1' : 'py-3',
@@ -93,4 +98,8 @@ export default function EmployeeHeaderCell({
       )}
     </div>
   );
-}
+});
+
+EmployeeHeaderCell.displayName = 'EmployeeHeaderCell';
+
+export default EmployeeHeaderCell;
