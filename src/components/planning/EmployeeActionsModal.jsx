@@ -33,15 +33,17 @@ export default function EmployeeActionsModal({
 
   const queryClient = useQueryClient();
 
-  // Load preview when employee or dates change
+  // Load preview when parameters change
   React.useEffect(() => {
-    if (deleteEmployeeId && startDate && endDate) {
+    if (employee?.id && startDate && endDate) {
+      setDeleteEmployeeId(employee.id);
       loadPreview();
     }
-  }, [deleteEmployeeId, startDate, endDate, deleteShifts, deleteNonShifts]);
+  }, [employee, startDate, endDate, deleteShifts, deleteNonShifts]);
 
   const loadPreview = async () => {
-    if (!deleteEmployeeId || !startDate || !endDate) return;
+    const empId = employee?.id || deleteEmployeeId;
+    if (!empId || !startDate || !endDate) return;
 
     setIsLoadingPreview(true);
     try {
@@ -50,13 +52,13 @@ export default function EmployeeActionsModal({
       const nonShiftTypes = await base44.entities.NonShiftType.list();
 
       const shiftsToDelete = deleteShifts ? allShifts.filter(s => 
-        s.employee_id === deleteEmployeeId &&
+        s.employee_id === empId &&
         s.date >= startDate &&
         s.date <= endDate
       ) : [];
 
       const nonShiftsToDelete = deleteNonShifts ? allNonShifts.filter(ns => 
-        ns.employee_id === deleteEmployeeId &&
+        ns.employee_id === empId &&
         ns.date >= startDate &&
         ns.date <= endDate
       ) : [];
@@ -77,6 +79,7 @@ export default function EmployeeActionsModal({
     } catch (error) {
       console.error('Error loading preview:', error);
       toast.error('Erreur lors du chargement de l\'aperçu');
+      setPreviewData(null);
     } finally {
       setIsLoadingPreview(false);
     }
@@ -88,8 +91,9 @@ export default function EmployeeActionsModal({
       return;
     }
 
-    if (!deleteEmployeeId) {
-      toast.error('Veuillez sélectionner un employé');
+    const empId = employee?.id || deleteEmployeeId;
+    if (!empId) {
+      toast.error('Employé manquant');
       return;
     }
 
@@ -99,13 +103,13 @@ export default function EmployeeActionsModal({
       const allNonShifts = await base44.entities.NonShiftEvent.list();
 
       const shiftsToDelete = deleteShifts ? allShifts.filter(s => 
-        s.employee_id === deleteEmployeeId &&
+        s.employee_id === empId &&
         s.date >= startDate &&
         s.date <= endDate
       ) : [];
 
       const nonShiftsToDelete = deleteNonShifts ? allNonShifts.filter(ns => 
-        ns.employee_id === deleteEmployeeId &&
+        ns.employee_id === empId &&
         ns.date >= startDate &&
         ns.date <= endDate
       ) : [];
@@ -147,7 +151,16 @@ export default function EmployeeActionsModal({
     }
   };
 
-  const isFormValid = deleteEmployeeId && startDate && endDate && confirmText === 'SUPPRIMER' && (deleteShifts || deleteNonShifts);
+  const isFormValid = () => {
+    const empId = employee?.id || deleteEmployeeId;
+    if (!empId || !startDate || !endDate) return false;
+    if (endDate < startDate) return false;
+    if (!deleteShifts && !deleteNonShifts) return false;
+    if (confirmText !== 'SUPPRIMER') return false;
+    if (!previewData) return false;
+    if (previewData.shiftsCount === 0 && previewData.nonShiftsCount === 0) return false;
+    return true;
+  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -305,118 +318,122 @@ export default function EmployeeActionsModal({
             )}
 
             {!isLoadingPreview && previewData && (
-              <div className="bg-yellow-50 border-2 border-yellow-300 rounded-lg p-4">
-                <h3 className="font-bold text-yellow-900 text-sm mb-2 flex items-center gap-2">
-                  <AlertTriangle className="w-4 h-4" />
-                  Aperçu de la suppression
-                </h3>
-                <div className="space-y-2 text-sm">
-                  {deleteShifts && (
-                    <div className="flex items-center gap-2">
-                      <div className="w-2 h-2 rounded-full bg-red-500" />
-                      <span className="font-semibold">{previewData.shiftsCount} shift(s)</span>
-                      <span className="text-gray-600">seront supprimés</span>
-                    </div>
-                  )}
-                  {deleteNonShifts && (
-                    <>
-                      <div className="flex items-center gap-2">
-                        <div className="w-2 h-2 rounded-full bg-red-500" />
-                        <span className="font-semibold">{previewData.nonShiftsCount} non-shift(s)</span>
-                        <span className="text-gray-600">seront supprimés</span>
-                      </div>
-                      {Object.keys(previewData.nonShiftsByType).length > 0 && (
-                        <div className="ml-4 mt-2 space-y-1 text-xs">
-                          <div className="font-semibold text-gray-700">Détail par type :</div>
-                          {Object.entries(previewData.nonShiftsByType).map(([type, count]) => (
-                            <div key={type} className="flex items-center gap-2 text-gray-600">
-                              <span>•</span>
-                              <span>{type}: {count}</span>
-                            </div>
-                          ))}
+              <>
+                {previewData.shiftsCount > 0 || previewData.nonShiftsCount > 0 ? (
+                  <div className="bg-yellow-50 border-2 border-yellow-300 rounded-lg p-4">
+                    <h3 className="font-bold text-yellow-900 text-sm mb-2 flex items-center gap-2">
+                      <AlertTriangle className="w-4 h-4" />
+                      Aperçu de la suppression
+                    </h3>
+                    <div className="space-y-2 text-sm">
+                      {deleteShifts && (
+                        <div className="flex items-center gap-2">
+                          <div className="w-2 h-2 rounded-full bg-red-500" />
+                          <span className="font-semibold">{previewData.shiftsCount} shift(s)</span>
+                          <span className="text-gray-600">seront supprimés</span>
                         </div>
                       )}
-                    </>
-                  )}
-                  <div className="border-t border-yellow-200 pt-2 mt-2">
-                    <div className="font-bold text-yellow-900">
-                      Total : {(previewData.shiftsCount || 0) + (previewData.nonShiftsCount || 0)} événement(s)
+                      {deleteNonShifts && (
+                        <>
+                          <div className="flex items-center gap-2">
+                            <div className="w-2 h-2 rounded-full bg-red-500" />
+                            <span className="font-semibold">{previewData.nonShiftsCount} non-shift(s)</span>
+                            <span className="text-gray-600">seront supprimés</span>
+                          </div>
+                          {Object.keys(previewData.nonShiftsByType).length > 0 && (
+                            <div className="ml-4 mt-2 space-y-1 text-xs">
+                              <div className="font-semibold text-gray-700">Détail par type :</div>
+                              {Object.entries(previewData.nonShiftsByType).map(([type, count]) => (
+                                <div key={type} className="flex items-center gap-2 text-gray-600">
+                                  <span>•</span>
+                                  <span>{type}: {count}</span>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </>
+                      )}
+                      <div className="border-t border-yellow-200 pt-2 mt-2">
+                        <div className="font-bold text-yellow-900">
+                          Total : {(previewData.shiftsCount || 0) + (previewData.nonShiftsCount || 0)} événement(s)
+                        </div>
+                      </div>
                     </div>
                   </div>
-                </div>
-              </div>
-            )}
-
-            {/* Confirmation */}
-            {previewData && (previewData.shiftsCount > 0 || previewData.nonShiftsCount > 0) && (
-              <>
-                <div className="border-t pt-4">
-                  <Label className="text-sm font-semibold text-gray-700 mb-1">
-                    Confirmation de sécurité *
-                  </Label>
-                  <p className="text-xs text-gray-600 mb-2">
-                    Pour confirmer, tapez exactement : <span className="font-mono font-bold">SUPPRIMER</span>
-                  </p>
-                  <Input
-                    value={confirmText}
-                    onChange={(e) => setConfirmText(e.target.value)}
-                    placeholder="Tapez SUPPRIMER"
-                    className={cn(
-                      "font-mono",
-                      confirmText && confirmText !== 'SUPPRIMER' && "border-red-500 focus:border-red-500"
-                    )}
-                  />
-                  {confirmText && confirmText !== 'SUPPRIMER' && (
-                    <p className="text-xs text-red-600 mt-1">
-                      Le texte ne correspond pas. Veuillez taper exactement "SUPPRIMER"
+                ) : (
+                  <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 text-center">
+                    <p className="text-sm text-gray-600">
+                      Aucun événement à supprimer pour cette période
                     </p>
-                  )}
-                  {confirmText === 'SUPPRIMER' && (
-                    <p className="text-xs text-green-600 mt-1 flex items-center gap-1">
-                      <CheckCircle className="w-3 h-3" />
-                      Confirmation valide
-                    </p>
-                  )}
-                </div>
-
-                {/* Actions */}
-                <div className="flex gap-3 pt-4 border-t">
-                  <Button
-                    onClick={() => onOpenChange(false)}
-                    variant="outline"
-                    className="flex-1"
-                    disabled={isDeleting}
-                  >
-                    Annuler
-                  </Button>
-                  <Button
-                    onClick={handleDelete}
-                    disabled={!isFormValid || isDeleting}
-                    className="flex-1 bg-red-600 hover:bg-red-700 disabled:opacity-50"
-                  >
-                    {isDeleting ? (
-                      <>
-                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                        Suppression...
-                      </>
-                    ) : (
-                      <>
-                        <Trash2 className="w-4 h-4 mr-2" />
-                        Supprimer définitivement
-                      </>
-                    )}
-                  </Button>
-                </div>
+                  </div>
+                )}
               </>
             )}
 
-            {previewData && previewData.shiftsCount === 0 && previewData.nonShiftsCount === 0 && (
-              <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 text-center">
-                <p className="text-sm text-gray-600">
-                  Aucun événement à supprimer pour cette période
+            {/* Confirmation - always visible if preview has data */}
+            {!isLoadingPreview && previewData && (previewData.shiftsCount > 0 || previewData.nonShiftsCount > 0) && (
+              <div className="border-t pt-4">
+                <Label className="text-sm font-semibold text-gray-700 mb-1">
+                  Confirmation de sécurité *
+                </Label>
+                <p className="text-xs text-gray-600 mb-2">
+                  Pour confirmer, tapez exactement : <span className="font-mono font-bold">SUPPRIMER</span>
                 </p>
+                <Input
+                  value={confirmText}
+                  onChange={(e) => setConfirmText(e.target.value)}
+                  placeholder="Tapez SUPPRIMER"
+                  disabled={isDeleting}
+                  className={cn(
+                    "font-mono",
+                    confirmText && confirmText !== 'SUPPRIMER' && "border-red-500 focus:border-red-500"
+                  )}
+                />
+                {confirmText && confirmText !== 'SUPPRIMER' && (
+                  <p className="text-xs text-red-600 mt-1">
+                    Le texte ne correspond pas. Veuillez taper exactement "SUPPRIMER"
+                  </p>
+                )}
+                {confirmText === 'SUPPRIMER' && (
+                  <p className="text-xs text-green-600 mt-1 flex items-center gap-1">
+                    <CheckCircle className="w-3 h-3" />
+                    Confirmation valide
+                  </p>
+                )}
               </div>
             )}
+
+            {/* Actions - always visible */}
+            <div className="flex gap-3 pt-4 border-t mt-4">
+              <Button
+                onClick={() => {
+                  setConfirmText('');
+                  onOpenChange(false);
+                }}
+                variant="outline"
+                className="flex-1"
+                disabled={isDeleting}
+              >
+                Annuler
+              </Button>
+              <Button
+                onClick={handleDelete}
+                disabled={!isFormValid() || isDeleting}
+                className="flex-1 bg-red-600 hover:bg-red-700 disabled:opacity-50"
+              >
+                {isDeleting ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Suppression...
+                  </>
+                ) : (
+                  <>
+                    <Trash2 className="w-4 h-4 mr-2" />
+                    Supprimer définitivement
+                  </>
+                )}
+              </Button>
+            </div>
           </TabsContent>
         </Tabs>
       </DialogContent>
