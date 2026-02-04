@@ -130,12 +130,15 @@ export default function ExportComptaModal({ open, onOpenChange, monthStart, mont
       ? employeeRecap.manual_contract_hours 
       : Math.max(0, autoMonthlyContractHours - deductedHours);
 
-    // Placeholder for overtime/complementary calculation
-    // TO BE REBUILT: Simple protocol from scratch
+    // SIMPLE PROTOCOL: No overtime/complementary calculations yet
+    // Base values only
     let overtime_25 = 0;
     let overtime_50 = 0;
     let complementary_10 = 0;
     let complementary_25 = 0;
+    
+    // Total paid = worked hours only (no majorations)
+    let totalPaid = totalHours;
 
     // Non-shifts visible in recap
     const autoNonShiftsCounts = {};
