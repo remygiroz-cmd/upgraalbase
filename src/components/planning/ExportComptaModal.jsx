@@ -5,12 +5,13 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { FileText, Send, Download, Loader2, AlertCircle, CheckCircle } from 'lucide-react';
+import { FileText, Send, Download, Loader2, AlertCircle, CheckCircle, Printer } from 'lucide-react';
 import { toast } from 'sonner';
 import { calculateShiftDuration } from './LegalChecks';
 import { calculateDeductedHours, calculatePaidBaseHours, calculateMonthlyContractHours } from './DeductionCalculations';
 import { calculateMonthlyEmployeeHours } from './OvertimeCalculations';
 import { calculateMonthlyCPTotal } from './paidLeaveCalculations';
+import { generateRecapHTML, generatePlanningHTML } from './ComptaExportHTML';
 
 const MONTHS = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'];
 
@@ -214,129 +215,82 @@ export default function ExportComptaModal({ open, onOpenChange, monthStart, mont
     setDebugLog([]);
     
     const startTime = Date.now();
-    let timeoutId;
 
     try {
-      addDebugLog('🚀 Début génération', { year, month, employeeCount: payrollData.length });
+      addDebugLog('🚀 Génération HTML côté client', { year, month, employeeCount: payrollData.length });
 
-      // Timeout de sécurité
-      timeoutId = setTimeout(() => {
-        setError('La génération prend trop de temps (>20s). Veuillez réessayer.');
-        toast.error('Timeout : génération trop longue');
-        setIsGenerating(false);
-        addDebugLog('⏱️ Timeout atteint (20s)');
-      }, 20000);
+      // Préparer les données
+      const preparedData = payrollData.map(d => ({
+        employeeName: `${d.employee.first_name} ${d.employee.last_name}`,
+        position: d.employee.position || '',
+        team: d.team?.name || '',
+        contractType: d.employee.contract_type?.toUpperCase() || '',
+        workTimeType: d.employee.work_time_type === 'full_time' ? 'Temps plein' : 'Temps partiel',
+        contractHours: d.contractHours,
+        deductedHours: d.deductedHours,
+        paidBaseHours: d.paidBaseHours,
+        totalHours: d.totalHours,
+        overtime_25: d.overtime_25,
+        overtime_50: d.overtime_50,
+        complementary_10: d.complementary_10,
+        complementary_25: d.complementary_25,
+        totalPaidHours: d.totalPaidHours,
+        nonShifts: Object.entries(d.nonShiftsCounts).map(([label, count]) => `${label}: ${count}j`).join(', '),
+        cpDays: d.cpDays
+      }));
 
-      addDebugLog('📞 Appel fonction backend');
+      addDebugLog('📄 Génération HTML récap');
+      const htmlRecap = generateRecapHTML(
+        preparedData, 
+        totals, 
+        monthName, 
+        year, 
+        settings.etablissement_name || 'Établissement'
+      );
 
-      const response = await base44.functions.invoke('generateComptaExport', {
-        year,
-        month,
-        monthName,
-        payrollData: payrollData.map(d => ({
-          employeeName: `${d.employee.first_name} ${d.employee.last_name}`,
-          position: d.employee.position || '',
-          team: d.team?.name || '',
-          contractType: d.employee.contract_type?.toUpperCase() || '',
-          workTimeType: d.employee.work_time_type === 'full_time' ? 'Temps plein' : 'Temps partiel',
-          contractHours: d.contractHours,
-          deductedHours: d.deductedHours,
-          paidBaseHours: d.paidBaseHours,
-          totalHours: d.totalHours,
-          overtime_25: d.overtime_25,
-          overtime_50: d.overtime_50,
-          complementary_10: d.complementary_10,
-          complementary_25: d.complementary_25,
-          totalPaidHours: d.totalPaidHours,
-          nonShifts: Object.entries(d.nonShiftsCounts).map(([label, count]) => `${label}: ${count}j`).join(', '),
-          cpDays: d.cpDays
-        })),
-        totals,
-        etablissementName: settings.etablissement_name || 'Établissement'
-      });
+      addDebugLog('📄 Génération HTML planning');
+      const htmlPlanning = generatePlanningHTML(
+        monthName, 
+        year, 
+        settings.etablissement_name || 'Établissement'
+      );
 
-      clearTimeout(timeoutId);
+      // Créer des blobs
+      const recapBlob = new Blob([htmlRecap], { type: 'text/html' });
+      const planningBlob = new Blob([htmlPlanning], { type: 'text/html' });
+      
+      const recapUrl = URL.createObjectURL(recapBlob);
+      const planningUrl = URL.createObjectURL(planningBlob);
 
-      addDebugLog('✅ Réponse reçue', {
-        hasHtmlRecap: !!response.data?.htmlRecap,
-        hasHtmlPlanning: !!response.data?.htmlPlanning,
-        hasRecapUrl: !!response.data?.htmlRecapUrl,
-        hasPlanningUrl: !!response.data?.htmlPlanningUrl
-      });
+      addDebugLog('🔗 URLs Blob créées');
 
-      if (!response.data) {
-        throw new Error('Réponse vide du serveur');
+      // Ouvrir les documents dans de nouveaux onglets
+      const win1 = window.open(recapUrl, '_blank');
+      if (!win1) {
+        throw new Error('Popup bloqué - autorisez les popups pour ce site');
       }
 
-      // Méthode : impression navigateur via HTML
-      if (response.data.htmlRecap && response.data.htmlPlanning) {
-        addDebugLog('📄 Génération HTML inline reçue');
-        
-        // Créer des blobs pour ouvrir dans de nouveaux onglets
-        const recapBlob = new Blob([response.data.htmlRecap], { type: 'text/html' });
-        const planningBlob = new Blob([response.data.htmlPlanning], { type: 'text/html' });
-        
-        const recapUrl = URL.createObjectURL(recapBlob);
-        const planningUrl = URL.createObjectURL(planningBlob);
+      addDebugLog('✅ Onglet 1 ouvert (récap)');
 
-        addDebugLog('🔗 URLs Blob créées');
+      await new Promise(resolve => setTimeout(resolve, 600));
 
-        // Ouvrir le premier document
-        const win1 = window.open(recapUrl, '_blank');
-        if (!win1) {
-          throw new Error('Popup bloqué - autorisez les popups pour ce site');
-        }
-
-        addDebugLog('✅ Onglet 1 ouvert (récap)');
-
-        // Attendre un peu avant d'ouvrir le second
-        await new Promise(resolve => setTimeout(resolve, 800));
-
-        const win2 = window.open(planningUrl, '_blank');
-        if (!win2) {
-          throw new Error('Popup bloqué pour le 2e document');
-        }
-
-        addDebugLog('✅ Onglet 2 ouvert (planning)');
-
-        // Déclencher l'impression automatiquement après chargement
-        win1.onload = () => {
-          setTimeout(() => win1.print(), 500);
-        };
-        win2.onload = () => {
-          setTimeout(() => win2.print(), 500);
-        };
-
-        const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
-        addDebugLog(`✅ Terminé en ${elapsed}s`);
-
-        toast.success('Documents ouverts - choisissez "Enregistrer en PDF" dans la boîte d\'impression');
-
-      } else if (response.data.htmlRecapUrl && response.data.htmlPlanningUrl) {
-        addDebugLog('🔗 URLs distantes reçues');
-
-        const win1 = window.open(response.data.htmlRecapUrl, '_blank');
-        if (!win1) {
-          throw new Error('Popup bloqué - autorisez les popups');
-        }
-
-        await new Promise(resolve => setTimeout(resolve, 500));
-
-        const win2 = window.open(response.data.htmlPlanningUrl, '_blank');
-        if (!win2) {
-          throw new Error('Popup bloqué pour le 2e document');
-        }
-
-        const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
-        addDebugLog(`✅ Terminé en ${elapsed}s`);
-
-        toast.success('Documents ouverts - utilisez Imprimer > Enregistrer en PDF');
-      } else {
-        throw new Error('Format de réponse invalide : aucune donnée HTML reçue');
+      const win2 = window.open(planningUrl, '_blank');
+      if (!win2) {
+        throw new Error('Popup bloqué pour le 2e document');
       }
+
+      addDebugLog('✅ Onglet 2 ouvert (planning)');
+
+      // Auto-print après chargement
+      win1.onload = () => setTimeout(() => win1.print(), 300);
+      win2.onload = () => setTimeout(() => win2.print(), 300);
+
+      const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
+      addDebugLog(`✅ Terminé en ${elapsed}s`);
+
+      toast.success('Documents ouverts - choisissez "Enregistrer en PDF" dans l\'impression');
 
     } catch (error) {
-      clearTimeout(timeoutId);
       const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
       
       addDebugLog(`❌ Erreur après ${elapsed}s`, { 
@@ -345,7 +299,7 @@ export default function ExportComptaModal({ open, onOpenChange, monthStart, mont
       });
 
       setError(`Erreur : ${error.message}`);
-      toast.error('Échec de la génération : ' + error.message);
+      toast.error('Échec : ' + error.message);
       console.error('ExportCompta error:', error);
     } finally {
       setIsGenerating(false);
@@ -360,30 +314,54 @@ export default function ExportComptaModal({ open, onOpenChange, monthStart, mont
     }
 
     setIsSending(true);
+    setError(null);
+    
     try {
+      addDebugLog('📧 Préparation email');
+
+      // Préparer les données
+      const preparedData = payrollData.map(d => ({
+        employeeName: `${d.employee.first_name} ${d.employee.last_name}`,
+        position: d.employee.position || '',
+        team: d.team?.name || '',
+        contractType: d.employee.contract_type?.toUpperCase() || '',
+        workTimeType: d.employee.work_time_type === 'full_time' ? 'Temps plein' : 'Temps partiel',
+        contractHours: d.contractHours,
+        deductedHours: d.deductedHours,
+        paidBaseHours: d.paidBaseHours,
+        totalHours: d.totalHours,
+        overtime_25: d.overtime_25,
+        overtime_50: d.overtime_50,
+        complementary_10: d.complementary_10,
+        complementary_25: d.complementary_25,
+        totalPaidHours: d.totalPaidHours,
+        nonShifts: Object.entries(d.nonShiftsCounts).map(([label, count]) => `${label}: ${count}j`).join(', '),
+        cpDays: d.cpDays
+      }));
+
+      // Générer HTML côté client
+      const htmlRecap = generateRecapHTML(
+        preparedData, 
+        totals, 
+        monthName, 
+        year, 
+        settings.etablissement_name || 'Établissement'
+      );
+
+      const htmlPlanning = generatePlanningHTML(
+        monthName, 
+        year, 
+        settings.etablissement_name || 'Établissement'
+      );
+
+      addDebugLog('✅ HTML générés', { recapSize: htmlRecap.length, planningSize: htmlPlanning.length });
+
+      // Envoyer au backend (qui ne fait que l'envoi email)
       await base44.functions.invoke('sendComptaExport', {
-        year,
-        month,
+        htmlRecap,
+        htmlPlanning,
         monthName,
-        payrollData: payrollData.map(d => ({
-          employeeName: `${d.employee.first_name} ${d.employee.last_name}`,
-          position: d.employee.position || '',
-          team: d.team?.name || '',
-          contractType: d.employee.contract_type?.toUpperCase() || '',
-          workTimeType: d.employee.work_time_type === 'full_time' ? 'Temps plein' : 'Temps partiel',
-          contractHours: d.contractHours,
-          deductedHours: d.deductedHours,
-          paidBaseHours: d.paidBaseHours,
-          totalHours: d.totalHours,
-          overtime_25: d.overtime_25,
-          overtime_50: d.overtime_50,
-          complementary_10: d.complementary_10,
-          complementary_25: d.complementary_25,
-          totalPaidHours: d.totalPaidHours,
-          nonShifts: Object.entries(d.nonShiftsCounts).map(([label, count]) => `${label}: ${count}j`).join(', '),
-          cpDays: d.cpDays
-        })),
-        totals,
+        year,
         settings: {
           emailCompta: settings.email_compta,
           etablissementName: settings.etablissement_name,
@@ -394,9 +372,12 @@ export default function ExportComptaModal({ open, onOpenChange, monthStart, mont
         customMessage
       });
 
+      addDebugLog('✅ Email envoyé');
       toast.success('Email envoyé à la comptabilité');
       onOpenChange(false);
     } catch (error) {
+      addDebugLog('❌ Erreur envoi email', { message: error.message });
+      setError(`Erreur envoi : ${error.message}`);
       toast.error('Erreur lors de l\'envoi : ' + error.message);
     } finally {
       setIsSending(false);
@@ -575,12 +556,12 @@ export default function ExportComptaModal({ open, onOpenChange, monthStart, mont
               {isGenerating ? (
                 <>
                   <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Génération...
+                  Ouverture...
                 </>
               ) : (
                 <>
-                  <Download className="w-4 h-4 mr-2" />
-                  Imprimer / Enregistrer en PDF
+                  <Printer className="w-4 h-4 mr-2" />
+                  Imprimer / Sauver en PDF
                 </>
               )}
             </Button>
