@@ -229,24 +229,15 @@ export default function EmployeeActionsModal({
               </div>
             </div>
 
-            {/* Employee Selection */}
-            <div>
-              <Label className="text-sm font-semibold text-gray-700">Employé concerné *</Label>
-              <Select 
-                value={deleteEmployeeId} 
-                onValueChange={(value) => {
-                  setDeleteEmployeeId(value);
-                  setConfirmText('');
-                }}
-              >
-                <SelectTrigger className="mt-1">
-                  <SelectValue placeholder="Choisir un employé..." />
-                </SelectTrigger>
-                <SelectContent>
-                  {/* This will be populated by the parent with all employees */}
-                </SelectContent>
-              </Select>
-            </div>
+            {/* Employee info (read-only) */}
+            {employee && (
+              <div className="bg-gray-50 border border-gray-200 rounded-lg p-3">
+                <Label className="text-sm font-semibold text-gray-700">Employé concerné</Label>
+                <div className="mt-1 text-sm font-semibold text-gray-900">
+                  {employee.first_name} {employee.last_name}
+                </div>
+              </div>
+            )}
 
             {/* Date Range */}
             <div className="grid grid-cols-2 gap-4">
