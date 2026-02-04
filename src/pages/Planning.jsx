@@ -19,6 +19,7 @@ import ApplyTemplateModal from '@/components/planning/ApplyTemplateModal';
 import NonShiftCard from '@/components/planning/NonShiftCard';
 import PlanningSettingsModal from '@/components/planning/PlanningSettingsModal';
 import AddPaidLeaveModal from '@/components/planning/AddPaidLeaveModal';
+import EmployeeHeaderCell from '@/components/planning/EmployeeHeaderCell';
 import { calculateShiftDuration, checkMinimumRest } from '@/components/planning/LegalChecks';
 import { parseLocalDate, formatLocalDate } from '@/components/planning/dateUtils';
 import { isDateInCPPeriod } from '@/components/planning/paidLeaveCalculations';
@@ -41,6 +42,7 @@ export default function Planning() {
   const [selectedEmployee, setSelectedEmployee] = useState('');
   const [copyWeekModal, setCopyWeekModal] = useState({ open: false, weekStart: null, weekAbove: null });
   const [weekConflictMode, setWeekConflictMode] = useState('replace');
+  const [displayMode, setDisplayMode] = useState('normal'); // 'compact' | 'normal'
   const queryClient = useQueryClient();
 
   // Fetch current user
@@ -714,81 +716,48 @@ export default function Planning() {
         <div style={{ height: '1px' }}></div>
       </div>
 
-      {/* Calendar Grid */}
-      <div className="bg-white border-2 border-gray-200 rounded-xl shadow-xl">
-        <div ref={tableContainerRef} className="overflow-x-auto">
+      {/* Calendar Grid with dedicated scroll container */}
+      <div className="bg-white border-2 border-gray-200 rounded-xl shadow-xl overflow-hidden flex flex-col" style={{ height: 'calc(100vh - 420px)' }}>
+        <div ref={tableContainerRef} className="overflow-x-auto overflow-y-auto flex-1">
           <div className="inline-block min-w-full">
-            {/* Header */}
+            {/* Header - Sticky */}
             <DragDropContext onDragEnd={handleTeamDragEnd}>
-              <div className="bg-gradient-to-r from-gray-100 to-gray-50 flex border-b-2 border-gray-300 sticky top-[68px] lg:top-0 z-30 shadow-md">
-                <div className="sticky left-0 z-20 bg-gradient-to-r from-gray-100 to-gray-50 border-r-2 border-gray-300 px-4 py-4 text-left text-sm font-bold text-gray-900 w-[120px] shadow-md flex items-center gap-2">
+              <div className="bg-gradient-to-r from-gray-100 to-gray-50 flex border-b-2 border-gray-300 sticky top-0 z-40 shadow-md">
+                <div className="sticky left-0 z-50 bg-gradient-to-r from-gray-100 to-gray-50 border-r-2 border-gray-300 px-4 py-3 text-left text-sm font-bold text-gray-900 w-[120px] shadow-md flex items-center gap-2">
                   <Calendar className="w-4 h-4 text-orange-600" />
-                  Jour
+                  <span className="hidden sm:inline">Jour</span>
                 </div>
                 <Droppable droppableId="employees" direction="horizontal">
                   {(provided) => (
                     <div 
                       ref={provided.innerRef} 
                       {...provided.droppableProps}
-                      className="flex"
+                      className="flex overflow-x-auto"
                     >
                       {employees.map((employee, index) => {
                         const team = allTeams.find(t => t.id === employee.team_id);
                         return (
                           <Draggable key={employee.id} draggableId={employee.id} index={index}>
                             {(provided, snapshot) => (
-                              <div
+                              <EmployeeHeaderCell
                                 ref={provided.innerRef}
-                                {...provided.draggableProps}
-                                className={cn(
-                                  "border-r border-gray-200 px-3 py-3 text-center min-w-[140px] w-[140px] sm:w-[180px] relative",
-                                  snapshot.isDragging && "bg-orange-100 shadow-2xl opacity-90"
-                                )}
+                                employee={employee}
+                                team={team}
+                                isDragging={snapshot.isDragging}
+                                dragHandleProps={provided.dragHandleProps}
+                                displayMode={displayMode}
+                                onAddCP={() => {
+                                  setSelectedEmployeeForCP(employee);
+                                  setSelectedCPPeriod(null);
+                                  setShowAddPaidLeaveModal(true);
+                                }}
+                                onApplyTemplate={() => {
+                                  setSelectedEmployeeForTemplate(employee);
+                                  setShowApplyTemplateModal(true);
+                                }}
                                 style={provided.draggableProps.style}
-                                >
-                                <div 
-                                 {...provided.dragHandleProps}
-                                 className="absolute left-1 top-1/2 -translate-y-1/2 cursor-grab active:cursor-grabbing text-gray-400 hover:text-orange-600 transition-colors"
-                                >
-                                 <GripVertical className="w-5 h-5" />
-                                </div>
-                                <div className="absolute right-1 top-1 flex gap-1">
-                                 <button
-                                   onClick={(e) => {
-                                     e.stopPropagation();
-                                     setSelectedEmployeeForCP(employee);
-                                     setSelectedCPPeriod(null);
-                                     setShowAddPaidLeaveModal(true);
-                                   }}
-                                   className="p-1 rounded hover:bg-green-100 transition-colors text-gray-500 hover:text-green-700"
-                                   title="Ajouter Congés Payés"
-                                 >
-                                   <span className="text-sm">🟢</span>
-                                 </button>
-                                 <button
-                                   onClick={(e) => {
-                                     e.stopPropagation();
-                                     setSelectedEmployeeForTemplate(employee);
-                                     setShowApplyTemplateModal(true);
-                                   }}
-                                   className="p-1 rounded hover:bg-gray-200 transition-colors text-gray-500 hover:text-orange-600"
-                                   title="Appliquer planning type"
-                                 >
-                                   <Copy className="w-4 h-4" />
-                                 </button>
-                                </div>
-                                <div className="font-bold text-xs sm:text-sm text-gray-900 whitespace-nowrap overflow-hidden text-ellipsis px-6">
-                                 {employee.first_name} {employee.last_name}
-                                </div>
-                                {team && (
-                                 <div 
-                                   className="text-[9px] sm:text-[10px] font-semibold text-white inline-block px-2 sm:px-3 py-0.5 sm:py-1 rounded-full mt-1 sm:mt-2 shadow-sm"
-                                   style={{ backgroundColor: team.color || '#3b82f6' }}
-                                 >
-                                   {team.name}
-                                 </div>
-                                )}
-                                </div>
+                                {...provided.draggableProps}
+                              />
                             )}
                           </Draggable>
                         );
@@ -1023,6 +992,7 @@ export default function Planning() {
             </div>
           </div>
         </div>
+      </div>
       </div>
 
       {/* Shift Modal */}
