@@ -41,7 +41,7 @@ export default function Pertes() {
 
   const { data: losses = [], isLoading: loadingLosses } = useQuery({
     queryKey: ['losses'],
-    queryFn: () => base44.entities.Loss.list('-date', 50)
+    queryFn: () => base44.entities.Loss.list('-date')
   });
 
   const { data: currentUser } = useQuery({
