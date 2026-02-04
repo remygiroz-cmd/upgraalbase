@@ -133,49 +133,11 @@ export default function MonthlySummary({ employee, shifts, nonShiftEvents, nonSh
     ? manualRecap.manual_contract_hours 
     : Math.max(0, autoMonthlyContractHours - deductedHours);
   
-  // MAJORATIONS : calculer depuis totalSoldeFromWeeks (= somme exacte des soldes visibles)
-  let overtime_25 = 0;
-  let overtime_50 = 0;
-  let complementary_10 = 0;
-  let complementary_25 = 0;
-
-  if (calculationMode === 'monthly' && monthlyHours.suppCompRetained !== undefined && monthlyHours.suppCompRetained > 0) {
-    const suppCompBase = monthlyHours.suppCompRetained; // Base = totalSoldeFromWeeks
-    const weeks = Math.ceil((monthEnd - monthStart) / (1000 * 60 * 60 * 24)) / 7;
-
-    if (monthlyHours.type === 'full_time') {
-      // Temps plein : +25% jusqu'à 8h/semaine, puis +50%
-      overtime_25 = Math.min(suppCompBase, 8 * weeks);
-      overtime_50 = Math.max(0, suppCompBase - (8 * weeks));
-      console.log(`[MonthlySummary] FT majorations from totalSolde=${suppCompBase}h: OT25=${overtime_25.toFixed(1)}h, OT50=${overtime_50.toFixed(1)}h`);
-    } else if (monthlyHours.type === 'part_time') {
-      // Temps partiel : +10% jusqu'à 10% contrat, puis +25% jusqu'à 1/3 contrat
-      const contractHoursWeekly = monthlyHours.contractHoursWeekly || 0;
-      const contractHoursMonthly = contractHoursWeekly * weeks;
-      const limit_10_percent = contractHoursMonthly * 0.10;
-      const max_allowed = contractHoursMonthly / 3;
-
-      complementary_10 = Math.min(suppCompBase, limit_10_percent);
-      complementary_25 = Math.min(Math.max(0, suppCompBase - limit_10_percent), max_allowed - complementary_10);
-      console.log(`[MonthlySummary] PT majorations from totalSolde=${suppCompBase}h: C10=${complementary_10.toFixed(1)}h, C25=${complementary_25.toFixed(1)}h`);
-    }
-  }
-
-  if (manualRecap) {
-    if (manualRecap.manual_overtime_25 !== undefined) overtime_25 = manualRecap.manual_overtime_25;
-    if (manualRecap.manual_overtime_50 !== undefined) overtime_50 = manualRecap.manual_overtime_50;
-    if (manualRecap.manual_complementary_10 !== undefined) complementary_10 = manualRecap.manual_complementary_10;
-    if (manualRecap.manual_complementary_25 !== undefined) complementary_25 = manualRecap.manual_complementary_25;
-  }
-
-  const nonShiftsCounts = manualRecap?.manual_non_shifts || autoNonShiftsCounts;
-  
-  const cpDays = manualRecap?.manual_cp_days ?? autoCPDays;
+  // V1 : pas de majorations encore, juste le delta retenu (suppComp)
+  const suppCompRetained = monthlyBalance.suppCompRetained || 0;
+  const nonShiftsCounts = autoNonShiftsCounts;
+  const cpDays = autoCPDays;
   const hasManualOverride = !!manualRecap;
-
-  // Calculate total paid hours: base + overtime/complementary + holiday bonus
-  const holidayBonus = holidayHoursData.paidBonus || 0;
-  const totalPaidHours = paidBaseHours + overtime_25 + overtime_50 + complementary_10 + complementary_25 + holidayBonus;
 
   return (
     <>
