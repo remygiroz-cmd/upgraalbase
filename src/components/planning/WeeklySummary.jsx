@@ -80,119 +80,30 @@ export default function WeeklySummary({ employee, shifts, weekStart, onDeleteWee
         {weekHours.total.toFixed(1)}h
       </div>
       
-      {debugMode && weekHours.debugInfo && (
-        <div className="absolute left-0 top-full mt-1 bg-white border-2 border-purple-500 rounded p-2 shadow-lg z-50 text-[9px] w-64 max-h-96 overflow-y-auto">
-          <div className="font-bold text-purple-900 mb-1">Debug:</div>
-          
-          <div className="mb-2">
-            <div className="font-semibold text-gray-700">Shifts:</div>
-            {weekHours.debugInfo.filter(i => i.type === 'shift').map((info, i) => (
-              <div key={i} className={cn(
-                "font-mono",
-                info.included ? "text-green-700" : "text-red-500"
-              )}>
-                {info.date}: {info.durationMinutes}min {info.included ? '✓' : '✗'}
-              </div>
-            ))}
+      {/* V1 SIMPLE : affichage du delta hebdo */}
+      {calculationMode === 'monthly' && simpleBalance.status === 'calculated' && (
+        <div className="text-[10px] space-y-0.5">
+          <div className="text-gray-600">
+            Contrat: {simpleBalance.contractWeek.toFixed(1)}h
           </div>
-          
-          {weekHours.debugInfo.filter(i => i.type === 'non-shift').length > 0 && (
-            <div className="mb-2 border-t border-purple-200 pt-1">
-              <div className="font-semibold text-blue-700">Non-shifts (génère heures):</div>
-              {weekHours.debugInfo.filter(i => i.type === 'non-shift').map((info, i) => (
-                <div key={i} className={cn(
-                  "font-mono text-[8px]",
-                  info.generatesHours ? "text-blue-600" : "text-gray-400"
-                )}>
-                  {info.date}: {info.label}<br/>
-                  {info.generatesHours ? `✓ ${info.hoursGenerated.toFixed(2)}h (${info.method})` : '✗ Pas d\'heures'}
-                </div>
-              ))}
-            </div>
-          )}
-          
-          <div className="border-t border-purple-300 mt-1 pt-1">
-            <div className="font-bold text-green-700">
-              Shifts: {(weekHours.total - (weekHours.nonShiftHours || 0)).toFixed(2)}h
-            </div>
-            {weekHours.nonShiftHours > 0 && (
-              <div className="font-bold text-blue-700">
-                Non-shifts: {weekHours.nonShiftHours.toFixed(2)}h
-              </div>
-            )}
-            <div className="font-bold text-purple-900">
-              Total: {weekHours.total.toFixed(2)}h
-            </div>
+          <div className={cn(
+            "font-semibold px-1 py-0.5 rounded",
+            simpleBalance.delta === 0 ? "text-gray-600 bg-gray-50" : simpleBalance.delta > 0 ? "text-blue-700 bg-blue-50" : "text-red-700 bg-red-50"
+          )}>
+            Écart: {simpleBalance.delta > 0 ? '+' : ''}{simpleBalance.delta.toFixed(1)}h
           </div>
         </div>
       )}
-      
-      {/* Mode hebdomadaire activé */}
-      {calculationMode === 'weekly' && weekHours.type === 'full_time' && weekHours.total_overtime > 0 && (
-        <div className="text-[10px] space-y-0.5">
-          {weekHours.overtime_25 > 0 && (
-            <div className="text-orange-700 font-semibold">
-              +{weekHours.overtime_25.toFixed(1)}h (+25%)
-            </div>
-          )}
-          {weekHours.overtime_50 > 0 && (
-            <div className="text-red-700 font-semibold">
-              +{weekHours.overtime_50.toFixed(1)}h (+50%)
-            </div>
-          )}
-        </div>
-      )}
 
-      {calculationMode === 'weekly' && weekHours.type === 'part_time' && weekHours.total_complementary > 0 && (
-        <div className="text-[10px] space-y-0.5">
-          {weekHours.complementary_10 > 0 && (
-            <div className="text-green-700 font-semibold">
-              +{weekHours.complementary_10.toFixed(1)}h (+10%)
-            </div>
-          )}
-          {weekHours.complementary_25 > 0 && (
-            <div className="text-orange-700 font-semibold">
-              +{weekHours.complementary_25.toFixed(1)}h (+25%)
-            </div>
-          )}
-          {weekHours.exceeds_limit && (
-            <div className="text-red-700 font-bold">
-              ⚠️ Plafond dépassé
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* Mode désactivé - affichage simple */}
-      {calculationMode === 'disabled' && weekHours.total > 0 && (
-        <div className="text-[10px] text-gray-500">
-          {weekHours.hasOvertime ? `+${weekHours.overtime?.toFixed(1)}h` : 'Normal'}
-        </div>
-      )}
-
-      {/* Mode mensuel (lissage) - afficher prévu/effectué/solde */}
-      {calculationMode === 'monthly' && weekHours.saldeData && (
-        <div className="text-[10px] space-y-0.5">
-          {weekHours.saldeData.status === 'calculated' ? (
-            <>
-              <div className="text-gray-600">
-                Prévu: {isNaN(weekHours.saldeData.expectedWeek) ? 'non défini' : weekHours.saldeData.expectedWeek.toFixed(1) + 'h'}
-              </div>
-              <div className="text-gray-600">
-                Effectué: {isNaN(weekHours.saldeData.workedWeek) ? 'non défini' : weekHours.saldeData.workedWeek.toFixed(1) + 'h'}
-              </div>
-              <div className={cn(
-                "font-semibold px-1 py-0.5 rounded",
-                weekHours.saldeData.salde === 0 ? "text-gray-600 bg-gray-50" : weekHours.saldeData.salde > 0 ? "text-blue-700 bg-blue-50" : "text-red-700 bg-red-50"
-              )}>
-                Solde: {isNaN(weekHours.saldeData.salde) ? 'non défini' : (weekHours.saldeData.salde > 0 ? '+' : '') + weekHours.saldeData.salde.toFixed(1) + 'h'}
-              </div>
-            </>
-          ) : (
-            <div className="text-orange-600 italic text-[9px]">
-              ⚠️ {weekHours.saldeData.reason}
-            </div>
-          )}
+      {debugMode && simpleBalance.status === 'calculated' && (
+        <div className="absolute left-0 top-full mt-1 bg-white border-2 border-purple-500 rounded p-2 shadow-lg z-50 text-[9px] w-56">
+          <div className="font-bold text-purple-900 mb-1">Debug V1:</div>
+          <div className="space-y-1 font-mono text-[8px]">
+            <div>weekKey: {simpleBalance.weekKey}</div>
+            <div>contractWeek: {simpleBalance.contractWeek.toFixed(2)}h</div>
+            <div>workedWeek: {simpleBalance.workedWeek.toFixed(2)}h</div>
+            <div className="font-semibold">delta: {simpleBalance.delta > 0 ? '+' : ''}{simpleBalance.delta.toFixed(2)}h</div>
+          </div>
         </div>
       )}
 
