@@ -178,24 +178,39 @@ export const calculateWeeklySaldeForSmoothing = (
     });
   }
 
-  // E) Calcul du prévu
-  const expectedWeek = joursContratInclus * heuresContratParJour;
+  // E) Calcul du prévu + PROTECTION NaN
+  let expectedWeek = joursContratInclus * heuresContratParJour;
+
+  if (isNaN(expectedWeek)) {
+   console.warn(`[DEBUG] expectedWeek is NaN for employee ${employee.id}, reset to 0`);
+   expectedWeek = 0;
+  }
 
   // F) Heures effectuées (shifts uniquement, pas non-shifts)
-  const workedWeek = getWorkedHoursForWeek(shifts, employeeId, weekStart, monthStart, monthEnd);
+  let workedWeek = getWorkedHoursForWeek(shifts, employeeId, weekStart, monthStart, monthEnd);
+
+  if (isNaN(workedWeek)) {
+   console.warn(`[DEBUG] workedWeek is NaN for employee ${employee.id}, reset to 0`);
+   workedWeek = 0;
+  }
 
   // G) Solde
-  const salde = workedWeek - expectedWeek;
+  let salde = workedWeek - expectedWeek;
+
+  if (isNaN(salde)) {
+   console.warn(`[DEBUG] salde is NaN for employee ${employee.id}, reset to 0`);
+   salde = 0;
+  }
 
   return {
-    status: 'calculated',
-    expectedWeek: Math.round(expectedWeek * 100) / 100,
-    workedWeek: Math.round(workedWeek * 100) / 100,
-    salde: Math.round(salde * 100) / 100,
-    daysIncluded,
-    joursContratInclus,
-    contractHoursWeekly,
-    reason: null
+   status: 'calculated',
+   expectedWeek: Math.round(expectedWeek * 100) / 100,
+   workedWeek: Math.round(workedWeek * 100) / 100,
+   salde: Math.round(salde * 100) / 100,
+   daysIncluded,
+   joursContratInclus,
+   contractHoursWeekly,
+   reason: null
   };
 };
 
