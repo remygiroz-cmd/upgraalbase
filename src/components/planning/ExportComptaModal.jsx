@@ -5,13 +5,14 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { FileText, Send, Download, Loader2, AlertCircle, CheckCircle, Printer } from 'lucide-react';
+import { FileText, Send, Download, Loader2, AlertCircle, CheckCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { calculateShiftDuration } from './LegalChecks';
 import { calculateDeductedHours, calculatePaidBaseHours, calculateMonthlyContractHours } from './DeductionCalculations';
 import { calculateMonthlyEmployeeHours } from './OvertimeCalculations';
 import { calculateMonthlyCPTotal } from './paidLeaveCalculations';
-import { generateRecapHTML, generatePlanningHTML } from './ComptaExportHTML';
+import { jsPDF } from 'jspdf';
+import 'jspdf-autotable';
 
 const MONTHS = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'];
 
@@ -209,6 +210,210 @@ export default function ExportComptaModal({ open, onOpenChange, monthStart, mont
     console.log('[ExportCompta]', message, data);
   };
 
+  const generatePDF = async () => {
+    addDebugLog('📄 Début génération PDF');
+
+    const doc = new jsPDF({
+      orientation: 'landscape',
+      unit: 'mm',
+      format: 'a4'
+    });
+
+    // Configuration
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const pageHeight = doc.internal.pageSize.getHeight();
+    const margin = 10;
+    
+    // === PAGE 1: Tableau récap paie ===
+    addDebugLog('📊 Génération page 1: Récap paie');
+
+    // En-tête
+    doc.setFontSize(16);
+    doc.setFont('helvetica', 'bold');
+    doc.text(settings.etablissement_name || 'Établissement', margin, margin + 8);
+    
+    doc.setFontSize(12);
+    doc.text(`Éléments pour établir les fiches de paie - ${monthName} ${year}`, margin, margin + 15);
+    
+    doc.setFontSize(8);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(128, 128, 128);
+    doc.text(`Généré le ${new Date().toLocaleDateString('fr-FR')} à ${new Date().toLocaleTimeString('fr-FR')}`, margin, margin + 20);
+    doc.setTextColor(0, 0, 0);
+
+    // Tableau avec autoTable
+    const tableData = payrollData.map(d => [
+      `${d.employee.first_name} ${d.employee.last_name}`,
+      d.team?.name || d.employee.position || '-',
+      d.employee.contract_type?.toUpperCase() || '',
+      d.contractHours.toFixed(1) + 'h',
+      d.deductedHours > 0 ? d.deductedHours.toFixed(1) + 'h' : '-',
+      d.paidBaseHours.toFixed(1) + 'h',
+      d.totalHours.toFixed(1) + 'h',
+      d.complementary_10 > 0 ? d.complementary_10.toFixed(1) + 'h' : '-',
+      d.complementary_25 > 0 ? d.complementary_25.toFixed(1) + 'h' : '-',
+      d.overtime_25 > 0 ? d.overtime_25.toFixed(1) + 'h' : '-',
+      d.overtime_50 > 0 ? d.overtime_50.toFixed(1) + 'h' : '-',
+      d.totalPaidHours.toFixed(1) + 'h',
+      Object.entries(d.nonShiftsCounts).map(([label, count]) => `${label}: ${count}j`).join(', ') || '-',
+      d.cpDays > 0 ? d.cpDays + 'j' : '-'
+    ]);
+
+    // Ligne TOTAL
+    tableData.push([
+      'TOTAL',
+      '',
+      '',
+      totals.contractHours.toFixed(1) + 'h',
+      totals.deductedHours.toFixed(1) + 'h',
+      totals.paidBaseHours.toFixed(1) + 'h',
+      totals.totalHours.toFixed(1) + 'h',
+      totals.complementary_10.toFixed(1) + 'h',
+      totals.complementary_25.toFixed(1) + 'h',
+      totals.overtime_25.toFixed(1) + 'h',
+      totals.overtime_50.toFixed(1) + 'h',
+      totals.totalPaidHours.toFixed(1) + 'h',
+      '',
+      ''
+    ]);
+
+    doc.autoTable({
+      startY: margin + 25,
+      head: [[
+        'Employé', 'Poste', 'Contrat', 'Base', 'Décomp.', 'Payée', 
+        'Effect.', 'C+10%', 'C+25%', 'S+25%', 'S+50%', 'Total', 'Absences', 'CP'
+      ]],
+      body: tableData,
+      styles: {
+        fontSize: 7,
+        cellPadding: 2,
+        overflow: 'linebreak',
+        halign: 'left'
+      },
+      headStyles: {
+        fillColor: [243, 244, 246],
+        textColor: [0, 0, 0],
+        fontStyle: 'bold',
+        fontSize: 7
+      },
+      columnStyles: {
+        0: { cellWidth: 30 },
+        1: { cellWidth: 25 },
+        2: { cellWidth: 15 },
+        3: { cellWidth: 15, halign: 'right' },
+        4: { cellWidth: 15, halign: 'right', textColor: [220, 38, 38] },
+        5: { cellWidth: 15, halign: 'right', fillColor: [219, 234, 254] },
+        6: { cellWidth: 15, halign: 'right' },
+        7: { cellWidth: 15, halign: 'right' },
+        8: { cellWidth: 15, halign: 'right' },
+        9: { cellWidth: 15, halign: 'right' },
+        10: { cellWidth: 15, halign: 'right' },
+        11: { cellWidth: 15, halign: 'right', fillColor: [219, 234, 254] },
+        12: { cellWidth: 30, fontSize: 6 },
+        13: { cellWidth: 12, halign: 'right' }
+      },
+      didParseCell: (data) => {
+        // Ligne TOTAL en gras
+        if (data.row.index === tableData.length - 1) {
+          data.cell.styles.fontStyle = 'bold';
+          data.cell.styles.fillColor = [229, 231, 235];
+        }
+      },
+      margin: { left: margin, right: margin }
+    });
+
+    // Pied de page
+    const finalY = doc.lastAutoTable.finalY || margin + 100;
+    doc.setFontSize(7);
+    doc.setTextColor(128, 128, 128);
+    doc.text('Document généré automatiquement via UpGraal', pageWidth / 2, pageHeight - 5, { align: 'center' });
+
+    // === PAGE 2: Planning ===
+    addDebugLog('📅 Génération page 2: Planning');
+    doc.addPage();
+
+    doc.setFontSize(18);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(0, 0, 0);
+    doc.text(`Planning ${monthName} ${year}`, pageWidth / 2, margin + 15, { align: 'center' });
+
+    doc.setFontSize(11);
+    doc.setFont('helvetica', 'bold');
+    doc.text(settings.etablissement_name || 'Établissement', pageWidth / 2, margin + 22, { align: 'center' });
+
+    doc.setFontSize(8);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(128, 128, 128);
+    doc.text(`Généré le ${new Date().toLocaleDateString('fr-FR')}`, pageWidth / 2, margin + 27, { align: 'center' });
+
+    // Récupérer les shifts et non-shifts pour le planning
+    const daysInMonth = new Date(year, month, 0).getDate();
+    const planningRows = [];
+
+    // Construire les lignes du planning par employé
+    for (const empData of payrollData) {
+      const empShifts = shifts.filter(s => s.employee_id === empData.employee.id);
+      const empNonShifts = nonShiftEvents.filter(ns => ns.employee_id === empData.employee.id);
+
+      const row = [`${empData.employee.first_name} ${empData.employee.last_name}`];
+      
+      // Pour chaque jour du mois
+      for (let day = 1; day <= Math.min(daysInMonth, 31); day++) {
+        const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+        const dayShifts = empShifts.filter(s => s.date === dateStr);
+        const dayNonShifts = empNonShifts.filter(ns => ns.date === dateStr);
+
+        if (dayShifts.length > 0) {
+          const shift = dayShifts[0];
+          row.push(`${shift.start_time}-${shift.end_time}`);
+        } else if (dayNonShifts.length > 0) {
+          const ns = dayNonShifts[0];
+          const nsType = nonShiftTypes.find(t => t.id === ns.type_id);
+          row.push(nsType?.label?.substring(0, 3) || 'ABS');
+        } else {
+          row.push('-');
+        }
+      }
+
+      planningRows.push(row);
+    }
+
+    // En-têtes jours
+    const dayHeaders = ['Employé'];
+    for (let day = 1; day <= Math.min(daysInMonth, 31); day++) {
+      dayHeaders.push(String(day));
+    }
+
+    doc.setTextColor(0, 0, 0);
+    doc.autoTable({
+      startY: margin + 35,
+      head: [dayHeaders],
+      body: planningRows,
+      styles: {
+        fontSize: 5,
+        cellPadding: 1.5,
+        overflow: 'linebreak'
+      },
+      headStyles: {
+        fillColor: [243, 244, 246],
+        textColor: [0, 0, 0],
+        fontStyle: 'bold',
+        fontSize: 6
+      },
+      columnStyles: {
+        0: { cellWidth: 35, fontStyle: 'bold' }
+      },
+      margin: { left: margin, right: margin }
+    });
+
+    doc.setFontSize(7);
+    doc.setTextColor(128, 128, 128);
+    doc.text('Document généré automatiquement via UpGraal', pageWidth / 2, pageHeight - 5, { align: 'center' });
+
+    addDebugLog('✅ PDF généré');
+    return doc;
+  };
+
   const handleDownloadPDFs = async () => {
     setIsGenerating(true);
     setError(null);
@@ -217,78 +422,17 @@ export default function ExportComptaModal({ open, onOpenChange, monthStart, mont
     const startTime = Date.now();
 
     try {
-      addDebugLog('🚀 Génération HTML côté client', { year, month, employeeCount: payrollData.length });
+      addDebugLog('🚀 Génération PDF', { year, month, employeeCount: payrollData.length });
 
-      // Préparer les données
-      const preparedData = payrollData.map(d => ({
-        employeeName: `${d.employee.first_name} ${d.employee.last_name}`,
-        position: d.employee.position || '',
-        team: d.team?.name || '',
-        contractType: d.employee.contract_type?.toUpperCase() || '',
-        workTimeType: d.employee.work_time_type === 'full_time' ? 'Temps plein' : 'Temps partiel',
-        contractHours: d.contractHours,
-        deductedHours: d.deductedHours,
-        paidBaseHours: d.paidBaseHours,
-        totalHours: d.totalHours,
-        overtime_25: d.overtime_25,
-        overtime_50: d.overtime_50,
-        complementary_10: d.complementary_10,
-        complementary_25: d.complementary_25,
-        totalPaidHours: d.totalPaidHours,
-        nonShifts: Object.entries(d.nonShiftsCounts).map(([label, count]) => `${label}: ${count}j`).join(', '),
-        cpDays: d.cpDays
-      }));
+      const doc = await generatePDF();
 
-      addDebugLog('📄 Génération HTML récap');
-      const htmlRecap = generateRecapHTML(
-        preparedData, 
-        totals, 
-        monthName, 
-        year, 
-        settings.etablissement_name || 'Établissement'
-      );
-
-      addDebugLog('📄 Génération HTML planning');
-      const htmlPlanning = generatePlanningHTML(
-        monthName, 
-        year, 
-        settings.etablissement_name || 'Établissement'
-      );
-
-      // Créer des blobs
-      const recapBlob = new Blob([htmlRecap], { type: 'text/html' });
-      const planningBlob = new Blob([htmlPlanning], { type: 'text/html' });
-      
-      const recapUrl = URL.createObjectURL(recapBlob);
-      const planningUrl = URL.createObjectURL(planningBlob);
-
-      addDebugLog('🔗 URLs Blob créées');
-
-      // Ouvrir les documents dans de nouveaux onglets
-      const win1 = window.open(recapUrl, '_blank');
-      if (!win1) {
-        throw new Error('Popup bloqué - autorisez les popups pour ce site');
-      }
-
-      addDebugLog('✅ Onglet 1 ouvert (récap)');
-
-      await new Promise(resolve => setTimeout(resolve, 600));
-
-      const win2 = window.open(planningUrl, '_blank');
-      if (!win2) {
-        throw new Error('Popup bloqué pour le 2e document');
-      }
-
-      addDebugLog('✅ Onglet 2 ouvert (planning)');
-
-      // Auto-print après chargement
-      win1.onload = () => setTimeout(() => win1.print(), 300);
-      win2.onload = () => setTimeout(() => win2.print(), 300);
+      addDebugLog('💾 Téléchargement PDF');
+      doc.save(`Export_Compta_${monthName}_${year}.pdf`);
 
       const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
       addDebugLog(`✅ Terminé en ${elapsed}s`);
 
-      toast.success('Documents ouverts - choisissez "Enregistrer en PDF" dans l\'impression');
+      toast.success('PDF téléchargé avec succès');
 
     } catch (error) {
       const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
@@ -317,49 +461,24 @@ export default function ExportComptaModal({ open, onOpenChange, monthStart, mont
     setError(null);
     
     try {
-      addDebugLog('📧 Préparation email');
+      addDebugLog('📧 Génération PDF pour email');
 
-      // Préparer les données
-      const preparedData = payrollData.map(d => ({
-        employeeName: `${d.employee.first_name} ${d.employee.last_name}`,
-        position: d.employee.position || '',
-        team: d.team?.name || '',
-        contractType: d.employee.contract_type?.toUpperCase() || '',
-        workTimeType: d.employee.work_time_type === 'full_time' ? 'Temps plein' : 'Temps partiel',
-        contractHours: d.contractHours,
-        deductedHours: d.deductedHours,
-        paidBaseHours: d.paidBaseHours,
-        totalHours: d.totalHours,
-        overtime_25: d.overtime_25,
-        overtime_50: d.overtime_50,
-        complementary_10: d.complementary_10,
-        complementary_25: d.complementary_25,
-        totalPaidHours: d.totalPaidHours,
-        nonShifts: Object.entries(d.nonShiftsCounts).map(([label, count]) => `${label}: ${count}j`).join(', '),
-        cpDays: d.cpDays
-      }));
+      // Générer le PDF
+      const doc = await generatePDF();
+      const pdfBlob = doc.output('blob');
 
-      // Générer HTML côté client
-      const htmlRecap = generateRecapHTML(
-        preparedData, 
-        totals, 
-        monthName, 
-        year, 
-        settings.etablissement_name || 'Établissement'
-      );
+      addDebugLog('📤 Upload PDF');
 
-      const htmlPlanning = generatePlanningHTML(
-        monthName, 
-        year, 
-        settings.etablissement_name || 'Établissement'
-      );
+      // Upload du PDF
+      const uploadResult = await base44.integrations.Core.UploadFile({ file: pdfBlob });
+      const pdfUrl = uploadResult.file_url;
 
-      addDebugLog('✅ HTML générés', { recapSize: htmlRecap.length, planningSize: htmlPlanning.length });
+      addDebugLog('✅ PDF uploadé', { url: pdfUrl });
 
-      // Envoyer au backend (qui ne fait que l'envoi email)
+      // Envoyer l'email avec pièce jointe
       await base44.functions.invoke('sendComptaExport', {
-        htmlRecap,
-        htmlPlanning,
+        pdfUrl,
+        pdfFilename: `Export_Compta_${monthName}_${year}.pdf`,
         monthName,
         year,
         settings: {
@@ -373,7 +492,7 @@ export default function ExportComptaModal({ open, onOpenChange, monthStart, mont
       });
 
       addDebugLog('✅ Email envoyé');
-      toast.success('Email envoyé à la comptabilité');
+      toast.success('Email envoyé à la comptabilité avec PDF en pièce jointe');
       onOpenChange(false);
     } catch (error) {
       addDebugLog('❌ Erreur envoi email', { message: error.message });
@@ -541,7 +660,7 @@ export default function ExportComptaModal({ open, onOpenChange, monthStart, mont
               className="mt-1"
             />
             <p className="text-xs text-gray-500 mt-1">
-              💡 Astuce : Les documents s'ouvriront dans de nouveaux onglets. Utilisez <strong>Ctrl+P</strong> puis <strong>"Enregistrer en PDF"</strong> pour les sauvegarder.
+              💡 Le document PDF contient : le tableau des éléments de paie + le planning mensuel complet.
             </p>
           </div>
 
@@ -556,12 +675,12 @@ export default function ExportComptaModal({ open, onOpenChange, monthStart, mont
               {isGenerating ? (
                 <>
                   <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Ouverture...
+                  Génération...
                 </>
               ) : (
                 <>
-                  <Printer className="w-4 h-4 mr-2" />
-                  Imprimer / Sauver en PDF
+                  <Download className="w-4 h-4 mr-2" />
+                  Télécharger le PDF
                 </>
               )}
             </Button>

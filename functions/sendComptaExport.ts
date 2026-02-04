@@ -9,37 +9,35 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { htmlRecap, htmlPlanning, monthName, year, settings, customMessage } = await req.json();
+    const { pdfUrl, pdfFilename, monthName, year, settings, customMessage } = await req.json();
 
     // Validate settings
     if (!settings.emailCompta || !settings.etablissementName || !settings.responsableName || !settings.responsableEmail) {
       return Response.json({ error: 'Paramètres comptabilité incomplets' }, { status: 400 });
     }
 
-    // Validate HTML
-    if (!htmlRecap || !htmlPlanning) {
-      return Response.json({ error: 'HTML manquant' }, { status: 400 });
+    if (!pdfUrl) {
+      return Response.json({ error: 'PDF URL manquant' }, { status: 400 });
     }
 
     console.log('Envoi email compta:', {
       to: settings.emailCompta,
       monthName,
       year,
-      htmlRecapSize: htmlRecap.length,
-      htmlPlanningSize: htmlPlanning.length
+      pdfUrl,
+      pdfFilename
     });
 
-    // Upload HTML files to storage
-    const htmlRecapBlob = new Blob([htmlRecap], { type: 'text/html' });
-    const htmlPlanningBlob = new Blob([htmlPlanning], { type: 'text/html' });
+    // Télécharger le PDF depuis l'URL
+    const pdfResponse = await fetch(pdfUrl);
+    if (!pdfResponse.ok) {
+      throw new Error('Impossible de récupérer le PDF');
+    }
 
-    const recapUpload = await base44.asServiceRole.integrations.Core.UploadFile({ file: htmlRecapBlob });
-    const planningUpload = await base44.asServiceRole.integrations.Core.UploadFile({ file: htmlPlanningBlob });
+    const pdfBuffer = await pdfResponse.arrayBuffer();
+    const pdfBase64 = btoa(String.fromCharCode(...new Uint8Array(pdfBuffer)));
 
-    const recapUrl = recapUpload.file_url;
-    const planningUrl = planningUpload.file_url;
-
-    console.log('Fichiers uploadés:', { recapUrl, planningUrl });
+    console.log('PDF téléchargé et encodé en base64, taille:', pdfBase64.length);
 
     // Send email via Resend
     const resendApiKey = Deno.env.get('RESEND_API_KEY');
@@ -49,7 +47,11 @@ Deno.serve(async (req) => {
     
     const emailBody = `Bonjour,
 
-${customMessage ? customMessage + '\n\n' : ''}Veuillez trouver ci-dessous les éléments pour établir les fiches de paie de ${monthName} ${year}.
+${customMessage ? customMessage + '\n\n' : ''}Veuillez trouver ci-joint le document d'export comptable pour ${monthName} ${year}.
+
+Ce document contient :
+- Le tableau récapitulatif des éléments de paie
+- Le planning mensuel complet
 
 Cordialement,
 ${settings.responsableName}
@@ -60,23 +62,15 @@ ${settings.responsableCoords || ''}`;
         <h2 style="color: #f97316;">Éléments de paie - ${monthName} ${year}</h2>
         <p>Bonjour,</p>
         ${customMessage ? `<p style="background: #f3f4f6; padding: 12px; border-radius: 6px; border-left: 3px solid #f97316;">${customMessage.replace(/\n/g, '<br>')}</p>` : ''}
-        <p>Veuillez trouver ci-dessous les documents nécessaires pour établir les fiches de paie.</p>
+        <p>Veuillez trouver ci-joint le document d'export comptable pour ${monthName} ${year}.</p>
         
-        <div style="margin: 25px 0;">
-          <a href="${recapUrl}" 
-             style="display: inline-block; margin: 10px 10px 10px 0; padding: 14px 28px; background-color: #f97316; color: white; text-decoration: none; border-radius: 6px; font-weight: bold; font-size: 14px;">
-            📄 Récapitulatif de paie
-          </a>
-          <a href="${planningUrl}" 
-             style="display: inline-block; margin: 10px 0; padding: 14px 28px; background-color: #3b82f6; color: white; text-decoration: none; border-radius: 6px; font-weight: bold; font-size: 14px;">
-            📅 Planning mensuel
-          </a>
-        </div>
-
-        <div style="background: #eff6ff; padding: 15px; border-radius: 6px; border-left: 3px solid #3b82f6; margin-top: 20px;">
-          <p style="margin: 0; font-size: 13px; color: #1e40af;">
-            💡 <strong>Pour convertir en PDF :</strong><br>
-            Cliquez sur chaque lien, puis dans votre navigateur : <strong>Ctrl+P</strong> (ou Cmd+P sur Mac) → <strong>"Enregistrer en PDF"</strong>
+        <div style="background: #eff6ff; padding: 15px; border-radius: 6px; border-left: 3px solid #3b82f6; margin: 20px 0;">
+          <p style="margin: 0; font-size: 14px; color: #1e40af;">
+            <strong>📎 Document joint :</strong><br>
+            <span style="color: #374151;">${pdfFilename}</span>
+          </p>
+          <p style="margin: 8px 0 0 0; font-size: 13px; color: #6b7280;">
+            Contient : tableau récapitulatif de paie + planning mensuel complet
           </p>
         </div>
 
@@ -104,7 +98,14 @@ ${settings.responsableCoords || ''}`;
         to: [settings.emailCompta],
         subject: `Éléments de paie - ${monthName} ${year}`,
         html: htmlBody,
-        text: emailBody
+        text: emailBody,
+        attachments: [
+          {
+            filename: pdfFilename,
+            content: pdfBase64,
+            content_type: 'application/pdf'
+          }
+        ]
       })
     });
 
