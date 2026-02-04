@@ -548,18 +548,34 @@ export default function ExportComptaModal({ open, onOpenChange, monthStart, mont
       const doc = await generatePDF();
       const pdfBlob = doc.output('blob');
 
-      addDebugLog('📤 Upload PDF');
+      // CRITICAL: Vérifier que le Blob est valide
+      if (!pdfBlob || pdfBlob.size === 0) {
+        throw new Error('PDF non généré ou vide (taille: 0)');
+      }
 
-      // Upload du PDF
-      const uploadResult = await base44.integrations.Core.UploadFile({ file: pdfBlob });
+      addDebugLog('✅ PDF généré', { size: pdfBlob.size, type: pdfBlob.type });
+
+      // Convertir le Blob en File (requis pour multipart/form-data)
+      const pdfFilename = `Export_Compta_${monthName}_${year}.pdf`;
+      const pdfFile = new File([pdfBlob], pdfFilename, { type: 'application/pdf' });
+
+      addDebugLog('📤 Upload PDF', { filename: pdfFilename, size: pdfFile.size });
+
+      // Upload du PDF avec un vrai File object
+      const uploadResult = await base44.integrations.Core.UploadFile({ file: pdfFile });
+      
+      if (!uploadResult || !uploadResult.file_url) {
+        throw new Error('Upload échoué: aucune URL retournée');
+      }
+
       const pdfUrl = uploadResult.file_url;
-
       addDebugLog('✅ PDF uploadé', { url: pdfUrl });
 
       // Envoyer l'email avec pièce jointe
+      addDebugLog('📧 Envoi email');
       await base44.functions.invoke('sendComptaExport', {
         pdfUrl,
-        pdfFilename: `Export_Compta_${monthName}_${year}.pdf`,
+        pdfFilename,
         monthName,
         year,
         settings: {
@@ -576,9 +592,13 @@ export default function ExportComptaModal({ open, onOpenChange, monthStart, mont
       toast.success('Email envoyé à la comptabilité avec PDF en pièce jointe');
       onOpenChange(false);
     } catch (error) {
-      addDebugLog('❌ Erreur envoi email', { message: error.message });
+      addDebugLog('❌ Erreur envoi email', { 
+        message: error.message,
+        stack: error.stack 
+      });
       setError(`Erreur envoi : ${error.message}`);
       toast.error('Erreur lors de l\'envoi : ' + error.message);
+      console.error('Send email error:', error);
     } finally {
       setIsSending(false);
     }
