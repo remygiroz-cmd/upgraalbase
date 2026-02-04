@@ -315,9 +315,10 @@ export default function MonthlySummary({ employee, shifts, nonShiftEvents, nonSh
             <div className="text-[10px] font-semibold text-purple-700 mb-1">
               🎉 Jours fériés : {holidayHoursData.count}j
             </div>
-            <div className="text-[9px] text-gray-600 space-y-0.5">
-              <div>Heures réelles: {holidayHoursData.realHours.toFixed(1)}h</div>
-              <div className="font-semibold text-purple-700">Comptées x2: {holidayHoursData.countedHours.toFixed(1)}h</div>
+            <div className="text-[9px] text-gray-600">
+              <div className="font-semibold text-purple-700">
+                Heures fériées travaillées: {holidayHoursData.workedHours.toFixed(1)}h
+              </div>
             </div>
           </div>
         )}

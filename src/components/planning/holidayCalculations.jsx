@@ -33,10 +33,11 @@ export function getHolidayMultiplier(employee, date, holidayDates) {
 
 /**
  * Calcule les heures travaillées en jours fériés pour un employé sur une période
+ * Ces heures s'ajoutent au total payé sans multiplication affichée
  */
 export function calculateHolidayHours(shifts, employee, startDate, endDate, holidayDates) {
   if (!holidayDates || holidayDates.length === 0) {
-    return { count: 0, dates: [], realHours: 0, countedHours: 0, bonusHours: 0 };
+    return { count: 0, dates: [], workedHours: 0, paidBonus: 0 };
   }
   
   const formatDateStr = (date) => {
@@ -54,7 +55,7 @@ export function calculateHolidayHours(shifts, employee, startDate, endDate, holi
   const endDateStr = formatDateStr(endDate);
   
   if (!startDateStr || !endDateStr) {
-    return { count: 0, dates: [], realHours: 0, countedHours: 0, bonusHours: 0 };
+    return { count: 0, dates: [], workedHours: 0, paidBonus: 0 };
   }
   
   const holidayShifts = shifts.filter(shift => {
@@ -67,22 +68,19 @@ export function calculateHolidayHours(shifts, employee, startDate, endDate, holi
   const result = {
     count: 0,
     dates: [],
-    realHours: 0,
-    countedHours: 0,
-    bonusHours: 0
+    workedHours: 0,  // Heures réellement travaillées
+    paidBonus: 0     // Heures supplémentaires à payer (= workedHours pour éligibles)
   };
   
   holidayShifts.forEach(shift => {
-    const multiplier = getHolidayMultiplier(employee, shift.date, holidayDates);
+    const isEligible = isEmployeeEligibleForHoliday(employee, shift.date);
     const shiftHours = calculateShiftDuration(shift);
-    const countedHours = shiftHours * multiplier;
     
-    if (multiplier === 2) {
+    if (isEligible) {
       result.count++;
       result.dates.push(shift.date);
-      result.realHours += shiftHours;
-      result.countedHours += countedHours;
-      result.bonusHours += shiftHours; // Les heures en bonus
+      result.workedHours += shiftHours;
+      result.paidBonus += shiftHours; // Bonus = heures travaillées (ajout au total payé)
     }
   });
   

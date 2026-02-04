@@ -263,7 +263,7 @@ export default function ExportComptaModal({ open, onOpenChange, monthStart, mont
       d.totalPaidHours.toFixed(1) + 'h',
       Object.entries(d.nonShiftsCounts).map(([label, count]) => `${label}: ${count}j`).join(', ') || '-',
       d.cpDays > 0 ? d.cpDays + 'j' : '-',
-      d.holidayHoursData.count > 0 ? `${d.holidayHoursData.count}j (${d.holidayHoursData.countedHours.toFixed(1)}h x2)` : '-'
+      d.holidayHoursData.count > 0 ? `${d.holidayHoursData.count}j (${d.holidayHoursData.workedHours.toFixed(1)}h)` : '-'
     ]);
 
     // Ligne TOTAL
@@ -655,12 +655,12 @@ export default function ExportComptaModal({ open, onOpenChange, monthStart, mont
                           </td>
                           <td className="px-2 py-2 text-right">{data.cpDays > 0 ? `${data.cpDays}j` : '-'}</td>
                           <td className="px-2 py-2 text-right text-[10px]">
-                          {data.holidayHoursData.count > 0 ? (
-                          <div>
-                            <div className="font-semibold">{data.holidayHoursData.count}j</div>
-                            <div className="text-purple-700">{data.holidayHoursData.countedHours.toFixed(1)}h (x2)</div>
-                          </div>
-                          ) : '-'}
+                            {data.holidayHoursData.count > 0 ? (
+                              <div>
+                                <div className="font-semibold">{data.holidayHoursData.count}j</div>
+                                <div className="text-purple-700">{data.holidayHoursData.workedHours.toFixed(1)}h</div>
+                              </div>
+                            ) : '-'}
                           </td>
                           </tr>
                           ))}
