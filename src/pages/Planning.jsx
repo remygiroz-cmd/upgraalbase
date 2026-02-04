@@ -153,6 +153,18 @@ export default function Planning() {
     }
   });
 
+  // Fetch holiday dates for current month
+  const { data: holidayDates = [] } = useQuery({
+    queryKey: ['holidayDates', currentYear, currentMonth],
+    queryFn: async () => {
+      const firstDay = formatLocalDate(new Date(currentYear, currentMonth, 1));
+      const lastDay = formatLocalDate(new Date(currentYear, currentMonth + 1, 0));
+      
+      const allHolidays = await base44.entities.HolidayDate.list();
+      return allHolidays.filter(h => h.date >= firstDay && h.date <= lastDay);
+    }
+  });
+
   const saveShiftMutation = useMutation({
     mutationFn: ({ id, data }) => {
       if (id) {
@@ -185,6 +197,26 @@ export default function Planning() {
     mutationFn: (data) => base44.entities.NonShiftEvent.create(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['nonShiftEvents'] });
+    }
+  });
+
+  const toggleHolidayMutation = useMutation({
+    mutationFn: async ({ date, isHoliday }) => {
+      if (isHoliday) {
+        // Find and delete existing holiday
+        const existing = holidayDates.find(h => h.date === date);
+        if (existing) {
+          return await base44.entities.HolidayDate.delete(existing.id);
+        }
+      } else {
+        // Create new holiday
+        return await base44.entities.HolidayDate.create({ date });
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['holidayDates'] });
+      queryClient.invalidateQueries({ queryKey: ['shifts'] });
+      toast.success('Jour férié mis à jour');
     }
   });
 
@@ -585,6 +617,17 @@ export default function Planning() {
     };
   };
 
+  // Check if date is a holiday
+  const isHolidayDate = (dateStr) => {
+    return holidayDates.some(h => h.date === dateStr);
+  };
+
+  // Toggle holiday status
+  const handleToggleHoliday = (dateStr) => {
+    const isCurrentlyHoliday = isHolidayDate(dateStr);
+    toggleHolidayMutation.mutate({ date: dateStr, isHoliday: isCurrentlyHoliday });
+  };
+
   return (
     <div className="space-y-2">
       <div className="flex items-center justify-between">
@@ -826,6 +869,21 @@ export default function Planning() {
                           )}>
                             {dayInfo.day}
                           </div>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleToggleHoliday(dateStr);
+                            }}
+                            className={cn(
+                              "mt-1 text-[9px] px-1.5 py-0.5 rounded-full font-semibold transition-all",
+                              isHolidayDate(dateStr)
+                                ? "bg-purple-600 text-white hover:bg-purple-700"
+                                : "bg-gray-200 text-gray-600 hover:bg-purple-100 hover:text-purple-700"
+                            )}
+                            title={isHolidayDate(dateStr) ? "Retirer jour férié" : "Marquer jour férié"}
+                          >
+                            {isHolidayDate(dateStr) ? "🎉 Férié" : "+ Férié"}
+                          </button>
                         </div>
                         <div className="flex flex-1">
                           {employees.map(employee => {
@@ -994,16 +1052,17 @@ export default function Planning() {
                             nonShiftTypes={nonShiftTypes}
                             monthStart={new Date(currentYear, currentMonth, 1)}
                             monthEnd={new Date(currentYear, currentMonth + 1, 0)}
-                          />
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </>
-              )}
-            </div>
-          </div>
-        </div>
+                            holidayDates={holidayDates}
+                            />
+                            </div>
+                            ))}
+                            </div>
+                            </div>
+                            </>
+                            )}
+                            </div>
+                            </div>
+                            </div>
       </div>
 
       {/* Shift Modal */}
@@ -1053,6 +1112,7 @@ export default function Planning() {
         onOpenChange={setShowExportComptaModal}
         monthStart={new Date(currentYear, currentMonth, 1)}
         monthEnd={new Date(currentYear, currentMonth + 1, 0)}
+        holidayDates={holidayDates}
       />
 
       {/* Copy Week Modal */}
