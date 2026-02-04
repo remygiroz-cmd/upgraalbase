@@ -182,12 +182,14 @@ export default function EmployeeFormModal({ open, onClose, employee }) {
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="bg-slate-800 border-slate-700 max-w-3xl max-h-[95vh] overflow-hidden flex flex-col">
-        <DialogHeader>
-          <DialogTitle>{employee ? 'Modifier' : 'Nouvel'} employé</DialogTitle>
-        </DialogHeader>
+      <DialogContent className="bg-slate-800 border-slate-700 max-w-3xl max-h-[95vh] overflow-hidden flex flex-col p-0">
+        <div className="px-6 py-4 border-b border-slate-700">
+          <DialogHeader>
+            <DialogTitle>{employee ? 'Modifier' : 'Nouvel'} employé</DialogTitle>
+          </DialogHeader>
+        </div>
 
-        <form onSubmit={handleSubmit} className="space-y-6 overflow-y-auto flex-1 pr-4">
+        <form onSubmit={handleSubmit} className="space-y-6 overflow-y-auto flex-1 px-6 py-4">
           <Tabs value={activeTab} onValueChange={setActiveTab}>
             <TabsList className="grid w-full grid-cols-4 bg-slate-700">
               <TabsTrigger value="identity">Identité</TabsTrigger>
@@ -522,20 +524,22 @@ export default function EmployeeFormModal({ open, onClose, employee }) {
             </TabsContent>
           </Tabs>
 
-          <div className="flex justify-end gap-3 pt-4 border-t border-slate-700">
-            <Button type="button" variant="outline" onClick={onClose} className="border-slate-600 text-slate-900 hover:text-slate-100 hover:bg-slate-700">
-              Annuler
-            </Button>
-            <Button 
-              type="submit" 
-              className="bg-orange-600 hover:bg-orange-700"
-              disabled={saveMutation.isPending}
-            >
-              {saveMutation.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-              {employee ? 'Mettre à jour' : 'Créer'}
-            </Button>
-          </div>
         </form>
+
+        <div className="px-6 py-4 border-t border-slate-700 flex justify-end gap-3">
+          <Button type="button" variant="outline" onClick={onClose} className="border-slate-600 text-slate-900 hover:text-slate-100 hover:bg-slate-700">
+            Annuler
+          </Button>
+          <Button 
+            type="submit" 
+            onClick={handleSubmit}
+            className="bg-orange-600 hover:bg-orange-700"
+            disabled={saveMutation.isPending}
+          >
+            {saveMutation.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+            {employee ? 'Mettre à jour' : 'Créer'}
+          </Button>
+        </div>
       </DialogContent>
     </Dialog>
   );
