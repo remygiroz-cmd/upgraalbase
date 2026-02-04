@@ -18,8 +18,10 @@ import MonthlySummary from '@/components/planning/MonthlySummary';
 import ApplyTemplateModal from '@/components/planning/ApplyTemplateModal';
 import NonShiftCard from '@/components/planning/NonShiftCard';
 import PlanningSettingsModal from '@/components/planning/PlanningSettingsModal';
+import AddPaidLeaveModal from '@/components/planning/AddPaidLeaveModal';
 import { calculateShiftDuration, checkMinimumRest } from '@/components/planning/LegalChecks';
 import { parseLocalDate, formatLocalDate } from '@/components/planning/dateUtils';
+import { isDateInCPPeriod } from '@/components/planning/paidLeaveCalculations';
 
 const DAYS = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche'];
 const MONTHS = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'];
@@ -29,7 +31,10 @@ export default function Planning() {
   const [showShiftModal, setShowShiftModal] = useState(false);
   const [showPlanningSettings, setShowPlanningSettings] = useState(false);
   const [showApplyTemplateModal, setShowApplyTemplateModal] = useState(false);
+  const [showAddPaidLeaveModal, setShowAddPaidLeaveModal] = useState(false);
   const [selectedEmployeeForTemplate, setSelectedEmployeeForTemplate] = useState(null);
+  const [selectedEmployeeForCP, setSelectedEmployeeForCP] = useState(null);
+  const [selectedCPPeriod, setSelectedCPPeriod] = useState(null);
   const [selectedCell, setSelectedCell] = useState(null);
   const [filterType, setFilterType] = useState('global');
   const [selectedTeam, setSelectedTeam] = useState('');
@@ -128,6 +133,19 @@ export default function Planning() {
     queryFn: async () => {
       const types = await base44.entities.NonShiftType.filter({ is_active: true });
       return types.sort((a, b) => (a.order || 0) - (b.order || 0));
+    }
+  });
+
+  // Fetch CP periods for current month
+  const { data: paidLeavePeriods = [] } = useQuery({
+    queryKey: ['paidLeavePeriods', currentYear, currentMonth],
+    queryFn: async () => {
+      const firstDay = formatLocalDate(new Date(currentYear, currentMonth, 1));
+      const lastDay = formatLocalDate(new Date(currentYear, currentMonth + 1, 0));
+      
+      const allPeriods = await base44.entities.PaidLeavePeriod.list();
+      // Filter periods that intersect with current month
+      return allPeriods.filter(p => p.end_cp >= firstDay && p.start_cp <= lastDay);
     }
   });
 
@@ -734,17 +752,31 @@ export default function Planning() {
                                 >
                                  <GripVertical className="w-5 h-5" />
                                 </div>
-                                <button
-                                 onClick={(e) => {
-                                   e.stopPropagation();
-                                   setSelectedEmployeeForTemplate(employee);
-                                   setShowApplyTemplateModal(true);
-                                 }}
-                                 className="absolute right-1 top-1 p-1 rounded hover:bg-gray-200 transition-colors text-gray-500 hover:text-orange-600"
-                                 title="Appliquer planning type"
-                                >
-                                 <Copy className="w-4 h-4" />
-                                </button>
+                                <div className="absolute right-1 top-1 flex gap-1">
+                                 <button
+                                   onClick={(e) => {
+                                     e.stopPropagation();
+                                     setSelectedEmployeeForCP(employee);
+                                     setSelectedCPPeriod(null);
+                                     setShowAddPaidLeaveModal(true);
+                                   }}
+                                   className="p-1 rounded hover:bg-green-100 transition-colors text-gray-500 hover:text-green-700"
+                                   title="Ajouter Congés Payés"
+                                 >
+                                   <span className="text-sm">🟢</span>
+                                 </button>
+                                 <button
+                                   onClick={(e) => {
+                                     e.stopPropagation();
+                                     setSelectedEmployeeForTemplate(employee);
+                                     setShowApplyTemplateModal(true);
+                                   }}
+                                   className="p-1 rounded hover:bg-gray-200 transition-colors text-gray-500 hover:text-orange-600"
+                                   title="Appliquer planning type"
+                                 >
+                                   <Copy className="w-4 h-4" />
+                                 </button>
+                                </div>
                                 <div className="font-bold text-xs sm:text-sm text-gray-900 whitespace-nowrap overflow-hidden text-ellipsis px-6">
                                  {employee.first_name} {employee.last_name}
                                 </div>
@@ -819,6 +851,12 @@ export default function Planning() {
                             const employeeShifts = getShiftsForEmployeeAndDate(employee.id, dateStr);
                             const employeeNonShifts = getNonShiftsForEmployeeAndDate(employee.id, dateStr);
                             const totalEvents = employeeShifts.length + employeeNonShifts.length;
+                            
+                            // Check if date is in CP period
+                            const employeeCPPeriods = paidLeavePeriods.filter(p => p.employee_id === employee.id);
+                            const cpPeriod = isDateInCPPeriod(dateStr, employeeCPPeriods);
+                            const isCPDay = !!cpPeriod;
+                            const isLastCPDay = cpPeriod && dateStr === cpPeriod.end_cp;
 
                             return (
                               <div
@@ -826,10 +864,27 @@ export default function Planning() {
                                 onClick={() => handleCellClick(employee.id, dateStr, dayInfo)}
                                 className={cn(
                                   "border-r border-gray-200 px-2 py-2 cursor-pointer hover:bg-orange-50 transition-all group relative min-w-[140px] w-[140px] sm:w-[180px] flex",
-                                  dayInfo.isWeekend && "bg-orange-50/20"
+                                  dayInfo.isWeekend && "bg-orange-50/20",
+                                  isCPDay && "bg-green-100/40"
                                 )}
                               >
-                                <div className="space-y-1.5 w-full flex flex-col" style={{ minHeight: `${Math.max(60, maxEventsInRow * 52)}px` }}>
+                                <div className="space-y-1.5 w-full flex flex-col relative" style={{ minHeight: `${Math.max(60, maxEventsInRow * 52)}px` }}>
+                                  {/* CP Badge */}
+                                  {isLastCPDay && cpPeriod && (
+                                    <div 
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        setSelectedEmployeeForCP(employee);
+                                        setSelectedCPPeriod(cpPeriod);
+                                        setShowAddPaidLeaveModal(true);
+                                      }}
+                                      className="absolute -top-1 -right-1 z-10 bg-green-600 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full shadow-md cursor-pointer hover:bg-green-700 transition-colors"
+                                      title="Cliquer pour modifier"
+                                    >
+                                      🟢 {cpPeriod.cp_days_manual || cpPeriod.cp_days_auto} CP
+                                    </div>
+                                  )}
+                                  
                                   {employeeNonShifts.map((nonShift) => {
                                     const type = nonShiftTypes.find(t => t.id === nonShift.non_shift_type_id);
                                     return (
@@ -999,6 +1054,14 @@ export default function Planning() {
         onOpenChange={setShowApplyTemplateModal}
         employeeId={selectedEmployeeForTemplate?.id}
         employeeName={selectedEmployeeForTemplate ? `${selectedEmployeeForTemplate.first_name} ${selectedEmployeeForTemplate.last_name}` : ''}
+      />
+
+      {/* Add Paid Leave Modal */}
+      <AddPaidLeaveModal
+        open={showAddPaidLeaveModal}
+        onOpenChange={setShowAddPaidLeaveModal}
+        employee={selectedEmployeeForCP}
+        existingPeriod={selectedCPPeriod}
       />
 
       {/* Copy Week Modal */}

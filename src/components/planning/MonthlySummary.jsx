@@ -3,6 +3,7 @@ import { cn } from '@/lib/utils';
 import { Edit2, Check, X } from 'lucide-react';
 import { calculateMonthlyEmployeeHours } from './OvertimeCalculations';
 import { calculateShiftDuration } from './LegalChecks';
+import { calculateMonthlyCPTotal } from './paidLeaveCalculations';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
@@ -41,6 +42,17 @@ export default function MonthlySummary({ employee, shifts, nonShiftEvents, nonSh
   });
 
   const manualRecap = recaps[0];
+
+  // Fetch CP periods
+  const { data: cpPeriods = [] } = useQuery({
+    queryKey: ['paidLeavePeriods', employee.id, year, month],
+    queryFn: async () => {
+      const all = await base44.entities.PaidLeavePeriod.filter({
+        employee_id: employee.id
+      });
+      return all;
+    }
+  });
 
   // Calculate automatic values
   const employeeShifts = shifts.filter(s => s.employee_id === employee.id);
@@ -145,6 +157,9 @@ export default function MonthlySummary({ employee, shifts, nonShiftEvents, nonSh
     }
   });
 
+  // CP days count
+  const autoCPDays = calculateMonthlyCPTotal(cpPeriods, monthStart, monthEnd);
+
   // Apply manual overrides
   const daysWorked = manualRecap?.manual_days_worked ?? autoDaysWorked;
   const totalHours = manualRecap?.manual_total_hours ?? autoTotalHours;
@@ -163,7 +178,8 @@ export default function MonthlySummary({ employee, shifts, nonShiftEvents, nonSh
   }
 
   const nonShiftsCounts = manualRecap?.manual_non_shifts || autoNonShiftsCounts;
-
+  
+  const cpDays = manualRecap?.manual_cp_days ?? autoCPDays;
   const hasManualOverride = !!manualRecap;
 
   return (
@@ -236,6 +252,15 @@ export default function MonthlySummary({ employee, shifts, nonShiftEvents, nonSh
           </div>
         )}
 
+        {/* CP count */}
+        {cpDays > 0 && (
+          <div className="mt-2 pt-2 border-t border-gray-200">
+            <div className="text-[10px] font-semibold text-green-700">
+              🟢 CP décomptés : {cpDays} j
+            </div>
+          </div>
+        )}
+
         {/* Non-shifts count */}
         {Object.keys(nonShiftsCounts).length > 0 && (
           <div className="mt-2 pt-2 border-t border-gray-200 text-[10px] text-gray-600 space-y-0.5">
@@ -268,7 +293,8 @@ export default function MonthlySummary({ employee, shifts, nonShiftEvents, nonSh
           overtime_50: monthlyHours.overtime_50 || 0,
           complementary_10: monthlyHours.complementary_10 || 0,
           complementary_25: monthlyHours.complementary_25 || 0,
-          nonShiftsCounts: autoNonShiftsCounts
+          nonShiftsCounts: autoNonShiftsCounts,
+          cpDays: autoCPDays
         }}
         currentRecap={manualRecap}
         monthlyHoursType={monthlyHours.type}
@@ -291,6 +317,7 @@ function EditMonthlyRecapDialog({ open, onOpenChange, employee, year, month, aut
         manual_overtime_50: currentRecap?.manual_overtime_50 ?? '',
         manual_complementary_10: currentRecap?.manual_complementary_10 ?? '',
         manual_complementary_25: currentRecap?.manual_complementary_25 ?? '',
+        manual_cp_days: currentRecap?.manual_cp_days ?? '',
         notes: currentRecap?.notes || ''
       });
     }
@@ -468,6 +495,23 @@ function EditMonthlyRecapDialog({ open, onOpenChange, employee, year, month, aut
               </div>
             </div>
           )}
+
+          {/* CP Days */}
+          <div>
+            <Label className="text-xs text-gray-700">CP décomptés (surcharge)</Label>
+            <Input
+              type="number"
+              step="0.5"
+              min="0"
+              placeholder={`Auto: ${autoValues.cpDays || 0}`}
+              value={formData.manual_cp_days}
+              onChange={(e) => setFormData({...formData, manual_cp_days: e.target.value})}
+              className="mt-1"
+            />
+            <p className="text-[10px] text-gray-500 mt-1">
+              Surcharge manuelle du total CP affiché dans le récap mensuel
+            </p>
+          </div>
 
           {/* Notes */}
           <div>
