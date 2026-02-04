@@ -8,6 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Loader2, Upload } from 'lucide-react';
 
 const CONTRACT_TYPES = [
@@ -53,6 +54,15 @@ export default function EmployeeFormModal({ open, onClose, employee }) {
     hourly_rate: 0,
     trial_end_date: '',
     permission_level: 'employee',
+    contract_days: {
+      monday: true,
+      tuesday: true,
+      wednesday: true,
+      thursday: true,
+      friday: true,
+      saturday: false,
+      sunday: false
+    },
     notes: '',
     is_active: true
   });
@@ -83,6 +93,15 @@ export default function EmployeeFormModal({ open, onClose, employee }) {
         hourly_rate: employee.hourly_rate || 0,
         trial_end_date: employee.trial_end_date || '',
         permission_level: employee.permission_level || 'employee',
+        contract_days: employee.contract_days || {
+          monday: true,
+          tuesday: true,
+          wednesday: true,
+          thursday: true,
+          friday: true,
+          saturday: false,
+          sunday: false
+        },
         notes: employee.notes || '',
         is_active: employee.is_active !== false
       });
@@ -111,6 +130,15 @@ export default function EmployeeFormModal({ open, onClose, employee }) {
         hourly_rate: 0,
         trial_end_date: '',
         permission_level: 'employee',
+        contract_days: {
+          monday: true,
+          tuesday: true,
+          wednesday: true,
+          thursday: true,
+          friday: true,
+          saturday: false,
+          sunday: false
+        },
         notes: '',
         is_active: true
       });
@@ -415,6 +443,37 @@ export default function EmployeeFormModal({ open, onClose, employee }) {
                     onChange={(e) => setForm(prev => ({ ...prev, hourly_rate: parseFloat(e.target.value) || 0 }))}
                     className="bg-slate-700 border-slate-600 mt-1"
                   />
+                </div>
+              </div>
+
+              <div>
+                <Label className="text-base font-semibold mb-3 block">Jours contractuels</Label>
+                <div className="grid grid-cols-4 gap-3">
+                  {[
+                    { key: 'monday', label: 'Lun' },
+                    { key: 'tuesday', label: 'Mar' },
+                    { key: 'wednesday', label: 'Mer' },
+                    { key: 'thursday', label: 'Jeu' },
+                    { key: 'friday', label: 'Ven' },
+                    { key: 'saturday', label: 'Sam' },
+                    { key: 'sunday', label: 'Dim' }
+                  ].map(day => (
+                    <div key={day.key} className="flex items-center gap-2">
+                      <Checkbox
+                        id={day.key}
+                        checked={form.contract_days[day.key] || false}
+                        onCheckedChange={(checked) => setForm(prev => ({
+                          ...prev,
+                          contract_days: {
+                            ...prev.contract_days,
+                            [day.key]: checked
+                          }
+                        }))}
+                        className="bg-slate-700 border-slate-600"
+                      />
+                      <Label htmlFor={day.key} className="cursor-pointer font-medium text-sm mb-0">{day.label}</Label>
+                    </div>
+                  ))}
                 </div>
               </div>
             </TabsContent>
