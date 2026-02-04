@@ -6,6 +6,7 @@ import { calculateShiftDuration } from './LegalChecks';
 import { calculateMonthlyCPTotal } from './paidLeaveCalculations';
 import { calculateDeductedHours, calculatePaidBaseHours, calculateMonthlyContractHours } from './DeductionCalculations';
 import { calculateHolidayHours } from './holidayCalculations';
+import { calculateExpectedDaysOfMonth, calculateRealizedDays, getGapColor, getGapTextColor } from './expectedDaysCalculations';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
@@ -55,6 +56,18 @@ export default function MonthlySummary({ employee, shifts, nonShiftEvents, nonSh
       });
       return all;
     }
+  });
+
+  // Fetch template weeks for expected days calculation
+  const { data: templateWeeks = [] } = useQuery({
+    queryKey: ['templateWeeks', employee.id],
+    queryFn: () => base44.entities.TemplateWeek.filter({ employee_id: employee.id })
+  });
+
+  // Fetch template shifts
+  const { data: templateShifts = [] } = useQuery({
+    queryKey: ['templateShifts'],
+    queryFn: () => base44.entities.TemplateShift.list()
   });
 
   // Calculate automatic values
@@ -173,6 +186,10 @@ export default function MonthlySummary({ employee, shifts, nonShiftEvents, nonSh
   // Holiday hours calculation
   const holidayHoursData = calculateHolidayHours(employeeShifts, employee, monthStart, monthEnd, holidayDates) || { count: 0, dates: [], workedHours: 0, paidBonus: 0 };
 
+  // Expected days calculation
+  const expectedDaysData = calculateExpectedDaysOfMonth(templateWeeks, templateShifts, monthStart, monthEnd);
+  const realizedDays = calculateRealizedDays(shifts, employee.id, monthStart, monthEnd);
+
   // Apply manual overrides
   const daysWorked = manualRecap?.manual_days_worked ?? autoDaysWorked;
   const totalHours = manualRecap?.manual_total_hours ?? autoTotalHours;
@@ -222,9 +239,42 @@ export default function MonthlySummary({ employee, shifts, nonShiftEvents, nonSh
           📊 Récap mois
         </div>
 
-        {/* Days worked */}
-        <div className="text-xs text-gray-700 mb-1">
-          <span className="font-semibold">{daysWorked}</span> jour{daysWorked > 1 ? 's' : ''}
+        {/* Days worked vs Expected */}
+        <div className="mb-2 pb-2 border-b border-gray-200 space-y-1">
+          {expectedDaysData.status === 'calculated' ? (
+            <>
+              <div className="text-xs text-gray-600">
+                <span className="font-semibold text-gray-700">{expectedDaysData.expectedDays}</span> jour(s) prévus
+              </div>
+              <div className="text-xs text-gray-600">
+                <span className="font-semibold text-gray-700">{realizedDays}</span> jour(s) réalisés
+              </div>
+              {(() => {
+                const gap = realizedDays - expectedDaysData.expectedDays;
+                const gapColor = getGapColor(gap);
+                const gapTextColor = getGapTextColor(gap);
+                const gapLabel = gap >= 0 ? `+${gap}` : `${gap}`;
+                return (
+                  <div className={cn(
+                    "text-xs font-bold px-2 py-1 rounded border-2",
+                    gapColor
+                  )}>
+                    <span className={gapTextColor}>
+                      Écart: {gapLabel}
+                    </span>
+                  </div>
+                );
+              })()}
+            </>
+          ) : expectedDaysData.status === 'undefined' ? (
+            <div className="text-xs text-gray-500 italic">
+              📋 Planning type: non défini
+            </div>
+          ) : (
+            <div className="text-xs text-orange-600 italic">
+              ⚠️ Planning type: non calculable
+            </div>
+          )}
         </div>
 
         {/* Base contractuelle payée (MAIN) */}
