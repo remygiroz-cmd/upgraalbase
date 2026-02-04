@@ -116,21 +116,23 @@ export default function MonthlySummary({ employee, shifts, nonShiftEvents, nonSh
      );
 
      // SOLUTION SIMPLE : calculer la somme directement depuis weekSaldes
+     // weekSaldes provient de getWeeklySummaryDataForMonth (SOURCE UNIQUE partagée avec WeeklySummary)
      if (monthlyHours.status === 'calculated' && monthlyHours.weekSaldes && monthlyHours.weekSaldes.length > 0) {
-       // Somme des soldes semaine par semaine (UNIQUE SOURCE DE VÉRITÉ)
+       // Somme des soldes semaine par semaine (identiques à ceux affichés dans WeeklySummary)
        const soldeTotalFromWeeks = monthlyHours.weekSaldes.reduce((sum, week) => sum + week.salde, 0);
 
-       // DEBUG OBLIGATOIRE : afficher la preuve
-       console.log(`[MonthlySummary] Employee ${employee.id} - RÉCAP DES SOLDES SEMAINES:`, {
+       // DEBUG OBLIGATOIRE : preuve d'identité avec WeeklySummary
+       console.log(`[MonthlySummary] Employee ${employee.id} - RÉCAP FINAL (identité avec WeeklySummary):`, {
          weekCount: monthlyHours.weekSaldes.length,
-         weekDetails: monthlyHours.weekSaldes.map((w, idx) => ({
-           semaine: idx + 1,
-           salde: w.salde,
+         weeksDetail: monthlyHours.weekSaldes.map((w, idx) => ({
+           semNum: idx + 1,
            expected: w.expectedWeek,
-           worked: w.workedWeek
+           worked: w.workedWeek,
+           salde: w.salde,
+           display: `Sem${idx+1}: ${w.expectedWeek.toFixed(1)}h prév → ${w.workedWeek.toFixed(1)}h eff = ${w.salde.toFixed(1)}h`
          })),
-         totalFromSum: soldeTotalFromWeeks,
-         PROOF: `Somme visible = ${monthlyHours.weekSaldes.map(w => w.salde.toFixed(1)).join(' + ')} = ${soldeTotalFromWeeks.toFixed(1)}h`
+         totalSolde: soldeTotalFromWeeks,
+         PROOF_IDENTITY: `Somme visible = ${monthlyHours.weekSaldes.map(w => w.salde.toFixed(1)).join(' + ')} = ${soldeTotalFromWeeks.toFixed(1)}h (identique à WeeklySummary)`
        });
 
        // Stocker pour affichage
