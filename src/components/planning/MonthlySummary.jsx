@@ -92,103 +92,16 @@ export default function MonthlySummary({ employee, shifts, nonShiftEvents, nonSh
   // Paid base hours: contract - deducted
   const autoPaidBaseHours = calculatePaidBaseHours(employee, employeeNonShifts, nonShiftTypes, monthStart, monthEnd);
 
-  // For overtime/complementary calculations, we still need weekly contract
-  const isFullTime = employee?.work_time_type === 'full_time';
-  const contractHoursWeekly = employee?.contract_hours_weekly 
-    ? parseFloat(employee.contract_hours_weekly.replace(':', '.').replace(/h/g, ''))
-    : (isFullTime ? 35 : 0);
-
-  // Overtime/complementary calculation
-   let monthlyHours = { type: 'unknown', total: autoTotalHours };
-   if (calculationMode === 'monthly') {
-     // Mode lissage : utiliser planning type
-     monthlyHours = calculateMonthlyEmployeeHoursSmoothing(
-       shifts,
-       employee.id,
-       monthStart,
-       monthEnd,
-       employee,
-       templateWeeks,
-       templateShifts,
-       nonShiftEvents,
-       nonShiftTypes
-     );
-
-     // suppCompRetained est DÉJÀ calculé par calculateMonthlyEmployeeHoursSmoothing
-     // Il est basé sur smoothedSalde (= max(0, totalSaldeFromWeeks))
-     // Rien à refaire ici
-
-     // Fallback si pas de planning type unique
-     if (monthlyHours.status !== 'calculated') {
-       monthlyHours = calculateMonthlyEmployeeHours(shifts, employee.id, monthStart, monthEnd, employee, nonShiftEvents, nonShiftTypes);
-     }
-  } else if (calculationMode === 'weekly') {
-    // Sum up weekly calculations
-    const weeklyData = [];
-    let currentDate = new Date(monthStart);
-    while (currentDate <= monthEnd) {
-      // Get week start (Monday)
-      const weekStart = new Date(currentDate);
-      const day = weekStart.getDay();
-      const diff = weekStart.getDate() - day + (day === 0 ? -6 : 1);
-      weekStart.setDate(diff);
-      
-      if (weekStart < monthStart) weekStart.setTime(monthStart.getTime());
-      
-      const weekEnd = new Date(weekStart);
-      weekEnd.setDate(weekEnd.getDate() + 6);
-      if (weekEnd > monthEnd) weekEnd.setTime(monthEnd.getTime());
-
-      const weekShifts = shifts.filter(s => {
-        if (s.employee_id !== employee.id) return false;
-        const shiftDate = new Date(s.date);
-        return shiftDate >= weekStart && shiftDate <= weekEnd;
-      });
-
-      const weekTotalHours = weekShifts.reduce((sum, shift) => sum + calculateShiftDuration(shift), 0);
-      
-      if (isFullTime || contractHoursWeekly >= 35) {
-        const overtime = Math.max(0, weekTotalHours - 35);
-        const overtime_25 = Math.min(overtime, 8);
-        const overtime_50 = Math.max(0, overtime - 8);
-        weeklyData.push({ overtime_25, overtime_50 });
-      } else if (contractHoursWeekly > 0) {
-        const complementary = Math.max(0, weekTotalHours - contractHoursWeekly);
-        const limit_10 = contractHoursWeekly * 0.10;
-        const complementary_10 = Math.min(complementary, limit_10);
-        const complementary_25 = Math.max(0, complementary - limit_10);
-        weeklyData.push({ complementary_10, complementary_25 });
-      }
-
-      currentDate = new Date(weekEnd);
-      currentDate.setDate(currentDate.getDate() + 1);
-    }
-
-    // Aggregate
-    if (isFullTime || contractHoursWeekly >= 35) {
-      const total_overtime_25 = weeklyData.reduce((sum, w) => sum + (w.overtime_25 || 0), 0);
-      const total_overtime_50 = weeklyData.reduce((sum, w) => sum + (w.overtime_50 || 0), 0);
-      monthlyHours = {
-        type: 'full_time',
-        total: autoTotalHours,
-        normal: Math.min(autoTotalHours, autoMonthlyContractHours),
-        overtime_25: total_overtime_25,
-        overtime_50: total_overtime_50,
-        total_overtime: total_overtime_25 + total_overtime_50
-      };
-    } else if (contractHoursWeekly > 0) {
-      const total_complementary_10 = weeklyData.reduce((sum, w) => sum + (w.complementary_10 || 0), 0);
-      const total_complementary_25 = weeklyData.reduce((sum, w) => sum + (w.complementary_25 || 0), 0);
-      monthlyHours = {
-        type: 'part_time',
-        total: autoTotalHours,
-        contract_hours: autoMonthlyContractHours,
-        normal: Math.min(autoTotalHours, autoMonthlyContractHours),
-        complementary_10: total_complementary_10,
-        complementary_25: total_complementary_25,
-        total_complementary: total_complementary_10 + total_complementary_25
-      };
-    }
+  // V1 SIMPLE : calcul mensuel du delta
+  let monthlyBalance = { status: 'not_calculable', suppCompRetained: 0, weekBalances: [] };
+  if (calculationMode === 'monthly') {
+    monthlyBalance = getSimpleMonthlyBalance(
+      shifts,
+      employee.id,
+      monthStart,
+      monthEnd,
+      employee
+    );
   }
 
   // Non-shifts count (only visible_in_recap = true)
