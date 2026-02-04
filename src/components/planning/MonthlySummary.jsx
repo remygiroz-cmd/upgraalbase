@@ -372,33 +372,34 @@ export default function MonthlySummary({ employee, shifts, nonShiftEvents, nonSh
           Effectuées: {totalHours.toFixed(1)}h
         </div>
 
-        {/* Mode lissage mensuel - afficher le cumul des soldes */}
-        {calculationMode === 'monthly' && monthlyHours.status === 'calculated' && monthlyHours.totalSalde !== undefined && (
-          <div className="mt-2 pt-2 border-t border-gray-200 space-y-1 text-[10px]">
-            <div className={cn(
-              "font-bold px-2 py-1 rounded",
-              monthlyHours.totalSalde <= 0 ? "bg-gray-100 text-gray-700" : "bg-blue-50 text-blue-900"
-            )}>
-              Solde cumulé: {monthlyHours.totalSalde > 0 ? '+' : ''}{monthlyHours.totalSalde.toFixed(1)}h
-            </div>
-            <div className={cn(
-              "font-bold px-2 py-1 rounded",
-              monthlyHours.smoothedSalde <= 0 ? "text-gray-600" : "text-blue-700 bg-blue-50"
-            )}>
-              Supp/Comp retenues: {monthlyHours.smoothedSalde.toFixed(1)}h
-            </div>
-            {monthlyHours.weekSaldes.length > 0 && (
-              <div className="text-[9px] text-gray-500 space-y-0.5 mt-1">
-                <div className="font-semibold">Détail par semaine:</div>
-                {monthlyHours.weekSaldes.map((week, idx) => (
-                  <div key={idx}>
-                    Sem {idx + 1}: {week.expectedWeek.toFixed(1)}h prév → {week.workedWeek.toFixed(1)}h eff ({week.salde > 0 ? '+' : ''}{week.salde.toFixed(1)}h)
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
+        {/* Mode lissage mensuel - afficher le cumul des soldes (somme des semaines) */}
+         {calculationMode === 'monthly' && monthlyHours.status === 'calculated' && monthlyHours.suppCompRetained !== undefined && (
+           <div className="mt-2 pt-2 border-t border-gray-200 space-y-1 text-[10px]">
+             {monthlyHours.weekSaldes.length > 0 && (
+               <div className="text-[9px] text-gray-500 space-y-0.5 mb-2 pb-2 border-b border-gray-200">
+                 <div className="font-semibold">Détail par semaine (source unique):</div>
+                 {monthlyHours.weekSaldes.map((week, idx) => (
+                   <div key={idx} className="flex justify-between">
+                     <span>Sem {idx + 1}:</span>
+                     <span className="font-mono">{week.salde > 0 ? '+' : ''}{week.salde.toFixed(1)}h</span>
+                   </div>
+                 ))}
+               </div>
+             )}
+             <div className={cn(
+               "font-bold px-2 py-1 rounded",
+               monthlyHours.suppCompRetained <= 0 ? "bg-gray-100 text-gray-700" : "bg-blue-50 text-blue-900"
+             )}>
+               Solde cumulé: {monthlyHours.suppCompRetained > 0 ? '+' : ''}{monthlyHours.suppCompRetained.toFixed(1)}h
+             </div>
+             <div className={cn(
+               "font-bold px-2 py-1 rounded",
+               monthlyHours.suppCompRetained <= 0 ? "text-gray-600" : "text-blue-700 bg-blue-50"
+             )}>
+               Supp/Comp retenues: {monthlyHours.suppCompRetained.toFixed(1)}h
+             </div>
+           </div>
+         )}
         {calculationMode === 'monthly' && monthlyHours.status === 'not_calculable' && (
           <div className="mt-2 pt-2 border-t border-gray-200 text-[10px] text-orange-600 italic">
             ⚠️ Mode lissage indisponible : {monthlyHours.reason}
