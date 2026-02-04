@@ -104,28 +104,57 @@ export const calculateWeeklySaldeForSmoothing = (
   const weekEnd = new Date(weekStart);
   weekEnd.setDate(weekEnd.getDate() + 6);
 
-  // A) Récupérer heures contractuelles semaine
+  // A) Récupérer heures contractuelles semaine + NORMALISATION
   const isFullTime = employee.work_time_type === 'full_time';
   let contractHoursWeekly = 35; // Défaut temps plein
   
   if (employee.contract_hours_weekly) {
     if (typeof employee.contract_hours_weekly === 'string') {
       // Format "HH:MM" → décimal
-      const [h, m] = employee.contract_hours_weekly.split(':').map(Number);
-      contractHoursWeekly = h + (m / 60);
+      const parts = employee.contract_hours_weekly.split(':').map(p => parseInt(p, 10));
+      contractHoursWeekly = (parts[0] || 0) + ((parts[1] || 0) / 60);
     } else {
-      contractHoursWeekly = parseFloat(employee.contract_hours_weekly);
+      contractHoursWeekly = parseFloat(String(employee.contract_hours_weekly).replace(',', '.')) || 35;
     }
   } else if (!isFullTime) {
     contractHoursWeekly = 0;
   }
 
-  // B) Nombre de jours contractuels par semaine
+  // Protéger contre NaN
+  if (isNaN(contractHoursWeekly)) {
+    console.warn(`[DEBUG] contractHoursWeekly is NaN for employee ${employee.id}, reset to 35`);
+    contractHoursWeekly = isFullTime ? 35 : 0;
+  }
+
+  // B) Nombre de jours contractuels par semaine + NORMALISATION
   const contractualDays = getContractualDaysOfWeek(employee);
   const joursContratParSemaine = contractualDays.size || 5; // Fallback Lun-Ven
 
+  // Protection : si aucun jour contractuel
+  if (joursContratParSemaine === 0) {
+    return {
+      status: 'not_calculable',
+      expectedWeek: 0,
+      workedWeek: 0,
+      salde: 0,
+      reason: 'Aucun jour contractuel défini'
+    };
+  }
+
   // C) Heures par jour contractuel
-  const heuresContratParJour = contractHoursWeekly / joursContratParSemaine;
+  let heuresContratParJour = contractHoursWeekly / joursContratParSemaine;
+  
+  // Protéger contre NaN
+  if (isNaN(heuresContratParJour)) {
+    console.warn(`[DEBUG] heuresContratParJour is NaN for employee ${employee.id}`);
+    return {
+      status: 'not_calculable',
+      expectedWeek: 0,
+      workedWeek: 0,
+      salde: 0,
+      reason: 'Heures contractuelles invalides'
+    };
+  }
 
   // D) Compter les jours contractuels inclus dans la semaine ET le mois
   const effectiveStart = new Date(Math.max(weekStart.getTime(), monthStart.getTime()));
