@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { cn } from '@/lib/utils';
 import { AlertTriangle, Trash2, ArrowDown, Bug } from 'lucide-react';
 import { calculateWeeklyHours } from './LegalChecks';
-import { calculateWeeklyEmployeeHours } from './OvertimeCalculations';
 import { useQuery } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 
@@ -20,14 +19,8 @@ export default function WeeklySummary({ employee, shifts, weekStart, onDeleteWee
 
   const calculationMode = settings[0]?.planning_calculation_mode || 'disabled';
 
-  // Calculate hours based on mode
-  let weekHours;
-  if (calculationMode === 'weekly') {
-    weekHours = calculateWeeklyEmployeeHours(shifts, employee.id, weekStart, employee, debugMode, nonShiftEvents, nonShiftTypes);
-  } else {
-    // Fallback to basic calculation
-    weekHours = calculateWeeklyHours(shifts, employee.id, weekStart, debugMode, nonShiftEvents, nonShiftTypes, employee);
-  }
+  // Calculate hours (TO BE REBUILT: Simple protocol from scratch)
+  const weekHours = calculateWeeklyHours(shifts, employee.id, weekStart, debugMode, nonShiftEvents, nonShiftTypes, employee);
 
   const handleDelete = () => {
     if (onDeleteWeek) {
