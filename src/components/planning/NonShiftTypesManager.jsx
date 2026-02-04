@@ -35,6 +35,11 @@ export default function NonShiftTypesManager({ open, onOpenChange, embeddedMode 
     icon: '📅',
     generates_work_hours: false,
     impacts_payroll: false,
+    deduction_rate: 100,
+    has_waiting_period: false,
+    waiting_period_days: 0,
+    waiting_period_deduction_rate: 100,
+    post_waiting_period_deduction_rate: 0,
     is_paid: false,
     counts_as_work_time: false,
     impacts_paid_leave: false,
@@ -99,6 +104,11 @@ export default function NonShiftTypesManager({ open, onOpenChange, embeddedMode 
       icon: '📅',
       generates_work_hours: false,
       impacts_payroll: false,
+      deduction_rate: 100,
+      has_waiting_period: false,
+      waiting_period_days: 0,
+      waiting_period_deduction_rate: 100,
+      post_waiting_period_deduction_rate: 0,
       is_paid: false,
       counts_as_work_time: false,
       impacts_paid_leave: false,
@@ -117,6 +127,11 @@ export default function NonShiftTypesManager({ open, onOpenChange, embeddedMode 
       icon: type.icon || '📅',
       generates_work_hours: type.generates_work_hours || false,
       impacts_payroll: type.impacts_payroll || false,
+      deduction_rate: type.deduction_rate ?? 100,
+      has_waiting_period: type.has_waiting_period || false,
+      waiting_period_days: type.waiting_period_days || 0,
+      waiting_period_deduction_rate: type.waiting_period_deduction_rate ?? 100,
+      post_waiting_period_deduction_rate: type.post_waiting_period_deduction_rate ?? 0,
       is_paid: type.is_paid || false,
       counts_as_work_time: type.counts_as_work_time || false,
       impacts_paid_leave: type.impacts_paid_leave || false,
@@ -270,7 +285,14 @@ export default function NonShiftTypesManager({ open, onOpenChange, embeddedMode 
                     <span className="text-[10px] bg-red-100 text-red-800 px-2 py-0.5 rounded">Bloquant</span>
                   )}
                   {type.impacts_payroll && (
-                    <span className="text-[10px] bg-purple-100 text-purple-800 px-2 py-0.5 rounded">Paie</span>
+                    <span className="text-[10px] bg-purple-100 text-purple-800 px-2 py-0.5 rounded">
+                      Paie {type.deduction_rate ?? 100}%
+                    </span>
+                  )}
+                  {type.has_waiting_period && (
+                    <span className="text-[10px] bg-orange-100 text-orange-800 px-2 py-0.5 rounded">
+                      Carence {type.waiting_period_days}j
+                    </span>
                   )}
                   {type.visible_in_recap && (
                     <span className="text-[10px] bg-gray-100 text-gray-800 px-2 py-0.5 rounded">Récap</span>
@@ -446,12 +468,92 @@ export default function NonShiftTypesManager({ open, onOpenChange, embeddedMode 
                 </div>
 
                 <div className="flex items-center justify-between">
-                  <Label className="text-sm">Impacte la fiche de paie</Label>
+                  <Label className="text-sm">Impacte la paie (déduction)</Label>
                   <Switch
                     checked={formData.impacts_payroll}
                     onCheckedChange={(checked) => setFormData({ ...formData, impacts_payroll: checked })}
                   />
                 </div>
+
+                {/* Deduction rate - only show if impacts_payroll is ON */}
+                {formData.impacts_payroll && (
+                  <div className="bg-orange-50 border border-orange-200 rounded-lg p-3 space-y-3">
+                    <div>
+                      <Label className="text-xs font-semibold">Taux de déduction (%)</Label>
+                      <Input
+                        type="number"
+                        min="0"
+                        max="100"
+                        step="1"
+                        value={formData.deduction_rate}
+                        onChange={(e) => setFormData({ ...formData, deduction_rate: parseFloat(e.target.value) || 0 })}
+                        className="mt-1"
+                      />
+                      <p className="text-[10px] text-gray-600 mt-1">
+                        0% = aucune déduction, 100% = déduction totale
+                      </p>
+                    </div>
+
+                    {/* Waiting period toggle */}
+                    <div className="flex items-center justify-between pt-2 border-t border-orange-300">
+                      <div>
+                        <Label className="text-sm font-semibold">Période de carence</Label>
+                        <p className="text-[10px] text-gray-600">Ex: maladie avec X jours non indemnisés</p>
+                      </div>
+                      <Switch
+                        checked={formData.has_waiting_period}
+                        onCheckedChange={(checked) => setFormData({ ...formData, has_waiting_period: checked })}
+                      />
+                    </div>
+
+                    {/* Waiting period configuration */}
+                    {formData.has_waiting_period && (
+                      <div className="space-y-3 pl-3 border-l-2 border-orange-400">
+                        <div>
+                          <Label className="text-xs">Nombre de jours de carence</Label>
+                          <Input
+                            type="number"
+                            min="0"
+                            step="1"
+                            value={formData.waiting_period_days}
+                            onChange={(e) => setFormData({ ...formData, waiting_period_days: parseInt(e.target.value) || 0 })}
+                            className="mt-1"
+                          />
+                        </div>
+                        <div>
+                          <Label className="text-xs">Taux pendant la carence (%)</Label>
+                          <Input
+                            type="number"
+                            min="0"
+                            max="100"
+                            step="1"
+                            value={formData.waiting_period_deduction_rate}
+                            onChange={(e) => setFormData({ ...formData, waiting_period_deduction_rate: parseFloat(e.target.value) || 0 })}
+                            className="mt-1"
+                          />
+                          <p className="text-[10px] text-gray-600 mt-1">
+                            Ex: 100% = non payé pendant carence
+                          </p>
+                        </div>
+                        <div>
+                          <Label className="text-xs">Taux après la carence (%)</Label>
+                          <Input
+                            type="number"
+                            min="0"
+                            max="100"
+                            step="1"
+                            value={formData.post_waiting_period_deduction_rate}
+                            onChange={(e) => setFormData({ ...formData, post_waiting_period_deduction_rate: parseFloat(e.target.value) || 0 })}
+                            className="mt-1"
+                          />
+                          <p className="text-[10px] text-gray-600 mt-1">
+                            Ex: 0% = totalement indemnisé après carence
+                          </p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
 
                 <div className="flex items-center justify-between">
                   <Label className="text-sm">Payé</Label>
