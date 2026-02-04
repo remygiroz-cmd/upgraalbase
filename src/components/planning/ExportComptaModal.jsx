@@ -352,12 +352,21 @@ export default function ExportComptaModal({ open, onOpenChange, monthStart, mont
 
     // Fonction pour obtenir l'abréviation du non-shift
     const getNonShiftLabel = (nsType) => {
-      if (!nsType) return 'ABS';
+      if (!nsType) {
+        console.warn('NonShiftType manquant - affichage ABS par défaut');
+        return 'ABS';
+      }
       
+      // Priorité 1: utiliser le code explicite si disponible
+      if (nsType.code) {
+        return nsType.code.toUpperCase();
+      }
+      
+      // Priorité 2: fallback sur le label
       const label = nsType.label || nsType.key || '';
       const lowerLabel = label.toLowerCase();
       
-      // Mapping des types courants
+      // Mapping des types courants (fallback pour anciens non-shifts)
       if (lowerLabel.includes('congé') && lowerLabel.includes('pay')) return 'CP';
       if (lowerLabel.includes('maladie') || lowerLabel.includes('malade')) return 'MAL';
       if (lowerLabel.includes('rtt')) return 'RTT';

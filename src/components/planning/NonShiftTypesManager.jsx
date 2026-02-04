@@ -11,14 +11,14 @@ import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 
 const DEFAULT_TYPES = [
-  { key: 'conges_payes', label: 'Congés payés', icon: '🏖️', color: '#22c55e' },
-  { key: 'maladie', label: 'Maladie', icon: '🤒', color: '#ef4444' },
-  { key: 'absence_injustifiee', label: 'Absence injustifiée', icon: '❌', color: '#991b1b' },
-  { key: 'jour_ferie', label: 'Jour férié', icon: '🎉', color: '#8b5cf6' },
-  { key: 'formation', label: 'Formation', icon: '📚', color: '#3b82f6' },
-  { key: 'repos', label: 'Repos / Récupération', icon: '💤', color: '#6b7280' },
-  { key: 'echange', label: 'Échange', icon: '🔄', color: '#f59e0b' },
-  { key: 'conge_impose', label: 'Congé imposé', icon: '📌', color: '#ec4899' }
+  { key: 'conges_payes', label: 'Congés payés', code: 'CP', icon: '🏖️', color: '#22c55e' },
+  { key: 'maladie', label: 'Maladie', code: 'MAL', icon: '🤒', color: '#ef4444' },
+  { key: 'absence_injustifiee', label: 'Absence injustifiée', code: 'AJ', icon: '❌', color: '#991b1b' },
+  { key: 'jour_ferie', label: 'Jour férié', code: 'FER', icon: '🎉', color: '#8b5cf6' },
+  { key: 'formation', label: 'Formation', code: 'FOR', icon: '📚', color: '#3b82f6' },
+  { key: 'repos', label: 'Repos / Récupération', code: 'REP', icon: '💤', color: '#6b7280' },
+  { key: 'echange', label: 'Échange', code: 'ECH', icon: '🔄', color: '#f59e0b' },
+  { key: 'conge_impose', label: 'Congé imposé', code: 'CI', icon: '📌', color: '#ec4899' }
 ];
 
 const PRESET_COLORS = [
@@ -30,6 +30,7 @@ export default function NonShiftTypesManager({ open, onOpenChange, embeddedMode 
   const [editingType, setEditingType] = useState(null);
   const [formData, setFormData] = useState({
     label: '',
+    code: '',
     key: '',
     color: '#6b7280',
     icon: '📅',
@@ -92,6 +93,7 @@ export default function NonShiftTypesManager({ open, onOpenChange, embeddedMode 
   const resetForm = () => {
     setFormData({
       label: '',
+      code: '',
       key: '',
       color: '#6b7280',
       icon: '📅',
@@ -108,6 +110,7 @@ export default function NonShiftTypesManager({ open, onOpenChange, embeddedMode 
     setEditingType(type);
     setFormData({
       label: type.label,
+      code: type.code || '',
       key: type.key,
       color: type.color || '#6b7280',
       icon: type.icon || '📅',
@@ -125,9 +128,18 @@ export default function NonShiftTypesManager({ open, onOpenChange, embeddedMode 
       toast.error('Le libellé est requis');
       return;
     }
+    if (!formData.code.trim()) {
+      toast.error('Le code court est requis');
+      return;
+    }
+    if (formData.code.length < 2 || formData.code.length > 5) {
+      toast.error('Le code doit contenir entre 2 et 5 caractères');
+      return;
+    }
 
     const dataToSave = {
       ...formData,
+      code: formData.code.toUpperCase(),
       key: formData.key || formData.label.toLowerCase().replace(/\s+/g, '_')
     };
 
@@ -161,14 +173,25 @@ export default function NonShiftTypesManager({ open, onOpenChange, embeddedMode 
         )}
 
         <form onSubmit={handleSubmit} className="bg-white border-2 border-gray-200 rounded-lg p-4 space-y-4">
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
             <div>
-              <Label>Libellé</Label>
+              <Label>Libellé *</Label>
               <Input
                 value={formData.label}
                 onChange={(e) => setFormData({ ...formData, label: e.target.value })}
                 placeholder="Ex: Congés payés"
                 required
+              />
+            </div>
+            <div>
+              <Label>Code court * (2-5 car.)</Label>
+              <Input
+                value={formData.code}
+                onChange={(e) => setFormData({ ...formData, code: e.target.value.toUpperCase() })}
+                placeholder="CP"
+                maxLength={5}
+                required
+                className="font-mono font-bold"
               />
             </div>
             <div>
@@ -236,8 +259,15 @@ export default function NonShiftTypesManager({ open, onOpenChange, embeddedMode 
             >
               <span className="text-xl">{type.icon}</span>
               <div className="flex-1">
-                <div className="font-semibold" style={{ color: type.color }}>
-                  {type.label}
+                <div className="flex items-center gap-2">
+                  <span className="font-semibold" style={{ color: type.color }}>
+                    {type.label}
+                  </span>
+                  {type.code && (
+                    <span className="text-xs font-mono font-bold px-2 py-0.5 rounded" style={{ backgroundColor: type.color + '20', color: type.color }}>
+                      {type.code}
+                    </span>
+                  )}
                 </div>
                 <div className="flex gap-2 mt-1 flex-wrap">
                   {type.generates_work_hours && (
@@ -312,7 +342,14 @@ export default function NonShiftTypesManager({ open, onOpenChange, embeddedMode 
                     <div className="flex items-center gap-2 flex-1">
                       <span className="text-2xl">{type.icon}</span>
                       <div>
-                        <p className="font-semibold text-gray-900">{type.label}</p>
+                        <div className="flex items-center gap-2">
+                          <p className="font-semibold text-gray-900">{type.label}</p>
+                          {type.code && (
+                            <span className="text-xs font-mono font-bold px-2 py-0.5 rounded" style={{ backgroundColor: type.color + '20', color: type.color }}>
+                              {type.code}
+                            </span>
+                          )}
+                        </div>
                         <div className="flex flex-wrap gap-1 mt-1">
                           {type.generates_work_hours && <span className="text-[10px] bg-blue-100 text-blue-800 px-2 py-0.5 rounded">Génère heures</span>}
                           {type.impacts_payroll && <span className="text-[10px] bg-purple-100 text-purple-800 px-2 py-0.5 rounded">Paie</span>}
@@ -360,7 +397,23 @@ export default function NonShiftTypesManager({ open, onOpenChange, embeddedMode 
                   value={formData.label}
                   onChange={(e) => setFormData({ ...formData, label: e.target.value })}
                   placeholder="Ex: Congés payés"
+                  required
                 />
+              </div>
+
+              <div>
+                <Label>Code court * (2-5 caractères)</Label>
+                <Input
+                  value={formData.code}
+                  onChange={(e) => setFormData({ ...formData, code: e.target.value.toUpperCase() })}
+                  placeholder="CP"
+                  maxLength={5}
+                  required
+                  className="font-mono font-bold text-lg"
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  Utilisé dans les exports PDF et les récaps (ex: CP, MAL, RTT)
+                </p>
               </div>
 
               <div className="grid grid-cols-2 gap-3">
