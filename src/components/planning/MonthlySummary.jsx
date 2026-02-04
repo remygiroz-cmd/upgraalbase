@@ -200,8 +200,9 @@ export default function MonthlySummary({ employee, shifts, nonShiftEvents, nonSh
   const cpDays = manualRecap?.manual_cp_days ?? autoCPDays;
   const hasManualOverride = !!manualRecap;
 
-  // Calculate total paid hours: base + overtime/complementary
-  const totalPaidHours = paidBaseHours + overtime_25 + overtime_50 + complementary_10 + complementary_25;
+  // Add holiday bonus hours to total paid
+  const holidayBonus = holidayHoursData.paidBonus || 0;
+  const totalPaidHours = paidBaseHours + overtime_25 + overtime_50 + complementary_10 + complementary_25 + holidayBonus;
 
   return (
     <>
