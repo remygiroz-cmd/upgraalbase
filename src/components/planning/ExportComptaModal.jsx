@@ -18,6 +18,9 @@ export default function ExportComptaModal({ open, onOpenChange, monthStart, mont
   const [customMessage, setCustomMessage] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
   const [isSending, setIsSending] = useState(false);
+  const [debugMode, setDebugMode] = useState(false);
+  const [debugLog, setDebugLog] = useState([]);
+  const [error, setError] = useState(null);
 
   const year = monthStart.getFullYear();
   const month = monthStart.getMonth() + 1;
@@ -199,9 +202,33 @@ export default function ExportComptaModal({ open, onOpenChange, monthStart, mont
     totalPaidHours: 0
   });
 
+  const addDebugLog = (message, data = null) => {
+    const log = { time: new Date().toISOString(), message, data };
+    setDebugLog(prev => [...prev, log]);
+    console.log('[ExportCompta]', message, data);
+  };
+
   const handleDownloadPDFs = async () => {
     setIsGenerating(true);
+    setError(null);
+    setDebugLog([]);
+    
+    const startTime = Date.now();
+    let timeoutId;
+
     try {
+      addDebugLog('🚀 Début génération', { year, month, employeeCount: payrollData.length });
+
+      // Timeout de sécurité
+      timeoutId = setTimeout(() => {
+        setError('La génération prend trop de temps (>20s). Veuillez réessayer.');
+        toast.error('Timeout : génération trop longue');
+        setIsGenerating(false);
+        addDebugLog('⏱️ Timeout atteint (20s)');
+      }, 20000);
+
+      addDebugLog('📞 Appel fonction backend');
+
       const response = await base44.functions.invoke('generateComptaExport', {
         year,
         month,
@@ -228,44 +255,101 @@ export default function ExportComptaModal({ open, onOpenChange, monthStart, mont
         etablissementName: settings.etablissement_name || 'Établissement'
       });
 
+      clearTimeout(timeoutId);
+
+      addDebugLog('✅ Réponse reçue', {
+        hasHtmlRecap: !!response.data?.htmlRecap,
+        hasHtmlPlanning: !!response.data?.htmlPlanning,
+        hasRecapUrl: !!response.data?.htmlRecapUrl,
+        hasPlanningUrl: !!response.data?.htmlPlanningUrl
+      });
+
+      if (!response.data) {
+        throw new Error('Réponse vide du serveur');
+      }
+
+      // Méthode : impression navigateur via HTML
       if (response.data.htmlRecap && response.data.htmlPlanning) {
-        // Client-side PDF generation from HTML
-        const generatePdfFromHtml = async (htmlContent, filename) => {
-          const iframe = document.createElement('iframe');
-          iframe.style.position = 'absolute';
-          iframe.style.width = '0';
-          iframe.style.height = '0';
-          iframe.style.border = 'none';
-          document.body.appendChild(iframe);
+        addDebugLog('📄 Génération HTML inline reçue');
+        
+        // Créer des blobs pour ouvrir dans de nouveaux onglets
+        const recapBlob = new Blob([response.data.htmlRecap], { type: 'text/html' });
+        const planningBlob = new Blob([response.data.htmlPlanning], { type: 'text/html' });
+        
+        const recapUrl = URL.createObjectURL(recapBlob);
+        const planningUrl = URL.createObjectURL(planningBlob);
 
-          const doc = iframe.contentWindow.document;
-          doc.open();
-          doc.write(htmlContent);
-          doc.close();
+        addDebugLog('🔗 URLs Blob créées');
 
-          await new Promise(resolve => setTimeout(resolve, 500));
+        // Ouvrir le premier document
+        const win1 = window.open(recapUrl, '_blank');
+        if (!win1) {
+          throw new Error('Popup bloqué - autorisez les popups pour ce site');
+        }
 
-          iframe.contentWindow.print();
-          setTimeout(() => document.body.removeChild(iframe), 1000);
+        addDebugLog('✅ Onglet 1 ouvert (récap)');
+
+        // Attendre un peu avant d'ouvrir le second
+        await new Promise(resolve => setTimeout(resolve, 800));
+
+        const win2 = window.open(planningUrl, '_blank');
+        if (!win2) {
+          throw new Error('Popup bloqué pour le 2e document');
+        }
+
+        addDebugLog('✅ Onglet 2 ouvert (planning)');
+
+        // Déclencher l'impression automatiquement après chargement
+        win1.onload = () => {
+          setTimeout(() => win1.print(), 500);
+        };
+        win2.onload = () => {
+          setTimeout(() => win2.print(), 500);
         };
 
-        await generatePdfFromHtml(response.data.htmlRecap, `Elements_paie_${monthName}_${year}.pdf`);
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        await generatePdfFromHtml(response.data.htmlPlanning, `Planning_${monthName}_${year}.pdf`);
+        const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
+        addDebugLog(`✅ Terminé en ${elapsed}s`);
 
-        toast.success('PDFs prêts à être imprimés');
+        toast.success('Documents ouverts - choisissez "Enregistrer en PDF" dans la boîte d\'impression');
+
       } else if (response.data.htmlRecapUrl && response.data.htmlPlanningUrl) {
-        // Open HTML files in new tabs for printing
-        window.open(response.data.htmlRecapUrl, '_blank');
+        addDebugLog('🔗 URLs distantes reçues');
+
+        const win1 = window.open(response.data.htmlRecapUrl, '_blank');
+        if (!win1) {
+          throw new Error('Popup bloqué - autorisez les popups');
+        }
+
         await new Promise(resolve => setTimeout(resolve, 500));
-        window.open(response.data.htmlPlanningUrl, '_blank');
-        
+
+        const win2 = window.open(response.data.htmlPlanningUrl, '_blank');
+        if (!win2) {
+          throw new Error('Popup bloqué pour le 2e document');
+        }
+
+        const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
+        addDebugLog(`✅ Terminé en ${elapsed}s`);
+
         toast.success('Documents ouverts - utilisez Imprimer > Enregistrer en PDF');
+      } else {
+        throw new Error('Format de réponse invalide : aucune donnée HTML reçue');
       }
+
     } catch (error) {
-      toast.error('Erreur lors de la génération : ' + error.message);
+      clearTimeout(timeoutId);
+      const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
+      
+      addDebugLog(`❌ Erreur après ${elapsed}s`, { 
+        message: error.message,
+        stack: error.stack 
+      });
+
+      setError(`Erreur : ${error.message}`);
+      toast.error('Échec de la génération : ' + error.message);
+      console.error('ExportCompta error:', error);
     } finally {
       setIsGenerating(false);
+      addDebugLog('🏁 Fin du processus');
     }
   };
 
@@ -410,9 +494,64 @@ export default function ExportComptaModal({ open, onOpenChange, monthStart, mont
             </div>
           </div>
 
+          {/* Erreur */}
+          {error && (
+            <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+              <div className="flex items-start gap-2">
+                <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
+                <div className="flex-1">
+                  <p className="font-semibold text-red-900 text-sm">Erreur de génération</p>
+                  <p className="text-red-800 text-xs mt-1">{error}</p>
+                  <Button
+                    onClick={() => { setError(null); handleDownloadPDFs(); }}
+                    size="sm"
+                    variant="outline"
+                    className="mt-2 border-red-300 text-red-700 hover:bg-red-100"
+                  >
+                    Réessayer
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Debug mode */}
+          {debugMode && debugLog.length > 0 && (
+            <div className="bg-gray-900 text-gray-100 rounded-lg p-3 text-xs font-mono max-h-48 overflow-y-auto">
+              <div className="flex items-center justify-between mb-2">
+                <span className="font-bold text-green-400">📋 Debug Log</span>
+                <button 
+                  onClick={() => setDebugLog([])}
+                  className="text-gray-400 hover:text-white text-xs"
+                >
+                  Effacer
+                </button>
+              </div>
+              {debugLog.map((log, idx) => (
+                <div key={idx} className="mb-1 border-b border-gray-800 pb-1">
+                  <span className="text-gray-500">[{new Date(log.time).toLocaleTimeString()}]</span>{' '}
+                  <span>{log.message}</span>
+                  {log.data && (
+                    <pre className="text-gray-400 ml-4 mt-1 text-[10px]">
+                      {JSON.stringify(log.data, null, 2)}
+                    </pre>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+
           {/* Message personnalisé */}
           <div>
-            <Label className="text-sm font-semibold text-gray-700">Message personnalisé (optionnel)</Label>
+            <div className="flex items-center justify-between mb-1">
+              <Label className="text-sm font-semibold text-gray-700">Message personnalisé (optionnel)</Label>
+              <button
+                onClick={() => setDebugMode(!debugMode)}
+                className="text-xs text-gray-500 hover:text-gray-700 flex items-center gap-1"
+              >
+                {debugMode ? '🔍 Debug ON' : '🔍 Debug'}
+              </button>
+            </div>
             <Textarea
               value={customMessage}
               onChange={(e) => setCustomMessage(e.target.value)}
@@ -420,6 +559,9 @@ export default function ExportComptaModal({ open, onOpenChange, monthStart, mont
               rows={3}
               className="mt-1"
             />
+            <p className="text-xs text-gray-500 mt-1">
+              💡 Astuce : Les documents s'ouvriront dans de nouveaux onglets. Utilisez <strong>Ctrl+P</strong> puis <strong>"Enregistrer en PDF"</strong> pour les sauvegarder.
+            </p>
           </div>
 
           {/* Actions */}
@@ -438,7 +580,7 @@ export default function ExportComptaModal({ open, onOpenChange, monthStart, mont
               ) : (
                 <>
                   <Download className="w-4 h-4 mr-2" />
-                  Télécharger les PDF
+                  Imprimer / Enregistrer en PDF
                 </>
               )}
             </Button>
