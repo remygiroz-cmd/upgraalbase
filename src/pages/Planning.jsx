@@ -1033,6 +1033,8 @@ export default function Planning() {
                                     }
                                     nonShiftEvents={nonShiftEvents}
                                     nonShiftTypes={nonShiftTypes}
+                                    monthStart={new Date(currentYear, currentMonth, 1)}
+                                    monthEnd={new Date(currentYear, currentMonth + 1, 0)}
                                   />
                                 </div>
                               );
