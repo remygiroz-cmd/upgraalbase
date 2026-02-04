@@ -19,6 +19,8 @@ export default function WeeklySummary({ employee, shifts, weekStart, onDeleteWee
     }
   });
 
+  const calculationMode = settings[0]?.planning_calculation_mode || 'disabled';
+
   // Fetch template weeks for lissage mode
   const { data: templateWeeks = [] } = useQuery({
     queryKey: ['templateWeeks', employee.id],
@@ -32,8 +34,6 @@ export default function WeeklySummary({ employee, shifts, weekStart, onDeleteWee
     queryFn: () => base44.entities.TemplateShift.list(),
     enabled: calculationMode === 'monthly'
   });
-
-  const calculationMode = settings[0]?.planning_calculation_mode || 'disabled';
 
   // Calculate hours based on mode
   let weekHours;
