@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
-import { Calendar, ChevronLeft, ChevronRight, Plus, Filter, GripVertical, Settings, MoreVertical, Copy, ArrowDown } from 'lucide-react';
+import { Calendar, ChevronLeft, ChevronRight, Plus, Filter, GripVertical, Settings, MoreVertical, Copy, ArrowDown, FileText } from 'lucide-react';
 import PageHeader from '@/components/ui/PageHeader';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -20,6 +20,7 @@ import NonShiftCard from '@/components/planning/NonShiftCard';
 import PlanningSettingsModal from '@/components/planning/PlanningSettingsModal';
 import AddPaidLeaveModal from '@/components/planning/AddPaidLeaveModal';
 import EmployeeHeaderCell from '@/components/planning/EmployeeHeaderCell';
+import ExportComptaModal from '@/components/planning/ExportComptaModal';
 import { calculateShiftDuration, checkMinimumRest } from '@/components/planning/LegalChecks';
 import { parseLocalDate, formatLocalDate } from '@/components/planning/dateUtils';
 import { isDateInCPPeriod } from '@/components/planning/paidLeaveCalculations';
@@ -33,6 +34,7 @@ export default function Planning() {
   const [showPlanningSettings, setShowPlanningSettings] = useState(false);
   const [showApplyTemplateModal, setShowApplyTemplateModal] = useState(false);
   const [showAddPaidLeaveModal, setShowAddPaidLeaveModal] = useState(false);
+  const [showExportComptaModal, setShowExportComptaModal] = useState(false);
   const [selectedEmployeeForTemplate, setSelectedEmployeeForTemplate] = useState(null);
   const [selectedEmployeeForCP, setSelectedEmployeeForCP] = useState(null);
   const [selectedCPPeriod, setSelectedCPPeriod] = useState(null);
@@ -590,15 +592,27 @@ export default function Planning() {
           <Calendar className="w-5 h-5 text-orange-600" />
           <h1 className="text-lg font-bold text-gray-900">Planning mensuel</h1>
         </div>
-        <Button
-          onClick={() => setShowPlanningSettings(true)}
-          variant="outline"
-          size="icon"
-          className="h-8 w-8 border border-gray-300 hover:border-orange-500 hover:bg-orange-50"
-          title="Paramètres du planning"
-        >
-          <Settings className="w-4 h-4" />
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            onClick={() => setShowExportComptaModal(true)}
+            variant="outline"
+            size="sm"
+            className="border border-gray-300 hover:border-blue-500 hover:bg-blue-50"
+            title="Export comptabilité"
+          >
+            <FileText className="w-4 h-4 mr-1" />
+            <span className="hidden sm:inline text-xs">Export compta</span>
+          </Button>
+          <Button
+            onClick={() => setShowPlanningSettings(true)}
+            variant="outline"
+            size="icon"
+            className="h-8 w-8 border border-gray-300 hover:border-orange-500 hover:bg-orange-50"
+            title="Paramètres du planning"
+          >
+            <Settings className="w-4 h-4" />
+          </Button>
+        </div>
       </div>
 
       {/* Month Navigation & Filters */}
@@ -1031,6 +1045,14 @@ export default function Planning() {
         onOpenChange={setShowAddPaidLeaveModal}
         employee={selectedEmployeeForCP}
         existingPeriod={selectedCPPeriod}
+      />
+
+      {/* Export Compta Modal */}
+      <ExportComptaModal
+        open={showExportComptaModal}
+        onOpenChange={setShowExportComptaModal}
+        monthStart={new Date(currentYear, currentMonth, 1)}
+        monthEnd={new Date(currentYear, currentMonth + 1, 0)}
       />
 
       {/* Copy Week Modal */}

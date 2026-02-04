@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Settings, Calendar, Calculator, Eye, Zap, Lock } from 'lucide-react';
+import { Settings, Calendar, Calculator, Eye, Zap, Lock, Mail } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import PositionsManager from './PositionsManager';
 import NonShiftTypesManager from './NonShiftTypesManager';
 import { Label } from '@/components/ui/label';
@@ -15,6 +17,7 @@ import { toast } from 'sonner';
 
 export default function PlanningSettingsModal({ open, onOpenChange, displayMode, setDisplayMode }) {
   const [activeTab, setActiveTab] = useState('statuts');
+  const [comptaSettings, setComptaSettings] = useState({});
   const queryClient = useQueryClient();
 
   // Fetch calculation mode setting
@@ -27,6 +30,28 @@ export default function PlanningSettingsModal({ open, onOpenChange, displayMode,
 
   const currentSetting = settings[0];
   const calculationMode = currentSetting?.planning_calculation_mode || 'disabled';
+
+  // Fetch compta export settings
+  const { data: comptaSettingsData = [] } = useQuery({
+    queryKey: ['appSettings', 'compta_export'],
+    queryFn: async () => {
+      return await base44.entities.AppSettings.filter({ setting_key: 'compta_export' });
+    }
+  });
+
+  const currentComptaSettings = comptaSettingsData[0];
+
+  React.useEffect(() => {
+    if (currentComptaSettings) {
+      setComptaSettings({
+        email_compta: currentComptaSettings.email_compta || '',
+        etablissement_name: currentComptaSettings.etablissement_name || '',
+        responsable_name: currentComptaSettings.responsable_name || '',
+        responsable_email: currentComptaSettings.responsable_email || '',
+        responsable_coords: currentComptaSettings.responsable_coords || ''
+      });
+    }
+  }, [currentComptaSettings]);
 
   // Mutation to save calculation mode
   const saveModeMutation = useMutation({
@@ -48,6 +73,33 @@ export default function PlanningSettingsModal({ open, onOpenChange, displayMode,
     }
   });
 
+  // Mutation to save compta settings
+  const saveComptaSettingsMutation = useMutation({
+    mutationFn: async (data) => {
+      if (currentComptaSettings) {
+        return await base44.entities.AppSettings.update(currentComptaSettings.id, data);
+      } else {
+        return await base44.entities.AppSettings.create({
+          setting_key: 'compta_export',
+          ...data
+        });
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['appSettings'] });
+      toast.success('Paramètres compta enregistrés');
+    }
+  });
+
+  const handleSaveComptaSettings = () => {
+    if (!comptaSettings.email_compta || !comptaSettings.etablissement_name || 
+        !comptaSettings.responsable_name || !comptaSettings.responsable_email) {
+      toast.error('Tous les champs obligatoires doivent être remplis');
+      return;
+    }
+    saveComptaSettingsMutation.mutate(comptaSettings);
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-5xl max-h-[85vh] overflow-y-auto">
@@ -62,7 +114,7 @@ export default function PlanningSettingsModal({ open, onOpenChange, displayMode,
         </DialogHeader>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="mt-4">
-          <TabsList className="grid w-full grid-cols-6 gap-1">
+          <TabsList className="grid w-full grid-cols-7 gap-1">
             <TabsTrigger value="statuts" className="text-xs flex flex-col items-center gap-1 py-2">
               <Calendar className="w-4 h-4" />
               <span>Statuts</span>
@@ -74,6 +126,10 @@ export default function PlanningSettingsModal({ open, onOpenChange, displayMode,
             <TabsTrigger value="calculs" className="text-xs flex flex-col items-center gap-1 py-2">
               <Calculator className="w-4 h-4" />
               <span>Calculs</span>
+            </TabsTrigger>
+            <TabsTrigger value="compta" className="text-xs flex flex-col items-center gap-1 py-2">
+              <Eye className="w-4 h-4" />
+              <span>Compta</span>
             </TabsTrigger>
             <TabsTrigger value="affichage" className="text-xs flex flex-col items-center gap-1 py-2">
               <Eye className="w-4 h-4" />
@@ -278,7 +334,97 @@ export default function PlanningSettingsModal({ open, onOpenChange, displayMode,
             </div>
           </TabsContent>
 
-          {/* Tab 4: Affichage & ergonomie */}
+          {/* Tab 4: Comptabilité / Export */}
+          <TabsContent value="compta" className="mt-6 space-y-4">
+            <Alert className="bg-blue-50 border-blue-200">
+              <Badge variant="outline" className="mb-2 bg-blue-100 text-blue-900">Configuration</Badge>
+              <AlertDescription className="text-sm text-gray-700">
+                Paramètres nécessaires pour l'export comptable mensuel (PDF + email automatique).
+              </AlertDescription>
+            </Alert>
+
+            <div className="bg-white border border-gray-200 rounded-lg p-6 space-y-6">
+              <h3 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                <Mail className="w-5 h-5 text-orange-600" />
+                Informations pour l'envoi automatique
+              </h3>
+
+              <div className="space-y-4">
+                <div>
+                  <Label className="text-sm font-semibold text-gray-900">Email comptabilité *</Label>
+                  <Input
+                    type="email"
+                    value={comptaSettings.email_compta || ''}
+                    onChange={(e) => setComptaSettings({...comptaSettings, email_compta: e.target.value})}
+                    placeholder="compta@example.com"
+                    className="mt-1"
+                  />
+                  <p className="text-[10px] text-gray-500 mt-1">Destinataire des exports mensuels</p>
+                </div>
+
+                <div>
+                  <Label className="text-sm font-semibold text-gray-900">Nom de l'établissement *</Label>
+                  <Input
+                    value={comptaSettings.etablissement_name || ''}
+                    onChange={(e) => setComptaSettings({...comptaSettings, etablissement_name: e.target.value})}
+                    placeholder="Restaurant Le Graal"
+                    className="mt-1"
+                  />
+                  <p className="text-[10px] text-gray-500 mt-1">Apparaît dans l'en-tête des documents</p>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label className="text-sm font-semibold text-gray-900">Nom du responsable *</Label>
+                    <Input
+                      value={comptaSettings.responsable_name || ''}
+                      onChange={(e) => setComptaSettings({...comptaSettings, responsable_name: e.target.value})}
+                      placeholder="Jean Dupont"
+                      className="mt-1"
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-sm font-semibold text-gray-900">Email du responsable *</Label>
+                    <Input
+                      type="email"
+                      value={comptaSettings.responsable_email || ''}
+                      onChange={(e) => setComptaSettings({...comptaSettings, responsable_email: e.target.value})}
+                      placeholder="responsable@example.com"
+                      className="mt-1"
+                    />
+                    <p className="text-[10px] text-gray-500 mt-1">Utilisé comme Reply-To dans l'email</p>
+                  </div>
+                </div>
+
+                <div>
+                  <Label className="text-sm font-semibold text-gray-900">Coordonnées du responsable</Label>
+                  <Textarea
+                    value={comptaSettings.responsable_coords || ''}
+                    onChange={(e) => setComptaSettings({...comptaSettings, responsable_coords: e.target.value})}
+                    placeholder="Tél: 01 23 45 67 89&#10;Email: responsable@example.com"
+                    rows={3}
+                    className="mt-1"
+                  />
+                  <p className="text-[10px] text-gray-500 mt-1">Texte libre ajouté en signature de l'email</p>
+                </div>
+
+                <Button 
+                  onClick={handleSaveComptaSettings}
+                  className="w-full bg-orange-600 hover:bg-orange-700"
+                >
+                  Enregistrer les paramètres comptabilité
+                </Button>
+              </div>
+
+              <div className="bg-orange-50 border border-orange-200 rounded p-3 text-xs text-gray-700">
+                <strong>ℹ️ Fonctionnement :</strong> Une fois configuré, le bouton "Export compta" dans le planning 
+                permet de générer et envoyer automatiquement les éléments de paie (récapitulatif + planning PDF) 
+                à votre comptabilité.
+              </div>
+            </div>
+          </TabsContent>
+
+          {/* Tab 5: Affichage & ergonomie */}
           <TabsContent value="affichage" className="mt-6 space-y-4">
             <Alert className="bg-blue-50 border-blue-200">
               <Badge variant="outline" className="mb-2 bg-blue-100 text-blue-900">Fonctionnel</Badge>
