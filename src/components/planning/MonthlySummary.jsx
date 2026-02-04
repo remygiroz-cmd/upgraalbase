@@ -1,13 +1,12 @@
 import React, { useState } from 'react';
 import { cn } from '@/lib/utils';
 import { Edit2, Check, X } from 'lucide-react';
-import { calculateMonthlyEmployeeHours } from './OvertimeCalculations';
 import { calculateShiftDuration } from './LegalChecks';
 import { calculateMonthlyCPTotal } from './paidLeaveCalculations';
 import { calculateDeductedHours, calculatePaidBaseHours, calculateMonthlyContractHours } from './DeductionCalculations';
 import { calculateHolidayHours } from './holidayCalculations';
 import { calculateExpectedDaysOfMonth, calculateRealizedDays, getGapColor, getGapTextColor } from './expectedDaysCalculations';
-import { calculateMonthlyEmployeeHoursSmoothing } from './smoothingCalculations';
+import { getSimpleMonthlyBalance } from './simpleOvertimeV1';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
