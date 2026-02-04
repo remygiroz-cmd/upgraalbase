@@ -309,11 +309,11 @@ export const calculateMonthlyEmployeeHoursSmoothing = (
   const totalHours = uniqueShifts.reduce((sum, shift) => sum + calculateShiftDuration(shift), 0);
 
   // Calculer les soldes semaine par semaine (avec base CONTRAT)
-  // ANTI DOUBLON : tracker par weekKey (date du lundi ISO)
+  // UTILISE LA FONCTION UNIQUE getWeeklySummaryDataForMonth POUR SOURCE UNIQUE
   let totalSalde = 0;
   const weekSaldes = [];
-  const processedWeekKeys = new Set(); // NOUVEAU : tracker les semaines déjà traitées
-  const weekKeyDetails = []; // DEBUG : détail des semaines traitées
+  const processedWeekKeys = new Set();
+  const weekKeyDetails = [];
 
   let currentDate = new Date(monthStart);
   while (currentDate <= monthEnd) {
@@ -328,18 +328,16 @@ export const calculateMonthlyEmployeeHoursSmoothing = (
     weekEnd.setDate(weekEnd.getDate() + 6);
     if (weekEnd > monthEnd) weekEnd.setTime(monthEnd.getTime());
 
-    // Générer clé unique pour cette semaine
     const weekKey = getWeekKey(weekStart);
-    
-    // Vérifier si cette semaine a déjà été traitée (ANTI DOUBLON)
+
     if (processedWeekKeys.has(weekKey)) {
-      console.warn(`[ANTI DOUBLON] Semaine ${weekKey} déjà traitée, skip`);
       currentDate = new Date(weekEnd);
       currentDate.setDate(currentDate.getDate() + 1);
       continue;
     }
 
-    const weekData = calculateWeeklySaldeForSmoothing(
+    // UTILISER LA FONCTION UNIQUE (source de vérité partagée avec WeeklySummary)
+    const weekData = getWeeklySummaryDataForMonth(
       shifts,
       employeeId,
       weekStart,
@@ -354,8 +352,7 @@ export const calculateMonthlyEmployeeHoursSmoothing = (
       weekSaldes.push(weekData);
       totalSalde += weekData.salde;
       processedWeekKeys.add(weekKey);
-      
-      // DEBUG : enregistrer le détail
+
       weekKeyDetails.push({
         weekKey,
         salde: weekData.salde,
@@ -368,13 +365,19 @@ export const calculateMonthlyEmployeeHoursSmoothing = (
     currentDate.setDate(currentDate.getDate() + 1);
   }
 
-  // DEBUG : log du détail des semaines
-  console.log(`[calculateMonthlyEmployeeHoursSmoothing] Employee ${employee.id} - Détail des semaines:`, {
-    monthStart: startStr,
-    monthEnd: endStr,
+  // DEBUG : log détail et preuve d'identité
+  console.log(`[calculateMonthlyEmployeeHoursSmoothing] Employee ${employee.id} - DÉTAIL SEMAINES (source unique):`, {
     weekCount: weekKeyDetails.length,
-    weekDetails: weekKeyDetails,
-    totalSalde
+    weeks: weekKeyDetails.map((w, idx) => ({
+      semNum: idx + 1,
+      weekKey: w.weekKey,
+      expected: w.expectedWeek,
+      worked: w.workedWeek,
+      salde: w.salde,
+      display: `Sem${idx+1}: expected=${w.expectedWeek}h worked=${w.workedWeek}h salde=${w.salde}h`
+    })),
+    totalSalde,
+    proof: `SOMME FINALE = ${weekKeyDetails.map(w => w.salde).join(' + ')} = ${totalSalde}h`
   });
 
   // Lissage : si salde <= 0 => 0 heures supp/comp
