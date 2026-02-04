@@ -7,6 +7,7 @@ import { calculateMonthlyCPTotal } from './paidLeaveCalculations';
 import { calculateDeductedHours, calculatePaidBaseHours, calculateMonthlyContractHours } from './DeductionCalculations';
 import { calculateHolidayHours } from './holidayCalculations';
 import { calculateExpectedDaysOfMonth, calculateRealizedDays, getGapColor, getGapTextColor } from './expectedDaysCalculations';
+import { calculateMonthlyEmployeeHoursSmoothing } from './smoothingCalculations';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
@@ -101,7 +102,22 @@ export default function MonthlySummary({ employee, shifts, nonShiftEvents, nonSh
   // Overtime/complementary calculation
   let monthlyHours = { type: 'unknown', total: autoTotalHours };
   if (calculationMode === 'monthly') {
-    monthlyHours = calculateMonthlyEmployeeHours(shifts, employee.id, monthStart, monthEnd, employee, nonShiftEvents, nonShiftTypes);
+    // Mode lissage : utiliser planning type
+    monthlyHours = calculateMonthlyEmployeeHoursSmoothing(
+      shifts,
+      employee.id,
+      monthStart,
+      monthEnd,
+      employee,
+      templateWeeks,
+      templateShifts,
+      nonShiftEvents,
+      nonShiftTypes
+    );
+    // Fallback si pas de planning type unique
+    if (monthlyHours.status !== 'calculated') {
+      monthlyHours = calculateMonthlyEmployeeHours(shifts, employee.id, monthStart, monthEnd, employee, nonShiftEvents, nonShiftTypes);
+    }
   } else if (calculationMode === 'weekly') {
     // Sum up weekly calculations
     const weeklyData = [];
@@ -310,7 +326,7 @@ export default function MonthlySummary({ employee, shifts, nonShiftEvents, nonSh
         </div>
 
         {/* Mode lissage mensuel - afficher le cumul des soldes */}
-        {calculationMode === 'monthly' && monthlyHours.totalSalde !== undefined && (
+        {calculationMode === 'monthly' && monthlyHours.status === 'calculated' && monthlyHours.totalSalde !== undefined && (
           <div className="mt-2 pt-2 border-t border-gray-200 space-y-1 text-[10px]">
             <div className={cn(
               "font-bold px-2 py-1 rounded",
@@ -321,6 +337,21 @@ export default function MonthlySummary({ employee, shifts, nonShiftEvents, nonSh
             <div className="text-gray-600">
               Supp/Comp retenues: {monthlyHours.smoothedSalde.toFixed(1)}h
             </div>
+            {monthlyHours.weekSaldes.length > 0 && (
+              <div className="text-[9px] text-gray-500 space-y-0.5 mt-1">
+                <div className="font-semibold">Détail par semaine:</div>
+                {monthlyHours.weekSaldes.map((week, idx) => (
+                  <div key={idx}>
+                    Sem {idx + 1}: {week.expectedWeek.toFixed(1)}h prév → {week.workedWeek.toFixed(1)}h eff ({week.salde > 0 ? '+' : ''}{week.salde.toFixed(1)}h)
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+        {calculationMode === 'monthly' && monthlyHours.status === 'not_calculable' && (
+          <div className="mt-2 pt-2 border-t border-gray-200 text-[10px] text-orange-600 italic">
+            ⚠️ Mode lissage indisponible : {monthlyHours.reason}
           </div>
         )}
 
