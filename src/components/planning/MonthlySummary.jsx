@@ -236,10 +236,31 @@ export default function MonthlySummary({ employee, shifts, nonShiftEvents, nonSh
     ? manualRecap.manual_contract_hours 
     : Math.max(0, autoMonthlyContractHours - deductedHours);
   
+  // TEMPS PLEIN : recalculer majorations depuis smoothedSalde (source unique)
   let overtime_25 = monthlyHours.overtime_25 || 0;
   let overtime_50 = monthlyHours.overtime_50 || 0;
   let complementary_10 = monthlyHours.complementary_10 || 0;
   let complementary_25 = monthlyHours.complementary_25 || 0;
+
+  // Si en mode lissage et temps plein, recalculer depuis smoothedSalde
+  if (calculationMode === 'monthly' && monthlyHours.type === 'full_time' && monthlyHours.smoothedSalde !== undefined) {
+    const weeks = Math.ceil((monthEnd - monthStart) / (1000 * 60 * 60 * 24)) / 7;
+    overtime_25 = Math.min(monthlyHours.smoothedSalde, 8 * weeks);
+    overtime_50 = Math.max(0, monthlyHours.smoothedSalde - (8 * weeks));
+    console.log(`[MonthlySummary] Recalc FT overtime from smoothedSalde=${monthlyHours.smoothedSalde}: OT25=${overtime_25}, OT50=${overtime_50}`);
+  }
+
+  // Si en mode lissage et temps partiel, recalculer depuis smoothedSalde
+  if (calculationMode === 'monthly' && monthlyHours.type === 'part_time' && monthlyHours.smoothedSalde !== undefined) {
+    const weeks = Math.ceil((monthEnd - monthStart) / (1000 * 60 * 60 * 24)) / 7;
+    const contractHoursWeekly = monthlyHours.contractHoursWeekly || 0;
+    const contractHoursMonthly = contractHoursWeekly * weeks;
+    const limit_10_percent = contractHoursMonthly * 0.10;
+    const max_allowed = contractHoursMonthly / 3;
+    complementary_10 = Math.min(monthlyHours.smoothedSalde, limit_10_percent);
+    complementary_25 = Math.min(Math.max(0, monthlyHours.smoothedSalde - limit_10_percent), max_allowed - complementary_10);
+    console.log(`[MonthlySummary] Recalc PT complementary from smoothedSalde=${monthlyHours.smoothedSalde}: C10=${complementary_10}, C25=${complementary_25}`);
+  }
 
   if (manualRecap) {
     if (manualRecap.manual_overtime_25 !== undefined) overtime_25 = manualRecap.manual_overtime_25;
