@@ -1,6 +1,7 @@
 /**
  * Calcule les jours prévus basés sur le planning type
  */
+import { formatLocalDate } from './dateUtils';
 
 /**
  * Récupère les jours de semaine travaillés selon le planning type
@@ -91,10 +92,13 @@ export const calculateExpectedDaysOfMonth = (templateWeeks, templateShifts, mont
  * Compte les jours réalisés (jours avec au moins 1 shift)
  */
 export const calculateRealizedDays = (shifts, employeeId, monthStart, monthEnd) => {
+  const startStr = formatLocalDate(monthStart);
+  const endStr = formatLocalDate(monthEnd);
+
   const monthShifts = shifts.filter(s => {
     if (s.employee_id !== employeeId) return false;
-    const shiftDate = new Date(s.date);
-    return shiftDate >= monthStart && shiftDate <= monthEnd;
+    // Comparaison de strings pour éviter les problèmes de timezone
+    return s.date >= startStr && s.date <= endStr;
   });
 
   // Obtenir les dates uniques
