@@ -448,9 +448,17 @@ export default function EmployeeFormModal({ open, onClose, employee }) {
                 </div>
               </div>
 
-              <div className="bg-slate-700 p-4 rounded-lg border border-slate-600">
-                <Label className="text-base font-semibold mb-4 block text-slate-200">Jours contractuels</Label>
-                <div className="grid grid-cols-7 gap-3">
+              {/* Jours contractuels */}
+              <div className="bg-slate-700 p-5 rounded-lg border border-slate-500 shadow-md">
+                <div className="mb-3">
+                  <Label className="text-sm font-semibold block text-slate-100 mb-1">
+                    Jours contractuels (semaine)
+                  </Label>
+                  <p className="text-xs text-slate-400">
+                    Utilisé pour calculer les heures prévues (lissage)
+                  </p>
+                </div>
+                <div className="grid grid-cols-7 gap-2">
                   {[
                     { key: 'monday', label: 'Lun' },
                     { key: 'tuesday', label: 'Mar' },
@@ -460,21 +468,29 @@ export default function EmployeeFormModal({ open, onClose, employee }) {
                     { key: 'saturday', label: 'Sam' },
                     { key: 'sunday', label: 'Dim' }
                   ].map(day => (
-                    <div key={day.key} className="flex flex-col items-center gap-2 p-2 bg-slate-800 rounded border border-slate-600 hover:border-slate-500 transition-colors">
-                      <Checkbox
-                        id={day.key}
-                        checked={form.contract_days[day.key] || false}
-                        onCheckedChange={(checked) => setForm(prev => ({
-                          ...prev,
-                          contract_days: {
-                            ...prev.contract_days,
-                            [day.key]: checked
-                          }
-                        }))}
-                        className="border-slate-400"
-                      />
-                      <Label htmlFor={day.key} className="cursor-pointer font-medium text-xs text-slate-300">{day.label}</Label>
-                    </div>
+                    <button
+                      key={day.key}
+                      type="button"
+                      onClick={() => setForm(prev => ({
+                        ...prev,
+                        contract_days: {
+                          ...prev.contract_days,
+                          [day.key]: !prev.contract_days[day.key]
+                        }
+                      }))}
+                      className={`flex flex-col items-center justify-center p-3 rounded border-2 transition-all ${
+                        form.contract_days[day.key]
+                          ? 'bg-blue-600 border-blue-500 shadow-lg'
+                          : 'bg-slate-800 border-slate-600 hover:border-slate-500'
+                      }`}
+                    >
+                      <span className={`text-sm font-bold ${form.contract_days[day.key] ? 'text-white' : 'text-slate-300'}`}>
+                        {day.label}
+                      </span>
+                      {form.contract_days[day.key] && (
+                        <span className="text-xs text-blue-100 mt-1">✓</span>
+                      )}
+                    </button>
                   ))}
                 </div>
               </div>
