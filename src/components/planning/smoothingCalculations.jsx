@@ -346,17 +346,18 @@ export const calculateMonthlyEmployeeHoursSmoothing = (
   });
 
   // Lissage : si salde <= 0 => 0 heures supp/comp
-  const smoothedSalde = Math.max(0, totalSalde);
+  // IMPORTANT : totalSaldoFromWeeks est l'UNIQUE source de vérité
+  const totalSaldoFromWeeks = totalSalde;
+  const smoothedSalde = Math.max(0, totalSaldoFromWeeks);
 
-  // DEBUG final - TRAÇAGE COMPLET
-  console.log(`[calculateMonthlyEmployeeHoursSmoothing] Employee ${employee.id} - FINAL TRACE:`, {
-    monthStart: startStr,
-    monthEnd: endStr,
+  // DEBUG final - TRAÇAGE COMPLET (PREUVE)
+  console.log(`[calculateMonthlyEmployeeHoursSmoothing] Employee ${employee.id} - TRAÇAGE FINAL:`, {
     weekCount: weekSaldes.length,
-    totalSalde: totalSalde,
-    smoothedSalde: smoothedSalde,
-    formula: 'smoothedSalde = Math.max(0, totalSalde)',
-    source: 'calculateMonthlyEmployeeHoursSmoothing'
+    weekKeyDetailsList: weekKeyDetails.map(w => `${w.weekKey}: ${w.salde}h`),
+    totalSaldoFromWeeks,
+    smoothedSalde,
+    formula: 'smoothedSalde = Math.max(0, totalSaldoFromWeeks)',
+    PROOF: `AVANT override: totalSaldoFromWeeks=${totalSaldoFromWeeks}h, APRÈS override: smoothedSalde=${smoothedSalde}h`
   });
 
   // Récupérer infos contrat
