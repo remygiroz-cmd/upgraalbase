@@ -21,28 +21,18 @@ export default function WeeklySummary({ employee, shifts, weekStart, onDeleteWee
 
   const calculationMode = settings[0]?.planning_calculation_mode || 'disabled';
 
-  // Fetch template weeks for lissage mode
-  const { data: templateWeeks = [] } = useQuery({
-    queryKey: ['templateWeeks', employee.id],
-    queryFn: () => base44.entities.TemplateWeek.filter({ employee_id: employee.id }),
-    enabled: calculationMode === 'monthly'
-  });
-
-  // Fetch template shifts for lissage mode
-  const { data: templateShifts = [] } = useQuery({
-    queryKey: ['templateShifts'],
-    queryFn: () => base44.entities.TemplateShift.list(),
-    enabled: calculationMode === 'monthly'
-  });
+  // No longer needed - lissage mode uses employee contract data instead of template weeks
+  // const { data: templateWeeks = [] } = useQuery({...})
+  // const { data: templateShifts = [] } = useQuery({...})
 
   // Calculate hours based on mode
   let weekHours;
   if (calculationMode === 'weekly') {
     weekHours = calculateWeeklyEmployeeHours(shifts, employee.id, weekStart, employee, debugMode, nonShiftEvents, nonShiftTypes);
   } else if (calculationMode === 'monthly') {
-    // Mode lissage mensuel : afficher le solde hebdo basé sur planning type
+    // Mode lissage mensuel : afficher le solde hebdo basé sur le CONTRAT (pas planning type)
     weekHours = calculateWeeklyEmployeeHours(shifts, employee.id, weekStart, employee, debugMode, nonShiftEvents, nonShiftTypes);
-    // Calculer solde avec planning type
+    // Calculer solde avec base contrat
     if (monthStart && monthEnd) {
       const saldeData = calculateWeeklySaldeForSmoothing(
         shifts,
@@ -50,8 +40,6 @@ export default function WeeklySummary({ employee, shifts, weekStart, onDeleteWee
         weekStart,
         monthStart,
         monthEnd,
-        templateWeeks,
-        templateShifts,
         employee,
         nonShiftEvents,
         nonShiftTypes
