@@ -184,7 +184,8 @@ export default function MonthlySummary({ employee, shifts, nonShiftEvents, nonSh
   // Apply manual overrides
   const daysWorked = manualRecap?.manual_days_worked ?? autoDaysWorked;
   const totalHours = manualRecap?.manual_total_hours ?? autoTotalHours;
-  const contractHours = manualRecap?.manual_contract_hours ?? autoContractHours;
+  const deductedHours = manualRecap?.manual_deducted_hours ?? autoDeductedHours;
+  const contractHoursPaid = manualRecap?.manual_contract_hours ?? autoContractHoursPaid;
   
   let overtime_25 = monthlyHours.overtime_25 || 0;
   let overtime_50 = monthlyHours.overtime_50 || 0;
