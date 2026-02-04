@@ -584,54 +584,53 @@ export default function Planning() {
   };
 
   return (
-    <div className="space-y-4 sm:space-y-6">
+    <div className="space-y-2">
       <div className="flex items-center justify-between">
-        <PageHeader
-          icon={Calendar}
-          title="Planning mensuel"
-          subtitle="Gestion des horaires de travail"
-        />
+        <div className="flex items-center gap-2">
+          <Calendar className="w-5 h-5 text-orange-600" />
+          <h1 className="text-lg font-bold text-gray-900">Planning mensuel</h1>
+        </div>
         <Button
           onClick={() => setShowPlanningSettings(true)}
           variant="outline"
           size="icon"
-          className="border-2 border-gray-300 hover:border-orange-500 hover:bg-orange-50"
+          className="h-8 w-8 border border-gray-300 hover:border-orange-500 hover:bg-orange-50"
           title="Paramètres du planning"
         >
-          <Settings className="w-5 h-5" />
+          <Settings className="w-4 h-4" />
         </Button>
       </div>
 
       {/* Month Navigation & Filters */}
-      <div className="bg-gradient-to-br from-white to-gray-50 border-2 border-gray-200 rounded-xl shadow-lg p-4 sm:p-6">
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mb-6">
+      <div className="bg-white border border-gray-200 rounded-lg p-3">
+        <div className="flex items-center justify-between gap-3 mb-3">
           <Button 
             onClick={previousMonth} 
             variant="outline" 
-            className="w-full sm:w-auto border-2 border-gray-300 hover:border-orange-500 hover:bg-orange-50 transition-all"
+            size="sm"
+            className="border border-gray-300 hover:border-orange-500 hover:bg-orange-50"
           >
-            <ChevronLeft className="w-5 h-5" />
-            <span className="ml-2 hidden sm:inline">Précédent</span>
+            <ChevronLeft className="w-4 h-4" />
+            <span className="ml-1 hidden sm:inline text-xs">Précédent</span>
           </Button>
-          <div className="text-center">
-            <h2 className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-orange-600 to-orange-500 bg-clip-text text-transparent">
-              {MONTHS[currentMonth]} {currentYear}
-            </h2>
-          </div>
+          <h2 className="text-lg font-bold text-orange-600">
+            {MONTHS[currentMonth]} {currentYear}
+          </h2>
           <Button 
             onClick={nextMonth} 
             variant="outline"
-            className="w-full sm:w-auto border-2 border-gray-300 hover:border-orange-500 hover:bg-orange-50 transition-all"
+            size="sm"
+            className="border border-gray-300 hover:border-orange-500 hover:bg-orange-50"
           >
-            <span className="mr-2 hidden sm:inline">Suivant</span>
-            <ChevronRight className="w-5 h-5" />
+            <span className="mr-1 hidden sm:inline text-xs">Suivant</span>
+            <ChevronRight className="w-4 h-4" />
           </Button>
         </div>
 
         {/* Filters */}
-        <div className="flex flex-col sm:flex-row gap-3">
+        <div className="flex flex-col sm:flex-row gap-2">
           <div className="flex-1">
-            <Label className="text-xs font-semibold text-gray-700 mb-2 flex items-center gap-2">
+            <Label className="text-[10px] font-semibold text-gray-600 mb-1 flex items-center gap-1">
               <Filter className="w-3 h-3" />
               Type de vue
             </Label>
@@ -640,7 +639,7 @@ export default function Planning() {
               setSelectedTeam('');
               setSelectedEmployee('');
             }}>
-              <SelectTrigger className="h-11 border-2 border-gray-300 hover:border-orange-400 transition-colors">
+              <SelectTrigger className="h-8 text-xs border border-gray-300 hover:border-orange-400">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -653,17 +652,17 @@ export default function Planning() {
 
           {filterType === 'team' && (
             <div className="flex-1">
-              <Label className="text-xs font-semibold text-gray-700 mb-2">Sélectionner l'équipe</Label>
+              <Label className="text-[10px] font-semibold text-gray-600 mb-1">Équipe</Label>
               <Select value={selectedTeam} onValueChange={setSelectedTeam}>
-                <SelectTrigger className="h-11 border-2 border-gray-300 hover:border-orange-400 transition-colors">
-                  <SelectValue placeholder="Choisir une équipe..." />
+                <SelectTrigger className="h-8 text-xs border border-gray-300 hover:border-orange-400">
+                  <SelectValue placeholder="Choisir..." />
                 </SelectTrigger>
                 <SelectContent>
                   {teams.map(team => (
                     <SelectItem key={team.id} value={team.id}>
                       <div className="flex items-center gap-2">
                         <div 
-                          className="w-3 h-3 rounded-full" 
+                          className="w-2 h-2 rounded-full" 
                           style={{ backgroundColor: team.color || '#3b82f6' }}
                         />
                         {team.name}
@@ -677,10 +676,10 @@ export default function Planning() {
 
           {filterType === 'employee' && (
             <div className="flex-1">
-              <Label className="text-xs font-semibold text-gray-700 mb-2">Sélectionner l'employé</Label>
+              <Label className="text-[10px] font-semibold text-gray-600 mb-1">Employé</Label>
               <Select value={selectedEmployee} onValueChange={setSelectedEmployee}>
-                <SelectTrigger className="h-11 border-2 border-gray-300 hover:border-orange-400 transition-colors">
-                  <SelectValue placeholder="Choisir un employé..." />
+                <SelectTrigger className="h-8 text-xs border border-gray-300 hover:border-orange-400">
+                  <SelectValue placeholder="Choisir..." />
                 </SelectTrigger>
                 <SelectContent>
                   {sortedEmployees.map(emp => {
@@ -695,7 +694,6 @@ export default function Planning() {
                             />
                           )}
                           {emp.first_name} {emp.last_name}
-                          {team && <span className="text-xs text-gray-500">({team.name})</span>}
                         </div>
                       </SelectItem>
                     );
@@ -717,7 +715,7 @@ export default function Planning() {
       </div>
 
       {/* Calendar Grid with dedicated scroll container */}
-      <div className="bg-white border-2 border-gray-200 rounded-xl shadow-xl overflow-hidden flex flex-col" style={{ height: 'calc(100vh - 420px)' }}>
+      <div className="bg-white border-2 border-gray-200 rounded-xl shadow-xl overflow-hidden flex flex-col" style={{ height: 'calc(100vh - 240px)' }}>
         <div ref={tableContainerRef} className="overflow-x-auto overflow-y-auto flex-1">
           <div className="inline-block min-w-full">
             {/* Header - Sticky */}
