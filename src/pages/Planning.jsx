@@ -21,6 +21,7 @@ import PlanningSettingsModal from '@/components/planning/PlanningSettingsModal';
 import AddPaidLeaveModal from '@/components/planning/AddPaidLeaveModal';
 import EmployeeHeaderCell from '@/components/planning/EmployeeHeaderCell';
 import ExportComptaModal from '@/components/planning/ExportComptaModal';
+import EmployeeActionsModal from '@/components/planning/EmployeeActionsModal';
 import { calculateShiftDuration, checkMinimumRest } from '@/components/planning/LegalChecks';
 import { parseLocalDate, formatLocalDate } from '@/components/planning/dateUtils';
 import { isDateInCPPeriod } from '@/components/planning/paidLeaveCalculations';
@@ -35,6 +36,8 @@ export default function Planning() {
   const [showApplyTemplateModal, setShowApplyTemplateModal] = useState(false);
   const [showAddPaidLeaveModal, setShowAddPaidLeaveModal] = useState(false);
   const [showExportComptaModal, setShowExportComptaModal] = useState(false);
+  const [showEmployeeActionsModal, setShowEmployeeActionsModal] = useState(false);
+  const [selectedEmployeeForActions, setSelectedEmployeeForActions] = useState(null);
   const [selectedEmployeeForTemplate, setSelectedEmployeeForTemplate] = useState(null);
   const [selectedEmployeeForCP, setSelectedEmployeeForCP] = useState(null);
   const [selectedCPPeriod, setSelectedCPPeriod] = useState(null);
@@ -801,14 +804,9 @@ export default function Planning() {
                                 isDragging={snapshot.isDragging}
                                 dragHandleProps={provided.dragHandleProps}
                                 displayMode={displayMode}
-                                onAddCP={() => {
-                                  setSelectedEmployeeForCP(employee);
-                                  setSelectedCPPeriod(null);
-                                  setShowAddPaidLeaveModal(true);
-                                }}
-                                onApplyTemplate={() => {
-                                  setSelectedEmployeeForTemplate(employee);
-                                  setShowApplyTemplateModal(true);
+                                onOpenActions={() => {
+                                  setSelectedEmployeeForActions(employee);
+                                  setShowEmployeeActionsModal(true);
                                 }}
                                 style={provided.draggableProps.style}
                                 {...provided.draggableProps}
@@ -1113,6 +1111,26 @@ export default function Planning() {
         monthStart={new Date(currentYear, currentMonth, 1)}
         monthEnd={new Date(currentYear, currentMonth + 1, 0)}
         holidayDates={holidayDates}
+      />
+
+      {/* Employee Actions Modal */}
+      <EmployeeActionsModal
+        open={showEmployeeActionsModal}
+        onOpenChange={setShowEmployeeActionsModal}
+        employee={selectedEmployeeForActions}
+        currentMonth={currentMonth}
+        currentYear={currentYear}
+        onAddCP={() => {
+          setSelectedEmployeeForCP(selectedEmployeeForActions);
+          setSelectedCPPeriod(null);
+          setShowEmployeeActionsModal(false);
+          setShowAddPaidLeaveModal(true);
+        }}
+        onApplyTemplate={() => {
+          setSelectedEmployeeForTemplate(selectedEmployeeForActions);
+          setShowEmployeeActionsModal(false);
+          setShowApplyTemplateModal(true);
+        }}
       />
 
       {/* Copy Week Modal */}
