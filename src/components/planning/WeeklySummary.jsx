@@ -34,6 +34,18 @@ export default function WeeklySummary({ employee, shifts, weekStart, onDeleteWee
     weekHours = calculateWeeklyEmployeeHours(shifts, employee.id, weekStart, employee, debugMode, nonShiftEvents, nonShiftTypes);
     // Calculer solde avec base contrat
     if (monthStart && monthEnd) {
+      // DEBUG: Log employee data before calculation
+      console.log('[WeeklySummary DEBUG] Employee contract data:', {
+        employeeId: employee.id,
+        contract_hours_weekly: employee.contract_hours_weekly,
+        contract_hours_weekly_type: typeof employee.contract_hours_weekly,
+        work_days_per_week: employee.work_days_per_week,
+        work_days_per_week_type: typeof employee.work_days_per_week,
+        contract_days: employee.contract_days,
+        contract_days_isArray: Array.isArray(employee.contract_days),
+        work_time_type: employee.work_time_type
+      });
+
       const saldeData = calculateWeeklySaldeForSmoothing(
         shifts,
         employee.id,
@@ -44,6 +56,16 @@ export default function WeeklySummary({ employee, shifts, weekStart, onDeleteWee
         nonShiftEvents,
         nonShiftTypes
       );
+
+      // DEBUG: Log result
+      console.log('[WeeklySummary DEBUG] Salde data result:', {
+        status: saldeData.status,
+        expectedWeek: saldeData.expectedWeek,
+        workedWeek: saldeData.workedWeek,
+        salde: saldeData.salde,
+        reason: saldeData.reason
+      });
+
       weekHours.saldeData = saldeData;
     }
   } else {
