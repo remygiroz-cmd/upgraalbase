@@ -167,6 +167,7 @@ export default function ExportComptaModal({ open, onOpenChange, monthStart, mont
       employee,
       team,
       contractHours: autoMonthlyContractHours,
+      autoMonthlyContractHours,
       deductedHours,
       paidBaseHours,
       totalHours,
