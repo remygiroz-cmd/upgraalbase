@@ -114,7 +114,7 @@ export default function PlanningSettingsModal({ open, onOpenChange, displayMode,
         </DialogHeader>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="mt-4">
-          <TabsList className="grid w-full grid-cols-7 gap-1">
+          <TabsList className="grid w-full grid-cols-6 gap-1">
             <TabsTrigger value="statuts" className="text-xs flex flex-col items-center gap-1 py-2">
               <Calendar className="w-4 h-4" />
               <span>Statuts</span>
@@ -138,10 +138,6 @@ export default function PlanningSettingsModal({ open, onOpenChange, displayMode,
             <TabsTrigger value="actions" className="text-xs flex flex-col items-center gap-1 py-2">
               <Zap className="w-4 h-4" />
               <span>Actions</span>
-            </TabsTrigger>
-            <TabsTrigger value="securite" className="text-xs flex flex-col items-center gap-1 py-2">
-              <Lock className="w-4 h-4" />
-              <span>Sécurité</span>
             </TabsTrigger>
           </TabsList>
 
