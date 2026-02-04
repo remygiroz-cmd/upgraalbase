@@ -109,8 +109,25 @@ Deno.serve(async (req) => {
     
     const pdfPlanningBytes = pdfPlanning.output('arraybuffer');
 
-    // Send email
+    // Upload PDFs to storage first
+    const pdfRecapBlob = new Blob([pdfRecapBytes], { type: 'application/pdf' });
+    const pdfPlanningBlob = new Blob([pdfPlanningBytes], { type: 'application/pdf' });
+
+    const recapFormData = new FormData();
+    recapFormData.append('file', pdfRecapBlob, `Elements_paie_${monthName}_${year}.pdf`);
+    
+    const planningFormData = new FormData();
+    planningFormData.append('file', pdfPlanningBlob, `Planning_${monthName}_${year}.pdf`);
+
+    const recapUploadResult = await base44.asServiceRole.integrations.Core.UploadFile({ file: pdfRecapBlob });
+    const planningUploadResult = await base44.asServiceRole.integrations.Core.UploadFile({ file: pdfPlanningBlob });
+
+    const recapPdfUrl = recapUploadResult.file_url;
+    const planningPdfUrl = planningUploadResult.file_url;
+
+    // Send email via Resend with file URLs
     const resendApiKey = Deno.env.get('RESEND_API_KEY');
+    const appUrl = Deno.env.get('BASE44_APP_URL');
     
     const emailBody = `Bonjour,
 
@@ -119,6 +136,17 @@ ${customMessage ? customMessage + '\n\n' : ''}Veuillez trouver ci-dessous et ci-
 Cordialement,
 ${settings.responsableName}
 ${settings.responsableCoords || ''}`;
+
+    const htmlBody = `
+      <p>Bonjour,</p>
+      ${customMessage ? `<p>${customMessage.replace(/\n/g, '<br>')}</p>` : ''}
+      <p>Veuillez trouver ci-dessous et ci-joint, les éléments pour établir les fiches de paie.</p>
+      <p>
+        <a href="${recapPdfUrl}" style="display: inline-block; margin: 10px 10px 10px 0; padding: 10px 20px; background-color: #f97316; color: white; text-decoration: none; border-radius: 5px;">📄 Télécharger le récapitulatif paie</a>
+        <a href="${planningPdfUrl}" style="display: inline-block; margin: 10px 0; padding: 10px 20px; background-color: #3b82f6; color: white; text-decoration: none; border-radius: 5px;">📅 Télécharger le planning</a>
+      </p>
+      <p>Cordialement,<br>${settings.responsableName}<br>${settings.responsableCoords ? settings.responsableCoords.replace(/\n/g, '<br>') : ''}</p>
+    `;
 
     const emailResponse = await fetch('https://api.resend.com/emails', {
       method: 'POST',
@@ -131,17 +159,8 @@ ${settings.responsableCoords || ''}`;
         reply_to: settings.responsableEmail,
         to: [settings.emailCompta],
         subject: 'Éléments pour établir les fiches de paie',
-        text: emailBody,
-        attachments: [
-          {
-            filename: `Elements_paie_${monthName}_${year}.pdf`,
-            content: btoa(String.fromCharCode(...new Uint8Array(pdfRecapBytes)))
-          },
-          {
-            filename: `Planning_${monthName}_${year}.pdf`,
-            content: btoa(String.fromCharCode(...new Uint8Array(pdfPlanningBytes)))
-          }
-        ]
+        html: htmlBody,
+        text: emailBody
       })
     });
 
