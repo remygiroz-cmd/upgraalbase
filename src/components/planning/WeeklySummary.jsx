@@ -1,9 +1,7 @@
 import React, { useState } from 'react';
 import { cn } from '@/lib/utils';
 import { AlertTriangle, Trash2, ArrowDown, Bug } from 'lucide-react';
-import { calculateWeeklyHours } from './LegalChecks';
-import { calculateWeeklyEmployeeHours } from './OvertimeCalculations';
-import { getWeeklySummaryDataForMonth } from './smoothingCalculations';
+import { getSimpleWeeklyBalance } from './simpleOvertimeV1';
 import { useQuery } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 
@@ -21,59 +19,15 @@ export default function WeeklySummary({ employee, shifts, weekStart, onDeleteWee
 
   const calculationMode = settings[0]?.planning_calculation_mode || 'disabled';
 
-  // No longer needed - lissage mode uses employee contract data instead of template weeks
-  // const { data: templateWeeks = [] } = useQuery({...})
-  // const { data: templateShifts = [] } = useQuery({...})
-
-  // Calculate hours based on mode
-  let weekHours;
-  if (calculationMode === 'weekly') {
-    weekHours = calculateWeeklyEmployeeHours(shifts, employee.id, weekStart, employee, debugMode, nonShiftEvents, nonShiftTypes);
-  } else if (calculationMode === 'monthly') {
-    // Mode lissage mensuel : afficher le solde hebdo basé sur le CONTRAT (pas planning type)
-    weekHours = calculateWeeklyEmployeeHours(shifts, employee.id, weekStart, employee, debugMode, nonShiftEvents, nonShiftTypes);
-    // Calculer solde avec base contrat
-    if (monthStart && monthEnd) {
-      // DEBUG: Log employee data before calculation
-      console.log('[WeeklySummary DEBUG] Employee contract data:', {
-        employeeId: employee.id,
-        contract_hours_weekly: employee.contract_hours_weekly,
-        contract_hours_weekly_type: typeof employee.contract_hours_weekly,
-        work_days_per_week: employee.work_days_per_week,
-        work_days_per_week_type: typeof employee.work_days_per_week,
-        contract_days: employee.contract_days,
-        contract_days_isArray: Array.isArray(employee.contract_days),
-        work_time_type: employee.work_time_type
-      });
-
-      // UTILISER LA FONCTION UNIQUE (partagée avec MonthlySummary)
-      const saldeData = getWeeklySummaryDataForMonth(
-        shifts,
-        employee.id,
-        weekStart,
-        monthStart,
-        monthEnd,
-        employee,
-        nonShiftEvents,
-        nonShiftTypes
-      );
-
-      // DEBUG: Log result (preuve du calcul)
-      console.log('[WeeklySummary DEBUG] Salde data (SOURCE UNIQUE)::', {
-        status: saldeData.status,
-        expectedWeek: saldeData.expectedWeek,
-        workedWeek: saldeData.workedWeek,
-        salde: saldeData.salde,
-        display: `expected=${saldeData.expectedWeek.toFixed(1)}h worked=${saldeData.workedWeek.toFixed(1)}h salde=${saldeData.salde.toFixed(1)}h`,
-        reason: saldeData.reason
-      });
-
-      weekHours.saldeData = saldeData;
-    }
-  } else {
-    // Fallback to basic calculation
-    weekHours = calculateWeeklyHours(shifts, employee.id, weekStart, debugMode, nonShiftEvents, nonShiftTypes, employee);
-  }
+  // V1 SIMPLE : calcul du delta hebdo
+  const simpleBalance = getSimpleWeeklyBalance(shifts, employee.id, weekStart, employee);
+  
+  const weekHours = {
+    total: simpleBalance.workedWeek,
+    contractWeek: simpleBalance.contractWeek,
+    delta: simpleBalance.delta,
+    simpleBalance
+  };
 
   const handleDelete = () => {
     if (onDeleteWeek) {
