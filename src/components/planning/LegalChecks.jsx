@@ -1,6 +1,5 @@
 // Vérifications juridiques pour la convention HCR
-import { parseLocalDate, formatLocalDate } from './dateUtils';
-import { calculateNonShiftGeneratedHours } from './NonShiftHoursCalculations';
+import { formatLocalDate } from './dateUtils';
 
 export const calculateShiftDuration = (shift) => {
   const [startH, startM] = shift.start_time.split(':').map(Number);
@@ -62,7 +61,7 @@ export const checkDailyHours = (shifts) => {
 };
 
 export const calculateWeeklyHours = (shifts, employeeId, weekStart, debug = false, nonShiftEvents = [], nonShiftTypes = [], employee = null) => {
-  // Calculer heures hebdomadaires (Lundi → Dimanche inclus)
+  // SIMPLE PROTOCOL: Calculate weekly hours worked only
   const weekEnd = new Date(weekStart);
   weekEnd.setDate(weekEnd.getDate() + 6);
   
@@ -71,11 +70,9 @@ export const calculateWeeklyHours = (shifts, employeeId, weekStart, debug = fals
   
   const debugInfo = [];
   
-  // Filter shifts in week range - using string comparison for date-only
+  // Filter shifts in week range
   const weekShifts = shifts.filter(s => {
     if (s.employee_id !== employeeId) return false;
-    
-    // Compare dates as strings (YYYY-MM-DD) - no timezone issues
     const included = s.date >= weekStartStr && s.date <= weekEndStr;
     
     if (debug) {
@@ -92,48 +89,25 @@ export const calculateWeeklyHours = (shifts, employeeId, weekStart, debug = fals
     return included;
   });
   
-  // Calculer heures des shifts réels
-  const shiftHours = weekShifts.reduce((sum, shift) => sum + calculateShiftDuration(shift), 0);
-  
-  // Filtrer les non-shifts de la semaine
-  const weekNonShifts = nonShiftEvents.filter(ns => {
-    if (ns.employee_id !== employeeId) return false;
-    return ns.date >= weekStartStr && ns.date <= weekEndStr;
-  });
-  
-  // Calculer heures générées par les non-shifts
-  const nonShiftResult = calculateNonShiftGeneratedHours(weekNonShifts, nonShiftTypes, employee, debug);
-  
-  // Total = shifts réels + heures générées
-  const totalHours = shiftHours + nonShiftResult.totalHours;
+  // Total hours from shifts only
+  const totalHours = weekShifts.reduce((sum, shift) => sum + calculateShiftDuration(shift), 0);
   
   if (debug) {
     const totalMinutes = weekShifts.reduce((sum, shift) => sum + calculateShiftDuration(shift) * 60, 0);
-    const nonShiftMinutes = Math.round(nonShiftResult.totalHours * 60);
-    
-    console.log('🔍 WEEKLY HOURS DEBUG:', {
+    console.log('🔍 WEEKLY HOURS:', {
       weekStart: weekStartStr,
       weekEnd: weekEndStr,
       employeeId,
-      totalShifts: weekShifts.length,
-      shifts: debugInfo,
-      shiftsMinutes: Math.round(totalMinutes),
-      shiftsHours: shiftHours.toFixed(2),
-      nonShifts: nonShiftResult.debugInfo,
-      nonShiftsMinutes: nonShiftMinutes,
-      nonShiftsHours: nonShiftResult.totalHours.toFixed(2),
-      totalMinutes: Math.round(totalMinutes) + nonShiftMinutes,
-      totalHours: totalHours.toFixed(2)
+      shifts: weekShifts.length,
+      totalHours: totalHours.toFixed(2),
+      totalMinutes: Math.round(totalMinutes)
     });
   }
   
   return {
     total: totalHours,
-    normal: Math.min(totalHours, 35),
-    overtime: Math.max(0, totalHours - 35),
-    hasOvertime: totalHours > 35,
-    debugInfo: debug ? [...debugInfo, ...nonShiftResult.debugInfo.map(ns => ({ type: 'non-shift', ...ns }))] : null,
-    nonShiftHours: nonShiftResult.totalHours
+    debugInfo: debug ? debugInfo : null,
+    nonShiftHours: 0
   };
 };
 
