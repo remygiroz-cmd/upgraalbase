@@ -350,37 +350,38 @@ export default function ExportComptaModal({ open, onOpenChange, monthStart, mont
     const daysInMonth = new Date(year, month, 0).getDate();
     const planningRows = [];
 
-    // Fonction pour obtenir l'abréviation du non-shift
-    const getNonShiftLabel = (nsType) => {
+    // Fonction pour obtenir l'abréviation du non-shift avec debug
+    const getNonShiftLabel = (nsEvent, nsType, employeeName, date) => {
+      // Debug log
+      addDebugLog('🔍 Résolution non-shift', { 
+        employeeName, 
+        date,
+        nsEvent: { id: nsEvent?.id, non_shift_type_id: nsEvent?.non_shift_type_id },
+        nsType: nsType ? { id: nsType.id, label: nsType.label, code: nsType.code } : null
+      });
+
       if (!nsType) {
-        console.warn('NonShiftType manquant - affichage ABS par défaut');
-        return 'ABS';
+        console.error('❌ NonShiftType introuvable pour event:', nsEvent?.id);
+        addDebugLog('❌ Type non trouvé', { eventId: nsEvent?.id });
+        return '???';
       }
       
-      // Priorité 1: utiliser le code explicite si disponible
+      // Priorité 1: utiliser le code explicite
       if (nsType.code) {
+        addDebugLog('✅ Code utilisé', { code: nsType.code });
         return nsType.code.toUpperCase();
       }
       
-      // Priorité 2: fallback sur le label
-      const label = nsType.label || nsType.key || '';
-      const lowerLabel = label.toLowerCase();
+      // Priorité 2: extraire des 3 premières lettres du label
+      if (nsType.label) {
+        const shortLabel = nsType.label.substring(0, 3).toUpperCase();
+        addDebugLog('⚠️ Pas de code, utilise label', { shortLabel });
+        return shortLabel;
+      }
       
-      // Mapping des types courants (fallback pour anciens non-shifts)
-      if (lowerLabel.includes('congé') && lowerLabel.includes('pay')) return 'CP';
-      if (lowerLabel.includes('maladie') || lowerLabel.includes('malade')) return 'MAL';
-      if (lowerLabel.includes('rtt')) return 'RTT';
-      if (lowerLabel.includes('repos')) return 'REP';
-      if (lowerLabel.includes('férié') || lowerLabel.includes('ferie')) return 'FER';
-      if (lowerLabel.includes('accident')) return 'ACC';
-      if (lowerLabel.includes('formation')) return 'FOR';
-      if (lowerLabel.includes('absence')) return 'ABS';
-      if (lowerLabel.includes('congé sans solde')) return 'CSS';
-      if (lowerLabel.includes('maternité')) return 'MAT';
-      if (lowerLabel.includes('paternité')) return 'PAT';
-      
-      // Par défaut, prendre les 3 premières lettres du label en majuscules
-      return label.substring(0, 3).toUpperCase();
+      // Fallback final
+      addDebugLog('⚠️ Fallback utilisé');
+      return '???';
     };
 
     // Construire les lignes du planning par employé
@@ -400,8 +401,8 @@ export default function ExportComptaModal({ open, onOpenChange, monthStart, mont
           // Les deux : shift + non-shift
           const shift = dayShifts[0];
           const ns = dayNonShifts[0];
-          const nsType = nonShiftTypes.find(t => t.id === ns.type_id);
-          const nsLabel = getNonShiftLabel(nsType);
+          const nsType = nonShiftTypes.find(t => t.id === ns.non_shift_type_id);
+          const nsLabel = getNonShiftLabel(ns, nsType, `${empData.employee.first_name} ${empData.employee.last_name}`, dateStr);
           row.push(`${shift.start_time}-${shift.end_time}\n${nsLabel}`);
         } else if (dayShifts.length > 0) {
           // Seulement shift
@@ -410,8 +411,8 @@ export default function ExportComptaModal({ open, onOpenChange, monthStart, mont
         } else if (dayNonShifts.length > 0) {
           // Seulement non-shift
           const ns = dayNonShifts[0];
-          const nsType = nonShiftTypes.find(t => t.id === ns.type_id);
-          const nsLabel = getNonShiftLabel(nsType);
+          const nsType = nonShiftTypes.find(t => t.id === ns.non_shift_type_id);
+          const nsLabel = getNonShiftLabel(ns, nsType, `${empData.employee.first_name} ${empData.employee.last_name}`, dateStr);
           row.push(nsLabel);
         } else {
           row.push('-');
@@ -449,11 +450,37 @@ export default function ExportComptaModal({ open, onOpenChange, monthStart, mont
       margin: { left: margin, right: margin }
     });
 
+    // Légende des codes non-shifts
+    const legendY = doc.lastAutoTable.finalY + 5;
+    if (legendY < pageHeight - 20) {
+      // Générer la légende à partir des types utilisés ce mois
+      const usedTypes = new Set();
+      nonShiftEvents.forEach(ns => {
+        if (ns.non_shift_type_id) usedTypes.add(ns.non_shift_type_id);
+      });
+
+      const legendItems = nonShiftTypes
+        .filter(t => usedTypes.has(t.id))
+        .map(t => `${t.code || t.label?.substring(0, 3).toUpperCase()} = ${t.label}`)
+        .join(' · ');
+
+      if (legendItems) {
+        doc.setFontSize(7);
+        doc.setTextColor(60, 60, 60);
+        doc.setFont('helvetica', 'bold');
+        doc.text('Légende : ', margin, legendY);
+        doc.setFont('helvetica', 'normal');
+
+        const lines = doc.splitTextToSize(legendItems, pageWidth - margin * 2 - 15);
+        doc.text(lines, margin + 15, legendY);
+      }
+    }
+
     doc.setFontSize(7);
     doc.setTextColor(128, 128, 128);
     doc.text('Document généré automatiquement via UpGraal', pageWidth / 2, pageHeight - 5, { align: 'center' });
 
-    addDebugLog('✅ PDF généré');
+    addDebugLog('✅ PDF généré avec légende');
     return doc;
   };
 
