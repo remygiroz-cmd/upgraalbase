@@ -16,6 +16,7 @@ import ShiftFormModal from '@/components/planning/ShiftFormModal';
 import WeeklySummary from '@/components/planning/WeeklySummary';
 import MonthlySummary from '@/components/planning/MonthlySummary';
 import ApplyTemplateModal from '@/components/planning/ApplyTemplateModal';
+import ApplyAllTemplatesModal from '@/components/planning/ApplyAllTemplatesModal';
 import NonShiftCard from '@/components/planning/NonShiftCard';
 import PlanningSettingsModal from '@/components/planning/PlanningSettingsModal';
 import AddPaidLeaveModal from '@/components/planning/AddPaidLeaveModal';
@@ -34,6 +35,7 @@ export default function Planning() {
   const [showShiftModal, setShowShiftModal] = useState(false);
   const [showPlanningSettings, setShowPlanningSettings] = useState(false);
   const [showApplyTemplateModal, setShowApplyTemplateModal] = useState(false);
+  const [showApplyAllTemplatesModal, setShowApplyAllTemplatesModal] = useState(false);
   const [showAddPaidLeaveModal, setShowAddPaidLeaveModal] = useState(false);
   const [showExportComptaModal, setShowExportComptaModal] = useState(false);
   const [showEmployeeActionsModal, setShowEmployeeActionsModal] = useState(false);
@@ -640,6 +642,15 @@ export default function Planning() {
         </div>
         <div className="flex items-center gap-2">
           <Button
+            onClick={() => setShowApplyAllTemplatesModal(true)}
+            variant="outline"
+            size="sm"
+            className="border border-gray-300 hover:border-orange-500 hover:bg-orange-50 text-xs"
+            title="Appliquer les plannings types de tous les employés"
+          >
+            <span>⚡ Tous les templates</span>
+          </Button>
+          <Button
             onClick={() => setShowExportComptaModal(true)}
             variant="outline"
             size="sm"
@@ -1094,6 +1105,14 @@ export default function Planning() {
         onOpenChange={setShowApplyTemplateModal}
         employeeId={selectedEmployeeForTemplate?.id}
         employeeName={selectedEmployeeForTemplate ? `${selectedEmployeeForTemplate.first_name} ${selectedEmployeeForTemplate.last_name}` : ''}
+      />
+
+      {/* Apply All Templates Modal */}
+      <ApplyAllTemplatesModal
+        open={showApplyAllTemplatesModal}
+        onOpenChange={setShowApplyAllTemplatesModal}
+        monthStart={new Date(currentYear, currentMonth, 1)}
+        monthEnd={new Date(currentYear, currentMonth + 1, 0)}
       />
 
       {/* Add Paid Leave Modal */}
