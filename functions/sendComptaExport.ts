@@ -35,9 +35,25 @@ Deno.serve(async (req) => {
     }
 
     const pdfBuffer = await pdfResponse.arrayBuffer();
-    const pdfBase64 = btoa(String.fromCharCode(...new Uint8Array(pdfBuffer)));
+    const pdfSize = pdfBuffer.byteLength;
+    
+    console.log('PDF téléchargé, taille:', (pdfSize / 1024).toFixed(2), 'KB');
+    
+    if (pdfSize === 0) {
+      throw new Error('Le PDF téléchargé est vide');
+    }
+    
+    // Conversion base64 par chunks pour éviter stack overflow
+    const uint8Array = new Uint8Array(pdfBuffer);
+    const chunkSize = 8192;
+    let base64String = '';
+    for (let i = 0; i < uint8Array.length; i += chunkSize) {
+      const chunk = uint8Array.slice(i, i + chunkSize);
+      base64String += String.fromCharCode.apply(null, chunk);
+    }
+    const pdfBase64 = btoa(base64String);
 
-    console.log('PDF téléchargé et encodé en base64, taille:', pdfBase64.length);
+    console.log('PDF encodé en base64, taille:', (pdfBase64.length / 1024).toFixed(2), 'KB');
 
     // Send email via Resend
     const resendApiKey = Deno.env.get('RESEND_API_KEY');
@@ -93,7 +109,7 @@ ${settings.responsableCoords || ''}`;
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        from: `${settings.etablissementName} <onboarding@resend.dev>`,
+        from: `${settings.etablissementName} <noreply@upgraal.com>`,
         reply_to: settings.responsableEmail,
         to: [settings.emailCompta],
         subject: `Éléments de paie - ${monthName} ${year}`,
@@ -103,28 +119,47 @@ ${settings.responsableCoords || ''}`;
           {
             filename: pdfFilename,
             content: pdfBase64,
-            content_type: 'application/pdf'
+            type: 'application/pdf'
           }
         ]
       })
     });
 
+    const result = await emailResponse.json();
+    
     if (!emailResponse.ok) {
-      const error = await emailResponse.json();
-      console.error('Erreur Resend:', error);
-      throw new Error('Erreur envoi email: ' + JSON.stringify(error));
+      console.error('Erreur Resend:', result);
+      
+      // Messages d'erreur clairs selon le code HTTP
+      let errorMessage = 'Erreur lors de l\'envoi de l\'email';
+      if (emailResponse.status === 403) {
+        errorMessage = 'Domaine d\'envoi non vérifié dans Resend';
+      } else if (emailResponse.status === 422) {
+        errorMessage = 'Adresse email invalide ou configuration incorrecte';
+      } else if (result.message) {
+        errorMessage = result.message;
+      }
+      
+      return Response.json({ 
+        error: errorMessage,
+        details: result,
+        status: emailResponse.status
+      }, { status: emailResponse.status });
     }
 
-    const result = await emailResponse.json();
     console.log('Email envoyé avec succès:', result);
 
     return Response.json({ 
       success: true,
-      emailId: result.id
+      emailId: result.id,
+      message: 'Email envoyé avec succès'
     });
 
   } catch (error) {
     console.error('Error in sendComptaExport:', error);
-    return Response.json({ error: error.message }, { status: 500 });
+    return Response.json({ 
+      error: error.message,
+      details: 'Erreur lors du traitement de l\'export comptabilité'
+    }, { status: 500 });
   }
 });
