@@ -427,6 +427,7 @@ export const calculateMonthlyEmployeeHoursSmoothing = (
         total_overtime: 0,
         totalSalde,
         smoothedSalde,
+        suppCompRetained: 0,
         weekSaldes,
         contractHoursWeekly,
         reason: null
@@ -446,6 +447,7 @@ export const calculateMonthlyEmployeeHoursSmoothing = (
       total_overtime: smoothedSalde,
       totalSalde,
       smoothedSalde,
+      suppCompRetained: smoothedSalde,
       weekSaldes,
       contractHoursWeekly,
       reason: null
@@ -464,6 +466,7 @@ export const calculateMonthlyEmployeeHoursSmoothing = (
         exceeds_limit: false,
         totalSalde,
         smoothedSalde,
+        suppCompRetained: 0,
         weekSaldes,
         contractHoursWeekly,
         reason: null
@@ -489,6 +492,7 @@ export const calculateMonthlyEmployeeHoursSmoothing = (
       exceeds_limit,
       totalSalde,
       smoothedSalde,
+      suppCompRetained: smoothedSalde,
       weekSaldes,
       contractHoursWeekly,
       reason: null
@@ -502,6 +506,7 @@ export const calculateMonthlyEmployeeHoursSmoothing = (
     normal: 0,
     totalSalde,
     smoothedSalde,
+    suppCompRetained: smoothedSalde,
     weekSaldes,
     contractHoursWeekly,
     reason: null
