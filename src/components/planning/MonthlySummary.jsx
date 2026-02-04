@@ -115,30 +115,9 @@ export default function MonthlySummary({ employee, shifts, nonShiftEvents, nonSh
        nonShiftTypes
      );
 
-     // SOLUTION SIMPLE : calculer la somme directement depuis weekSaldes
-     // weekSaldes provient de getWeeklySummaryDataForMonth (SOURCE UNIQUE partagée avec WeeklySummary)
-     if (monthlyHours.status === 'calculated' && monthlyHours.weekSaldes && monthlyHours.weekSaldes.length > 0) {
-       // Somme des soldes semaine par semaine (identiques à ceux affichés dans WeeklySummary)
-       const soldeTotalFromWeeks = monthlyHours.weekSaldes.reduce((sum, week) => sum + week.salde, 0);
-
-       // DEBUG OBLIGATOIRE : preuve d'identité avec WeeklySummary
-       console.log(`[MonthlySummary] Employee ${employee.id} - RÉCAP FINAL (identité avec WeeklySummary):`, {
-         weekCount: monthlyHours.weekSaldes.length,
-         weeksDetail: monthlyHours.weekSaldes.map((w, idx) => ({
-           semNum: idx + 1,
-           expected: w.expectedWeek,
-           worked: w.workedWeek,
-           salde: w.salde,
-           display: `Sem${idx+1}: ${w.expectedWeek.toFixed(1)}h prév → ${w.workedWeek.toFixed(1)}h eff = ${w.salde.toFixed(1)}h`
-         })),
-         totalSolde: soldeTotalFromWeeks,
-         PROOF_IDENTITY: `Somme visible = ${monthlyHours.weekSaldes.map(w => w.salde.toFixed(1)).join(' + ')} = ${soldeTotalFromWeeks.toFixed(1)}h (identique à WeeklySummary)`
-       });
-
-       // Stocker pour affichage
-       monthlyHours.totalSoldeFromWeeks = soldeTotalFromWeeks;
-       monthlyHours.suppCompRetained = Math.max(0, soldeTotalFromWeeks);
-     }
+     // suppCompRetained est DÉJÀ calculé par calculateMonthlyEmployeeHoursSmoothing
+     // Il est basé sur smoothedSalde (= max(0, totalSaldeFromWeeks))
+     // Rien à refaire ici
 
      // Fallback si pas de planning type unique
      if (monthlyHours.status !== 'calculated') {
