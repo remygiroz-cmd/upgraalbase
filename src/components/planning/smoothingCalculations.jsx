@@ -348,6 +348,13 @@ export const calculateMonthlyEmployeeHoursSmoothing = (
   // Lissage : si salde <= 0 => 0 heures supp/comp
   const smoothedSalde = Math.max(0, totalSalde);
 
+  // DEBUG final
+  console.log(`[calculateMonthlyEmployeeHoursSmoothing] Final result for employee ${employee.id}:`, {
+    totalSalde,
+    smoothedSalde,
+    weekCount: weekSaldes.length
+  });
+
   // Récupérer infos contrat
   const isFullTime = employee.work_time_type === 'full_time';
   let contractHoursWeekly = 35; // Défaut temps plein
