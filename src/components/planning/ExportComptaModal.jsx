@@ -350,6 +350,30 @@ export default function ExportComptaModal({ open, onOpenChange, monthStart, mont
     const daysInMonth = new Date(year, month, 0).getDate();
     const planningRows = [];
 
+    // Fonction pour obtenir l'abréviation du non-shift
+    const getNonShiftLabel = (nsType) => {
+      if (!nsType) return 'ABS';
+      
+      const label = nsType.label || nsType.key || '';
+      const lowerLabel = label.toLowerCase();
+      
+      // Mapping des types courants
+      if (lowerLabel.includes('congé') && lowerLabel.includes('pay')) return 'CP';
+      if (lowerLabel.includes('maladie') || lowerLabel.includes('malade')) return 'MAL';
+      if (lowerLabel.includes('rtt')) return 'RTT';
+      if (lowerLabel.includes('repos')) return 'REP';
+      if (lowerLabel.includes('férié') || lowerLabel.includes('ferie')) return 'FER';
+      if (lowerLabel.includes('accident')) return 'ACC';
+      if (lowerLabel.includes('formation')) return 'FOR';
+      if (lowerLabel.includes('absence')) return 'ABS';
+      if (lowerLabel.includes('congé sans solde')) return 'CSS';
+      if (lowerLabel.includes('maternité')) return 'MAT';
+      if (lowerLabel.includes('paternité')) return 'PAT';
+      
+      // Par défaut, prendre les 3 premières lettres du label en majuscules
+      return label.substring(0, 3).toUpperCase();
+    };
+
     // Construire les lignes du planning par employé
     for (const empData of payrollData) {
       const empShifts = shifts.filter(s => s.employee_id === empData.employee.id);
@@ -363,13 +387,23 @@ export default function ExportComptaModal({ open, onOpenChange, monthStart, mont
         const dayShifts = empShifts.filter(s => s.date === dateStr);
         const dayNonShifts = empNonShifts.filter(ns => ns.date === dateStr);
 
-        if (dayShifts.length > 0) {
+        if (dayShifts.length > 0 && dayNonShifts.length > 0) {
+          // Les deux : shift + non-shift
+          const shift = dayShifts[0];
+          const ns = dayNonShifts[0];
+          const nsType = nonShiftTypes.find(t => t.id === ns.type_id);
+          const nsLabel = getNonShiftLabel(nsType);
+          row.push(`${shift.start_time}-${shift.end_time}\n${nsLabel}`);
+        } else if (dayShifts.length > 0) {
+          // Seulement shift
           const shift = dayShifts[0];
           row.push(`${shift.start_time}-${shift.end_time}`);
         } else if (dayNonShifts.length > 0) {
+          // Seulement non-shift
           const ns = dayNonShifts[0];
           const nsType = nonShiftTypes.find(t => t.id === ns.type_id);
-          row.push(nsType?.label?.substring(0, 3) || 'ABS');
+          const nsLabel = getNonShiftLabel(nsType);
+          row.push(nsLabel);
         } else {
           row.push('-');
         }
