@@ -5,6 +5,7 @@ import { calculateMonthlyEmployeeHours } from './OvertimeCalculations';
 import { calculateShiftDuration } from './LegalChecks';
 import { calculateMonthlyCPTotal } from './paidLeaveCalculations';
 import { calculateDeductedHours, calculatePaidBaseHours, calculateMonthlyContractHours } from './DeductionCalculations';
+import { calculateHolidayHours } from './holidayCalculations';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
@@ -14,7 +15,7 @@ import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
 import { AlertTriangle } from 'lucide-react';
 
-export default function MonthlySummary({ employee, shifts, nonShiftEvents, nonShiftTypes, monthStart, monthEnd }) {
+export default function MonthlySummary({ employee, shifts, nonShiftEvents, nonShiftTypes, monthStart, monthEnd, holidayDates = [] }) {
   const [showEditDialog, setShowEditDialog] = useState(false);
   const queryClient = useQueryClient();
 
@@ -169,6 +170,9 @@ export default function MonthlySummary({ employee, shifts, nonShiftEvents, nonSh
   // CP days count
   const autoCPDays = calculateMonthlyCPTotal(cpPeriods, monthStart, monthEnd);
 
+  // Holiday hours calculation
+  const holidayHoursData = calculateHolidayHours(employeeShifts, employee, monthStart, monthEnd, holidayDates);
+
   // Apply manual overrides
   const daysWorked = manualRecap?.manual_days_worked ?? autoDaysWorked;
   const totalHours = manualRecap?.manual_total_hours ?? autoTotalHours;
@@ -301,6 +305,19 @@ export default function MonthlySummary({ employee, shifts, nonShiftEvents, nonSh
           <div className="mt-2 pt-2 border-t border-gray-200">
             <div className="text-[10px] font-semibold text-green-700">
               🟢 CP décomptés : {cpDays} j
+            </div>
+          </div>
+        )}
+
+        {/* Holiday hours */}
+        {holidayHoursData.count > 0 && (
+          <div className="mt-2 pt-2 border-t border-gray-200">
+            <div className="text-[10px] font-semibold text-purple-700 mb-1">
+              🎉 Jours fériés : {holidayHoursData.count}j
+            </div>
+            <div className="text-[9px] text-gray-600 space-y-0.5">
+              <div>Heures réelles: {holidayHoursData.realHours.toFixed(1)}h</div>
+              <div className="font-semibold text-purple-700">Comptées x2: {holidayHoursData.countedHours.toFixed(1)}h</div>
             </div>
           </div>
         )}

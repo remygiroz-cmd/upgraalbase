@@ -11,12 +11,13 @@ import { calculateShiftDuration } from './LegalChecks';
 import { calculateDeductedHours, calculatePaidBaseHours, calculateMonthlyContractHours } from './DeductionCalculations';
 import { calculateMonthlyEmployeeHours } from './OvertimeCalculations';
 import { calculateMonthlyCPTotal } from './paidLeaveCalculations';
+import { calculateHolidayHours } from './holidayCalculations';
 import { jsPDF } from 'jspdf';
 import 'jspdf-autotable';
 
 const MONTHS = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'];
 
-export default function ExportComptaModal({ open, onOpenChange, monthStart, monthEnd }) {
+export default function ExportComptaModal({ open, onOpenChange, monthStart, monthEnd, holidayDates = [] }) {
   const [customMessage, setCustomMessage] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
   const [isSending, setIsSending] = useState(false);
@@ -163,6 +164,9 @@ export default function ExportComptaModal({ open, onOpenChange, monthStart, mont
     const autoCPDays = calculateMonthlyCPTotal(cpPeriods.filter(p => p.employee_id === employee.id), monthStart, monthEnd);
     const cpDays = employeeRecap?.manual_cp_days ?? autoCPDays;
 
+    // Holiday hours
+    const holidayHoursData = calculateHolidayHours(employeeShifts, employee, monthStart, monthEnd, holidayDates);
+
     return {
       employee,
       team,
@@ -178,6 +182,7 @@ export default function ExportComptaModal({ open, onOpenChange, monthStart, mont
       totalPaidHours,
       nonShiftsCounts,
       cpDays,
+      holidayHoursData,
       type: monthlyHours.type
     };
   });
@@ -257,7 +262,8 @@ export default function ExportComptaModal({ open, onOpenChange, monthStart, mont
       d.overtime_50 > 0 ? d.overtime_50.toFixed(1) + 'h' : '-',
       d.totalPaidHours.toFixed(1) + 'h',
       Object.entries(d.nonShiftsCounts).map(([label, count]) => `${label}: ${count}j`).join(', ') || '-',
-      d.cpDays > 0 ? d.cpDays + 'j' : '-'
+      d.cpDays > 0 ? d.cpDays + 'j' : '-',
+      d.holidayHoursData.count > 0 ? `${d.holidayHoursData.count}j (${d.holidayHoursData.countedHours.toFixed(1)}h x2)` : '-'
     ]);
 
     // Ligne TOTAL
@@ -275,6 +281,7 @@ export default function ExportComptaModal({ open, onOpenChange, monthStart, mont
       totals.overtime_50.toFixed(1) + 'h',
       totals.totalPaidHours.toFixed(1) + 'h',
       '',
+      '',
       ''
     ]);
 
@@ -282,7 +289,7 @@ export default function ExportComptaModal({ open, onOpenChange, monthStart, mont
       startY: margin + 25,
       head: [[
         'Employé', 'Poste', 'Contrat', 'Base', 'Décomp.', 'Payée', 
-        'Effect.', 'C+10%', 'C+25%', 'S+25%', 'S+50%', 'Total', 'Absences', 'CP'
+        'Effect.', 'C+10%', 'C+25%', 'S+25%', 'S+50%', 'Total', 'Absences', 'CP', 'Fériés'
       ]],
       body: tableData,
       styles: {
@@ -310,8 +317,9 @@ export default function ExportComptaModal({ open, onOpenChange, monthStart, mont
         9: { cellWidth: 15, halign: 'right' },
         10: { cellWidth: 15, halign: 'right' },
         11: { cellWidth: 15, halign: 'right', fillColor: [219, 234, 254] },
-        12: { cellWidth: 30, fontSize: 6 },
-        13: { cellWidth: 12, halign: 'right' }
+        12: { cellWidth: 28, fontSize: 6 },
+        13: { cellWidth: 12, halign: 'right' },
+        14: { cellWidth: 22, halign: 'right', fontSize: 6, textColor: [147, 51, 234] }
       },
       didParseCell: (data) => {
         // Ligne TOTAL en gras
@@ -616,8 +624,9 @@ export default function ExportComptaModal({ open, onOpenChange, monthStart, mont
                     <th className="px-2 py-2 text-right font-semibold bg-blue-50">Total payé</th>
                     <th className="px-2 py-2 text-left font-semibold">Absences</th>
                     <th className="px-2 py-2 text-right font-semibold">CP</th>
-                  </tr>
-                </thead>
+                    <th className="px-2 py-2 text-right font-semibold">Fériés</th>
+                    </tr>
+                    </thead>
                 <tbody className="divide-y">
                   {payrollData.map((data, idx) => (
                     <tr key={idx} className="hover:bg-gray-50">
@@ -643,12 +652,20 @@ export default function ExportComptaModal({ open, onOpenChange, monthStart, mont
                           Object.entries(data.nonShiftsCounts).map(([label, count]) => (
                             <div key={label}>{label}: {count}j</div>
                           )) : '-'}
-                      </td>
-                      <td className="px-2 py-2 text-right">{data.cpDays > 0 ? `${data.cpDays}j` : '-'}</td>
-                    </tr>
-                  ))}
-                  <tr className="bg-gray-200 font-bold">
-                    <td className="px-2 py-2" colSpan="3">TOTAL</td>
+                          </td>
+                          <td className="px-2 py-2 text-right">{data.cpDays > 0 ? `${data.cpDays}j` : '-'}</td>
+                          <td className="px-2 py-2 text-right text-[10px]">
+                          {data.holidayHoursData.count > 0 ? (
+                          <div>
+                            <div className="font-semibold">{data.holidayHoursData.count}j</div>
+                            <div className="text-purple-700">{data.holidayHoursData.countedHours.toFixed(1)}h (x2)</div>
+                          </div>
+                          ) : '-'}
+                          </td>
+                          </tr>
+                          ))}
+                          <tr className="bg-gray-200 font-bold">
+                          <td className="px-2 py-2" colSpan="3">TOTAL</td>
                     <td className="px-2 py-2 text-right">{totals.contractHours.toFixed(1)}h</td>
                     <td className="px-2 py-2 text-right text-red-600">{totals.deductedHours.toFixed(1)}h</td>
                     <td className="px-2 py-2 text-right text-blue-900">{totals.paidBaseHours.toFixed(1)}h</td>
@@ -658,10 +675,10 @@ export default function ExportComptaModal({ open, onOpenChange, monthStart, mont
                     <td className="px-2 py-2 text-right">{totals.overtime_25.toFixed(1)}h</td>
                     <td className="px-2 py-2 text-right">{totals.overtime_50.toFixed(1)}h</td>
                     <td className="px-2 py-2 text-right bg-blue-100">{totals.totalPaidHours.toFixed(1)}h</td>
-                    <td colSpan="2"></td>
-                  </tr>
-                </tbody>
-              </table>
+                    <td colSpan="3"></td>
+                    </tr>
+                    </tbody>
+                    </table>
             </div>
           </div>
 
