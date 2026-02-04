@@ -115,23 +115,27 @@ export default function MonthlySummary({ employee, shifts, nonShiftEvents, nonSh
        nonShiftTypes
      );
 
-     // DEBUG AVANT override
-     console.log(`[MonthlySummary] Employee ${employee.id} - AVANT override:`, {
-       status: monthlyHours.status,
-       totalSalde: monthlyHours.totalSalde,
-       smoothedSalde: monthlyHours.smoothedSalde
-     });
+     // SOLUTION SIMPLE : calculer la somme directement depuis weekSaldes
+     if (monthlyHours.status === 'calculated' && monthlyHours.weekSaldes && monthlyHours.weekSaldes.length > 0) {
+       // Somme des soldes semaine par semaine (UNIQUE SOURCE DE VÉRITÉ)
+       const soldeTotalFromWeeks = monthlyHours.weekSaldes.reduce((sum, week) => sum + week.salde, 0);
 
-     // CORRECTION : forcer smoothedSalde = totalSalde (source unique)
-     if (monthlyHours.status === 'calculated' && monthlyHours.totalSalde !== undefined) {
-       monthlyHours.smoothedSalde = monthlyHours.totalSalde;
-       monthlyHours.suppCompRetained = Math.max(0, monthlyHours.totalSalde);
-
-       console.log(`[MonthlySummary] Employee ${employee.id} - APRÈS override:`, {
-         totalSalde: monthlyHours.totalSalde,
-         smoothedSalde: monthlyHours.smoothedSalde,
-         suppCompRetained: monthlyHours.suppCompRetained
+       // DEBUG OBLIGATOIRE : afficher la preuve
+       console.log(`[MonthlySummary] Employee ${employee.id} - RÉCAP DES SOLDES SEMAINES:`, {
+         weekCount: monthlyHours.weekSaldes.length,
+         weekDetails: monthlyHours.weekSaldes.map((w, idx) => ({
+           semaine: idx + 1,
+           salde: w.salde,
+           expected: w.expectedWeek,
+           worked: w.workedWeek
+         })),
+         totalFromSum: soldeTotalFromWeeks,
+         PROOF: `Somme visible = ${monthlyHours.weekSaldes.map(w => w.salde.toFixed(1)).join(' + ')} = ${soldeTotalFromWeeks.toFixed(1)}h`
        });
+
+       // Stocker pour affichage
+       monthlyHours.totalSoldeFromWeeks = soldeTotalFromWeeks;
+       monthlyHours.suppCompRetained = Math.max(0, soldeTotalFromWeeks);
      }
 
      // Fallback si pas de planning type unique
