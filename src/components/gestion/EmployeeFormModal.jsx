@@ -182,12 +182,12 @@ export default function EmployeeFormModal({ open, onClose, employee }) {
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="bg-slate-800 border-slate-700 max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="bg-slate-800 border-slate-700 max-w-3xl max-h-[95vh] overflow-hidden flex flex-col">
         <DialogHeader>
           <DialogTitle>{employee ? 'Modifier' : 'Nouvel'} employé</DialogTitle>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-6">
+        <form onSubmit={handleSubmit} className="space-y-6 overflow-y-auto flex-1 pr-4">
           <Tabs value={activeTab} onValueChange={setActiveTab}>
             <TabsList className="grid w-full grid-cols-4 bg-slate-700">
               <TabsTrigger value="identity">Identité</TabsTrigger>
@@ -446,9 +446,9 @@ export default function EmployeeFormModal({ open, onClose, employee }) {
                 </div>
               </div>
 
-              <div>
-                <Label className="text-base font-semibold mb-3 block">Jours contractuels</Label>
-                <div className="grid grid-cols-4 gap-3">
+              <div className="bg-slate-700 p-4 rounded-lg border border-slate-600">
+                <Label className="text-base font-semibold mb-4 block text-slate-200">Jours contractuels</Label>
+                <div className="grid grid-cols-7 gap-3">
                   {[
                     { key: 'monday', label: 'Lun' },
                     { key: 'tuesday', label: 'Mar' },
@@ -458,7 +458,7 @@ export default function EmployeeFormModal({ open, onClose, employee }) {
                     { key: 'saturday', label: 'Sam' },
                     { key: 'sunday', label: 'Dim' }
                   ].map(day => (
-                    <div key={day.key} className="flex items-center gap-2">
+                    <div key={day.key} className="flex flex-col items-center gap-2 p-2 bg-slate-800 rounded border border-slate-600 hover:border-slate-500 transition-colors">
                       <Checkbox
                         id={day.key}
                         checked={form.contract_days[day.key] || false}
@@ -469,9 +469,9 @@ export default function EmployeeFormModal({ open, onClose, employee }) {
                             [day.key]: checked
                           }
                         }))}
-                        className="bg-slate-700 border-slate-600"
+                        className="border-slate-400"
                       />
-                      <Label htmlFor={day.key} className="cursor-pointer font-medium text-sm mb-0">{day.label}</Label>
+                      <Label htmlFor={day.key} className="cursor-pointer font-medium text-xs text-slate-300">{day.label}</Label>
                     </div>
                   ))}
                 </div>
