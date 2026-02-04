@@ -4,6 +4,7 @@ import { Edit2, Check, X } from 'lucide-react';
 import { calculateMonthlyEmployeeHours } from './OvertimeCalculations';
 import { calculateShiftDuration } from './LegalChecks';
 import { calculateMonthlyCPTotal } from './paidLeaveCalculations';
+import { calculateDeductedHours, calculatePaidBaseHours, calculateMonthlyContractHours } from './DeductionCalculations';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
@@ -11,6 +12,7 @@ import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
+import { AlertTriangle } from 'lucide-react';
 
 export default function MonthlySummary({ employee, shifts, nonShiftEvents, nonShiftTypes, monthStart, monthEnd }) {
   const [showEditDialog, setShowEditDialog] = useState(false);
@@ -62,18 +64,23 @@ export default function MonthlySummary({ employee, shifts, nonShiftEvents, nonSh
   const daysWithShifts = new Set(employeeShifts.map(s => s.date));
   const autoDaysWorked = daysWithShifts.size;
 
-  // Total hours
+  // Total hours actually worked
   const autoTotalHours = employeeShifts.reduce((sum, shift) => sum + calculateShiftDuration(shift), 0);
 
-  // Contract hours
+  // Contract hours: monthly base from employee record
+  const autoMonthlyContractHours = calculateMonthlyContractHours(employee);
+  
+  // Deducted hours from non-shift events
+  const autoDeductedHours = calculateDeductedHours(employee, employeeNonShifts, nonShiftTypes, monthStart, monthEnd);
+  
+  // Paid base hours: contract - deducted
+  const autoPaidBaseHours = calculatePaidBaseHours(employee, employeeNonShifts, nonShiftTypes, monthStart, monthEnd);
+
+  // For overtime/complementary calculations, we still need weekly contract
   const isFullTime = employee?.work_time_type === 'full_time';
   const contractHoursWeekly = employee?.contract_hours_weekly 
     ? parseFloat(employee.contract_hours_weekly.replace(':', '.').replace(/h/g, ''))
     : (isFullTime ? 35 : 0);
-  
-  const days = Math.ceil((monthEnd - monthStart) / (1000 * 60 * 60 * 24)) + 1;
-  const weeks = days / 7;
-  const autoContractHours = contractHoursWeekly * weeks;
 
   // Overtime/complementary calculation
   let monthlyHours = { type: 'unknown', total: autoTotalHours };
@@ -163,7 +170,12 @@ export default function MonthlySummary({ employee, shifts, nonShiftEvents, nonSh
   // Apply manual overrides
   const daysWorked = manualRecap?.manual_days_worked ?? autoDaysWorked;
   const totalHours = manualRecap?.manual_total_hours ?? autoTotalHours;
-  const contractHours = manualRecap?.manual_contract_hours ?? autoContractHours;
+  const deductedHours = manualRecap?.manual_deducted_hours ?? autoDeductedHours;
+  
+  // Paid base can be overridden directly OR calculated from contract - deducted
+  const paidBaseHours = manualRecap?.manual_contract_hours 
+    ? manualRecap.manual_contract_hours 
+    : Math.max(0, autoMonthlyContractHours - deductedHours);
   
   let overtime_25 = monthlyHours.overtime_25 || 0;
   let overtime_50 = monthlyHours.overtime_50 || 0;
@@ -181,6 +193,9 @@ export default function MonthlySummary({ employee, shifts, nonShiftEvents, nonSh
   
   const cpDays = manualRecap?.manual_cp_days ?? autoCPDays;
   const hasManualOverride = !!manualRecap;
+
+  // Calculate total paid hours: base + overtime/complementary
+  const totalPaidHours = paidBaseHours + overtime_25 + overtime_50 + complementary_10 + complementary_25;
 
   return (
     <>
@@ -205,21 +220,29 @@ export default function MonthlySummary({ employee, shifts, nonShiftEvents, nonSh
           <span className="font-semibold">{daysWorked}</span> jour{daysWorked > 1 ? 's' : ''}
         </div>
 
-        {/* Total hours */}
-        <div className="text-lg font-bold text-gray-900">
-          {totalHours.toFixed(1)}h
+        {/* Base contractuelle payée (MAIN) */}
+        <div className="text-xl font-bold text-blue-900 mb-0.5">
+          {paidBaseHours.toFixed(1)}h
+        </div>
+        <div className="text-[9px] text-gray-600 font-semibold mb-2">
+          Base: {autoMonthlyContractHours.toFixed(1)}h
         </div>
 
-        {/* Contract base */}
-        {contractHours > 0 && (
-          <div className="text-[10px] text-gray-500">
-            Base: {contractHours.toFixed(1)}h
+        {/* Deducted hours warning */}
+        {deductedHours > 0 && (
+          <div className="text-[10px] text-red-700 font-semibold mb-1">
+            – {deductedHours.toFixed(1)}h décomptées
           </div>
         )}
 
+        {/* Heures effectuées (smaller) */}
+        <div className="text-xs text-gray-600 mb-1 pb-2 border-b border-gray-200">
+          Effectuées: {totalHours.toFixed(1)}h
+        </div>
+
         {/* Overtime/Complementary details */}
         {calculationMode !== 'disabled' && (
-          <div className="mt-2 space-y-0.5 text-[10px]">
+          <div className="mt-1 space-y-0.5 text-[10px]">
             {monthlyHours.type === 'full_time' && (overtime_25 > 0 || overtime_50 > 0) && (
               <>
                 {overtime_25 > 0 && (
@@ -248,6 +271,13 @@ export default function MonthlySummary({ employee, shifts, nonShiftEvents, nonSh
                   </div>
                 )}
               </>
+            )}
+
+            {/* Total paid hours */}
+            {(overtime_25 > 0 || overtime_50 > 0 || complementary_10 > 0 || complementary_25 > 0) && (
+              <div className="pt-1 mt-1 border-t border-gray-300 text-blue-900 font-bold">
+                Total payé: {totalPaidHours.toFixed(1)}h
+              </div>
             )}
           </div>
         )}
@@ -288,7 +318,9 @@ export default function MonthlySummary({ employee, shifts, nonShiftEvents, nonSh
         autoValues={{
           daysWorked: autoDaysWorked,
           totalHours: autoTotalHours,
-          contractHours: autoContractHours,
+          monthlyContractHours: autoMonthlyContractHours,
+          deductedHours: autoDeductedHours,
+          paidBaseHours: autoPaidBaseHours,
           overtime_25: monthlyHours.overtime_25 || 0,
           overtime_50: monthlyHours.overtime_50 || 0,
           complementary_10: monthlyHours.complementary_10 || 0,
@@ -312,6 +344,7 @@ function EditMonthlyRecapDialog({ open, onOpenChange, employee, year, month, aut
       setFormData({
         manual_days_worked: currentRecap?.manual_days_worked ?? '',
         manual_total_hours: currentRecap?.manual_total_hours ?? '',
+        manual_deducted_hours: currentRecap?.manual_deducted_hours ?? '',
         manual_contract_hours: currentRecap?.manual_contract_hours ?? '',
         manual_overtime_25: currentRecap?.manual_overtime_25 ?? '',
         manual_overtime_50: currentRecap?.manual_overtime_50 ?? '',
@@ -423,13 +456,39 @@ function EditMonthlyRecapDialog({ open, onOpenChange, employee, year, month, aut
                 type="number"
                 step="0.1"
                 min="0"
-                placeholder={`Auto: ${autoValues.contractHours.toFixed(1)}`}
+                placeholder={`Auto: ${autoValues.paidBaseHours.toFixed(1)}`}
                 value={formData.manual_contract_hours}
                 onChange={(e) => setFormData({...formData, manual_contract_hours: e.target.value})}
                 className="mt-1"
               />
+              <div className="text-[10px] text-gray-500 mt-1">
+                Contrat: {autoValues.monthlyContractHours.toFixed(1)}h
+                {autoValues.deductedHours > 0 && ` – ${autoValues.deductedHours.toFixed(1)}h décomptées`}
+              </div>
             </div>
           </div>
+
+          {/* Deducted hours */}
+          {autoValues.deductedHours > 0 && (
+            <div className="bg-orange-50 border border-orange-200 rounded-lg p-3">
+              <Label className="text-xs text-gray-700 font-semibold">Heures décomptées</Label>
+              <Input
+                type="number"
+                step="0.1"
+                min="0"
+                placeholder={`Auto: ${autoValues.deductedHours.toFixed(1)}`}
+                value={formData.manual_deducted_hours}
+                onChange={(e) => setFormData({...formData, manual_deducted_hours: e.target.value})}
+                className="mt-1"
+              />
+              <div className="flex items-start gap-2 mt-2">
+                <AlertTriangle className="w-4 h-4 text-orange-600 flex-shrink-0 mt-0.5" />
+                <p className="text-[10px] text-gray-600">
+                  Heures automatiquement déduites de la base contractuelle via les statuts (absences, maladie, etc.)
+                </p>
+              </div>
+            </div>
+          )}
 
           {/* Overtime/Complementary */}
           {monthlyHoursType === 'full_time' && (
