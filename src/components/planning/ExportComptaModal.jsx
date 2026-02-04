@@ -9,7 +9,7 @@ import { FileText, Send, Download, Loader2, AlertCircle, CheckCircle } from 'luc
 import { toast } from 'sonner';
 import { calculateShiftDuration } from './LegalChecks';
 import { calculateDeductedHours, calculatePaidBaseHours, calculateMonthlyContractHours } from './DeductionCalculations';
-import { calculateMonthlyEmployeeHours } from './OvertimeCalculations';
+
 import { calculateMonthlyCPTotal } from './paidLeaveCalculations';
 import { calculateHolidayHours } from './holidayCalculations';
 import { jsPDF } from 'jspdf';
@@ -130,23 +130,12 @@ export default function ExportComptaModal({ open, onOpenChange, monthStart, mont
       ? employeeRecap.manual_contract_hours 
       : Math.max(0, autoMonthlyContractHours - deductedHours);
 
-    // Calculate overtime/complementary
-    let monthlyHours = { type: 'unknown', total: totalHours };
-    if (calculationMode === 'monthly') {
-      monthlyHours = calculateMonthlyEmployeeHours(shifts, employee.id, monthStart, monthEnd, employee);
-    }
-
-    let overtime_25 = monthlyHours.overtime_25 || 0;
-    let overtime_50 = monthlyHours.overtime_50 || 0;
-    let complementary_10 = monthlyHours.complementary_10 || 0;
-    let complementary_25 = monthlyHours.complementary_25 || 0;
-
-    if (employeeRecap) {
-      if (employeeRecap.manual_overtime_25 !== undefined) overtime_25 = employeeRecap.manual_overtime_25;
-      if (employeeRecap.manual_overtime_50 !== undefined) overtime_50 = employeeRecap.manual_overtime_50;
-      if (employeeRecap.manual_complementary_10 !== undefined) complementary_10 = employeeRecap.manual_complementary_10;
-      if (employeeRecap.manual_complementary_25 !== undefined) complementary_25 = employeeRecap.manual_complementary_25;
-    }
+    // Placeholder for overtime/complementary calculation
+    // TO BE REBUILT: Simple protocol from scratch
+    let overtime_25 = 0;
+    let overtime_50 = 0;
+    let complementary_10 = 0;
+    let complementary_25 = 0;
 
     // Non-shifts visible in recap
     const autoNonShiftsCounts = {};
@@ -185,7 +174,7 @@ export default function ExportComptaModal({ open, onOpenChange, monthStart, mont
       nonShiftsCounts,
       cpDays,
       holidayHoursData,
-      type: monthlyHours.type
+
     };
   });
 
