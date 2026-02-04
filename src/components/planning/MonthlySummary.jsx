@@ -327,7 +327,9 @@ export default function MonthlySummary({ employee, shifts, nonShiftEvents, nonSh
         autoValues={{
           daysWorked: autoDaysWorked,
           totalHours: autoTotalHours,
-          contractHours: autoContractHours,
+          deductedHours: autoDeductedHours,
+          contractHoursPaid: autoContractHoursPaid,
+          monthlyContractHours: monthlyContractHours,
           overtime_25: monthlyHours.overtime_25 || 0,
           overtime_50: monthlyHours.overtime_50 || 0,
           complementary_10: monthlyHours.complementary_10 || 0,
