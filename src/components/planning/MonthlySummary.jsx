@@ -317,15 +317,11 @@ export default function MonthlySummary({ employee, shifts, nonShiftEvents, nonSh
           deductedHours: autoDeductedHours,
           deductedDetails: autoDeductedDetails,
           paidBaseHours: autoPaidBaseHours,
-          overtime_25: monthlyHours.overtime_25 || 0,
-          overtime_50: monthlyHours.overtime_50 || 0,
-          complementary_10: monthlyHours.complementary_10 || 0,
-          complementary_25: monthlyHours.complementary_25 || 0,
+          suppCompRetained: suppCompRetained,
           nonShiftsCounts: autoNonShiftsCounts,
           cpDays: autoCPDays
         }}
         currentRecap={manualRecap}
-        monthlyHoursType={monthlyHours.type}
       />
     </>
   );
