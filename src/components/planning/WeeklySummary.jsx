@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { cn } from '@/lib/utils';
 import { AlertTriangle, Trash2, ArrowDown, Bug } from 'lucide-react';
 import { calculateWeeklyHours } from './LegalChecks';
-import { calculateWeeklyEmployeeHours } from './OvertimeCalculations';
+import { calculateWeeklyEmployeeHours, calculateWeeklySaldeForSmoothing } from './OvertimeCalculations';
 import { useQuery } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 
@@ -24,6 +24,12 @@ export default function WeeklySummary({ employee, shifts, weekStart, onDeleteWee
   let weekHours;
   if (calculationMode === 'weekly') {
     weekHours = calculateWeeklyEmployeeHours(shifts, employee.id, weekStart, employee, debugMode, nonShiftEvents, nonShiftTypes);
+  } else if (calculationMode === 'monthly') {
+    // Mode lissage mensuel : afficher le solde hebdo
+    weekHours = calculateWeeklyEmployeeHours(shifts, employee.id, weekStart, employee, debugMode, nonShiftEvents, nonShiftTypes);
+    // Ajouter le solde pour affichage
+    const weeklySaldeData = calculateWeeklySaldeForSmoothing(shifts, employee.id, weekStart, employee, nonShiftEvents, nonShiftTypes);
+    weekHours.salde = weeklySaldeData.salde;
   } else {
     // Fallback to basic calculation
     weekHours = calculateWeeklyHours(shifts, employee.id, weekStart, debugMode, nonShiftEvents, nonShiftTypes, employee);
@@ -170,10 +176,17 @@ export default function WeeklySummary({ employee, shifts, weekStart, onDeleteWee
         </div>
       )}
 
-      {/* Mode mensuel - info uniquement */}
+      {/* Mode mensuel (lissage) - afficher le solde hebdomadaire */}
       {calculationMode === 'monthly' && weekHours.total > 0 && (
-        <div className="text-[10px] text-gray-500">
-          Calcul mensuel
+        <div className="text-[10px] space-y-0.5">
+          {weekHours.salde !== undefined && (
+            <div className={cn(
+              "font-semibold px-1 py-0.5 rounded",
+              weekHours.salde === 0 ? "text-gray-600" : weekHours.salde > 0 ? "text-blue-700 bg-blue-50" : "text-gray-500"
+            )}>
+              Solde: {weekHours.salde > 0 ? '+' : ''}{weekHours.salde.toFixed(1)}h
+            </div>
+          )}
         </div>
       )}
 

@@ -101,7 +101,7 @@ export default function MonthlySummary({ employee, shifts, nonShiftEvents, nonSh
   // Overtime/complementary calculation
   let monthlyHours = { type: 'unknown', total: autoTotalHours };
   if (calculationMode === 'monthly') {
-    monthlyHours = calculateMonthlyEmployeeHours(shifts, employee.id, monthStart, monthEnd, employee);
+    monthlyHours = calculateMonthlyEmployeeHours(shifts, employee.id, monthStart, monthEnd, employee, nonShiftEvents, nonShiftTypes);
   } else if (calculationMode === 'weekly') {
     // Sum up weekly calculations
     const weeklyData = [];
@@ -309,7 +309,22 @@ export default function MonthlySummary({ employee, shifts, nonShiftEvents, nonSh
           Effectuées: {totalHours.toFixed(1)}h
         </div>
 
-        {/* Overtime/Complementary details */}
+        {/* Mode lissage mensuel - afficher le cumul des soldes */}
+        {calculationMode === 'monthly' && monthlyHours.totalSalde !== undefined && (
+          <div className="mt-2 pt-2 border-t border-gray-200 space-y-1 text-[10px]">
+            <div className={cn(
+              "font-bold px-2 py-1 rounded",
+              monthlyHours.totalSalde <= 0 ? "bg-gray-100 text-gray-700" : "bg-blue-50 text-blue-900"
+            )}>
+              Solde cumulé: {monthlyHours.totalSalde > 0 ? '+' : ''}{monthlyHours.totalSalde.toFixed(1)}h
+            </div>
+            <div className="text-gray-600">
+              Supp/Comp retenues: {monthlyHours.smoothedSalde.toFixed(1)}h
+            </div>
+          </div>
+        )}
+
+        {/* Overtime/Complementary details (weekly mode + monthly with solde) */}
         {calculationMode !== 'disabled' && (
           <div className="mt-1 space-y-0.5 text-[10px]">
             {monthlyHours.type === 'full_time' && (overtime_25 > 0 || overtime_50 > 0) && (
