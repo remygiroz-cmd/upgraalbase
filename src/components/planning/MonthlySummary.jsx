@@ -487,70 +487,7 @@ function EditMonthlyRecapDialog({ open, onOpenChange, employee, year, month, aut
             </div>
           </div>
 
-          {/* Overtime/Complementary */}
-          {monthlyHoursType === 'full_time' && (
-            <div>
-              <h3 className="font-semibold text-gray-900 mb-3">Heures supplémentaires</h3>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label className="text-xs text-gray-700">Heures +25%</Label>
-                  <Input
-                    type="number"
-                    step="0.1"
-                    min="0"
-                    placeholder={`Auto: ${autoValues.overtime_25.toFixed(1)}`}
-                    value={formData.manual_overtime_25}
-                    onChange={(e) => setFormData({...formData, manual_overtime_25: e.target.value})}
-                    className="mt-1"
-                  />
-                </div>
-                <div>
-                  <Label className="text-xs text-gray-700">Heures +50%</Label>
-                  <Input
-                    type="number"
-                    step="0.1"
-                    min="0"
-                    placeholder={`Auto: ${autoValues.overtime_50.toFixed(1)}`}
-                    value={formData.manual_overtime_50}
-                    onChange={(e) => setFormData({...formData, manual_overtime_50: e.target.value})}
-                    className="mt-1"
-                  />
-                </div>
-              </div>
-            </div>
-          )}
 
-          {monthlyHoursType === 'part_time' && (
-            <div>
-              <h3 className="font-semibold text-gray-900 mb-3">Heures complémentaires</h3>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label className="text-xs text-gray-700">Heures +10%</Label>
-                  <Input
-                    type="number"
-                    step="0.1"
-                    min="0"
-                    placeholder={`Auto: ${autoValues.complementary_10.toFixed(1)}`}
-                    value={formData.manual_complementary_10}
-                    onChange={(e) => setFormData({...formData, manual_complementary_10: e.target.value})}
-                    className="mt-1"
-                  />
-                </div>
-                <div>
-                  <Label className="text-xs text-gray-700">Heures +25%</Label>
-                  <Input
-                    type="number"
-                    step="0.1"
-                    min="0"
-                    placeholder={`Auto: ${autoValues.complementary_25.toFixed(1)}`}
-                    value={formData.manual_complementary_25}
-                    onChange={(e) => setFormData({...formData, manual_complementary_25: e.target.value})}
-                    className="mt-1"
-                  />
-                </div>
-              </div>
-            </div>
-          )}
 
           {/* CP Days */}
           <div>
