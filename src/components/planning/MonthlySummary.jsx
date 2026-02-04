@@ -227,15 +227,23 @@ export default function MonthlySummary({ employee, shifts, nonShiftEvents, nonSh
           <span className="font-semibold">{daysWorked}</span> jour{daysWorked > 1 ? 's' : ''}
         </div>
 
-        {/* Total hours */}
-        <div className="text-lg font-bold text-gray-900">
-          {totalHours.toFixed(1)}h
+        {/* Base contractuelle payée (main value) */}
+        <div className="text-xl font-bold text-blue-900 mb-1">
+          {contractHoursPaid.toFixed(1)}h
+        </div>
+        <div className="text-[9px] text-gray-500 uppercase font-semibold">
+          Base payée
         </div>
 
-        {/* Contract base */}
-        {contractHours > 0 && (
-          <div className="text-[10px] text-gray-500">
-            Base: {contractHours.toFixed(1)}h
+        {/* Heures réellement effectuées */}
+        <div className="text-xs text-gray-700 mt-2">
+          ✓ Effectuées: {totalHours.toFixed(1)}h
+        </div>
+
+        {/* Heures décomptées */}
+        {deductedHours > 0 && (
+          <div className="text-[10px] text-red-600">
+            − Décomptées: {deductedHours.toFixed(1)}h
           </div>
         )}
 
