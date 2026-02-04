@@ -71,6 +71,38 @@ export const getWorkedHoursForWeek = (shifts, employeeId, weekStart, monthStart,
 };
 
 /**
+ * FONCTION UNIQUE DE CALCUL DE SOLDE HEBDO
+ * Utilisée par WeeklySummary ET MonthlySummary pour garantir l'identité des calculs
+ * 
+ * Retourne { expectedWeek, workedWeek, salde } calculés sur les jours du mois uniquement
+ * 
+ * BASE = CONTRAT (heures_contractuelles_semaine)
+ * Prorata sur les jours contractuels inclus dans la semaine ET le mois
+ */
+export const getWeeklySummaryDataForMonth = (
+  shifts,
+  employeeId,
+  weekStart,
+  monthStart,
+  monthEnd,
+  employee,
+  nonShiftEvents = [],
+  nonShiftTypes = []
+) => {
+  // Appel calculateWeeklySaldeForSmoothing (même logique)
+  return calculateWeeklySaldeForSmoothing(
+    shifts,
+    employeeId,
+    weekStart,
+    monthStart,
+    monthEnd,
+    employee,
+    nonShiftEvents,
+    nonShiftTypes
+  );
+};
+
+/**
  * Calcule le solde hebdomadaire pour le mode lissage
  * BASE = CONTRAT (heures_contractuelles_semaine)
  * Prorata sur les jours contractuels inclus dans la semaine ET le mois
