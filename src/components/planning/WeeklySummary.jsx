@@ -2,11 +2,12 @@ import React, { useState } from 'react';
 import { cn } from '@/lib/utils';
 import { AlertTriangle, Trash2, ArrowDown, Bug } from 'lucide-react';
 import { calculateWeeklyHours } from './LegalChecks';
-import { calculateWeeklyEmployeeHours, calculateWeeklySaldeForSmoothing } from './OvertimeCalculations';
+import { calculateWeeklyEmployeeHours } from './OvertimeCalculations';
+import { calculateWeeklySaldeForSmoothing } from './smoothingCalculations';
 import { useQuery } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 
-export default function WeeklySummary({ employee, shifts, weekStart, onDeleteWeek, onCopyFromAbove, nonShiftEvents = [], nonShiftTypes = [] }) {
+export default function WeeklySummary({ employee, shifts, weekStart, onDeleteWeek, onCopyFromAbove, nonShiftEvents = [], nonShiftTypes = [], monthStart, monthEnd }) {
   const [showConfirm, setShowConfirm] = useState(false);
   const [debugMode, setDebugMode] = useState(false);
 
@@ -18,6 +19,20 @@ export default function WeeklySummary({ employee, shifts, weekStart, onDeleteWee
     }
   });
 
+  // Fetch template weeks for lissage mode
+  const { data: templateWeeks = [] } = useQuery({
+    queryKey: ['templateWeeks', employee.id],
+    queryFn: () => base44.entities.TemplateWeek.filter({ employee_id: employee.id }),
+    enabled: calculationMode === 'monthly'
+  });
+
+  // Fetch template shifts for lissage mode
+  const { data: templateShifts = [] } = useQuery({
+    queryKey: ['templateShifts'],
+    queryFn: () => base44.entities.TemplateShift.list(),
+    enabled: calculationMode === 'monthly'
+  });
+
   const calculationMode = settings[0]?.planning_calculation_mode || 'disabled';
 
   // Calculate hours based on mode
@@ -25,11 +40,24 @@ export default function WeeklySummary({ employee, shifts, weekStart, onDeleteWee
   if (calculationMode === 'weekly') {
     weekHours = calculateWeeklyEmployeeHours(shifts, employee.id, weekStart, employee, debugMode, nonShiftEvents, nonShiftTypes);
   } else if (calculationMode === 'monthly') {
-    // Mode lissage mensuel : afficher le solde hebdo
+    // Mode lissage mensuel : afficher le solde hebdo basé sur planning type
     weekHours = calculateWeeklyEmployeeHours(shifts, employee.id, weekStart, employee, debugMode, nonShiftEvents, nonShiftTypes);
-    // Ajouter le solde pour affichage
-    const weeklySaldeData = calculateWeeklySaldeForSmoothing(shifts, employee.id, weekStart, employee, nonShiftEvents, nonShiftTypes);
-    weekHours.salde = weeklySaldeData.salde;
+    // Calculer solde avec planning type
+    if (monthStart && monthEnd) {
+      const saldeData = calculateWeeklySaldeForSmoothing(
+        shifts,
+        employee.id,
+        weekStart,
+        monthStart,
+        monthEnd,
+        templateWeeks,
+        templateShifts,
+        employee,
+        nonShiftEvents,
+        nonShiftTypes
+      );
+      weekHours.saldeData = saldeData;
+    }
   } else {
     // Fallback to basic calculation
     weekHours = calculateWeeklyHours(shifts, employee.id, weekStart, debugMode, nonShiftEvents, nonShiftTypes, employee);
@@ -176,15 +204,27 @@ export default function WeeklySummary({ employee, shifts, weekStart, onDeleteWee
         </div>
       )}
 
-      {/* Mode mensuel (lissage) - afficher le solde hebdomadaire */}
-      {calculationMode === 'monthly' && weekHours.total > 0 && (
+      {/* Mode mensuel (lissage) - afficher prévu/effectué/solde */}
+      {calculationMode === 'monthly' && weekHours.saldeData && (
         <div className="text-[10px] space-y-0.5">
-          {weekHours.salde !== undefined && (
-            <div className={cn(
-              "font-semibold px-1 py-0.5 rounded",
-              weekHours.salde === 0 ? "text-gray-600" : weekHours.salde > 0 ? "text-blue-700 bg-blue-50" : "text-gray-500"
-            )}>
-              Solde: {weekHours.salde > 0 ? '+' : ''}{weekHours.salde.toFixed(1)}h
+          {weekHours.saldeData.status === 'calculated' ? (
+            <>
+              <div className="text-gray-600">
+                Prévu: {weekHours.saldeData.expectedWeek.toFixed(1)}h
+              </div>
+              <div className="text-gray-600">
+                Effectué: {weekHours.saldeData.workedWeek.toFixed(1)}h
+              </div>
+              <div className={cn(
+                "font-semibold px-1 py-0.5 rounded",
+                weekHours.saldeData.salde === 0 ? "text-gray-600 bg-gray-50" : weekHours.saldeData.salde > 0 ? "text-blue-700 bg-blue-50" : "text-red-700 bg-red-50"
+              )}>
+                Solde: {weekHours.saldeData.salde > 0 ? '+' : ''}{weekHours.saldeData.salde.toFixed(1)}h
+              </div>
+            </>
+          ) : (
+            <div className="text-orange-600 italic text-[9px]">
+              ⚠️ {weekHours.saldeData.reason}
             </div>
           )}
         </div>
