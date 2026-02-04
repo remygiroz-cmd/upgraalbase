@@ -1,8 +1,11 @@
 /**
- * Calculate deducted hours from non-shift events based on type configuration
+ * Calculate deducted hours from non-shift events based on "Impacte la paie"
+ * Returns both total and detail by type
  */
 export function calculateDeductedHours(employee, nonShiftEvents, nonShiftTypes, monthStart, monthEnd) {
-  if (!employee || !nonShiftEvents || !nonShiftTypes) return 0;
+  if (!employee || !nonShiftEvents || !nonShiftTypes) {
+    return { total: 0, details: [] };
+  }
 
   // Filter events for this employee in this month
   const monthStartStr = formatDate(monthStart);
@@ -14,42 +17,70 @@ export function calculateDeductedHours(employee, nonShiftEvents, nonShiftTypes, 
     e.date <= monthEndStr
   );
 
-  let totalDeducted = 0;
+  // Calculate daily hours once
+  const dailyHours = calculateDailyContractHours(employee);
+  
+  // Group by type
+  const deductionsByType = {};
 
   employeeEvents.forEach(event => {
     const type = nonShiftTypes.find(t => t.id === event.non_shift_type_id);
     
-    // Only deduct if type is configured to deduct hours
-    if (!type || !type.deducts_hours) return;
+    // Only deduct if type has "Impacte la paie" enabled
+    if (!type || !type.impacts_payroll) return;
 
-    if (type.deduction_mode === 'manual' && type.deduction_hours_per_day) {
-      // Manual: fixed hours per day
-      totalDeducted += type.deduction_hours_per_day;
-    } else {
-      // Auto: calculate based on contract
-      const dailyHours = calculateDailyContractHours(employee);
-      totalDeducted += dailyHours;
+    if (!deductionsByType[type.label]) {
+      deductionsByType[type.label] = {
+        label: type.label,
+        count: 0,
+        hoursPerDay: dailyHours,
+        totalHours: 0
+      };
     }
+
+    deductionsByType[type.label].count += 1;
+    deductionsByType[type.label].totalHours += dailyHours;
   });
 
-  return totalDeducted;
+  // Convert to array and calculate total
+  const details = Object.values(deductionsByType);
+  const total = details.reduce((sum, d) => sum + d.totalHours, 0);
+
+  return { total, details };
 }
 
 /**
  * Calculate daily contract hours for an employee
+ * Cas standard: heures_semaine / jours_semaine
+ * Cas CDD courte durée: heures_totales / jours_totaux
  */
 function calculateDailyContractHours(employee) {
-  // Get weekly contract hours
+  if (!employee) return 0;
+
+  // Check if CDD courte durée (has contract_total_hours and contract_total_days)
+  const isCDDCourteDuree = employee.contract_type === 'cdd' && 
+                            employee.contract_total_hours && 
+                            employee.contract_total_days;
+
+  if (isCDDCourteDuree) {
+    // CDD courte durée: heures_totales / jours_totaux
+    const totalHours = parseFloat(String(employee.contract_total_hours).replace(':', '.').replace(/h/g, ''));
+    const totalDays = employee.contract_total_days;
+    
+    if (totalHours > 0 && totalDays > 0) {
+      return totalHours / totalDays;
+    }
+  }
+
+  // Cas standard: heures_semaine / jours_semaine
   const contractHoursWeekly = employee?.contract_hours_weekly 
     ? parseFloat(employee.contract_hours_weekly.replace(':', '.').replace(/h/g, ''))
     : 0;
   
-  // Get work days per week (default to 5 if not specified)
   const workDaysPerWeek = employee?.work_days_per_week || 5;
 
   if (contractHoursWeekly === 0 || workDaysPerWeek === 0) return 0;
 
-  // Daily hours = weekly hours / work days per week
   return contractHoursWeekly / workDaysPerWeek;
 }
 
@@ -82,8 +113,8 @@ export function calculateMonthlyContractHours(employee) {
  */
 export function calculatePaidBaseHours(employee, nonShiftEvents, nonShiftTypes, monthStart, monthEnd) {
   const contractHours = calculateMonthlyContractHours(employee);
-  const deductedHours = calculateDeductedHours(employee, nonShiftEvents, nonShiftTypes, monthStart, monthEnd);
+  const deductedData = calculateDeductedHours(employee, nonShiftEvents, nonShiftTypes, monthStart, monthEnd);
   
   // Ensure paid base doesn't go negative
-  return Math.max(0, contractHours - deductedHours);
+  return Math.max(0, contractHours - deductedData.total);
 }

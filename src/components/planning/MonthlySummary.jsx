@@ -70,8 +70,10 @@ export default function MonthlySummary({ employee, shifts, nonShiftEvents, nonSh
   // Contract hours: monthly base from employee record
   const autoMonthlyContractHours = calculateMonthlyContractHours(employee);
   
-  // Deducted hours from non-shift events
-  const autoDeductedHours = calculateDeductedHours(employee, employeeNonShifts, nonShiftTypes, monthStart, monthEnd);
+  // Deducted hours from non-shift events (with details)
+  const autoDeductedData = calculateDeductedHours(employee, employeeNonShifts, nonShiftTypes, monthStart, monthEnd);
+  const autoDeductedHours = autoDeductedData.total;
+  const autoDeductedDetails = autoDeductedData.details;
   
   // Paid base hours: contract - deducted
   const autoPaidBaseHours = calculatePaidBaseHours(employee, employeeNonShifts, nonShiftTypes, monthStart, monthEnd);
@@ -228,15 +230,27 @@ export default function MonthlySummary({ employee, shifts, nonShiftEvents, nonSh
           Base: {autoMonthlyContractHours.toFixed(1)}h
         </div>
 
-        {/* Deducted hours warning */}
+        {/* Deducted hours detail */}
         {deductedHours > 0 && (
-          <div className="text-[10px] text-red-700 font-semibold mb-1">
-            – {deductedHours.toFixed(1)}h décomptées
+          <div className="mb-2 pb-2 border-b border-gray-200">
+            <div className="text-[10px] text-red-700 font-bold mb-1">
+              – {deductedHours.toFixed(1)}h décomptées
+            </div>
+            {autoDeductedDetails.length > 0 && (
+              <div className="text-[9px] text-gray-600 space-y-0.5">
+                {autoDeductedDetails.map((detail, idx) => (
+                  <div key={idx} className="flex justify-between items-center">
+                    <span>{detail.label}: {detail.count}j</span>
+                    <span className="font-semibold">{detail.totalHours.toFixed(1)}h</span>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         )}
 
         {/* Heures effectuées (smaller) */}
-        <div className="text-xs text-gray-600 mb-1 pb-2 border-b border-gray-200">
+        <div className="text-xs text-gray-600 mb-2">
           Effectuées: {totalHours.toFixed(1)}h
         </div>
 
@@ -320,6 +334,7 @@ export default function MonthlySummary({ employee, shifts, nonShiftEvents, nonSh
           totalHours: autoTotalHours,
           monthlyContractHours: autoMonthlyContractHours,
           deductedHours: autoDeductedHours,
+          deductedDetails: autoDeductedDetails,
           paidBaseHours: autoPaidBaseHours,
           overtime_25: monthlyHours.overtime_25 || 0,
           overtime_50: monthlyHours.overtime_50 || 0,
@@ -469,26 +484,35 @@ function EditMonthlyRecapDialog({ open, onOpenChange, employee, year, month, aut
           </div>
 
           {/* Deducted hours */}
-          {autoValues.deductedHours > 0 && (
-            <div className="bg-orange-50 border border-orange-200 rounded-lg p-3">
-              <Label className="text-xs text-gray-700 font-semibold">Heures décomptées</Label>
-              <Input
-                type="number"
-                step="0.1"
-                min="0"
-                placeholder={`Auto: ${autoValues.deductedHours.toFixed(1)}`}
-                value={formData.manual_deducted_hours}
-                onChange={(e) => setFormData({...formData, manual_deducted_hours: e.target.value})}
-                className="mt-1"
-              />
-              <div className="flex items-start gap-2 mt-2">
-                <AlertTriangle className="w-4 h-4 text-orange-600 flex-shrink-0 mt-0.5" />
-                <p className="text-[10px] text-gray-600">
-                  Heures automatiquement déduites de la base contractuelle via les statuts (absences, maladie, etc.)
-                </p>
+          <div className="bg-orange-50 border border-orange-200 rounded-lg p-3">
+            <Label className="text-xs text-gray-700 font-semibold">Heures décomptées paie</Label>
+            <Input
+              type="number"
+              step="0.1"
+              min="0"
+              placeholder={`Auto: ${autoValues.deductedHours.toFixed(1)}`}
+              value={formData.manual_deducted_hours}
+              onChange={(e) => setFormData({...formData, manual_deducted_hours: e.target.value})}
+              className="mt-1"
+            />
+            {autoValues.deductedDetails && autoValues.deductedDetails.length > 0 && (
+              <div className="mt-2 text-[10px] text-gray-700 space-y-1">
+                <div className="font-semibold mb-1">Détail auto :</div>
+                {autoValues.deductedDetails.map((detail, idx) => (
+                  <div key={idx} className="flex justify-between items-center">
+                    <span>{detail.label}: {detail.count}j × {detail.hoursPerDay.toFixed(2)}h</span>
+                    <span className="font-semibold">{detail.totalHours.toFixed(1)}h</span>
+                  </div>
+                ))}
               </div>
+            )}
+            <div className="flex items-start gap-2 mt-2">
+              <AlertTriangle className="w-4 h-4 text-orange-600 flex-shrink-0 mt-0.5" />
+              <p className="text-[10px] text-gray-600">
+                Heures déduites via les statuts ayant "Impacte la paie" activé. Calcul basé sur heures contractuelles/jour.
+              </p>
             </div>
-          )}
+          </div>
 
           {/* Overtime/Complementary */}
           {monthlyHoursType === 'full_time' && (
