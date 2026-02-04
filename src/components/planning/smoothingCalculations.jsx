@@ -1,6 +1,12 @@
 /**
  * Calculs pour le mode "Calcul mensuel (lissage)"
- * Basé sur le planning type pour les heures prévues
+ * Basé sur le CONTRAT pour les heures prévues (pas sur le planning type)
+ * 
+ * OBJECTIF :
+ * - Calculer un solde semaine par semaine sur les jours du mois uniquement
+ * - Base "prévu" = heures contractuelles semaine (ex 35h)
+ * - Semaines partielles (début/fin de mois) : prorata sur jours inclus
+ * - Éviter double-compte des shifts (déduplicar par shift_id)
  */
 
 import { calculateShiftDuration } from './LegalChecks';
@@ -8,58 +14,71 @@ import { formatLocalDate, parseLocalDate } from './dateUtils';
 import { calculateNonShiftGeneratedHours } from './NonShiftHoursCalculations';
 
 /**
- * Récupère les heures prévues pour un jour spécifique selon le planning type
- * @param {Date} date - La date pour laquelle on veut les heures prévues
- * @param {Array} templateWeeks - Liste des TemplateWeek pour l'employé
- * @param {Array} templateShifts - Liste des TemplateShift
- * @returns {number} Heures prévues ce jour, ou 0 si pas de planning type unique ou jour non prévu
+ * Récupère les jours contractuels de l'employé (Lun-Dim)
+ * Retourne un Set avec les jours travaillés selon le contrat (1=Lundi, 7=Dimanche)
  */
-export const getExpectedHoursForDay = (date, templateWeeks, templateShifts) => {
-  // Vérifier qu'il y a exactement un planning type
-  if (!templateWeeks || templateWeeks.length !== 1) {
-    return null; // Non calculable
+const getContractualDaysOfWeek = (employee) => {
+  if (!employee?.contract_days) {
+    // Fallback : par défaut Lun-Ven
+    return new Set([1, 2, 3, 4, 5]);
   }
 
-  const template = templateWeeks[0];
-  
-  // Déterminer le jour de semaine (1=Lundi, 7=Dimanche)
-  const jsDay = date.getDay(); // 0=Dimanche, 1=Lundi, ..., 6=Samedi
-  const dayOfWeek = jsDay === 0 ? 7 : jsDay; // ISO: 1=Lundi, 7=Dimanche
+  const days = new Set();
+  if (employee.contract_days.monday) days.add(1);
+  if (employee.contract_days.tuesday) days.add(2);
+  if (employee.contract_days.wednesday) days.add(3);
+  if (employee.contract_days.thursday) days.add(4);
+  if (employee.contract_days.friday) days.add(5);
+  if (employee.contract_days.saturday) days.add(6);
+  if (employee.contract_days.sunday) days.add(7);
 
-  // Trouver tous les template shifts pour ce jour
-  const dayTemplates = templateShifts.filter(ts => 
-    ts.template_week_id === template.id && ts.day_of_week === dayOfWeek
-  );
-
-  // Calculer la durée totale prévue ce jour
-  let expectedHours = 0;
-  dayTemplates.forEach(ts => {
-    const [startHour, startMin] = ts.start_time.split(':').map(Number);
-    const [endHour, endMin] = ts.end_time.split(':').map(Number);
-    const startMinutes = startHour * 60 + startMin;
-    const endMinutes = endHour * 60 + endMin;
-    const breakMinutes = ts.break_minutes || 0;
-    const durationMinutes = endMinutes - startMinutes - breakMinutes;
-    expectedHours += durationMinutes / 60;
-  });
-
-  return expectedHours;
+  return days;
 };
 
 /**
- * Récupère les heures effectuées pour un jour spécifique
+ * Calcule les heures effectuées pour une semaine (avec prorata pour semaines partielles)
+ * IMPORTANT : Déduplique strictement par shift_id pour éviter les doubles comptes
  */
-export const getWorkedHoursForDay = (dateStr, shifts, employeeId) => {
-  const dayShifts = shifts.filter(s => 
-    s.employee_id === employeeId && s.date === dateStr
-  );
+export const getWorkedHoursForWeek = (shifts, employeeId, weekStart, monthStart, monthEnd) => {
+  const weekEnd = new Date(weekStart);
+  weekEnd.setDate(weekEnd.getDate() + 6);
 
-  return dayShifts.reduce((sum, shift) => sum + calculateShiftDuration(shift), 0);
+  // Filtrer les shifts : employé + dates incluses dans [weekStart, weekEnd] ET [monthStart, monthEnd]
+  const effectiveStart = new Date(Math.max(weekStart.getTime(), monthStart.getTime()));
+  const effectiveEnd = new Date(Math.min(weekEnd.getTime(), monthEnd.getTime()));
+
+  const startStr = formatLocalDate(effectiveStart);
+  const endStr = formatLocalDate(effectiveEnd);
+
+  // Déduplicar par shift_id AVANT de sommer (ANTI DOUBLE-COMPTE)
+  const shiftIds = new Set();
+  const uniqueShifts = [];
+
+  shifts.forEach(shift => {
+    if (shift.employee_id !== employeeId) return;
+    if (shift.date < startStr || shift.date > endStr) return;
+    
+    if (!shiftIds.has(shift.id)) {
+      shiftIds.add(shift.id);
+      uniqueShifts.push(shift);
+    }
+  });
+
+  // Sommer les heures (chaque shift une seule fois)
+  const totalWorkedHours = uniqueShifts.reduce((sum, shift) => sum + calculateShiftDuration(shift), 0);
+
+  return totalWorkedHours;
 };
 
 /**
  * Calcule le solde hebdomadaire pour le mode lissage
- * Prend en compte UNIQUEMENT les jours du mois inclus dans la semaine
+ * BASE = CONTRAT (heures_contractuelles_semaine)
+ * Prorata sur les jours contractuels inclus dans la semaine ET le mois
+ * 
+ * Méthode :
+ * 1) heuresContratParJour = heuresContratSemaine / joursContratParSemaine
+ * 2) joursContratInclus = nombre de jours "contractuels" dans [weekStart, weekEnd] ∩ [monthStart, monthEnd]
+ * 3) prévuSemaine = joursContratInclus * heuresContratParJour
  */
 export const calculateWeeklySaldeForSmoothing = (
   shifts,
@@ -67,76 +86,99 @@ export const calculateWeeklySaldeForSmoothing = (
   weekStart,
   monthStart,
   monthEnd,
-  templateWeeks,
-  templateShifts,
   employee,
   nonShiftEvents = [],
   nonShiftTypes = []
 ) => {
-  // Vérifier qu'il y a un planning type unique
-  if (!templateWeeks || templateWeeks.length !== 1) {
+  // Vérifier les données d'employé
+  if (!employee) {
     return {
       status: 'not_calculable',
       expectedWeek: null,
       workedWeek: null,
       salde: null,
-      reason: templateWeeks && templateWeeks.length > 1 
-        ? 'Plusieurs plannings types'
-        : 'Aucun planning type'
+      reason: 'Données employé manquantes'
     };
   }
 
   const weekEnd = new Date(weekStart);
   weekEnd.setDate(weekEnd.getDate() + 6);
 
-  let expectedWeek = 0;
-  let workedWeek = 0;
+  // A) Récupérer heures contractuelles semaine
+  const isFullTime = employee.work_time_type === 'full_time';
+  let contractHoursWeekly = 35; // Défaut temps plein
+  
+  if (employee.contract_hours_weekly) {
+    if (typeof employee.contract_hours_weekly === 'string') {
+      // Format "HH:MM" → décimal
+      const [h, m] = employee.contract_hours_weekly.split(':').map(Number);
+      contractHoursWeekly = h + (m / 60);
+    } else {
+      contractHoursWeekly = parseFloat(employee.contract_hours_weekly);
+    }
+  } else if (!isFullTime) {
+    contractHoursWeekly = 0;
+  }
+
+  // B) Nombre de jours contractuels par semaine
+  const contractualDays = getContractualDaysOfWeek(employee);
+  const joursContratParSemaine = contractualDays.size || 5; // Fallback Lun-Ven
+
+  // C) Heures par jour contractuel
+  const heuresContratParJour = contractHoursWeekly / joursContratParSemaine;
+
+  // D) Compter les jours contractuels inclus dans la semaine ET le mois
+  const effectiveStart = new Date(Math.max(weekStart.getTime(), monthStart.getTime()));
+  const effectiveEnd = new Date(Math.min(weekEnd.getTime(), monthEnd.getTime()));
+
+  let joursContratInclus = 0;
   const daysIncluded = [];
 
-  // Itérer sur chaque jour de la semaine
-  for (let d = new Date(weekStart); d <= weekEnd; d.setDate(d.getDate() + 1)) {
-    const dateObj = new Date(d);
-    
-    // CONTRAINTE : ne traiter que les jours du mois
-    if (dateObj < monthStart || dateObj > monthEnd) {
-      continue;
+  for (let d = new Date(effectiveStart); d <= effectiveEnd; d.setDate(d.getDate() + 1)) {
+    const jsDay = d.getDay(); // 0=Dimanche, 1=Lundi, ..., 6=Samedi
+    const isoDay = jsDay === 0 ? 7 : jsDay; // ISO: 1=Lundi, 7=Dimanche
+
+    if (contractualDays.has(isoDay)) {
+      joursContratInclus++;
     }
 
-    const dateStr = formatLocalDate(dateObj);
-
-    // Heures prévues ce jour selon planning type
-    const expectedDay = getExpectedHoursForDay(dateObj, templateWeeks, templateShifts);
-    if (expectedDay !== null) {
-      expectedWeek += expectedDay;
-    }
-
-    // Heures effectuées ce jour
-    const workedDay = getWorkedHoursForDay(dateStr, shifts, employeeId);
-    workedWeek += workedDay;
-
+    const dateStr = formatLocalDate(d);
     daysIncluded.push({
       date: dateStr,
-      expected: expectedDay,
-      worked: workedDay
+      isContractual: contractualDays.has(isoDay)
     });
   }
 
-  // Solde = effectué - prévu
+  // E) Calcul du prévu
+  const expectedWeek = joursContratInclus * heuresContratParJour;
+
+  // F) Heures effectuées (shifts uniquement, pas non-shifts)
+  const workedWeek = getWorkedHoursForWeek(shifts, employeeId, weekStart, monthStart, monthEnd);
+
+  // G) Solde
   const salde = workedWeek - expectedWeek;
 
   return {
     status: 'calculated',
-    expectedWeek,
-    workedWeek,
-    salde,
+    expectedWeek: Math.round(expectedWeek * 100) / 100,
+    workedWeek: Math.round(workedWeek * 100) / 100,
+    salde: Math.round(salde * 100) / 100,
     daysIncluded,
+    joursContratInclus,
+    contractHoursWeekly,
     reason: null
   };
 };
 
 /**
  * Calcule les heures pour un mois complet en mode lissage
- * Basé sur le planning type
+ * Basé sur le CONTRAT (pas planning type)
+ * 
+ * PROCESSUS :
+ * 1) Calculer solde semaine par semaine avec base contrat + prorata
+ * 2) Sommer les soldes → totalSalde
+ * 3) Appliquer lissage : smoothedSalde = max(0, totalSalde)
+ * 4) Appliquer majorations (25%, 50% ou 10%, 25%) selon type
  */
 export const calculateMonthlyEmployeeHoursSmoothing = (
   shifts,
@@ -149,13 +191,11 @@ export const calculateMonthlyEmployeeHoursSmoothing = (
   nonShiftEvents = [],
   nonShiftTypes = []
 ) => {
-  // Vérifier qu'il y a un planning type unique
-  if (!templateWeeks || templateWeeks.length !== 1) {
+  // Vérifier les données d'employé
+  if (!employee) {
     return {
       status: 'not_calculable',
-      reason: templateWeeks && templateWeeks.length > 1 
-        ? 'Plusieurs plannings types'
-        : 'Aucun planning type',
+      reason: 'Données employé manquantes',
       totalSalde: null,
       smoothedSalde: null,
       weekSaldes: [],
@@ -163,16 +203,25 @@ export const calculateMonthlyEmployeeHoursSmoothing = (
     };
   }
 
-  // Récupérer heures totales du mois
-  const monthShifts = shifts.filter(s => {
-    if (s.employee_id !== employeeId) return false;
-    const shiftDate = new Date(s.date);
-    return shiftDate >= monthStart && shiftDate <= monthEnd;
+  // Récupérer heures totales du mois (déduplication par shift_id)
+  const startStr = formatLocalDate(monthStart);
+  const endStr = formatLocalDate(monthEnd);
+
+  const shiftIds = new Set();
+  const uniqueShifts = [];
+  shifts.forEach(shift => {
+    if (shift.employee_id !== employeeId) return;
+    if (shift.date < startStr || shift.date > endStr) return;
+    
+    if (!shiftIds.has(shift.id)) {
+      shiftIds.add(shift.id);
+      uniqueShifts.push(shift);
+    }
   });
 
-  const totalHours = monthShifts.reduce((sum, shift) => sum + calculateShiftDuration(shift), 0);
+  const totalHours = uniqueShifts.reduce((sum, shift) => sum + calculateShiftDuration(shift), 0);
 
-  // Calculer les soldes semaine par semaine
+  // Calculer les soldes semaine par semaine (avec base CONTRAT)
   let totalSalde = 0;
   const weekSaldes = [];
 
@@ -195,8 +244,6 @@ export const calculateMonthlyEmployeeHoursSmoothing = (
       weekStart,
       monthStart,
       monthEnd,
-      templateWeeks,
-      templateShifts,
       employee,
       nonShiftEvents,
       nonShiftTypes
@@ -211,19 +258,30 @@ export const calculateMonthlyEmployeeHoursSmoothing = (
     currentDate.setDate(currentDate.getDate() + 1);
   }
 
-  // Règle du lissage : si salde <= 0 => 0 heures supp/comp
+  // Lissage : si salde <= 0 => 0 heures supp/comp
   const smoothedSalde = Math.max(0, totalSalde);
 
-  const isFullTime = employee?.work_time_type === 'full_time';
-  const contractHoursWeekly = employee?.contract_hours_weekly 
-    ? parseFloat(employee.contract_hours_weekly.replace(':', '.').replace(/h/g, ''))
-    : (isFullTime ? 35 : 0);
+  // Récupérer infos contrat
+  const isFullTime = employee.work_time_type === 'full_time';
+  let contractHoursWeekly = 35; // Défaut temps plein
+  
+  if (employee.contract_hours_weekly) {
+    if (typeof employee.contract_hours_weekly === 'string') {
+      const [h, m] = employee.contract_hours_weekly.split(':').map(Number);
+      contractHoursWeekly = h + (m / 60);
+    } else {
+      contractHoursWeekly = parseFloat(employee.contract_hours_weekly);
+    }
+  } else if (!isFullTime) {
+    contractHoursWeekly = 0;
+  }
 
+  // Nombre de semaines réelles du mois (pour majorations)
   const days = Math.ceil((monthEnd - monthStart) / (1000 * 60 * 60 * 24)) + 1;
   const weeks = days / 7;
 
   if (isFullTime || contractHoursWeekly >= 35) {
-    // Heures supplémentaires
+    // TEMPS PLEIN : Heures supplémentaires
     if (smoothedSalde <= 0) {
       return {
         status: 'calculated',
@@ -236,6 +294,7 @@ export const calculateMonthlyEmployeeHoursSmoothing = (
         totalSalde,
         smoothedSalde,
         weekSaldes,
+        contractHoursWeekly,
         reason: null
       };
     }
@@ -254,10 +313,11 @@ export const calculateMonthlyEmployeeHoursSmoothing = (
       totalSalde,
       smoothedSalde,
       weekSaldes,
+      contractHoursWeekly,
       reason: null
     };
   } else if (contractHoursWeekly > 0) {
-    // Heures complémentaires
+    // TEMPS PARTIEL : Heures complémentaires
     if (smoothedSalde <= 0) {
       return {
         status: 'calculated',
@@ -271,6 +331,7 @@ export const calculateMonthlyEmployeeHoursSmoothing = (
         totalSalde,
         smoothedSalde,
         weekSaldes,
+        contractHoursWeekly,
         reason: null
       };
     }
@@ -281,7 +342,6 @@ export const calculateMonthlyEmployeeHoursSmoothing = (
 
     const complementary_10 = Math.min(smoothedSalde, limit_10_percent);
     const complementary_25 = Math.min(Math.max(0, smoothedSalde - limit_10_percent), max_allowed - complementary_10);
-
     const exceeds_limit = smoothedSalde > max_allowed;
 
     return {
@@ -296,6 +356,7 @@ export const calculateMonthlyEmployeeHoursSmoothing = (
       totalSalde,
       smoothedSalde,
       weekSaldes,
+      contractHoursWeekly,
       reason: null
     };
   }
@@ -308,6 +369,7 @@ export const calculateMonthlyEmployeeHoursSmoothing = (
     totalSalde,
     smoothedSalde,
     weekSaldes,
+    contractHoursWeekly,
     reason: null
   };
 };
