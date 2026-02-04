@@ -261,47 +261,7 @@ export default function MonthlySummary({ employee, shifts, nonShiftEvents, nonSh
           </div>
         )}
 
-        {/* Overtime/Complementary details (weekly mode + monthly with solde) */}
-        {calculationMode !== 'disabled' && (
-          <div className="mt-1 space-y-0.5 text-[10px]">
-            {monthlyHours.type === 'full_time' && (overtime_25 > 0 || overtime_50 > 0) && (
-              <>
-                {overtime_25 > 0 && (
-                  <div className="text-orange-700 font-semibold">
-                    {overtime_25.toFixed(1)}h (+25%)
-                  </div>
-                )}
-                {overtime_50 > 0 && (
-                  <div className="text-red-700 font-semibold">
-                    {overtime_50.toFixed(1)}h (+50%)
-                  </div>
-                )}
-              </>
-            )}
-
-            {monthlyHours.type === 'part_time' && (complementary_10 > 0 || complementary_25 > 0) && (
-              <>
-                {complementary_10 > 0 && (
-                  <div className="text-green-700 font-semibold">
-                    {complementary_10.toFixed(1)}h (+10%)
-                  </div>
-                )}
-                {complementary_25 > 0 && (
-                  <div className="text-orange-700 font-semibold">
-                    {complementary_25.toFixed(1)}h (+25%)
-                  </div>
-                )}
-              </>
-            )}
-
-            {/* Total paid hours */}
-            {(overtime_25 > 0 || overtime_50 > 0 || complementary_10 > 0 || complementary_25 > 0) && (
-              <div className="pt-1 mt-1 border-t border-gray-300 text-blue-900 font-bold">
-                Total payé: {totalPaidHours.toFixed(1)}h
-              </div>
-            )}
-          </div>
-        )}
+        {/* V1 : pas de majorations pour le moment */}
 
         {/* CP count */}
         {cpDays > 0 && (
