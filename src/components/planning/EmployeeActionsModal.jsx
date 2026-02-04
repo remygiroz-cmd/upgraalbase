@@ -26,6 +26,8 @@ export default function EmployeeActionsModal({
   const [endDate, setEndDate] = useState(formatLocalDate(new Date(currentYear, currentMonth + 1, 0)));
   const [deleteShifts, setDeleteShifts] = useState(true);
   const [deleteNonShifts, setDeleteNonShifts] = useState(true);
+  const [deleteCPs, setDeleteCPs] = useState(true);
+  const [deleteAllEmployees, setDeleteAllEmployees] = useState(false);
   const [confirmText, setConfirmText] = useState('');
   const [isDeleting, setIsDeleting] = useState(false);
   const [previewData, setPreviewData] = useState(null);
@@ -39,29 +41,46 @@ export default function EmployeeActionsModal({
       setDeleteEmployeeId(employee.id);
       loadPreview();
     }
-  }, [employee, startDate, endDate, deleteShifts, deleteNonShifts]);
+  }, [employee, startDate, endDate, deleteShifts, deleteNonShifts, deleteCPs, deleteAllEmployees]);
 
   const loadPreview = async () => {
     const empId = employee?.id || deleteEmployeeId;
-    if (!empId || !startDate || !endDate) return;
+    if ((!empId && !deleteAllEmployees) || !startDate || !endDate) return;
 
     setIsLoadingPreview(true);
     try {
       const allShifts = await base44.entities.Shift.list();
       const allNonShifts = await base44.entities.NonShiftEvent.list();
+      const allCPs = await base44.entities.PaidLeavePeriod.list();
       const nonShiftTypes = await base44.entities.NonShiftType.list();
 
+      // Filter by employee(s)
+      const employeeFilter = deleteAllEmployees 
+        ? (item) => item.date >= startDate && item.date <= endDate
+        : (item) => item.employee_id === empId && item.date >= startDate && item.date <= endDate;
+
+      const cpFilter = deleteAllEmployees
+        ? (cp) => {
+            // Check if CP period overlaps with date range
+            return (cp.start_cp <= endDate && cp.end_cp >= startDate);
+          }
+        : (cp) => {
+            return cp.employee_id === empId && (cp.start_cp <= endDate && cp.end_cp >= startDate);
+          };
+
       const shiftsToDelete = deleteShifts ? allShifts.filter(s => 
-        s.employee_id === empId &&
-        s.date >= startDate &&
-        s.date <= endDate
+        deleteAllEmployees 
+          ? (s.date >= startDate && s.date <= endDate)
+          : (s.employee_id === empId && s.date >= startDate && s.date <= endDate)
       ) : [];
 
       const nonShiftsToDelete = deleteNonShifts ? allNonShifts.filter(ns => 
-        ns.employee_id === empId &&
-        ns.date >= startDate &&
-        ns.date <= endDate
+        deleteAllEmployees 
+          ? (ns.date >= startDate && ns.date <= endDate)
+          : (ns.employee_id === empId && ns.date >= startDate && ns.date <= endDate)
       ) : [];
+
+      const cpsToDelete = deleteCPs ? allCPs.filter(cpFilter) : [];
 
       // Group non-shifts by type
       const nonShiftsByType = {};
@@ -74,6 +93,7 @@ export default function EmployeeActionsModal({
       setPreviewData({
         shiftsCount: shiftsToDelete.length,
         nonShiftsCount: nonShiftsToDelete.length,
+        cpsCount: cpsToDelete.length,
         nonShiftsByType
       });
     } catch (error) {
@@ -92,7 +112,7 @@ export default function EmployeeActionsModal({
     }
 
     const empId = employee?.id || deleteEmployeeId;
-    if (!empId) {
+    if (!empId && !deleteAllEmployees) {
       toast.error('Employé manquant');
       return;
     }
@@ -101,18 +121,25 @@ export default function EmployeeActionsModal({
     try {
       const allShifts = await base44.entities.Shift.list();
       const allNonShifts = await base44.entities.NonShiftEvent.list();
+      const allCPs = await base44.entities.PaidLeavePeriod.list();
+
+      const cpFilter = deleteAllEmployees
+        ? (cp) => (cp.start_cp <= endDate && cp.end_cp >= startDate)
+        : (cp) => cp.employee_id === empId && (cp.start_cp <= endDate && cp.end_cp >= startDate);
 
       const shiftsToDelete = deleteShifts ? allShifts.filter(s => 
-        s.employee_id === empId &&
-        s.date >= startDate &&
-        s.date <= endDate
+        deleteAllEmployees 
+          ? (s.date >= startDate && s.date <= endDate)
+          : (s.employee_id === empId && s.date >= startDate && s.date <= endDate)
       ) : [];
 
       const nonShiftsToDelete = deleteNonShifts ? allNonShifts.filter(ns => 
-        ns.employee_id === empId &&
-        ns.date >= startDate &&
-        ns.date <= endDate
+        deleteAllEmployees 
+          ? (ns.date >= startDate && ns.date <= endDate)
+          : (ns.employee_id === empId && ns.date >= startDate && ns.date <= endDate)
       ) : [];
+
+      const cpsToDelete = deleteCPs ? allCPs.filter(cpFilter) : [];
 
       // Delete all
       const deletePromises = [];
@@ -129,13 +156,20 @@ export default function EmployeeActionsModal({
         });
       }
 
+      if (deleteCPs) {
+        cpsToDelete.forEach(cp => {
+          deletePromises.push(base44.entities.PaidLeavePeriod.delete(cp.id));
+        });
+      }
+
       await Promise.all(deletePromises);
 
       // Invalidate queries
       queryClient.invalidateQueries({ queryKey: ['shifts'] });
       queryClient.invalidateQueries({ queryKey: ['nonShiftEvents'] });
+      queryClient.invalidateQueries({ queryKey: ['paidLeavePeriods'] });
 
-      const total = shiftsToDelete.length + nonShiftsToDelete.length;
+      const total = shiftsToDelete.length + nonShiftsToDelete.length + cpsToDelete.length;
       toast.success(`✅ ${total} événement(s) supprimé(s) avec succès`);
       
       // Reset form
@@ -153,12 +187,13 @@ export default function EmployeeActionsModal({
 
   const isFormValid = () => {
     const empId = employee?.id || deleteEmployeeId;
-    if (!empId || !startDate || !endDate) return false;
+    if (!empId && !deleteAllEmployees) return false;
+    if (!startDate || !endDate) return false;
     if (endDate < startDate) return false;
-    if (!deleteShifts && !deleteNonShifts) return false;
+    if (!deleteShifts && !deleteNonShifts && !deleteCPs) return false;
     if (confirmText !== 'SUPPRIMER') return false;
     if (!previewData) return false;
-    if (previewData.shiftsCount === 0 && previewData.nonShiftsCount === 0) return false;
+    if (previewData.shiftsCount === 0 && previewData.nonShiftsCount === 0 && previewData.cpsCount === 0) return false;
     return true;
   };
 
@@ -242,8 +277,29 @@ export default function EmployeeActionsModal({
               </div>
             </div>
 
+            {/* Employee selection mode */}
+            <div className="bg-purple-50 border-2 border-purple-300 rounded-lg p-3">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={deleteAllEmployees}
+                  onChange={(e) => {
+                    setDeleteAllEmployees(e.target.checked);
+                    setConfirmText('');
+                  }}
+                  className="w-4 h-4"
+                />
+                <span className="text-sm font-bold text-purple-900">
+                  🌐 Supprimer pour TOUS les employés (réinitialiser le mois entier)
+                </span>
+              </label>
+              <p className="text-xs text-purple-700 mt-1 ml-6">
+                Attention : cela supprimera les données de tous les employés sur la période sélectionnée
+              </p>
+            </div>
+
             {/* Employee info (read-only) */}
-            {employee && (
+            {!deleteAllEmployees && employee && (
               <div className="bg-gray-50 border border-gray-200 rounded-lg p-3">
                 <Label className="text-sm font-semibold text-gray-700">Employé concerné</Label>
                 <div className="mt-1 text-sm font-semibold text-gray-900">
@@ -305,7 +361,19 @@ export default function EmployeeActionsModal({
                   }}
                   className="w-4 h-4"
                 />
-                <span className="text-sm">Supprimer les non-shifts (CP, congés, absences, etc.)</span>
+                <span className="text-sm">Supprimer les non-shifts (école, formation, absences, etc.)</span>
+              </label>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={deleteCPs}
+                  onChange={(e) => {
+                    setDeleteCPs(e.target.checked);
+                    setConfirmText('');
+                  }}
+                  className="w-4 h-4"
+                />
+                <span className="text-sm">Supprimer les périodes de congés payés (CP)</span>
               </label>
             </div>
 
@@ -319,21 +387,21 @@ export default function EmployeeActionsModal({
 
             {!isLoadingPreview && previewData && (
               <>
-                {previewData.shiftsCount > 0 || previewData.nonShiftsCount > 0 ? (
+                {previewData.shiftsCount > 0 || previewData.nonShiftsCount > 0 || previewData.cpsCount > 0 ? (
                   <div className="bg-yellow-50 border-2 border-yellow-300 rounded-lg p-4">
                     <h3 className="font-bold text-yellow-900 text-sm mb-2 flex items-center gap-2">
                       <AlertTriangle className="w-4 h-4" />
                       Aperçu de la suppression
                     </h3>
                     <div className="space-y-2 text-sm">
-                      {deleteShifts && (
+                      {deleteShifts && previewData.shiftsCount > 0 && (
                         <div className="flex items-center gap-2">
                           <div className="w-2 h-2 rounded-full bg-red-500" />
                           <span className="font-semibold">{previewData.shiftsCount} shift(s)</span>
                           <span className="text-gray-600">seront supprimés</span>
                         </div>
                       )}
-                      {deleteNonShifts && (
+                      {deleteNonShifts && previewData.nonShiftsCount > 0 && (
                         <>
                           <div className="flex items-center gap-2">
                             <div className="w-2 h-2 rounded-full bg-red-500" />
@@ -353,9 +421,16 @@ export default function EmployeeActionsModal({
                           )}
                         </>
                       )}
+                      {deleteCPs && previewData.cpsCount > 0 && (
+                        <div className="flex items-center gap-2">
+                          <div className="w-2 h-2 rounded-full bg-red-500" />
+                          <span className="font-semibold">{previewData.cpsCount} période(s) CP</span>
+                          <span className="text-gray-600">seront supprimées</span>
+                        </div>
+                      )}
                       <div className="border-t border-yellow-200 pt-2 mt-2">
                         <div className="font-bold text-yellow-900">
-                          Total : {(previewData.shiftsCount || 0) + (previewData.nonShiftsCount || 0)} événement(s)
+                          Total : {(previewData.shiftsCount || 0) + (previewData.nonShiftsCount || 0) + (previewData.cpsCount || 0)} événement(s)
                         </div>
                       </div>
                     </div>
@@ -371,7 +446,7 @@ export default function EmployeeActionsModal({
             )}
 
             {/* Confirmation - always visible if preview has data */}
-            {!isLoadingPreview && previewData && (previewData.shiftsCount > 0 || previewData.nonShiftsCount > 0) && (
+            {!isLoadingPreview && previewData && (previewData.shiftsCount > 0 || previewData.nonShiftsCount > 0 || previewData.cpsCount > 0) && (
               <div className="border-t pt-4">
                 <Label className="text-sm font-semibold text-gray-700 mb-1">
                   Confirmation de sécurité *
