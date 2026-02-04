@@ -8,10 +8,6 @@ import { Textarea } from '@/components/ui/textarea';
 import { FileText, Send, Download, Loader2, AlertCircle, CheckCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { calculateShiftDuration } from './LegalChecks';
-import { calculateDeductedHours, calculatePaidBaseHours, calculateMonthlyContractHours } from './DeductionCalculations';
-
-import { calculateMonthlyCPTotal } from './paidLeaveCalculations';
-import { calculateHolidayHours } from './holidayCalculations';
 import { jsPDF } from 'jspdf';
 import 'jspdf-autotable';
 
@@ -117,18 +113,21 @@ export default function ExportComptaModal({ open, onOpenChange, monthStart, mont
     const employeeRecap = recaps.find(r => r.employee_id === employee.id);
     const team = teams.find(t => t.id === employee.team_id);
 
-    // Calculate hours
-    const autoTotalHours = employeeShifts.reduce((sum, shift) => sum + calculateShiftDuration(shift), 0);
-    const autoMonthlyContractHours = calculateMonthlyContractHours(employee);
-    const autoDeductedData = calculateDeductedHours(employee, employeeNonShifts, nonShiftTypes, monthStart, monthEnd);
-    const autoPaidBaseHours = calculatePaidBaseHours(employee, employeeNonShifts, nonShiftTypes, monthStart, monthEnd);
+    // SIMPLE PROTOCOL: Only worked hours, no complex deductions
+     const autoTotalHours = employeeShifts.reduce((sum, shift) => sum + calculateShiftDuration(shift), 0);
 
-    // Apply manual overrides
-    const totalHours = employeeRecap?.manual_total_hours ?? autoTotalHours;
-    const deductedHours = employeeRecap?.manual_deducted_hours ?? autoDeductedData.total;
-    const paidBaseHours = employeeRecap?.manual_contract_hours 
-      ? employeeRecap.manual_contract_hours 
-      : Math.max(0, autoMonthlyContractHours - deductedHours);
+     // Calculate monthly contract hours (simple)
+     const isFullTime = employee?.work_time_type === 'full_time';
+     const contractHoursWeekly = employee?.contract_hours_weekly 
+       ? parseFloat(employee.contract_hours_weekly.replace(':', '.').replace(/h/g, ''))
+       : (isFullTime ? 35 : 0);
+     const autoMonthlyContractHours = contractHoursWeekly * 4.33;
+
+     // Apply manual overrides
+     const totalHours = employeeRecap?.manual_total_hours ?? autoTotalHours;
+     const contractHours = employeeRecap?.manual_contract_hours ?? autoMonthlyContractHours;
+     const deductedHours = 0; // Placeholder - not calculated yet
+     const paidBaseHours = totalHours;
 
     // SIMPLE PROTOCOL: No overtime/complementary calculations yet
     // Base values only
@@ -140,45 +139,30 @@ export default function ExportComptaModal({ open, onOpenChange, monthStart, mont
     // Total paid = worked hours only (no majorations)
     let totalPaid = totalHours;
 
-    // Non-shifts visible in recap
-    const autoNonShiftsCounts = {};
-    employeeNonShifts.forEach(ns => {
-      const type = nonShiftTypes.find(t => t.id === ns.non_shift_type_id);
-      if (type && type.visible_in_recap) {
-        autoNonShiftsCounts[type.label] = (autoNonShiftsCounts[type.label] || 0) + 1;
-      }
-    });
-    const nonShiftsCounts = employeeRecap?.manual_non_shifts || autoNonShiftsCounts;
+    // Placeholder for non-shifts and CP
+     const nonShiftsCounts = employeeRecap?.manual_non_shifts || {};
+     const cpDays = employeeRecap?.manual_cp_days ?? 0;
+     const holidayHoursData = { count: 0, dates: [], workedHours: 0, paidBonus: 0 };
 
-    // CP days
-    const autoCPDays = calculateMonthlyCPTotal(cpPeriods.filter(p => p.employee_id === employee.id), monthStart, monthEnd);
-    const cpDays = employeeRecap?.manual_cp_days ?? autoCPDays;
-
-    // Holiday hours
-    const holidayHoursData = calculateHolidayHours(employeeShifts, employee, monthStart, monthEnd, holidayDates);
-
-    // Add holiday bonus to total paid
-    const holidayBonus = holidayHoursData.paidBonus || 0;
-    const totalPaidHours = paidBaseHours + overtime_25 + overtime_50 + complementary_10 + complementary_25 + holidayBonus;
+     // Total paid = worked hours (no majorations)
+     const totalPaidHours = totalHours;
 
     return {
-      employee,
-      team,
-      contractHours: autoMonthlyContractHours,
-      autoMonthlyContractHours,
-      deductedHours,
-      paidBaseHours,
-      totalHours,
-      overtime_25,
-      overtime_50,
-      complementary_10,
-      complementary_25,
-      totalPaidHours,
-      nonShiftsCounts,
-      cpDays,
-      holidayHoursData,
-
-    };
+       employee,
+       team,
+       contractHours,
+       deductedHours,
+       paidBaseHours,
+       totalHours,
+       overtime_25: 0,
+       overtime_50: 0,
+       complementary_10: 0,
+       complementary_25: 0,
+       totalPaidHours,
+       nonShiftsCounts,
+       cpDays,
+       holidayHoursData
+     };
   });
 
   // Calculate totals
