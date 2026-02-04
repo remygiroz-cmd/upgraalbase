@@ -70,10 +70,8 @@ export default function MonthlySummary({ employee, shifts, nonShiftEvents, nonSh
   // Contract hours: monthly base from employee record
   const autoMonthlyContractHours = calculateMonthlyContractHours(employee);
   
-  // Deducted hours from non-shift events (with details)
-  const deductionData = calculateDeductedHours(employee, employeeNonShifts, nonShiftTypes, monthStart, monthEnd);
-  const autoDeductedHours = deductionData.total;
-  const autoDeductionDetails = deductionData.details;
+  // Deducted hours from non-shift events
+  const autoDeductedHours = calculateDeductedHours(employee, employeeNonShifts, nonShiftTypes, monthStart, monthEnd);
   
   // Paid base hours: contract - deducted
   const autoPaidBaseHours = calculatePaidBaseHours(employee, employeeNonShifts, nonShiftTypes, monthStart, monthEnd);
@@ -230,23 +228,10 @@ export default function MonthlySummary({ employee, shifts, nonShiftEvents, nonSh
           Base: {autoMonthlyContractHours.toFixed(1)}h
         </div>
 
-        {/* Deducted hours detail */}
+        {/* Deducted hours warning */}
         {deductedHours > 0 && (
-          <div className="mt-2 pt-2 border-t border-gray-200 space-y-1">
-            <div className="text-[10px] text-red-700 font-bold">
-              Déductions: –{deductedHours.toFixed(1)}h
-            </div>
-            {Object.entries(autoDeductionDetails).map(([typeLabel, detail]) => (
-              <div key={typeLabel} className="text-[9px] text-gray-600">
-                <span className="font-semibold">{typeLabel}:</span> {detail.days} j
-                {detail.hasWaitingPeriod && detail.waitingDays > 0 && (
-                  <span className="text-orange-600">
-                    {' '}({detail.waitingDays} carence / {detail.compensatedDays} indem.)
-                  </span>
-                )}
-                {' '}→ –{detail.hoursDeducted.toFixed(1)}h
-              </div>
-            ))}
+          <div className="text-[10px] text-red-700 font-semibold mb-1">
+            – {deductedHours.toFixed(1)}h décomptées
           </div>
         )}
 
@@ -335,7 +320,6 @@ export default function MonthlySummary({ employee, shifts, nonShiftEvents, nonSh
           totalHours: autoTotalHours,
           monthlyContractHours: autoMonthlyContractHours,
           deductedHours: autoDeductedHours,
-          deductionDetails: autoDeductionDetails,
           paidBaseHours: autoPaidBaseHours,
           overtime_25: monthlyHours.overtime_25 || 0,
           overtime_50: monthlyHours.overtime_50 || 0,
@@ -486,8 +470,8 @@ function EditMonthlyRecapDialog({ open, onOpenChange, employee, year, month, aut
 
           {/* Deducted hours */}
           {autoValues.deductedHours > 0 && (
-            <div className="bg-orange-50 border border-orange-200 rounded-lg p-4">
-              <Label className="text-xs text-gray-700 font-semibold">Heures décomptées (surcharge)</Label>
+            <div className="bg-orange-50 border border-orange-200 rounded-lg p-3">
+              <Label className="text-xs text-gray-700 font-semibold">Heures décomptées</Label>
               <Input
                 type="number"
                 step="0.1"
@@ -497,35 +481,10 @@ function EditMonthlyRecapDialog({ open, onOpenChange, employee, year, month, aut
                 onChange={(e) => setFormData({...formData, manual_deducted_hours: e.target.value})}
                 className="mt-1"
               />
-              
-              {/* Détail des déductions automatiques */}
-              <div className="mt-3 space-y-1.5 text-xs text-gray-700">
-                <div className="font-semibold">Détail automatique :</div>
-                {Object.entries(autoValues.deductionDetails || {}).map(([typeLabel, detail]) => (
-                  <div key={typeLabel} className="pl-2 border-l-2 border-orange-300">
-                    <div className="font-medium">{typeLabel} : {detail.days} jour{detail.days > 1 ? 's' : ''}</div>
-                    {detail.hasWaitingPeriod && detail.waitingDays > 0 ? (
-                      <div className="text-[10px] text-gray-600">
-                        • Carence : {detail.waitingDays} j
-                        <br />
-                        • Indemnisés : {detail.compensatedDays} j
-                        <br />
-                        • Total déduit : {detail.hoursDeducted.toFixed(1)}h
-                      </div>
-                    ) : (
-                      <div className="text-[10px] text-gray-600">
-                        • Heures déduites : {detail.hoursDeducted.toFixed(1)}h
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-
-              <div className="flex items-start gap-2 mt-3 pt-3 border-t border-orange-300">
+              <div className="flex items-start gap-2 mt-2">
                 <AlertTriangle className="w-4 h-4 text-orange-600 flex-shrink-0 mt-0.5" />
                 <p className="text-[10px] text-gray-600">
-                  Calculé selon les taux configurés dans Paramètres → Statuts. 
-                  Saisissez une valeur pour surcharger le calcul automatique.
+                  Heures automatiquement déduites de la base contractuelle via les statuts (absences, maladie, etc.)
                 </p>
               </div>
             </div>
