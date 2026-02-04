@@ -35,8 +35,27 @@ export function getHolidayMultiplier(employee, date, holidayDates) {
  * Calcule les heures travaillées en jours fériés pour un employé sur une période
  */
 export function calculateHolidayHours(shifts, employee, startDate, endDate, holidayDates) {
-  const startDateStr = typeof startDate === 'string' ? startDate : startDate.toISOString().split('T')[0];
-  const endDateStr = typeof endDate === 'string' ? endDate : endDate.toISOString().split('T')[0];
+  if (!holidayDates || holidayDates.length === 0) {
+    return { count: 0, dates: [], realHours: 0, countedHours: 0, bonusHours: 0 };
+  }
+  
+  const formatDateStr = (date) => {
+    if (!date) return '';
+    if (typeof date === 'string') return date;
+    const d = new Date(date);
+    if (isNaN(d.getTime())) return '';
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+  
+  const startDateStr = formatDateStr(startDate);
+  const endDateStr = formatDateStr(endDate);
+  
+  if (!startDateStr || !endDateStr) {
+    return { count: 0, dates: [], realHours: 0, countedHours: 0, bonusHours: 0 };
+  }
   
   const holidayShifts = shifts.filter(shift => {
     if (shift.employee_id !== employee.id) return false;
