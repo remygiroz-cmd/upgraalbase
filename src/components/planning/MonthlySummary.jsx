@@ -347,7 +347,10 @@ export default function MonthlySummary({ employee, shifts, nonShiftEvents, nonSh
             )}>
               Solde cumulé: {monthlyHours.totalSalde > 0 ? '+' : ''}{monthlyHours.totalSalde.toFixed(1)}h
             </div>
-            <div className="text-gray-600">
+            <div className={cn(
+              "font-bold px-2 py-1 rounded",
+              monthlyHours.smoothedSalde <= 0 ? "text-gray-600" : "text-blue-700 bg-blue-50"
+            )}>
               Supp/Comp retenues: {monthlyHours.smoothedSalde.toFixed(1)}h
             </div>
             {monthlyHours.weekSaldes.length > 0 && (
