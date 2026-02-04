@@ -228,22 +228,40 @@ export default function ExportComptaModal({ open, onOpenChange, monthStart, mont
         etablissementName: settings.etablissement_name || 'Établissement'
       });
 
-      // Download PDFs
-      const pdfRecap = response.data.pdfRecap;
-      const pdfPlanning = response.data.pdfPlanning;
+      if (response.data.htmlRecap && response.data.htmlPlanning) {
+        // Client-side PDF generation from HTML
+        const generatePdfFromHtml = async (htmlContent, filename) => {
+          const iframe = document.createElement('iframe');
+          iframe.style.position = 'absolute';
+          iframe.style.width = '0';
+          iframe.style.height = '0';
+          iframe.style.border = 'none';
+          document.body.appendChild(iframe);
 
-      // Create download links
-      const linkRecap = document.createElement('a');
-      linkRecap.href = `data:application/pdf;base64,${pdfRecap}`;
-      linkRecap.download = `Elements_paie_${monthName}_${year}.pdf`;
-      linkRecap.click();
+          const doc = iframe.contentWindow.document;
+          doc.open();
+          doc.write(htmlContent);
+          doc.close();
 
-      const linkPlanning = document.createElement('a');
-      linkPlanning.href = `data:application/pdf;base64,${pdfPlanning}`;
-      linkPlanning.download = `Planning_${monthName}_${year}.pdf`;
-      linkPlanning.click();
+          await new Promise(resolve => setTimeout(resolve, 500));
 
-      toast.success('PDFs téléchargés');
+          iframe.contentWindow.print();
+          setTimeout(() => document.body.removeChild(iframe), 1000);
+        };
+
+        await generatePdfFromHtml(response.data.htmlRecap, `Elements_paie_${monthName}_${year}.pdf`);
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        await generatePdfFromHtml(response.data.htmlPlanning, `Planning_${monthName}_${year}.pdf`);
+
+        toast.success('PDFs prêts à être imprimés');
+      } else if (response.data.htmlRecapUrl && response.data.htmlPlanningUrl) {
+        // Open HTML files in new tabs for printing
+        window.open(response.data.htmlRecapUrl, '_blank');
+        await new Promise(resolve => setTimeout(resolve, 500));
+        window.open(response.data.htmlPlanningUrl, '_blank');
+        
+        toast.success('Documents ouverts - utilisez Imprimer > Enregistrer en PDF');
+      }
     } catch (error) {
       toast.error('Erreur lors de la génération : ' + error.message);
     } finally {

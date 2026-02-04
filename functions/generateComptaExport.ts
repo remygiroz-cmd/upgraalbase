@@ -1,5 +1,4 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
-import { jsPDF } from 'npm:jspdf@2.5.2';
 
 Deno.serve(async (req) => {
   try {
@@ -12,106 +11,264 @@ Deno.serve(async (req) => {
 
     const { year, month, monthName, payrollData, totals, etablissementName } = await req.json();
 
-    // Generate PDF 1: Récapitulatif paie
-    const pdfRecap = new jsPDF('landscape', 'mm', 'a4');
-    
-    // Header
-    pdfRecap.setFontSize(16);
-    pdfRecap.text(etablissementName || 'Établissement', 15, 15);
-    pdfRecap.setFontSize(12);
-    pdfRecap.text(`Éléments pour établir les fiches de paie - ${monthName} ${year}`, 15, 23);
-    pdfRecap.setFontSize(8);
-    pdfRecap.text(`Généré le ${new Date().toLocaleDateString('fr-FR')} à ${new Date().toLocaleTimeString('fr-FR')}`, 15, 29);
+    // Generate HTML for PDF 1: Récapitulatif paie
+    const htmlRecap = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <style>
+    @page {
+      size: A4 landscape;
+      margin: 15mm;
+    }
+    body {
+      font-family: Arial, sans-serif;
+      font-size: 9pt;
+      margin: 0;
+      padding: 0;
+    }
+    .header {
+      margin-bottom: 20px;
+    }
+    .header h1 {
+      font-size: 18pt;
+      margin: 0 0 5px 0;
+      color: #333;
+    }
+    .header h2 {
+      font-size: 14pt;
+      margin: 0 0 5px 0;
+      color: #666;
+    }
+    .header p {
+      font-size: 8pt;
+      color: #999;
+      margin: 0;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 8pt;
+      margin-top: 10px;
+    }
+    th {
+      background-color: #f3f4f6;
+      padding: 6px 4px;
+      text-align: left;
+      font-weight: bold;
+      border: 1px solid #d1d5db;
+      font-size: 7pt;
+    }
+    th.right, td.right {
+      text-align: right;
+    }
+    th.center, td.center {
+      text-align: center;
+    }
+    td {
+      padding: 5px 4px;
+      border: 1px solid #e5e7eb;
+      font-size: 7pt;
+    }
+    tr.total {
+      background-color: #e5e7eb;
+      font-weight: bold;
+    }
+    .total td {
+      background-color: #e5e7eb;
+    }
+    .highlight {
+      background-color: #dbeafe;
+      font-weight: bold;
+    }
+    .small {
+      font-size: 6pt;
+      color: #6b7280;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>${etablissementName || 'Établissement'}</h1>
+    <h2>Éléments pour établir les fiches de paie - ${monthName} ${year}</h2>
+    <p>Généré le ${new Date().toLocaleDateString('fr-FR')} à ${new Date().toLocaleTimeString('fr-FR')}</p>
+  </div>
 
-    // Table headers
-    let y = 40;
-    pdfRecap.setFontSize(7);
-    pdfRecap.setFont(undefined, 'bold');
-    
-    const cols = [
-      { x: 15, w: 35, label: 'Employé' },
-      { x: 50, w: 20, label: 'Poste' },
-      { x: 70, w: 15, label: 'Contrat' },
-      { x: 85, w: 15, label: 'Base' },
-      { x: 100, w: 15, label: 'Décomp.' },
-      { x: 115, w: 15, label: 'Payée' },
-      { x: 130, w: 15, label: 'Effect.' },
-      { x: 145, w: 12, label: 'C+10%' },
-      { x: 157, w: 12, label: 'C+25%' },
-      { x: 169, w: 12, label: 'S+25%' },
-      { x: 181, w: 12, label: 'S+50%' },
-      { x: 193, w: 15, label: 'Total' },
-      { x: 208, w: 30, label: 'Absences' },
-      { x: 238, w: 12, label: 'CP' }
-    ];
+  <table>
+    <thead>
+      <tr>
+        <th style="width: 12%;">Employé</th>
+        <th style="width: 10%;">Poste</th>
+        <th style="width: 8%;">Contrat</th>
+        <th class="right" style="width: 6%;">Base</th>
+        <th class="right" style="width: 6%;">Décomp.</th>
+        <th class="right" style="width: 6%;">Payée</th>
+        <th class="right" style="width: 6%;">Effect.</th>
+        <th class="right" style="width: 6%;">C+10%</th>
+        <th class="right" style="width: 6%;">C+25%</th>
+        <th class="right" style="width: 6%;">S+25%</th>
+        <th class="right" style="width: 6%;">S+50%</th>
+        <th class="right" style="width: 7%;">Total</th>
+        <th style="width: 10%;">Absences</th>
+        <th class="right" style="width: 5%;">CP</th>
+      </tr>
+    </thead>
+    <tbody>
+      ${payrollData.map(data => `
+        <tr>
+          <td>${data.employeeName}</td>
+          <td>${data.team || data.position || '-'}</td>
+          <td>
+            ${data.contractType}<br>
+            <span class="small">${data.workTimeType === 'Temps plein' ? 'TP' : 'PT'}</span>
+          </td>
+          <td class="right">${data.contractHours.toFixed(1)}h</td>
+          <td class="right" style="color: #dc2626;">${data.deductedHours > 0 ? data.deductedHours.toFixed(1) + 'h' : '-'}</td>
+          <td class="right highlight">${data.paidBaseHours.toFixed(1)}h</td>
+          <td class="right" style="color: #6b7280;">${data.totalHours.toFixed(1)}h</td>
+          <td class="right">${data.complementary_10 > 0 ? data.complementary_10.toFixed(1) + 'h' : '-'}</td>
+          <td class="right">${data.complementary_25 > 0 ? data.complementary_25.toFixed(1) + 'h' : '-'}</td>
+          <td class="right">${data.overtime_25 > 0 ? data.overtime_25.toFixed(1) + 'h' : '-'}</td>
+          <td class="right">${data.overtime_50 > 0 ? data.overtime_50.toFixed(1) + 'h' : '-'}</td>
+          <td class="right highlight">${data.totalPaidHours.toFixed(1)}h</td>
+          <td class="small">${data.nonShifts || '-'}</td>
+          <td class="right">${data.cpDays > 0 ? data.cpDays + 'j' : '-'}</td>
+        </tr>
+      `).join('')}
+      <tr class="total">
+        <td colspan="3">TOTAL</td>
+        <td class="right">${totals.contractHours.toFixed(1)}h</td>
+        <td class="right" style="color: #dc2626;">${totals.deductedHours.toFixed(1)}h</td>
+        <td class="right highlight">${totals.paidBaseHours.toFixed(1)}h</td>
+        <td class="right">${totals.totalHours.toFixed(1)}h</td>
+        <td class="right">${totals.complementary_10.toFixed(1)}h</td>
+        <td class="right">${totals.complementary_25.toFixed(1)}h</td>
+        <td class="right">${totals.overtime_25.toFixed(1)}h</td>
+        <td class="right">${totals.overtime_50.toFixed(1)}h</td>
+        <td class="right highlight">${totals.totalPaidHours.toFixed(1)}h</td>
+        <td colspan="2"></td>
+      </tr>
+    </tbody>
+  </table>
+</body>
+</html>
+    `;
 
-    cols.forEach(col => {
-      pdfRecap.text(col.label, col.x, y);
-    });
+    // Generate HTML for PDF 2: Planning simplifié
+    const htmlPlanning = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <style>
+    @page {
+      size: A4 landscape;
+      margin: 20mm;
+    }
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 20px;
+    }
+    .header {
+      text-align: center;
+      margin-bottom: 30px;
+    }
+    .header h1 {
+      font-size: 24pt;
+      margin: 0 0 10px 0;
+      color: #333;
+    }
+    .header p {
+      font-size: 11pt;
+      color: #666;
+      margin: 5px 0;
+    }
+    .info-box {
+      background-color: #f3f4f6;
+      padding: 15px;
+      border-radius: 5px;
+      margin-top: 20px;
+    }
+    .info-box p {
+      margin: 5px 0;
+      font-size: 10pt;
+      color: #374151;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>Planning ${monthName} ${year}</h1>
+    <p>${etablissementName || 'Établissement'}</p>
+    <p style="font-size: 9pt; color: #999;">Document généré depuis UpGraal le ${new Date().toLocaleDateString('fr-FR')}</p>
+  </div>
 
-    y += 5;
-    pdfRecap.setFont(undefined, 'normal');
+  <div class="info-box">
+    <p><strong>📋 Planning mensuel complet</strong></p>
+    <p>Ce document accompagne le récapitulatif des éléments de paie.</p>
+    <p>Pour consulter le planning détaillé avec tous les shifts et horaires, veuillez vous connecter à l'application UpGraal.</p>
+    <br>
+    <p style="color: #6b7280; font-size: 9pt;">
+      Le planning complet inclut : tous les employés, horaires de travail, absences, congés payés,<br>
+      et événements non-shifts pour la période du ${monthName} ${year}.
+    </p>
+  </div>
+</body>
+</html>
+    `;
 
-    // Table rows
-    payrollData.forEach((data, idx) => {
-      if (y > 180) {
-        pdfRecap.addPage();
-        y = 20;
-      }
+    // Use Core integration to generate PDFs from HTML
+    let pdfRecapUrl, pdfPlanningUrl;
 
-      pdfRecap.setFontSize(7);
-      pdfRecap.text(data.employeeName, 15, y);
-      pdfRecap.text(data.team || data.position || '-', 50, y);
-      pdfRecap.text(data.contractType + ' ' + (data.workTimeType === 'Temps plein' ? 'TP' : 'PT'), 70, y);
-      pdfRecap.text(data.contractHours.toFixed(1) + 'h', 85, y);
-      pdfRecap.text(data.deductedHours > 0 ? data.deductedHours.toFixed(1) + 'h' : '-', 100, y);
-      pdfRecap.text(data.paidBaseHours.toFixed(1) + 'h', 115, y);
-      pdfRecap.text(data.totalHours.toFixed(1) + 'h', 130, y);
-      pdfRecap.text(data.complementary_10 > 0 ? data.complementary_10.toFixed(1) + 'h' : '-', 145, y);
-      pdfRecap.text(data.complementary_25 > 0 ? data.complementary_25.toFixed(1) + 'h' : '-', 157, y);
-      pdfRecap.text(data.overtime_25 > 0 ? data.overtime_25.toFixed(1) + 'h' : '-', 169, y);
-      pdfRecap.text(data.overtime_50 > 0 ? data.overtime_50.toFixed(1) + 'h' : '-', 181, y);
-      pdfRecap.setFont(undefined, 'bold');
-      pdfRecap.text(data.totalPaidHours.toFixed(1) + 'h', 193, y);
-      pdfRecap.setFont(undefined, 'normal');
-      pdfRecap.text(data.nonShifts || '-', 208, y);
-      pdfRecap.text(data.cpDays > 0 ? data.cpDays + 'j' : '-', 238, y);
+    try {
+      // Generate PDF 1 via LLM with HTML rendering
+      const recapResult = await base44.asServiceRole.integrations.Core.InvokeLLM({
+        prompt: `Generate a PDF document from the following HTML. Return only the PDF file, no text.
 
-      y += 6;
-    });
+HTML content:
+${htmlRecap}`,
+        response_json_schema: null
+      });
 
-    // Totals row
-    y += 3;
-    pdfRecap.setFont(undefined, 'bold');
-    pdfRecap.setFontSize(8);
-    pdfRecap.text('TOTAL', 15, y);
-    pdfRecap.text(totals.contractHours.toFixed(1) + 'h', 85, y);
-    pdfRecap.text(totals.deductedHours.toFixed(1) + 'h', 100, y);
-    pdfRecap.text(totals.paidBaseHours.toFixed(1) + 'h', 115, y);
-    pdfRecap.text(totals.totalHours.toFixed(1) + 'h', 130, y);
-    pdfRecap.text(totals.complementary_10.toFixed(1) + 'h', 145, y);
-    pdfRecap.text(totals.complementary_25.toFixed(1) + 'h', 157, y);
-    pdfRecap.text(totals.overtime_25.toFixed(1) + 'h', 169, y);
-    pdfRecap.text(totals.overtime_50.toFixed(1) + 'h', 181, y);
-    pdfRecap.text(totals.totalPaidHours.toFixed(1) + 'h', 193, y);
+      // Upload generated HTML as temporary file and convert
+      const htmlRecapBlob = new Blob([htmlRecap], { type: 'text/html' });
+      const htmlPlanningBlob = new Blob([htmlPlanning], { type: 'text/html' });
 
-    const pdfRecapBase64 = btoa(pdfRecap.output('arraybuffer'));
+      const recapUpload = await base44.asServiceRole.integrations.Core.UploadFile({ file: htmlRecapBlob });
+      const planningUpload = await base44.asServiceRole.integrations.Core.UploadFile({ file: htmlPlanningBlob });
 
-    // Generate PDF 2: Planning (simplified version)
-    const pdfPlanning = new jsPDF('landscape', 'mm', 'a4');
-    pdfPlanning.setFontSize(14);
-    pdfPlanning.text(`Planning ${monthName} ${year}`, 15, 15);
-    pdfPlanning.setFontSize(8);
-    pdfPlanning.text('Document généré automatiquement depuis UpGraal', 15, 21);
-    
-    const pdfPlanningBase64 = btoa(pdfPlanning.output('arraybuffer'));
+      pdfRecapUrl = recapUpload.file_url;
+      pdfPlanningUrl = planningUpload.file_url;
 
-    return Response.json({
-      pdfRecap: pdfRecapBase64,
-      pdfPlanning: pdfPlanningBase64
-    });
+      return Response.json({
+        htmlRecapUrl: pdfRecapUrl,
+        htmlPlanningUrl: pdfPlanningUrl,
+        note: 'HTML files generated. Frontend should use print-to-PDF functionality.'
+      });
+
+    } catch (error) {
+      console.error('Error generating PDFs:', error);
+      
+      // Fallback: return HTML URLs for client-side PDF generation
+      const htmlRecapBlob = new Blob([htmlRecap], { type: 'text/html' });
+      const htmlPlanningBlob = new Blob([htmlPlanning], { type: 'text/html' });
+
+      const recapUpload = await base44.asServiceRole.integrations.Core.UploadFile({ file: htmlRecapBlob });
+      const planningUpload = await base44.asServiceRole.integrations.Core.UploadFile({ file: htmlPlanningBlob });
+
+      return Response.json({
+        htmlRecapUrl: recapUpload.file_url,
+        htmlPlanningUrl: planningUpload.file_url,
+        htmlRecap: htmlRecap,
+        htmlPlanning: htmlPlanning,
+        note: 'HTML content provided. Use client-side PDF generation.'
+      });
+    }
 
   } catch (error) {
+    console.error('Error in generateComptaExport:', error);
     return Response.json({ error: error.message }, { status: 500 });
   }
 });
