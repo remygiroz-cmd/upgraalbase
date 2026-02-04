@@ -137,7 +137,7 @@ export default function MonthlySummary({ employee, shifts, nonShiftEvents, nonSh
       monthlyHours = {
         type: 'full_time',
         total: autoTotalHours,
-        normal: Math.min(autoTotalHours, autoContractHours),
+        normal: Math.min(autoTotalHours, autoMonthlyContractHours),
         overtime_25: total_overtime_25,
         overtime_50: total_overtime_50,
         total_overtime: total_overtime_25 + total_overtime_50
@@ -148,8 +148,8 @@ export default function MonthlySummary({ employee, shifts, nonShiftEvents, nonSh
       monthlyHours = {
         type: 'part_time',
         total: autoTotalHours,
-        contract_hours: autoContractHours,
-        normal: Math.min(autoTotalHours, autoContractHours),
+        contract_hours: autoMonthlyContractHours,
+        normal: Math.min(autoTotalHours, autoMonthlyContractHours),
         complementary_10: total_complementary_10,
         complementary_25: total_complementary_25,
         total_complementary: total_complementary_10 + total_complementary_25
