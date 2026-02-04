@@ -220,16 +220,16 @@ export default function WeeklySummary({ employee, shifts, weekStart, onDeleteWee
           {weekHours.saldeData.status === 'calculated' ? (
             <>
               <div className="text-gray-600">
-                Prévu: {weekHours.saldeData.expectedWeek.toFixed(1)}h
+                Prévu: {isNaN(weekHours.saldeData.expectedWeek) ? 'non défini' : weekHours.saldeData.expectedWeek.toFixed(1) + 'h'}
               </div>
               <div className="text-gray-600">
-                Effectué: {weekHours.saldeData.workedWeek.toFixed(1)}h
+                Effectué: {isNaN(weekHours.saldeData.workedWeek) ? 'non défini' : weekHours.saldeData.workedWeek.toFixed(1) + 'h'}
               </div>
               <div className={cn(
                 "font-semibold px-1 py-0.5 rounded",
                 weekHours.saldeData.salde === 0 ? "text-gray-600 bg-gray-50" : weekHours.saldeData.salde > 0 ? "text-blue-700 bg-blue-50" : "text-red-700 bg-red-50"
               )}>
-                Solde: {weekHours.saldeData.salde > 0 ? '+' : ''}{weekHours.saldeData.salde.toFixed(1)}h
+                Solde: {isNaN(weekHours.saldeData.salde) ? 'non défini' : (weekHours.saldeData.salde > 0 ? '+' : '') + weekHours.saldeData.salde.toFixed(1) + 'h'}
               </div>
             </>
           ) : (
