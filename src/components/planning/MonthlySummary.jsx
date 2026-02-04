@@ -100,24 +100,37 @@ export default function MonthlySummary({ employee, shifts, nonShiftEvents, nonSh
     : (isFullTime ? 35 : 0);
 
   // Overtime/complementary calculation
-  let monthlyHours = { type: 'unknown', total: autoTotalHours };
-  if (calculationMode === 'monthly') {
-    // Mode lissage : utiliser planning type
-    monthlyHours = calculateMonthlyEmployeeHoursSmoothing(
-      shifts,
-      employee.id,
-      monthStart,
-      monthEnd,
-      employee,
-      templateWeeks,
-      templateShifts,
-      nonShiftEvents,
-      nonShiftTypes
-    );
-    // Fallback si pas de planning type unique
-    if (monthlyHours.status !== 'calculated') {
-      monthlyHours = calculateMonthlyEmployeeHours(shifts, employee.id, monthStart, monthEnd, employee, nonShiftEvents, nonShiftTypes);
-    }
+   let monthlyHours = { type: 'unknown', total: autoTotalHours };
+   if (calculationMode === 'monthly') {
+     // Mode lissage : utiliser planning type
+     monthlyHours = calculateMonthlyEmployeeHoursSmoothing(
+       shifts,
+       employee.id,
+       monthStart,
+       monthEnd,
+       employee,
+       templateWeeks,
+       templateShifts,
+       nonShiftEvents,
+       nonShiftTypes
+     );
+
+     // DEBUG TRAÇAGE COMPLET
+     console.log(`[MonthlySummary] Employee ${employee.id} - Après calcul lissage:`, {
+       status: monthlyHours.status,
+       totalSalde: monthlyHours.totalSalde,
+       smoothedSalde: monthlyHours.smoothedSalde,
+       type: monthlyHours.type,
+       overtime_25: monthlyHours.overtime_25,
+       overtime_50: monthlyHours.overtime_50,
+       complementary_10: monthlyHours.complementary_10,
+       complementary_25: monthlyHours.complementary_25
+     });
+
+     // Fallback si pas de planning type unique
+     if (monthlyHours.status !== 'calculated') {
+       monthlyHours = calculateMonthlyEmployeeHours(shifts, employee.id, monthStart, monthEnd, employee, nonShiftEvents, nonShiftTypes);
+     }
   } else if (calculationMode === 'weekly') {
     // Sum up weekly calculations
     const weeklyData = [];
