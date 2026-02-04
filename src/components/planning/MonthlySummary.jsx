@@ -115,17 +115,24 @@ export default function MonthlySummary({ employee, shifts, nonShiftEvents, nonSh
        nonShiftTypes
      );
 
-     // DEBUG TRAÇAGE COMPLET
-     console.log(`[MonthlySummary] Employee ${employee.id} - Après calcul lissage:`, {
+     // DEBUG AVANT override
+     console.log(`[MonthlySummary] Employee ${employee.id} - AVANT override:`, {
        status: monthlyHours.status,
        totalSalde: monthlyHours.totalSalde,
-       smoothedSalde: monthlyHours.smoothedSalde,
-       type: monthlyHours.type,
-       overtime_25: monthlyHours.overtime_25,
-       overtime_50: monthlyHours.overtime_50,
-       complementary_10: monthlyHours.complementary_10,
-       complementary_25: monthlyHours.complementary_25
+       smoothedSalde: monthlyHours.smoothedSalde
      });
+
+     // CORRECTION : forcer smoothedSalde = totalSalde (source unique)
+     if (monthlyHours.status === 'calculated' && monthlyHours.totalSalde !== undefined) {
+       monthlyHours.smoothedSalde = monthlyHours.totalSalde;
+       monthlyHours.suppCompRetained = Math.max(0, monthlyHours.totalSalde);
+
+       console.log(`[MonthlySummary] Employee ${employee.id} - APRÈS override:`, {
+         totalSalde: monthlyHours.totalSalde,
+         smoothedSalde: monthlyHours.smoothedSalde,
+         suppCompRetained: monthlyHours.suppCompRetained
+       });
+     }
 
      // Fallback si pas de planning type unique
      if (monthlyHours.status !== 'calculated') {
