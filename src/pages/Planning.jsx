@@ -16,13 +16,11 @@ import ShiftFormModal from '@/components/planning/ShiftFormModal';
 import WeeklySummary from '@/components/planning/WeeklySummary';
 import MonthlySummary from '@/components/planning/MonthlySummary';
 import ApplyTemplateModal from '@/components/planning/ApplyTemplateModal';
-import ApplyAllTemplatesModal from '@/components/planning/ApplyAllTemplatesModal';
 import NonShiftCard from '@/components/planning/NonShiftCard';
 import PlanningSettingsModal from '@/components/planning/PlanningSettingsModal';
 import AddPaidLeaveModal from '@/components/planning/AddPaidLeaveModal';
 import EmployeeHeaderCell from '@/components/planning/EmployeeHeaderCell';
 import ExportComptaModal from '@/components/planning/ExportComptaModal';
-import EmployeeActionsModal from '@/components/planning/EmployeeActionsModal';
 import { calculateShiftDuration, checkMinimumRest } from '@/components/planning/LegalChecks';
 import { parseLocalDate, formatLocalDate } from '@/components/planning/dateUtils';
 import { isDateInCPPeriod } from '@/components/planning/paidLeaveCalculations';
@@ -35,11 +33,8 @@ export default function Planning() {
   const [showShiftModal, setShowShiftModal] = useState(false);
   const [showPlanningSettings, setShowPlanningSettings] = useState(false);
   const [showApplyTemplateModal, setShowApplyTemplateModal] = useState(false);
-  const [showApplyAllTemplatesModal, setShowApplyAllTemplatesModal] = useState(false);
   const [showAddPaidLeaveModal, setShowAddPaidLeaveModal] = useState(false);
   const [showExportComptaModal, setShowExportComptaModal] = useState(false);
-  const [showEmployeeActionsModal, setShowEmployeeActionsModal] = useState(false);
-  const [selectedEmployeeForActions, setSelectedEmployeeForActions] = useState(null);
   const [selectedEmployeeForTemplate, setSelectedEmployeeForTemplate] = useState(null);
   const [selectedEmployeeForCP, setSelectedEmployeeForCP] = useState(null);
   const [selectedCPPeriod, setSelectedCPPeriod] = useState(null);
@@ -642,15 +637,6 @@ export default function Planning() {
         </div>
         <div className="flex items-center gap-2">
           <Button
-            onClick={() => setShowApplyAllTemplatesModal(true)}
-            variant="outline"
-            size="sm"
-            className="border border-gray-300 hover:border-orange-500 hover:bg-orange-50 text-xs"
-            title="Appliquer les plannings types de tous les employés"
-          >
-            <span>⚡ Tous les templates</span>
-          </Button>
-          <Button
             onClick={() => setShowExportComptaModal(true)}
             variant="outline"
             size="sm"
@@ -815,9 +801,14 @@ export default function Planning() {
                                 isDragging={snapshot.isDragging}
                                 dragHandleProps={provided.dragHandleProps}
                                 displayMode={displayMode}
-                                onOpenActions={() => {
-                                  setSelectedEmployeeForActions(employee);
-                                  setShowEmployeeActionsModal(true);
+                                onAddCP={() => {
+                                  setSelectedEmployeeForCP(employee);
+                                  setSelectedCPPeriod(null);
+                                  setShowAddPaidLeaveModal(true);
+                                }}
+                                onApplyTemplate={() => {
+                                  setSelectedEmployeeForTemplate(employee);
+                                  setShowApplyTemplateModal(true);
                                 }}
                                 style={provided.draggableProps.style}
                                 {...provided.draggableProps}
@@ -1033,8 +1024,6 @@ export default function Planning() {
                                     }
                                     nonShiftEvents={nonShiftEvents}
                                     nonShiftTypes={nonShiftTypes}
-                                    monthStart={new Date(currentYear, currentMonth, 1)}
-                                    monthEnd={new Date(currentYear, currentMonth + 1, 0)}
                                   />
                                 </div>
                               );
@@ -1109,14 +1098,6 @@ export default function Planning() {
         employeeName={selectedEmployeeForTemplate ? `${selectedEmployeeForTemplate.first_name} ${selectedEmployeeForTemplate.last_name}` : ''}
       />
 
-      {/* Apply All Templates Modal */}
-      <ApplyAllTemplatesModal
-        open={showApplyAllTemplatesModal}
-        onOpenChange={setShowApplyAllTemplatesModal}
-        monthStart={new Date(currentYear, currentMonth, 1)}
-        monthEnd={new Date(currentYear, currentMonth + 1, 0)}
-      />
-
       {/* Add Paid Leave Modal */}
       <AddPaidLeaveModal
         open={showAddPaidLeaveModal}
@@ -1132,26 +1113,6 @@ export default function Planning() {
         monthStart={new Date(currentYear, currentMonth, 1)}
         monthEnd={new Date(currentYear, currentMonth + 1, 0)}
         holidayDates={holidayDates}
-      />
-
-      {/* Employee Actions Modal */}
-      <EmployeeActionsModal
-        open={showEmployeeActionsModal}
-        onOpenChange={setShowEmployeeActionsModal}
-        employee={selectedEmployeeForActions}
-        currentMonth={currentMonth}
-        currentYear={currentYear}
-        onAddCP={() => {
-          setSelectedEmployeeForCP(selectedEmployeeForActions);
-          setSelectedCPPeriod(null);
-          setShowEmployeeActionsModal(false);
-          setShowAddPaidLeaveModal(true);
-        }}
-        onApplyTemplate={() => {
-          setSelectedEmployeeForTemplate(selectedEmployeeForActions);
-          setShowEmployeeActionsModal(false);
-          setShowApplyTemplateModal(true);
-        }}
       />
 
       {/* Copy Week Modal */}

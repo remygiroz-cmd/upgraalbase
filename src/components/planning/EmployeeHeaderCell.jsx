@@ -1,11 +1,18 @@
 import React, { useState } from 'react';
-import { MoreVertical } from 'lucide-react';
+import { Copy, MoreVertical } from 'lucide-react';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { cn } from '@/lib/utils';
 
 const EmployeeHeaderCell = React.forwardRef(({
   employee,
   team,
-  onOpenActions,
+  onAddCP,
+  onApplyTemplate,
   isDragging,
   dragHandleProps,
   displayMode,
@@ -40,12 +47,21 @@ const EmployeeHeaderCell = React.forwardRef(({
 
       {/* Actions menu - only on hover */}
       <div className="hidden group-hover:block absolute right-1 top-1 z-20">
-        <button 
-          onClick={onOpenActions}
-          className="p-1 rounded hover:bg-gray-200 transition-colors text-gray-500 hover:text-gray-700"
-        >
-          <MoreVertical className="w-4 h-4" />
-        </button>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button className="p-1 rounded hover:bg-gray-200 transition-colors text-gray-500 hover:text-gray-700">
+              <MoreVertical className="w-4 h-4" />
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem onClick={() => onAddCP()}>
+              <span className="mr-2">🟢</span> Ajouter CP
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => onApplyTemplate()}>
+              <Copy className="w-4 h-4 mr-2" /> Appliquer template
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
 
       {/* Employee name */}

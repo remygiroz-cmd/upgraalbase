@@ -297,7 +297,7 @@ ${currentUser.email || '-'}`;
       <DialogContent className="bg-white border-gray-300 max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="text-gray-900">
-            DEBUG COMPONENT: EmployeeFormModal → {employee ? 'Modifier l\'employé' : 'Nouvel employé'}
+            {employee ? 'Modifier l\'employé' : 'Nouvel employé'}
           </DialogTitle>
         </DialogHeader>
 
@@ -849,48 +849,6 @@ ${currentUser.email || '-'}`;
                   placeholder="Ex: 5"
                   disabled={!isManager}
                 />
-              </div>
-
-              {/* Jours contractuels (semaine) */}
-              <div className="bg-orange-50 border border-orange-200 rounded-lg p-4">
-                <p className="text-xs font-semibold text-gray-900 mb-3">DEBUG: Contract days loaded</p>
-                <Label className="text-sm font-semibold text-gray-900 block mb-2">
-                  Jours contractuels (semaine)
-                </Label>
-                <p className="text-xs text-gray-600 mb-4">
-                  Utilisé pour calculer les heures prévues (mode lissage)
-                </p>
-                <div className="grid grid-cols-7 gap-2">
-                  {[
-                    { key: 'monday', label: 'Lun' },
-                    { key: 'tuesday', label: 'Mar' },
-                    { key: 'wednesday', label: 'Mer' },
-                    { key: 'thursday', label: 'Jeu' },
-                    { key: 'friday', label: 'Ven' },
-                    { key: 'saturday', label: 'Sam' },
-                    { key: 'sunday', label: 'Dim' }
-                  ].map(day => (
-                    <button
-                      key={day.key}
-                      type="button"
-                      onClick={() => setFormData(prev => ({
-                        ...prev,
-                        contract_days: {
-                          ...prev.contract_days,
-                          [day.key]: !prev.contract_days?.[day.key]
-                        }
-                      }))}
-                      disabled={!isManager}
-                      className={`py-2 px-2 rounded font-medium text-sm transition-all ${
-                        formData.contract_days?.[day.key]
-                          ? 'bg-orange-600 text-white border-orange-700 border'
-                          : 'bg-white text-gray-900 border border-gray-300 hover:border-gray-400'
-                      } ${!isManager ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
-                    >
-                      {day.label}
-                    </button>
-                  ))}
-                </div>
               </div>
 
               {/* Coefficient / Niveau */}

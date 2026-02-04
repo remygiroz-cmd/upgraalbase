@@ -1,12 +1,11 @@
 import React, { useState } from 'react';
 import { cn } from '@/lib/utils';
 import { Edit2, Check, X } from 'lucide-react';
+import { calculateMonthlyEmployeeHours } from './OvertimeCalculations';
 import { calculateShiftDuration } from './LegalChecks';
 import { calculateMonthlyCPTotal } from './paidLeaveCalculations';
 import { calculateDeductedHours, calculatePaidBaseHours, calculateMonthlyContractHours } from './DeductionCalculations';
 import { calculateHolidayHours } from './holidayCalculations';
-import { calculateExpectedDaysOfMonth, calculateRealizedDays, getGapColor, getGapTextColor } from './expectedDaysCalculations';
-import { getSimpleMonthlyBalance } from './simpleOvertimeV1';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
@@ -58,18 +57,6 @@ export default function MonthlySummary({ employee, shifts, nonShiftEvents, nonSh
     }
   });
 
-  // Fetch template weeks for expected days calculation
-  const { data: templateWeeks = [] } = useQuery({
-    queryKey: ['templateWeeks', employee.id],
-    queryFn: () => base44.entities.TemplateWeek.filter({ employee_id: employee.id })
-  });
-
-  // Fetch template shifts
-  const { data: templateShifts = [] } = useQuery({
-    queryKey: ['templateShifts'],
-    queryFn: () => base44.entities.TemplateShift.list()
-  });
-
   // Calculate automatic values
   const employeeShifts = shifts.filter(s => s.employee_id === employee.id);
   const employeeNonShifts = nonShiftEvents.filter(e => e.employee_id === employee.id);
@@ -92,16 +79,83 @@ export default function MonthlySummary({ employee, shifts, nonShiftEvents, nonSh
   // Paid base hours: contract - deducted
   const autoPaidBaseHours = calculatePaidBaseHours(employee, employeeNonShifts, nonShiftTypes, monthStart, monthEnd);
 
-  // V1 SIMPLE : calcul mensuel du delta
-  let monthlyBalance = { status: 'not_calculable', suppCompRetained: 0, weekBalances: [] };
+  // For overtime/complementary calculations, we still need weekly contract
+  const isFullTime = employee?.work_time_type === 'full_time';
+  const contractHoursWeekly = employee?.contract_hours_weekly 
+    ? parseFloat(employee.contract_hours_weekly.replace(':', '.').replace(/h/g, ''))
+    : (isFullTime ? 35 : 0);
+
+  // Overtime/complementary calculation
+  let monthlyHours = { type: 'unknown', total: autoTotalHours };
   if (calculationMode === 'monthly') {
-    monthlyBalance = getSimpleMonthlyBalance(
-      shifts,
-      employee.id,
-      monthStart,
-      monthEnd,
-      employee
-    );
+    monthlyHours = calculateMonthlyEmployeeHours(shifts, employee.id, monthStart, monthEnd, employee);
+  } else if (calculationMode === 'weekly') {
+    // Sum up weekly calculations
+    const weeklyData = [];
+    let currentDate = new Date(monthStart);
+    while (currentDate <= monthEnd) {
+      // Get week start (Monday)
+      const weekStart = new Date(currentDate);
+      const day = weekStart.getDay();
+      const diff = weekStart.getDate() - day + (day === 0 ? -6 : 1);
+      weekStart.setDate(diff);
+      
+      if (weekStart < monthStart) weekStart.setTime(monthStart.getTime());
+      
+      const weekEnd = new Date(weekStart);
+      weekEnd.setDate(weekEnd.getDate() + 6);
+      if (weekEnd > monthEnd) weekEnd.setTime(monthEnd.getTime());
+
+      const weekShifts = shifts.filter(s => {
+        if (s.employee_id !== employee.id) return false;
+        const shiftDate = new Date(s.date);
+        return shiftDate >= weekStart && shiftDate <= weekEnd;
+      });
+
+      const weekTotalHours = weekShifts.reduce((sum, shift) => sum + calculateShiftDuration(shift), 0);
+      
+      if (isFullTime || contractHoursWeekly >= 35) {
+        const overtime = Math.max(0, weekTotalHours - 35);
+        const overtime_25 = Math.min(overtime, 8);
+        const overtime_50 = Math.max(0, overtime - 8);
+        weeklyData.push({ overtime_25, overtime_50 });
+      } else if (contractHoursWeekly > 0) {
+        const complementary = Math.max(0, weekTotalHours - contractHoursWeekly);
+        const limit_10 = contractHoursWeekly * 0.10;
+        const complementary_10 = Math.min(complementary, limit_10);
+        const complementary_25 = Math.max(0, complementary - limit_10);
+        weeklyData.push({ complementary_10, complementary_25 });
+      }
+
+      currentDate = new Date(weekEnd);
+      currentDate.setDate(currentDate.getDate() + 1);
+    }
+
+    // Aggregate
+    if (isFullTime || contractHoursWeekly >= 35) {
+      const total_overtime_25 = weeklyData.reduce((sum, w) => sum + (w.overtime_25 || 0), 0);
+      const total_overtime_50 = weeklyData.reduce((sum, w) => sum + (w.overtime_50 || 0), 0);
+      monthlyHours = {
+        type: 'full_time',
+        total: autoTotalHours,
+        normal: Math.min(autoTotalHours, autoMonthlyContractHours),
+        overtime_25: total_overtime_25,
+        overtime_50: total_overtime_50,
+        total_overtime: total_overtime_25 + total_overtime_50
+      };
+    } else if (contractHoursWeekly > 0) {
+      const total_complementary_10 = weeklyData.reduce((sum, w) => sum + (w.complementary_10 || 0), 0);
+      const total_complementary_25 = weeklyData.reduce((sum, w) => sum + (w.complementary_25 || 0), 0);
+      monthlyHours = {
+        type: 'part_time',
+        total: autoTotalHours,
+        contract_hours: autoMonthlyContractHours,
+        normal: Math.min(autoTotalHours, autoMonthlyContractHours),
+        complementary_10: total_complementary_10,
+        complementary_25: total_complementary_25,
+        total_complementary: total_complementary_10 + total_complementary_25
+      };
+    }
   }
 
   // Non-shifts count (only visible_in_recap = true)
@@ -119,10 +173,6 @@ export default function MonthlySummary({ employee, shifts, nonShiftEvents, nonSh
   // Holiday hours calculation
   const holidayHoursData = calculateHolidayHours(employeeShifts, employee, monthStart, monthEnd, holidayDates) || { count: 0, dates: [], workedHours: 0, paidBonus: 0 };
 
-  // Expected days calculation
-  const expectedDaysData = calculateExpectedDaysOfMonth(templateWeeks, templateShifts, monthStart, monthEnd);
-  const realizedDays = calculateRealizedDays(shifts, employee.id, monthStart, monthEnd);
-
   // Apply manual overrides
   const daysWorked = manualRecap?.manual_days_worked ?? autoDaysWorked;
   const totalHours = manualRecap?.manual_total_hours ?? autoTotalHours;
@@ -133,11 +183,26 @@ export default function MonthlySummary({ employee, shifts, nonShiftEvents, nonSh
     ? manualRecap.manual_contract_hours 
     : Math.max(0, autoMonthlyContractHours - deductedHours);
   
-  // V1 : pas de majorations encore, juste le delta retenu (suppComp)
-  const suppCompRetained = monthlyBalance.suppCompRetained || 0;
-  const nonShiftsCounts = autoNonShiftsCounts;
-  const cpDays = autoCPDays;
+  let overtime_25 = monthlyHours.overtime_25 || 0;
+  let overtime_50 = monthlyHours.overtime_50 || 0;
+  let complementary_10 = monthlyHours.complementary_10 || 0;
+  let complementary_25 = monthlyHours.complementary_25 || 0;
+
+  if (manualRecap) {
+    if (manualRecap.manual_overtime_25 !== undefined) overtime_25 = manualRecap.manual_overtime_25;
+    if (manualRecap.manual_overtime_50 !== undefined) overtime_50 = manualRecap.manual_overtime_50;
+    if (manualRecap.manual_complementary_10 !== undefined) complementary_10 = manualRecap.manual_complementary_10;
+    if (manualRecap.manual_complementary_25 !== undefined) complementary_25 = manualRecap.manual_complementary_25;
+  }
+
+  const nonShiftsCounts = manualRecap?.manual_non_shifts || autoNonShiftsCounts;
+  
+  const cpDays = manualRecap?.manual_cp_days ?? autoCPDays;
   const hasManualOverride = !!manualRecap;
+
+  // Calculate total paid hours: base + overtime/complementary + holiday bonus
+  const holidayBonus = holidayHoursData.paidBonus || 0;
+  const totalPaidHours = paidBaseHours + overtime_25 + overtime_50 + complementary_10 + complementary_25 + holidayBonus;
 
   return (
     <>
@@ -157,42 +222,9 @@ export default function MonthlySummary({ employee, shifts, nonShiftEvents, nonSh
           📊 Récap mois
         </div>
 
-        {/* Days worked vs Expected */}
-        <div className="mb-2 pb-2 border-b border-gray-200 space-y-1">
-          {expectedDaysData.status === 'calculated' ? (
-            <>
-              <div className="text-xs text-gray-600">
-                <span className="font-semibold text-gray-700">{expectedDaysData.expectedDays}</span> jour(s) prévus
-              </div>
-              <div className="text-xs text-gray-600">
-                <span className="font-semibold text-gray-700">{realizedDays}</span> jour(s) réalisés
-              </div>
-              {(() => {
-                const gap = realizedDays - expectedDaysData.expectedDays;
-                const gapColor = getGapColor(gap);
-                const gapTextColor = getGapTextColor(gap);
-                const gapLabel = gap >= 0 ? `+${gap}` : `${gap}`;
-                return (
-                  <div className={cn(
-                    "text-xs font-bold px-2 py-1 rounded border-2",
-                    gapColor
-                  )}>
-                    <span className={gapTextColor}>
-                      Écart: {gapLabel}
-                    </span>
-                  </div>
-                );
-              })()}
-            </>
-          ) : expectedDaysData.status === 'undefined' ? (
-            <div className="text-xs text-gray-500 italic">
-              📋 Planning type: non défini
-            </div>
-          ) : (
-            <div className="text-xs text-orange-600 italic">
-              ⚠️ Planning type: non calculable
-            </div>
-          )}
+        {/* Days worked */}
+        <div className="text-xs text-gray-700 mb-1">
+          <span className="font-semibold">{daysWorked}</span> jour{daysWorked > 1 ? 's' : ''}
         </div>
 
         {/* Base contractuelle payée (MAIN) */}
@@ -227,41 +259,47 @@ export default function MonthlySummary({ employee, shifts, nonShiftEvents, nonSh
           Effectuées: {totalHours.toFixed(1)}h
         </div>
 
-        {/* V1 SIMPLE : détail des semaines et delta mensuel */}
-        {calculationMode === 'monthly' && monthlyBalance.status === 'calculated' && (
-          <div className="mt-2 pt-2 border-t border-gray-200 space-y-1 text-[10px]">
-            {monthlyBalance.weekBalances.length > 0 && (
-              <div className="text-[9px] text-gray-500 space-y-0.5 mb-2 pb-2 border-b border-gray-200">
-                <div className="font-semibold">Détail par semaine:</div>
-                {monthlyBalance.weekBalances.map((week, idx) => (
-                  <div key={idx} className="flex justify-between">
-                    <span>Sem {idx + 1}:</span>
-                    <span className="font-mono">{week.delta > 0 ? '+' : ''}{week.delta.toFixed(1)}h</span>
+        {/* Overtime/Complementary details */}
+        {calculationMode !== 'disabled' && (
+          <div className="mt-1 space-y-0.5 text-[10px]">
+            {monthlyHours.type === 'full_time' && (overtime_25 > 0 || overtime_50 > 0) && (
+              <>
+                {overtime_25 > 0 && (
+                  <div className="text-orange-700 font-semibold">
+                    {overtime_25.toFixed(1)}h (+25%)
                   </div>
-                ))}
+                )}
+                {overtime_50 > 0 && (
+                  <div className="text-red-700 font-semibold">
+                    {overtime_50.toFixed(1)}h (+50%)
+                  </div>
+                )}
+              </>
+            )}
+
+            {monthlyHours.type === 'part_time' && (complementary_10 > 0 || complementary_25 > 0) && (
+              <>
+                {complementary_10 > 0 && (
+                  <div className="text-green-700 font-semibold">
+                    {complementary_10.toFixed(1)}h (+10%)
+                  </div>
+                )}
+                {complementary_25 > 0 && (
+                  <div className="text-orange-700 font-semibold">
+                    {complementary_25.toFixed(1)}h (+25%)
+                  </div>
+                )}
+              </>
+            )}
+
+            {/* Total paid hours */}
+            {(overtime_25 > 0 || overtime_50 > 0 || complementary_10 > 0 || complementary_25 > 0) && (
+              <div className="pt-1 mt-1 border-t border-gray-300 text-blue-900 font-bold">
+                Total payé: {totalPaidHours.toFixed(1)}h
               </div>
             )}
-            <div className={cn(
-              "font-bold px-2 py-1 rounded",
-              monthlyBalance.monthlyDelta <= 0 ? "bg-gray-100 text-gray-700" : "bg-blue-50 text-blue-900"
-            )}>
-              Écart mensuel: {monthlyBalance.monthlyDelta > 0 ? '+' : ''}{monthlyBalance.monthlyDelta.toFixed(1)}h
-            </div>
-            <div className={cn(
-              "font-bold px-2 py-1 rounded",
-              suppCompRetained <= 0 ? "text-gray-600" : "text-blue-700 bg-blue-50"
-            )}>
-              Supp/Comp retenues: {suppCompRetained.toFixed(1)}h
-            </div>
           </div>
         )}
-        {calculationMode === 'monthly' && monthlyBalance.status === 'not_calculable' && (
-          <div className="mt-2 pt-2 border-t border-gray-200 text-[10px] text-orange-600 italic">
-            ⚠️ {monthlyBalance.reason}
-          </div>
-        )}
-
-        {/* V1 : pas de majorations pour le moment */}
 
         {/* CP count */}
         {cpDays > 0 && (
@@ -317,17 +355,21 @@ export default function MonthlySummary({ employee, shifts, nonShiftEvents, nonSh
           deductedHours: autoDeductedHours,
           deductedDetails: autoDeductedDetails,
           paidBaseHours: autoPaidBaseHours,
-          suppCompRetained: suppCompRetained,
+          overtime_25: monthlyHours.overtime_25 || 0,
+          overtime_50: monthlyHours.overtime_50 || 0,
+          complementary_10: monthlyHours.complementary_10 || 0,
+          complementary_25: monthlyHours.complementary_25 || 0,
           nonShiftsCounts: autoNonShiftsCounts,
           cpDays: autoCPDays
         }}
         currentRecap={manualRecap}
+        monthlyHoursType={monthlyHours.type}
       />
     </>
   );
 }
 
-function EditMonthlyRecapDialog({ open, onOpenChange, employee, year, month, autoValues, currentRecap }) {
+function EditMonthlyRecapDialog({ open, onOpenChange, employee, year, month, autoValues, currentRecap, monthlyHoursType }) {
   const queryClient = useQueryClient();
   const [formData, setFormData] = useState({});
 
@@ -338,6 +380,10 @@ function EditMonthlyRecapDialog({ open, onOpenChange, employee, year, month, aut
         manual_total_hours: currentRecap?.manual_total_hours ?? '',
         manual_deducted_hours: currentRecap?.manual_deducted_hours ?? '',
         manual_contract_hours: currentRecap?.manual_contract_hours ?? '',
+        manual_overtime_25: currentRecap?.manual_overtime_25 ?? '',
+        manual_overtime_50: currentRecap?.manual_overtime_50 ?? '',
+        manual_complementary_10: currentRecap?.manual_complementary_10 ?? '',
+        manual_complementary_25: currentRecap?.manual_complementary_25 ?? '',
         manual_cp_days: currentRecap?.manual_cp_days ?? '',
         notes: currentRecap?.notes || ''
       });
@@ -487,7 +533,70 @@ function EditMonthlyRecapDialog({ open, onOpenChange, employee, year, month, aut
             </div>
           </div>
 
+          {/* Overtime/Complementary */}
+          {monthlyHoursType === 'full_time' && (
+            <div>
+              <h3 className="font-semibold text-gray-900 mb-3">Heures supplémentaires</h3>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label className="text-xs text-gray-700">Heures +25%</Label>
+                  <Input
+                    type="number"
+                    step="0.1"
+                    min="0"
+                    placeholder={`Auto: ${autoValues.overtime_25.toFixed(1)}`}
+                    value={formData.manual_overtime_25}
+                    onChange={(e) => setFormData({...formData, manual_overtime_25: e.target.value})}
+                    className="mt-1"
+                  />
+                </div>
+                <div>
+                  <Label className="text-xs text-gray-700">Heures +50%</Label>
+                  <Input
+                    type="number"
+                    step="0.1"
+                    min="0"
+                    placeholder={`Auto: ${autoValues.overtime_50.toFixed(1)}`}
+                    value={formData.manual_overtime_50}
+                    onChange={(e) => setFormData({...formData, manual_overtime_50: e.target.value})}
+                    className="mt-1"
+                  />
+                </div>
+              </div>
+            </div>
+          )}
 
+          {monthlyHoursType === 'part_time' && (
+            <div>
+              <h3 className="font-semibold text-gray-900 mb-3">Heures complémentaires</h3>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label className="text-xs text-gray-700">Heures +10%</Label>
+                  <Input
+                    type="number"
+                    step="0.1"
+                    min="0"
+                    placeholder={`Auto: ${autoValues.complementary_10.toFixed(1)}`}
+                    value={formData.manual_complementary_10}
+                    onChange={(e) => setFormData({...formData, manual_complementary_10: e.target.value})}
+                    className="mt-1"
+                  />
+                </div>
+                <div>
+                  <Label className="text-xs text-gray-700">Heures +25%</Label>
+                  <Input
+                    type="number"
+                    step="0.1"
+                    min="0"
+                    placeholder={`Auto: ${autoValues.complementary_25.toFixed(1)}`}
+                    value={formData.manual_complementary_25}
+                    onChange={(e) => setFormData({...formData, manual_complementary_25: e.target.value})}
+                    className="mt-1"
+                  />
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* CP Days */}
           <div>

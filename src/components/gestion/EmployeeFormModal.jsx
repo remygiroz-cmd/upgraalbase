@@ -8,7 +8,6 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
-import { Checkbox } from '@/components/ui/checkbox';
 import { Loader2, Upload } from 'lucide-react';
 
 const CONTRACT_TYPES = [
@@ -54,15 +53,6 @@ export default function EmployeeFormModal({ open, onClose, employee }) {
     hourly_rate: 0,
     trial_end_date: '',
     permission_level: 'employee',
-    contract_days: {
-      monday: true,
-      tuesday: true,
-      wednesday: true,
-      thursday: true,
-      friday: true,
-      saturday: false,
-      sunday: false
-    },
     notes: '',
     is_active: true
   });
@@ -93,15 +83,6 @@ export default function EmployeeFormModal({ open, onClose, employee }) {
         hourly_rate: employee.hourly_rate || 0,
         trial_end_date: employee.trial_end_date || '',
         permission_level: employee.permission_level || 'employee',
-        contract_days: employee.contract_days || {
-          monday: true,
-          tuesday: true,
-          wednesday: true,
-          thursday: true,
-          friday: true,
-          saturday: false,
-          sunday: false
-        },
         notes: employee.notes || '',
         is_active: employee.is_active !== false
       });
@@ -130,15 +111,6 @@ export default function EmployeeFormModal({ open, onClose, employee }) {
         hourly_rate: 0,
         trial_end_date: '',
         permission_level: 'employee',
-        contract_days: {
-          monday: true,
-          tuesday: true,
-          wednesday: true,
-          thursday: true,
-          friday: true,
-          saturday: false,
-          sunday: false
-        },
         notes: '',
         is_active: true
       });
@@ -182,14 +154,12 @@ export default function EmployeeFormModal({ open, onClose, employee }) {
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="bg-slate-800 border-slate-700 max-w-3xl max-h-[95vh] overflow-hidden flex flex-col p-0">
-        <div className="px-6 py-4 border-b border-slate-700">
-          <DialogHeader>
-            <DialogTitle>{employee ? 'Modifier' : 'Nouvel'} employé</DialogTitle>
-          </DialogHeader>
-        </div>
+      <DialogContent className="bg-slate-800 border-slate-700 max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>{employee ? 'Modifier' : 'Nouvel'} employé</DialogTitle>
+        </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-6 overflow-y-auto flex-1 px-6 py-4">
+        <form onSubmit={handleSubmit} className="space-y-6">
           <Tabs value={activeTab} onValueChange={setActiveTab}>
             <TabsList className="grid w-full grid-cols-4 bg-slate-700">
               <TabsTrigger value="identity">Identité</TabsTrigger>
@@ -447,53 +417,6 @@ export default function EmployeeFormModal({ open, onClose, employee }) {
                   />
                 </div>
               </div>
-
-              {/* Jours contractuels */}
-              <div className="bg-slate-700 p-5 rounded-lg border border-slate-500 shadow-md">
-                <div className="mb-3">
-                  <Label className="text-sm font-semibold block text-slate-100 mb-1">
-                    Jours contractuels (semaine)
-                  </Label>
-                  <p className="text-xs text-slate-400">
-                    Utilisé pour calculer les heures prévues (lissage)
-                  </p>
-                </div>
-                <div className="grid grid-cols-7 gap-2">
-                  {[
-                    { key: 'monday', label: 'Lun' },
-                    { key: 'tuesday', label: 'Mar' },
-                    { key: 'wednesday', label: 'Mer' },
-                    { key: 'thursday', label: 'Jeu' },
-                    { key: 'friday', label: 'Ven' },
-                    { key: 'saturday', label: 'Sam' },
-                    { key: 'sunday', label: 'Dim' }
-                  ].map(day => (
-                    <button
-                      key={day.key}
-                      type="button"
-                      onClick={() => setForm(prev => ({
-                        ...prev,
-                        contract_days: {
-                          ...prev.contract_days,
-                          [day.key]: !prev.contract_days[day.key]
-                        }
-                      }))}
-                      className={`flex flex-col items-center justify-center p-3 rounded border-2 transition-all ${
-                        form.contract_days[day.key]
-                          ? 'bg-blue-600 border-blue-500 shadow-lg'
-                          : 'bg-slate-800 border-slate-600 hover:border-slate-500'
-                      }`}
-                    >
-                      <span className={`text-sm font-bold ${form.contract_days[day.key] ? 'text-white' : 'text-slate-300'}`}>
-                        {day.label}
-                      </span>
-                      {form.contract_days[day.key] && (
-                        <span className="text-xs text-blue-100 mt-1">✓</span>
-                      )}
-                    </button>
-                  ))}
-                </div>
-              </div>
             </TabsContent>
 
             {/* Legal Tab */}
@@ -540,22 +463,20 @@ export default function EmployeeFormModal({ open, onClose, employee }) {
             </TabsContent>
           </Tabs>
 
+          <div className="flex justify-end gap-3 pt-4 border-t border-slate-700">
+            <Button type="button" variant="outline" onClick={onClose} className="border-slate-600 text-slate-900 hover:text-slate-100 hover:bg-slate-700">
+              Annuler
+            </Button>
+            <Button 
+              type="submit" 
+              className="bg-orange-600 hover:bg-orange-700"
+              disabled={saveMutation.isPending}
+            >
+              {saveMutation.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+              {employee ? 'Mettre à jour' : 'Créer'}
+            </Button>
+          </div>
         </form>
-
-        <div className="px-6 py-4 border-t border-slate-700 flex justify-end gap-3">
-          <Button type="button" variant="outline" onClick={onClose} className="border-slate-600 text-slate-900 hover:text-slate-100 hover:bg-slate-700">
-            Annuler
-          </Button>
-          <Button 
-            type="submit" 
-            onClick={handleSubmit}
-            className="bg-orange-600 hover:bg-orange-700"
-            disabled={saveMutation.isPending}
-          >
-            {saveMutation.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-            {employee ? 'Mettre à jour' : 'Créer'}
-          </Button>
-        </div>
       </DialogContent>
     </Dialog>
   );
