@@ -46,7 +46,8 @@ export default function WeeklySummary({ employee, shifts, weekStart, onDeleteWee
         work_time_type: employee.work_time_type
       });
 
-      const saldeData = calculateWeeklySaldeForSmoothing(
+      // UTILISER LA FONCTION UNIQUE (partagée avec MonthlySummary)
+      const saldeData = getWeeklySummaryDataForMonth(
         shifts,
         employee.id,
         weekStart,
@@ -57,12 +58,13 @@ export default function WeeklySummary({ employee, shifts, weekStart, onDeleteWee
         nonShiftTypes
       );
 
-      // DEBUG: Log result
-      console.log('[WeeklySummary DEBUG] Salde data result:', {
+      // DEBUG: Log result (preuve du calcul)
+      console.log('[WeeklySummary DEBUG] Salde data (SOURCE UNIQUE)::', {
         status: saldeData.status,
         expectedWeek: saldeData.expectedWeek,
         workedWeek: saldeData.workedWeek,
         salde: saldeData.salde,
+        display: `expected=${saldeData.expectedWeek.toFixed(1)}h worked=${saldeData.workedWeek.toFixed(1)}h salde=${saldeData.salde.toFixed(1)}h`,
         reason: saldeData.reason
       });
 
