@@ -35,10 +35,8 @@ export default function NonShiftTypesManager({ open, onOpenChange, embeddedMode 
     icon: '📅',
     generates_work_hours: false,
     impacts_payroll: false,
-    is_paid: false,
     counts_as_work_time: false,
     impacts_paid_leave: false,
-    blocks_shifts: false,
     visible_in_recap: false
   });
   const queryClient = useQueryClient();
@@ -99,10 +97,8 @@ export default function NonShiftTypesManager({ open, onOpenChange, embeddedMode 
       icon: '📅',
       generates_work_hours: false,
       impacts_payroll: false,
-      is_paid: false,
       counts_as_work_time: false,
       impacts_paid_leave: false,
-      blocks_shifts: false,
       visible_in_recap: false
     });
     setEditingType(null);
@@ -117,10 +113,8 @@ export default function NonShiftTypesManager({ open, onOpenChange, embeddedMode 
       icon: type.icon || '📅',
       generates_work_hours: type.generates_work_hours || false,
       impacts_payroll: type.impacts_payroll || false,
-      is_paid: type.is_paid || false,
       counts_as_work_time: type.counts_as_work_time || false,
       impacts_paid_leave: type.impacts_paid_leave || false,
-      blocks_shifts: type.blocks_shifts || false,
       visible_in_recap: type.visible_in_recap || false
     });
   };
@@ -197,27 +191,13 @@ export default function NonShiftTypesManager({ open, onOpenChange, embeddedMode 
             </div>
           </div>
 
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+          <div className="grid grid-cols-2 gap-4">
             <div className="flex items-center gap-2">
               <Switch
                 checked={formData.generates_work_hours}
                 onCheckedChange={(checked) => setFormData({ ...formData, generates_work_hours: checked })}
               />
               <Label className="text-xs">Génère des heures</Label>
-            </div>
-            <div className="flex items-center gap-2">
-              <Switch
-                checked={formData.is_paid}
-                onCheckedChange={(checked) => setFormData({ ...formData, is_paid: checked })}
-              />
-              <Label className="text-xs">Payé</Label>
-            </div>
-            <div className="flex items-center gap-2">
-              <Switch
-                checked={formData.blocks_shifts}
-                onCheckedChange={(checked) => setFormData({ ...formData, blocks_shifts: checked })}
-              />
-              <Label className="text-xs">Bloque les shifts</Label>
             </div>
             <div className="flex items-center gap-2">
               <Switch
@@ -262,12 +242,6 @@ export default function NonShiftTypesManager({ open, onOpenChange, embeddedMode 
                 <div className="flex gap-2 mt-1 flex-wrap">
                   {type.generates_work_hours && (
                     <span className="text-[10px] bg-blue-100 text-blue-800 px-2 py-0.5 rounded">Heures</span>
-                  )}
-                  {type.is_paid && (
-                    <span className="text-[10px] bg-green-100 text-green-800 px-2 py-0.5 rounded">Payé</span>
-                  )}
-                  {type.blocks_shifts && (
-                    <span className="text-[10px] bg-red-100 text-red-800 px-2 py-0.5 rounded">Bloquant</span>
                   )}
                   {type.impacts_payroll && (
                     <span className="text-[10px] bg-purple-100 text-purple-800 px-2 py-0.5 rounded">Paie</span>
@@ -340,9 +314,9 @@ export default function NonShiftTypesManager({ open, onOpenChange, embeddedMode 
                       <div>
                         <p className="font-semibold text-gray-900">{type.label}</p>
                         <div className="flex flex-wrap gap-1 mt-1">
-                          {type.is_paid && <span className="text-[10px] bg-green-100 text-green-800 px-2 py-0.5 rounded">Payé</span>}
                           {type.generates_work_hours && <span className="text-[10px] bg-blue-100 text-blue-800 px-2 py-0.5 rounded">Génère heures</span>}
-                          {type.blocks_shifts && <span className="text-[10px] bg-red-100 text-red-800 px-2 py-0.5 rounded">Bloque shifts</span>}
+                          {type.impacts_payroll && <span className="text-[10px] bg-purple-100 text-purple-800 px-2 py-0.5 rounded">Paie</span>}
+                          {type.visible_in_recap && <span className="text-[10px] bg-gray-100 text-gray-800 px-2 py-0.5 rounded">Récap</span>}
                         </div>
                       </div>
                     </div>
@@ -438,7 +412,10 @@ export default function NonShiftTypesManager({ open, onOpenChange, embeddedMode 
                 <p className="text-xs font-semibold text-gray-700 uppercase">Paramètres RH & Paie</p>
                 
                 <div className="flex items-center justify-between">
-                  <Label className="text-sm">Génère des heures de travail</Label>
+                  <div>
+                    <Label className="text-sm">Génère des heures de travail</Label>
+                    <p className="text-[10px] text-gray-500">Ajoute des heures aux compteurs de travail</p>
+                  </div>
                   <Switch
                     checked={formData.generates_work_hours}
                     onCheckedChange={(checked) => setFormData({ ...formData, generates_work_hours: checked })}
@@ -446,7 +423,10 @@ export default function NonShiftTypesManager({ open, onOpenChange, embeddedMode 
                 </div>
 
                 <div className="flex items-center justify-between">
-                  <Label className="text-sm">Impacte la fiche de paie</Label>
+                  <div>
+                    <Label className="text-sm">Impacte la paie</Label>
+                    <p className="text-[10px] text-gray-500">Déduit des heures de la base contractuelle</p>
+                  </div>
                   <Switch
                     checked={formData.impacts_payroll}
                     onCheckedChange={(checked) => setFormData({ ...formData, impacts_payroll: checked })}
@@ -454,15 +434,10 @@ export default function NonShiftTypesManager({ open, onOpenChange, embeddedMode 
                 </div>
 
                 <div className="flex items-center justify-between">
-                  <Label className="text-sm">Payé</Label>
-                  <Switch
-                    checked={formData.is_paid}
-                    onCheckedChange={(checked) => setFormData({ ...formData, is_paid: checked })}
-                  />
-                </div>
-
-                <div className="flex items-center justify-between">
-                  <Label className="text-sm">Compte dans le temps de travail</Label>
+                  <div>
+                    <Label className="text-sm">Compte dans le temps de travail</Label>
+                    <p className="text-[10px] text-gray-500">Pris en compte dans les calculs de temps</p>
+                  </div>
                   <Switch
                     checked={formData.counts_as_work_time}
                     onCheckedChange={(checked) => setFormData({ ...formData, counts_as_work_time: checked })}
@@ -470,23 +445,21 @@ export default function NonShiftTypesManager({ open, onOpenChange, embeddedMode 
                 </div>
 
                 <div className="flex items-center justify-between">
-                  <Label className="text-sm">Impacte les congés payés</Label>
+                  <div>
+                    <Label className="text-sm">Impacte les congés payés</Label>
+                    <p className="text-[10px] text-gray-500">Influence les droits aux CP</p>
+                  </div>
                   <Switch
                     checked={formData.impacts_paid_leave}
                     onCheckedChange={(checked) => setFormData({ ...formData, impacts_paid_leave: checked })}
                   />
                 </div>
 
-                <div className="flex items-center justify-between">
-                  <Label className="text-sm">Bloque la création de shifts</Label>
-                  <Switch
-                    checked={formData.blocks_shifts}
-                    onCheckedChange={(checked) => setFormData({ ...formData, blocks_shifts: checked })}
-                  />
-                </div>
-
-                <div className="flex items-center justify-between">
-                  <Label className="text-sm">Visible dans les récaps</Label>
+                <div className="flex items-center justify-between bg-blue-50 p-2 rounded">
+                  <div>
+                    <Label className="text-sm font-semibold">Visible dans les récaps</Label>
+                    <p className="text-[10px] text-gray-600">Affiche le statut dans le récapitulatif mensuel</p>
+                  </div>
                   <Switch
                     checked={formData.visible_in_recap}
                     onCheckedChange={(checked) => setFormData({ ...formData, visible_in_recap: checked })}

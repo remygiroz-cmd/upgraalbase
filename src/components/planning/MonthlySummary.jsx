@@ -157,11 +157,11 @@ export default function MonthlySummary({ employee, shifts, nonShiftEvents, nonSh
     }
   }
 
-  // Non-shifts count
+  // Non-shifts count (only visible_in_recap = true)
   const autoNonShiftsCounts = {};
   employeeNonShifts.forEach(ns => {
     const type = nonShiftTypes.find(t => t.id === ns.non_shift_type_id);
-    if (type) {
+    if (type && type.visible_in_recap) {
       autoNonShiftsCounts[type.label] = (autoNonShiftsCounts[type.label] || 0) + 1;
     }
   });
