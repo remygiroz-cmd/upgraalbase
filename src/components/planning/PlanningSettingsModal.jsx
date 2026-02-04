@@ -301,6 +301,22 @@ export default function PlanningSettingsModal({ open, onOpenChange, displayMode,
 
                 <div className="flex items-center justify-between">
                   <div>
+                    <Label className="font-semibold text-gray-900">Mode compact (en-têtes employés)</Label>
+                    <p className="text-xs text-gray-600 mt-1">
+                      Réduire l'espacement des en-têtes pour afficher plus d'employés
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-gray-500">{displayMode === 'compact' ? 'Compact' : 'Normal'}</span>
+                    <Switch 
+                      checked={displayMode === 'compact'}
+                      onCheckedChange={(checked) => setDisplayMode(checked ? 'compact' : 'normal')}
+                    />
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <div>
                     <Label className="font-semibold text-gray-900">Afficher les icônes de statut</Label>
                     <p className="text-xs text-gray-600 mt-1">
                       Montrer les emojis sur les cartes de shifts (prochainement)
