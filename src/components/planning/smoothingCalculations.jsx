@@ -348,11 +348,15 @@ export const calculateMonthlyEmployeeHoursSmoothing = (
   // Lissage : si salde <= 0 => 0 heures supp/comp
   const smoothedSalde = Math.max(0, totalSalde);
 
-  // DEBUG final
-  console.log(`[calculateMonthlyEmployeeHoursSmoothing] Final result for employee ${employee.id}:`, {
-    totalSalde,
-    smoothedSalde,
-    weekCount: weekSaldes.length
+  // DEBUG final - TRAÇAGE COMPLET
+  console.log(`[calculateMonthlyEmployeeHoursSmoothing] Employee ${employee.id} - FINAL TRACE:`, {
+    monthStart: startStr,
+    monthEnd: endStr,
+    weekCount: weekSaldes.length,
+    totalSalde: totalSalde,
+    smoothedSalde: smoothedSalde,
+    formula: 'smoothedSalde = Math.max(0, totalSalde)',
+    source: 'calculateMonthlyEmployeeHoursSmoothing'
   });
 
   // Récupérer infos contrat
