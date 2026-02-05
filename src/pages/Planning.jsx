@@ -655,10 +655,10 @@ export default function Planning() {
             variant="outline"
             size="sm"
             className="border border-red-400 hover:border-red-600 hover:bg-red-50 text-red-700 font-semibold"
-            title="Effacer tout le planning du mois"
+            title="Réinitialiser complètement le planning du mois"
           >
             <AlertTriangle className="w-4 h-4 mr-1" />
-            <span className="hidden sm:inline text-xs">Effacer mois</span>
+            <span className="hidden sm:inline text-xs">Réinitialiser mois</span>
           </Button>
           <Button
             onClick={() => setShowExportComptaModal(true)}

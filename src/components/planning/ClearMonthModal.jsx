@@ -72,7 +72,7 @@ export default function ClearMonthModal({ open, onOpenChange, monthStart, monthE
 
   const handleClear = async () => {
     if (totalItems === 0) {
-      toast.error('Aucune donnée à supprimer pour ce mois');
+      toast.success('Le planning de ce mois est déjà vierge');
       onOpenChange(false);
       return;
     }
@@ -80,69 +80,108 @@ export default function ClearMonthModal({ open, onOpenChange, monthStart, monthE
     setClearing(true);
 
     try {
-      console.log('🗑️ [CLEAR MONTH] Début suppression', { year, month, monthName });
-      console.log('🗑️ [CLEAR MONTH] Shifts:', existingShifts.length);
-      console.log('🗑️ [CLEAR MONTH] NonShifts:', nonShiftEvents.length);
-      console.log('🗑️ [CLEAR MONTH] CP Periods:', paidLeavePeriods.length);
-      console.log('🗑️ [CLEAR MONTH] Recaps:', monthlyRecaps.length);
+      console.log('🔄 [RESET PLANNING] Début réinitialisation', { year, month, monthName });
+      console.log('🔄 [RESET PLANNING] Shifts:', existingShifts.length);
+      console.log('🔄 [RESET PLANNING] NonShifts:', nonShiftEvents.length);
+      console.log('🔄 [RESET PLANNING] CP Periods:', paidLeavePeriods.length);
+      console.log('🔄 [RESET PLANNING] Recaps:', monthlyRecaps.length);
 
       let deletedShifts = 0;
       let deletedEvents = 0;
       let deletedCP = 0;
       let deletedRecaps = 0;
+      const deletionErrors = [];
 
       // Delete all shifts
       for (const shift of existingShifts) {
-        await base44.entities.Shift.delete(shift.id);
-        deletedShifts++;
+        try {
+          await base44.entities.Shift.delete(shift.id);
+          deletedShifts++;
+        } catch (err) {
+          deletionErrors.push(`Shift ${shift.id}: ${err.message}`);
+          console.error('Error deleting shift:', shift.id, err);
+        }
       }
 
       // Delete all non-shift events
       for (const event of nonShiftEvents) {
-        await base44.entities.NonShiftEvent.delete(event.id);
-        deletedEvents++;
+        try {
+          await base44.entities.NonShiftEvent.delete(event.id);
+          deletedEvents++;
+        } catch (err) {
+          deletionErrors.push(`NonShift ${event.id}: ${err.message}`);
+          console.error('Error deleting non-shift:', event.id, err);
+        }
       }
 
-      // Delete all paid leave periods
-      console.log('🗑️ [CLEAR MONTH] Deleting CP periods:', paidLeavePeriods.length);
+      // Delete all paid leave periods (CRITICAL)
+      console.log('🔄 [RESET PLANNING] Deleting CP periods:', paidLeavePeriods.length);
       for (const period of paidLeavePeriods) {
-        console.log('🗑️ [CLEAR MONTH] Deleting CP period:', period.id, period);
-        await base44.entities.PaidLeavePeriod.delete(period.id);
-        deletedCP++;
+        try {
+          console.log('🔄 [RESET PLANNING] Deleting CP period:', period.id, {
+            employee_id: period.employee_id,
+            start_cp: period.start_cp,
+            end_cp: period.end_cp
+          });
+          await base44.entities.PaidLeavePeriod.delete(period.id);
+          deletedCP++;
+          console.log('✅ [RESET PLANNING] CP period deleted:', period.id);
+        } catch (err) {
+          deletionErrors.push(`CP Period ${period.id}: ${err.message}`);
+          console.error('❌ Error deleting CP period:', period.id, err);
+        }
       }
-      console.log('✅ [CLEAR MONTH] CP periods deleted:', deletedCP);
+      console.log('✅ [RESET PLANNING] CP periods deleted:', deletedCP, '/', paidLeavePeriods.length);
 
       // Delete monthly recaps
       for (const recap of monthlyRecaps) {
-        await base44.entities.MonthlyRecap.delete(recap.id);
-        deletedRecaps++;
+        try {
+          await base44.entities.MonthlyRecap.delete(recap.id);
+          deletedRecaps++;
+        } catch (err) {
+          deletionErrors.push(`Recap ${recap.id}: ${err.message}`);
+          console.error('Error deleting recap:', recap.id, err);
+        }
       }
 
       const totalDeleted = deletedShifts + deletedEvents + deletedCP + deletedRecaps;
 
-      console.log('✅ [CLEAR MONTH] Suppression terminée', {
+      console.log('✅ [RESET PLANNING] Réinitialisation terminée', {
         deletedShifts,
         deletedEvents,
         deletedCP,
         deletedRecaps,
-        totalDeleted
+        totalDeleted,
+        errors: deletionErrors.length
       });
 
-      // Vérification de cohérence
+      // Vérification de cohérence stricte
       if (totalDeleted === 0 && totalItems > 0) {
-        throw new Error('Aucun élément supprimé alors que des données existaient');
+        throw new Error('ERREUR: Aucun élément supprimé alors que des données existaient');
+      }
+
+      if (deletedCP < paidLeavePeriods.length) {
+        console.warn('⚠️ WARNING: Certaines périodes CP n\'ont pas été supprimées', {
+          expected: paidLeavePeriods.length,
+          deleted: deletedCP
+        });
+      }
+
+      if (deletionErrors.length > 0) {
+        console.error('❌ [RESET PLANNING] Erreurs de suppression:', deletionErrors);
+        throw new Error(`Certains éléments n'ont pas pu être supprimés: ${deletionErrors.join(', ')}`);
       }
 
       setClearing(false);
-      toast.success(`✓ Planning de ${monthName} ${year} entièrement effacé : ${deletedShifts} shifts, ${deletedEvents} événements, ${deletedCP} CP, ${deletedRecaps} récaps supprimés`);
+      toast.success(`✓ Planning de ${monthName} ${year} réinitialisé`);
       onSuccess?.();
       onOpenChange(false);
       setConfirmChecked(false);
 
     } catch (error) {
       setClearing(false);
-      console.error('❌ [CLEAR MONTH ERROR]:', error);
-      toast.error('Erreur lors de la suppression: ' + error.message);
+      console.error('❌ [RESET PLANNING ERROR]:', error);
+      toast.error('Erreur lors de la réinitialisation: ' + error.message);
     }
   };
 
@@ -155,7 +194,7 @@ export default function ClearMonthModal({ open, onOpenChange, monthStart, monthE
         <DialogHeader>
           <DialogTitle className="text-xl font-bold text-red-600 flex items-center gap-2">
             <AlertTriangle className="w-6 h-6" />
-            Effacer le planning de {monthName} {year}
+            Réinitialiser le planning de {monthName} {year}
           </DialogTitle>
         </DialogHeader>
 
@@ -167,7 +206,7 @@ export default function ClearMonthModal({ open, onOpenChange, monthStart, monthE
               <div className="flex-1">
                 <p className="font-bold text-red-900 mb-2 text-base">⚠️ Action irréversible</p>
                 <p className="text-sm text-red-800 mb-4 leading-relaxed">
-                  Cette action supprime <strong>définitivement toutes les données du planning</strong> pour le mois de <strong>{monthName} {year}</strong>, pour <strong>tous les employés</strong>.
+                  Cette action remettra le planning dans son <strong>état initial</strong>, comme un <strong>mois vierge</strong>. Toutes les données du planning pour <strong>{monthName} {year}</strong> seront définitivement supprimées.
                 </p>
                 <div className="bg-white border-2 border-red-300 rounded-lg p-4 space-y-2">
                   <div className="flex justify-between items-center text-sm">
@@ -216,7 +255,7 @@ export default function ClearMonthModal({ open, onOpenChange, monthStart, monthE
                   className="w-5 h-5 rounded border-gray-400 mt-0.5"
                 />
                 <span className="text-sm font-semibold text-gray-900 leading-relaxed">
-                  J'ai bien compris que cette action est définitive et irréversible
+                  Je confirme la réinitialisation complète du mois
                 </span>
               </label>
             </div>
@@ -255,12 +294,12 @@ export default function ClearMonthModal({ open, onOpenChange, monthStart, monthE
               {clearing ? (
                 <>
                   <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Suppression du planning en cours...
+                  Réinitialisation en cours...
                 </>
               ) : (
                 <>
                   <Trash2 className="w-4 h-4 mr-2" />
-                  Effacer définitivement
+                  Réinitialiser le mois
                 </>
               )}
             </Button>
