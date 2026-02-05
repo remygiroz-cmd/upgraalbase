@@ -58,7 +58,16 @@ export default function EmployeeFormModal({ open, onClose, employee, isManager =
     cdd_custom_reason: '',
     payslips: [],
     documents: [],
-    is_active: true
+    is_active: true,
+    weekly_schedule: {
+      monday: { worked: false, hours: 0 },
+      tuesday: { worked: false, hours: 0 },
+      wednesday: { worked: false, hours: 0 },
+      thursday: { worked: false, hours: 0 },
+      friday: { worked: false, hours: 0 },
+      saturday: { worked: false, hours: 0 },
+      sunday: { worked: false, hours: 0 }
+    }
   });
 
   const createMutation = useMutation({
