@@ -880,6 +880,27 @@ ${currentUser.email || '-'}`;
                 />
               </div>
 
+              {/* Répartition hebdomadaire */}
+              <WeeklyScheduleBlock 
+                schedule={formData.weekly_schedule || {}}
+                onChange={(newSchedule) => {
+                  const daysWorked = Object.values(newSchedule).filter(d => d.worked).length;
+                  const totalWeeklyHours = Object.values(newSchedule).reduce((sum, d) => sum + (d.worked ? parseFloat(d.hours || 0) : 0), 0);
+                  const totalMonthlyHours = totalWeeklyHours * 4.3333;
+
+                  setFormData({ 
+                    ...formData, 
+                    weekly_schedule: newSchedule,
+                    work_days_per_week: daysWorked,
+                    contract_hours_weekly: totalWeeklyHours.toFixed(2),
+                    contract_hours: totalMonthlyHours.toFixed(2)
+                  });
+                }}
+                isManager={isManager}
+                expectedDays={formData.work_days_per_week}
+                expectedWeeklyHours={formData.contract_hours_weekly ? parseFloat(formData.contract_hours_weekly.replace(':', '.')) : null}
+              />
+
               {/* Coefficient / Niveau */}
               <div>
                 <Label className="text-gray-900">Coefficient / Niveau</Label>
