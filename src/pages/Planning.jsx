@@ -21,6 +21,8 @@ import PlanningSettingsModal from '@/components/planning/PlanningSettingsModal';
 import AddPaidLeaveModal from '@/components/planning/AddPaidLeaveModal';
 import EmployeeHeaderCell from '@/components/planning/EmployeeHeaderCell';
 import ExportComptaModal from '@/components/planning/ExportComptaModal';
+import ApplyTemplatesModal from '@/components/planning/ApplyTemplatesModal';
+import ClearMonthModal from '@/components/planning/ClearMonthModal';
 import { calculateShiftDuration, checkMinimumRest } from '@/components/planning/LegalChecks';
 import { parseLocalDate, formatLocalDate } from '@/components/planning/dateUtils';
 import { isDateInCPPeriod } from '@/components/planning/paidLeaveCalculations';
@@ -35,6 +37,8 @@ export default function Planning() {
   const [showApplyTemplateModal, setShowApplyTemplateModal] = useState(false);
   const [showAddPaidLeaveModal, setShowAddPaidLeaveModal] = useState(false);
   const [showExportComptaModal, setShowExportComptaModal] = useState(false);
+  const [showApplyTemplatesModal, setShowApplyTemplatesModal] = useState(false);
+  const [showClearMonthModal, setShowClearMonthModal] = useState(false);
   const [selectedEmployeeForTemplate, setSelectedEmployeeForTemplate] = useState(null);
   const [selectedEmployeeForCP, setSelectedEmployeeForCP] = useState(null);
   const [selectedCPPeriod, setSelectedCPPeriod] = useState(null);
@@ -637,6 +641,26 @@ export default function Planning() {
         </div>
         <div className="flex items-center gap-2">
           <Button
+            onClick={() => setShowApplyTemplatesModal(true)}
+            variant="outline"
+            size="sm"
+            className="border border-blue-400 hover:border-blue-600 hover:bg-blue-50 text-blue-700 font-semibold"
+            title="Appliquer les plannings types au mois"
+          >
+            <Calendar className="w-4 h-4 mr-1" />
+            <span className="hidden sm:inline text-xs">Appliquer templates</span>
+          </Button>
+          <Button
+            onClick={() => setShowClearMonthModal(true)}
+            variant="outline"
+            size="sm"
+            className="border border-red-400 hover:border-red-600 hover:bg-red-50 text-red-700 font-semibold"
+            title="Effacer tout le planning du mois"
+          >
+            <AlertTriangle className="w-4 h-4 mr-1" />
+            <span className="hidden sm:inline text-xs">Effacer mois</span>
+          </Button>
+          <Button
             onClick={() => setShowExportComptaModal(true)}
             variant="outline"
             size="sm"
@@ -1113,6 +1137,30 @@ export default function Planning() {
         monthStart={new Date(currentYear, currentMonth, 1)}
         monthEnd={new Date(currentYear, currentMonth + 1, 0)}
         holidayDates={holidayDates}
+      />
+
+      {/* Apply Templates Modal */}
+      <ApplyTemplatesModal
+        open={showApplyTemplatesModal}
+        onOpenChange={setShowApplyTemplatesModal}
+        monthStart={new Date(currentYear, currentMonth, 1)}
+        monthEnd={new Date(currentYear, currentMonth + 1, 0)}
+        onSuccess={() => {
+          queryClient.invalidateQueries({ queryKey: ['shifts'] });
+          queryClient.invalidateQueries({ queryKey: ['nonShiftEvents'] });
+        }}
+      />
+
+      {/* Clear Month Modal */}
+      <ClearMonthModal
+        open={showClearMonthModal}
+        onOpenChange={setShowClearMonthModal}
+        monthStart={new Date(currentYear, currentMonth, 1)}
+        monthEnd={new Date(currentYear, currentMonth + 1, 0)}
+        onSuccess={() => {
+          queryClient.invalidateQueries({ queryKey: ['shifts'] });
+          queryClient.invalidateQueries({ queryKey: ['nonShiftEvents'] });
+        }}
       />
 
       {/* Copy Week Modal */}
