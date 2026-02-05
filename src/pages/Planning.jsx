@@ -17,8 +17,8 @@ import WeeklySummary from '@/components/planning/WeeklySummary';
 import MonthlySummary from '@/components/planning/MonthlySummary';
 import NonShiftCard from '@/components/planning/NonShiftCard';
 import PlanningSettingsModal from '@/components/planning/PlanningSettingsModal';
-import AddPaidLeaveModalContent from '@/components/planning/AddPaidLeaveModalContent';
-import ApplyTemplateModalContent from '@/components/planning/ApplyTemplateModalContent';
+import AddCPGlobalModal from '@/components/planning/AddCPGlobalModal';
+import ApplyTemplateGlobalModal from '@/components/planning/ApplyTemplateGlobalModal';
 import EmployeeHeaderCell from '@/components/planning/EmployeeHeaderCell';
 import ExportComptaModal from '@/components/planning/ExportComptaModal';
 import ApplyTemplatesModal from '@/components/planning/ApplyTemplatesModal';
@@ -374,14 +374,7 @@ export default function Planning() {
     return null;
   };
 
-  // Gérer les actions depuis le dropdown d'employé
-  const handleEmployeeAction = (action, employee) => {
-    setModalState({
-      isOpen: true,
-      actionType: action,
-      selectedEmployee: employee
-    });
-  };
+
 
   // Handle cell click
   const handleCellClick = (employeeId, dateStr, dayInfo) => {
@@ -653,11 +646,21 @@ export default function Planning() {
         </div>
         <div className="flex items-center gap-2">
           <Button
-            onClick={() => setShowApplyTemplatesModal(true)}
+            onClick={() => setModalState({ isOpen: true, actionType: 'ADD_CP', selectedEmployee: null })}
+            variant="outline"
+            size="sm"
+            className="border border-green-400 hover:border-green-600 hover:bg-green-50 text-green-700 font-semibold"
+            title="Ajouter des congés payés"
+          >
+            <span className="mr-1">🟢</span>
+            <span className="hidden sm:inline text-xs">Ajouter CP</span>
+          </Button>
+          <Button
+            onClick={() => setModalState({ isOpen: true, actionType: 'APPLY_TEMPLATE', selectedEmployee: null })}
             variant="outline"
             size="sm"
             className="border border-blue-400 hover:border-blue-600 hover:bg-blue-50 text-blue-700 font-semibold"
-            title="Appliquer les plannings types au mois"
+            title="Appliquer les plannings types"
           >
             <Calendar className="w-4 h-4 mr-1" />
             <span className="hidden sm:inline text-xs">Appliquer templates</span>
@@ -837,7 +840,6 @@ export default function Planning() {
                               isDragging={snapshot.isDragging}
                               dragHandleProps={provided.dragHandleProps}
                               displayMode={displayMode}
-                              onActionSelect={handleEmployeeAction}
                               style={provided.draggableProps.style}
                               {...provided.draggableProps}
                               />
@@ -1121,7 +1123,7 @@ export default function Planning() {
         setDisplayMode={setDisplayMode}
       />
 
-      {/* Modale centralisée pour les actions employé */}
+      {/* Modale centralisée pour les actions globales */}
       {modalState.isOpen && (
         <Dialog 
           open={true}
@@ -1133,16 +1135,14 @@ export default function Planning() {
           }}
         >
           <DialogContent className="max-w-4xl w-[90vw] max-h-[90vh] overflow-y-auto">
-            {modalState.actionType === 'ADD_CP' && modalState.selectedEmployee && (
+            {modalState.actionType === 'ADD_CP' && (
               <>
                 <DialogHeader>
                   <DialogTitle className="text-xl font-bold text-green-600">
-                    🟢 Ajouter / Modifier Congés Payés
+                    🟢 Ajouter Congés Payés
                   </DialogTitle>
                 </DialogHeader>
-                <AddPaidLeaveModalContent
-                  employee={modalState.selectedEmployee}
-                  existingPeriod={selectedCPPeriod}
+                <AddCPGlobalModal
                   onClose={() => {
                     setModalState({ isOpen: false, actionType: null, selectedEmployee: null });
                     setSelectedCPPeriod(null);
@@ -1150,16 +1150,16 @@ export default function Planning() {
                 />
               </>
             )}
-            {modalState.actionType === 'APPLY_TEMPLATE' && modalState.selectedEmployee && (
+            {modalState.actionType === 'APPLY_TEMPLATE' && (
               <>
                 <DialogHeader>
                   <DialogTitle className="text-xl font-bold text-blue-600">
-                    📋 Appliquer un template de planning
+                    📋 Appliquer des plannings types — {MONTHS[currentMonth]} {currentYear}
                   </DialogTitle>
                 </DialogHeader>
-                <ApplyTemplateModalContent
-                  employeeId={modalState.selectedEmployee.id}
-                  employeeName={`${modalState.selectedEmployee.first_name} ${modalState.selectedEmployee.last_name}`}
+                <ApplyTemplateGlobalModal
+                  currentMonth={currentMonth}
+                  currentYear={currentYear}
                   onClose={() => {
                     setModalState({ isOpen: false, actionType: null, selectedEmployee: null });
                   }}
@@ -1179,17 +1179,7 @@ export default function Planning() {
         holidayDates={holidayDates}
       />
 
-      {/* Apply Templates Modal */}
-      <ApplyTemplatesModal
-        open={showApplyTemplatesModal}
-        onOpenChange={setShowApplyTemplatesModal}
-        monthStart={new Date(currentYear, currentMonth, 1)}
-        monthEnd={new Date(currentYear, currentMonth + 1, 0)}
-        onSuccess={() => {
-          queryClient.invalidateQueries({ queryKey: ['shifts'] });
-          queryClient.invalidateQueries({ queryKey: ['nonShiftEvents'] });
-        }}
-      />
+
 
       {/* Clear Month Modal */}
       <ClearMonthModal
