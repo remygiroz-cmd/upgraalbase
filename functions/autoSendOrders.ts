@@ -1,18 +1,12 @@
-import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
+import { createClient } from 'npm:@base44/sdk@0.8.6';
 
 Deno.serve(async (req) => {
   try {
-    const base44 = createClientFromRequest(req);
-    
-    // Pour les automations, on skip l'auth car elles tournent sans utilisateur
-    const isAutomated = !req.headers.get('authorization');
-    
-    if (!isAutomated) {
-      const user = await base44.auth.me();
-      if (user?.role !== 'admin') {
-        return Response.json({ error: 'Forbidden: Admin access required' }, { status: 403 });
-      }
-    }
+    // Pour les automations scheduled, utiliser directement un client service role
+    const base44 = createClient({
+      appId: Deno.env.get('BASE44_APP_ID'),
+      serviceRoleKey: true
+    });
 
     const now = new Date();
     
@@ -50,7 +44,7 @@ Deno.serve(async (req) => {
     console.log(`Vérification automatique - Jour: ${currentDay}, Heure Paris: ${currentTime}`);
 
     // Récupérer tous les fournisseurs actifs avec automatisation
-    const suppliers = await base44.asServiceRole.entities.Supplier.filter({ is_active: true });
+    const suppliers = await base44.entities.Supplier.filter({ is_active: true });
     
     // Fonction pour vérifier si l'heure est dans la fenêtre de 5 minutes
     const isWithinTimeWindow = (closingTime) => {
@@ -78,7 +72,7 @@ Deno.serve(async (req) => {
     for (const supplier of suppliersToProcess) {
       try {
         // Récupérer les commandes en cours pour ce fournisseur
-        const orders = await base44.asServiceRole.entities.Order.filter({
+        const orders = await base44.entities.Order.filter({
           supplier_id: supplier.id,
           status: 'en_cours'
         });
@@ -88,13 +82,13 @@ Deno.serve(async (req) => {
         for (const order of orders) {
           try {
             // Envoyer l'email via la fonction sendOrderEmail
-            const emailResult = await base44.asServiceRole.functions.invoke('sendOrderEmail', {
+            const emailResult = await base44.functions.invoke('sendOrderEmail', {
               orderId: order.id
             });
 
             if (emailResult.data.success) {
               // Marquer comme terminée
-              await base44.asServiceRole.entities.Order.update(order.id, {
+              await base44.entities.Order.update(order.id, {
                 status: 'terminee'
               });
 
