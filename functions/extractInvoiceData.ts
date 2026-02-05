@@ -1,12 +1,22 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
 
+// Rôles autorisés à extraire des données de factures
+const ALLOWED_ROLES = ['admin', 'manager', 'comptable', 'gestionnaire'];
+
 Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
     const user = await base44.auth.me();
 
+    // Vérification authentification
     if (!user) {
       return Response.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    // Vérification des permissions
+    if (!ALLOWED_ROLES.includes(user.role)) {
+      console.warn(`[SECURITY] User ${user.id} attempted to extract invoice data without permission`);
+      return Response.json({ error: 'Permissions insuffisantes' }, { status: 403 });
     }
 
     const { file_url } = await req.json();
@@ -15,7 +25,7 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'file_url is required' }, { status: 400 });
     }
 
-    // Extraction IA avec contexte internet pour améliorer la précision
+    // Extraction IA
     const extractionResult = await base44.integrations.Core.InvokeLLM({
       prompt: `Analyse cette facture et extrais les informations suivantes en JSON:
 - supplier: nom du fournisseur
@@ -53,13 +63,15 @@ Si une information n'est pas trouvée, mets null. Sois précis et extrait tout l
     const lowConfidence = extractionResult.confidence < 0.7;
     const status = (missingCritical || lowConfidence) ? "a_verifier" : "non_envoyee";
 
+    console.log(`[INFO] Invoice extraction completed with confidence: ${extractionResult.confidence}`);
+
     return Response.json({
       ...extractionResult,
       status
     });
 
   } catch (error) {
-    console.error('Error extracting invoice data:', error);
+    console.error('[ERROR] extractInvoiceData:', error.message);
     return Response.json({ error: error.message }, { status: 500 });
   }
 });
