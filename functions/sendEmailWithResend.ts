@@ -1,18 +1,34 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
 
+// Rôles autorisés à envoyer des emails
+const ALLOWED_ROLES = ['admin', 'manager', 'comptable', 'gestionnaire'];
+
 Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
     const user = await base44.auth.me();
 
+    // Vérification authentification
     if (!user) {
       return Response.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    // Vérification des permissions
+    if (!ALLOWED_ROLES.includes(user.role)) {
+      console.warn(`[SECURITY] User ${user.id} attempted to send email without permission`);
+      return Response.json({ error: 'Permissions insuffisantes' }, { status: 403 });
     }
 
     const { to, subject, html, body, attachments, from_name, reply_to } = await req.json();
 
     if (!to || !subject || (!html && !body)) {
       return Response.json({ error: 'Missing required fields: to, subject, html or body' }, { status: 400 });
+    }
+
+    // Validation email
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(to)) {
+      return Response.json({ error: 'Invalid email format' }, { status: 400 });
     }
 
     const apiKey = Deno.env.get('RESEND_API_KEY');
@@ -29,37 +45,34 @@ Deno.serve(async (req) => {
           senderName = settings[0].email_sender_name;
         }
       } catch (err) {
-        console.log('Using default sender name');
+        // Use default sender name
       }
     }
 
     // Build email payload
-    const emailPayload = {
+    const emailPayload: any = {
       from: `${senderName} <noreply@upgraal.com>`,
       to: [to],
       subject: subject
     };
 
-    // Add HTML or plain text
     if (html) {
       emailPayload.html = html;
     } else if (body) {
       emailPayload.text = body;
     }
 
-    // Add reply-to if provided
     if (reply_to) {
       emailPayload.reply_to = [reply_to];
     }
 
-    // Add attachments if provided
     if (attachments && attachments.length > 0) {
       emailPayload.attachments = attachments;
-      console.log('Attachments:', attachments.map(a => ({ filename: a.filename, contentLength: a.content?.length })));
     }
 
-    // Send email via Resend API
-    console.log('Sending email with payload:', { to, subject, hasAttachments: !!emailPayload.attachments });
+    // Log sécurisé (sans données sensibles)
+    console.log(`[INFO] Sending email with ${attachments?.length || 0} attachments`);
+
     const response = await fetch('https://api.resend.com/emails', {
       method: 'POST',
       headers: {
@@ -72,18 +85,16 @@ Deno.serve(async (req) => {
     const result = await response.json();
 
     if (!response.ok) {
-      // Better error handling for common issues
       let errorMessage = 'Erreur lors de l\'envoi de l\'email';
       
       if (response.status === 403) {
-        errorMessage = 'Le domaine d\'envoi n\'est pas vérifié. Veuillez vérifier votre domaine dans Resend.';
+        errorMessage = 'Le domaine d\'envoi n\'est pas vérifié.';
       } else if (response.status === 422) {
-        errorMessage = 'Adresse email invalide ou domaine non configuré correctement.';
+        errorMessage = 'Adresse email invalide ou domaine non configuré.';
       }
       
       return Response.json({ 
         error: errorMessage,
-        details: result,
         status: response.status
       }, { status: response.status });
     }
@@ -91,15 +102,13 @@ Deno.serve(async (req) => {
     return Response.json({ 
       success: true, 
       message: 'Email sent successfully',
-      id: result.id,
-      attachmentsSent: emailPayload.attachments?.length || 0
+      id: result.id
     });
 
   } catch (error) {
-    console.error('Error:', error);
+    console.error('[ERROR] sendEmailWithResend:', error.message);
     return Response.json({ 
-      error: 'Internal server error', 
-      details: error.message 
+      error: 'Internal server error'
     }, { status: 500 });
   }
 });
