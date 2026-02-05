@@ -15,10 +15,10 @@ import ShiftCard from '@/components/planning/ShiftCard';
 import ShiftFormModal from '@/components/planning/ShiftFormModal';
 import WeeklySummary from '@/components/planning/WeeklySummary';
 import MonthlySummary from '@/components/planning/MonthlySummary';
-import ApplyTemplateModal from '@/components/planning/ApplyTemplateModal';
 import NonShiftCard from '@/components/planning/NonShiftCard';
 import PlanningSettingsModal from '@/components/planning/PlanningSettingsModal';
-import AddPaidLeaveModal from '@/components/planning/AddPaidLeaveModal';
+import AddPaidLeaveModalContent from '@/components/planning/AddPaidLeaveModalContent';
+import ApplyTemplateModalContent from '@/components/planning/ApplyTemplateModalContent';
 import EmployeeHeaderCell from '@/components/planning/EmployeeHeaderCell';
 import ExportComptaModal from '@/components/planning/ExportComptaModal';
 import ApplyTemplatesModal from '@/components/planning/ApplyTemplatesModal';
@@ -1122,59 +1122,53 @@ export default function Planning() {
       />
 
       {/* Modale centralisée pour les actions employé */}
-      <Dialog 
-        open={modalState.isOpen} 
-        onOpenChange={(open) => {
-          if (!open) {
-            setModalState({ isOpen: false, actionType: null, selectedEmployee: null });
-            setSelectedCPPeriod(null);
-          }
-        }}
-      >
-        <DialogContent className="max-w-4xl w-[90vw] max-h-[90vh] overflow-y-auto">
-          {modalState.actionType === 'ADD_CP' && modalState.selectedEmployee && (
-            <>
-              <DialogHeader>
-                <DialogTitle className="text-xl font-bold text-green-600">
-                  🟢 Ajouter / Modifier Congés Payés
-                </DialogTitle>
-              </DialogHeader>
-              <AddPaidLeaveModal
-                open={true}
-                onOpenChange={(open) => {
-                  if (!open) {
+      {modalState.isOpen && (
+        <Dialog 
+          open={true}
+          onOpenChange={(open) => {
+            if (!open) {
+              setModalState({ isOpen: false, actionType: null, selectedEmployee: null });
+              setSelectedCPPeriod(null);
+            }
+          }}
+        >
+          <DialogContent className="max-w-4xl w-[90vw] max-h-[90vh] overflow-y-auto">
+            {modalState.actionType === 'ADD_CP' && modalState.selectedEmployee && (
+              <>
+                <DialogHeader>
+                  <DialogTitle className="text-xl font-bold text-green-600">
+                    🟢 Ajouter / Modifier Congés Payés
+                  </DialogTitle>
+                </DialogHeader>
+                <AddPaidLeaveModalContent
+                  employee={modalState.selectedEmployee}
+                  existingPeriod={selectedCPPeriod}
+                  onClose={() => {
                     setModalState({ isOpen: false, actionType: null, selectedEmployee: null });
                     setSelectedCPPeriod(null);
-                  }
-                }}
-                employee={modalState.selectedEmployee}
-                existingPeriod={selectedCPPeriod}
-                embedded={true}
-              />
-            </>
-          )}
-          {modalState.actionType === 'APPLY_TEMPLATE' && modalState.selectedEmployee && (
-            <>
-              <DialogHeader>
-                <DialogTitle className="text-xl font-bold text-blue-600">
-                  📋 Appliquer un template de planning
-                </DialogTitle>
-              </DialogHeader>
-              <ApplyTemplateModal
-                open={true}
-                onOpenChange={(open) => {
-                  if (!open) {
+                  }}
+                />
+              </>
+            )}
+            {modalState.actionType === 'APPLY_TEMPLATE' && modalState.selectedEmployee && (
+              <>
+                <DialogHeader>
+                  <DialogTitle className="text-xl font-bold text-blue-600">
+                    📋 Appliquer un template de planning
+                  </DialogTitle>
+                </DialogHeader>
+                <ApplyTemplateModalContent
+                  employeeId={modalState.selectedEmployee.id}
+                  employeeName={`${modalState.selectedEmployee.first_name} ${modalState.selectedEmployee.last_name}`}
+                  onClose={() => {
                     setModalState({ isOpen: false, actionType: null, selectedEmployee: null });
-                  }
-                }}
-                employeeId={modalState.selectedEmployee.id}
-                employeeName={`${modalState.selectedEmployee.first_name} ${modalState.selectedEmployee.last_name}`}
-                embedded={true}
-              />
-            </>
-          )}
-        </DialogContent>
-      </Dialog>
+                  }}
+                />
+              </>
+            )}
+          </DialogContent>
+        </Dialog>
+      )}
 
       {/* Export Compta Modal */}
       <ExportComptaModal
