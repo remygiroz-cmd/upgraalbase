@@ -241,7 +241,7 @@ Système de gestion des factures`;
           updatedHistory.shift();
         }
 
-        await base44.entities.InvoiceAutomationConfig.update(config.id, {
+        await serviceClient.entities.InvoiceAutomationConfig.update(config.id, {
           last_run_at: new Date().toISOString(),
           last_run_status: 'success',
           run_history: updatedHistory
