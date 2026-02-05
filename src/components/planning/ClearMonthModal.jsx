@@ -3,23 +3,21 @@ import { useQuery } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { AlertTriangle, Trash2, Loader2 } from 'lucide-react';
+import { AlertTriangle, Trash2, Loader2, CheckCircle } from 'lucide-react';
 import { toast } from 'sonner';
 
 const MONTHS = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'];
 
 export default function ClearMonthModal({ open, onOpenChange, monthStart, monthEnd, onSuccess }) {
-  const [confirmText, setConfirmText] = useState('');
+  const [confirmChecked, setConfirmChecked] = useState(false);
   const [clearing, setClearing] = useState(false);
 
   const year = monthStart.getFullYear();
   const month = monthStart.getMonth() + 1;
   const monthName = MONTHS[monthStart.getMonth()];
-  const expectedText = `EFFACER ${monthName.toUpperCase()} ${year}`;
 
-  // Fetch existing shifts to count
+  // Fetch ALL planning data for the month
   const { data: existingShifts = [] } = useQuery({
     queryKey: ['shifts', year, month],
     queryFn: async () => {
@@ -42,15 +40,48 @@ export default function ClearMonthModal({ open, onOpenChange, monthStart, monthE
     enabled: open
   });
 
-  const totalItems = existingShifts.length + nonShiftEvents.length;
-  const isConfirmed = confirmText.trim() === expectedText;
+  const { data: paidLeavePeriods = [] } = useQuery({
+    queryKey: ['paidLeavePeriods', year, month],
+    queryFn: async () => {
+      const allPeriods = await base44.entities.PaidLeavePeriod.list();
+      const firstDay = formatDate(monthStart);
+      const lastDay = formatDate(monthEnd);
+      // Include periods that overlap with the month
+      return allPeriods.filter(p => p.end_cp >= firstDay && p.start_cp <= lastDay);
+    },
+    enabled: open
+  });
+
+  const { data: monthlyRecaps = [] } = useQuery({
+    queryKey: ['monthlyRecaps', year, month],
+    queryFn: async () => {
+      return await base44.entities.MonthlyRecap.filter({ year, month });
+    },
+    enabled: open
+  });
+
+  const totalItems = existingShifts.length + nonShiftEvents.length + paidLeavePeriods.length + monthlyRecaps.length;
 
   const handleClear = async () => {
+    if (totalItems === 0) {
+      toast.error('Aucune donnée à supprimer pour ce mois');
+      onOpenChange(false);
+      return;
+    }
+
     setClearing(true);
 
     try {
+      console.log('🗑️ [CLEAR MONTH] Début suppression', { year, month, monthName });
+      console.log('🗑️ [CLEAR MONTH] Shifts:', existingShifts.length);
+      console.log('🗑️ [CLEAR MONTH] NonShifts:', nonShiftEvents.length);
+      console.log('🗑️ [CLEAR MONTH] CP Periods:', paidLeavePeriods.length);
+      console.log('🗑️ [CLEAR MONTH] Recaps:', monthlyRecaps.length);
+
       let deletedShifts = 0;
       let deletedEvents = 0;
+      let deletedCP = 0;
+      let deletedRecaps = 0;
 
       // Delete all shifts
       for (const shift of existingShifts) {
@@ -64,15 +95,42 @@ export default function ClearMonthModal({ open, onOpenChange, monthStart, monthE
         deletedEvents++;
       }
 
+      // Delete all paid leave periods
+      for (const period of paidLeavePeriods) {
+        await base44.entities.PaidLeavePeriod.delete(period.id);
+        deletedCP++;
+      }
+
+      // Delete monthly recaps
+      for (const recap of monthlyRecaps) {
+        await base44.entities.MonthlyRecap.delete(recap.id);
+        deletedRecaps++;
+      }
+
+      const totalDeleted = deletedShifts + deletedEvents + deletedCP + deletedRecaps;
+
+      console.log('✅ [CLEAR MONTH] Suppression terminée', {
+        deletedShifts,
+        deletedEvents,
+        deletedCP,
+        deletedRecaps,
+        totalDeleted
+      });
+
+      // Vérification de cohérence
+      if (totalDeleted === 0 && totalItems > 0) {
+        throw new Error('Aucun élément supprimé alors que des données existaient');
+      }
+
       setClearing(false);
-      toast.success(`✓ Planning effacé : ${deletedShifts} shifts + ${deletedEvents} événements supprimés`);
+      toast.success(`✓ Planning de ${monthName} ${year} entièrement effacé : ${deletedShifts} shifts, ${deletedEvents} événements, ${deletedCP} CP, ${deletedRecaps} récaps supprimés`);
       onSuccess?.();
       onOpenChange(false);
-      setConfirmText('');
+      setConfirmChecked(false);
 
     } catch (error) {
       setClearing(false);
-      console.error('Clear month error:', error);
+      console.error('❌ [CLEAR MONTH ERROR]:', error);
       toast.error('Erreur lors de la suppression: ' + error.message);
     }
   };
@@ -80,9 +138,9 @@ export default function ClearMonthModal({ open, onOpenChange, monthStart, monthE
   return (
     <Dialog open={open} onOpenChange={(open) => {
       onOpenChange(open);
-      if (!open) setConfirmText('');
+      if (!open) setConfirmChecked(false);
     }}>
-      <DialogContent className="max-w-lg">
+      <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="text-xl font-bold text-red-600 flex items-center gap-2">
             <AlertTriangle className="w-6 h-6" />
@@ -92,57 +150,66 @@ export default function ClearMonthModal({ open, onOpenChange, monthStart, monthE
 
         <div className="space-y-6">
           {/* Warning */}
-          <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+          <div className="bg-red-50 border-2 border-red-300 rounded-lg p-4">
             <div className="flex items-start gap-3">
-              <AlertTriangle className="w-6 h-6 text-red-600 flex-shrink-0 mt-0.5" />
-              <div>
-                <p className="font-semibold text-red-900 mb-2">⚠️ Action irréversible</p>
-                <p className="text-sm text-red-800 mb-3">
-                  Cette action supprime définitivement <strong>tous les shifts et événements du mois</strong> pour <strong>tous les employés</strong>.
+              <AlertTriangle className="w-7 h-7 text-red-600 flex-shrink-0 mt-0.5" />
+              <div className="flex-1">
+                <p className="font-bold text-red-900 mb-2 text-base">⚠️ Action irréversible</p>
+                <p className="text-sm text-red-800 mb-4 leading-relaxed">
+                  Cette action supprime <strong>définitivement toutes les données du planning</strong> pour le mois de <strong>{monthName} {year}</strong>, pour <strong>tous les employés</strong>.
                 </p>
-                <div className="bg-white border border-red-300 rounded p-3">
+                <div className="bg-white border-2 border-red-300 rounded-lg p-4 space-y-2">
                   <div className="flex justify-between items-center text-sm">
-                    <span className="text-gray-700">Shifts à supprimer :</span>
+                    <span className="text-gray-700 font-medium">Shifts (travail) :</span>
                     <span className="font-bold text-red-900">{existingShifts.length}</span>
                   </div>
-                  <div className="flex justify-between items-center text-sm mt-1">
-                    <span className="text-gray-700">Événements (CP/Abs) :</span>
+                  <div className="flex justify-between items-center text-sm">
+                    <span className="text-gray-700 font-medium">Absences / Repos :</span>
                     <span className="font-bold text-red-900">{nonShiftEvents.length}</span>
                   </div>
-                  <div className="flex justify-between items-center text-sm mt-2 pt-2 border-t border-red-200">
-                    <span className="font-semibold text-gray-900">Total :</span>
-                    <span className="font-bold text-red-900 text-lg">{totalItems}</span>
+                  <div className="flex justify-between items-center text-sm">
+                    <span className="text-gray-700 font-medium">Périodes CP :</span>
+                    <span className="font-bold text-red-900">{paidLeavePeriods.length}</span>
+                  </div>
+                  <div className="flex justify-between items-center text-sm">
+                    <span className="text-gray-700 font-medium">Récaps mensuels :</span>
+                    <span className="font-bold text-red-900">{monthlyRecaps.length}</span>
+                  </div>
+                  <div className="flex justify-between items-center text-sm mt-3 pt-3 border-t-2 border-red-300">
+                    <span className="font-bold text-gray-900 text-base">TOTAL :</span>
+                    <span className="font-bold text-red-900 text-xl">{totalItems}</span>
                   </div>
                 </div>
               </div>
             </div>
           </div>
 
-          {/* Confirmation input */}
-          <div>
-            <Label className="text-sm font-semibold text-gray-900 mb-2 block">
-              Pour confirmer, tapez exactement :
-            </Label>
-            <div className="bg-gray-100 border border-gray-300 rounded-lg p-3 mb-3">
-              <code className="text-sm font-mono font-bold text-gray-900">{expectedText}</code>
+          {totalItems === 0 && (
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 flex items-center gap-3">
+              <CheckCircle className="w-5 h-5 text-blue-600" />
+              <p className="text-sm text-blue-800 font-medium">
+                Aucune donnée à supprimer pour ce mois
+              </p>
             </div>
-            <Input
-              value={confirmText}
-              onChange={(e) => setConfirmText(e.target.value)}
-              placeholder="Tapez ici..."
-              className={`text-center font-mono text-sm ${
-                confirmText && !isConfirmed ? 'border-red-500 focus:ring-red-500' : ''
-              } ${isConfirmed ? 'border-green-500 bg-green-50' : ''}`}
-              disabled={clearing}
-              autoComplete="off"
-            />
-            {confirmText && !isConfirmed && (
-              <p className="text-xs text-red-600 mt-1">❌ Le texte ne correspond pas</p>
-            )}
-            {isConfirmed && (
-              <p className="text-xs text-green-600 mt-1 font-semibold">✓ Confirmation valide</p>
-            )}
-          </div>
+          )}
+
+          {/* Confirmation checkbox */}
+          {totalItems > 0 && (
+            <div className="bg-gray-50 border-2 border-gray-300 rounded-lg p-4">
+              <label className="flex items-start gap-3 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={confirmChecked}
+                  onChange={(e) => setConfirmChecked(e.target.checked)}
+                  disabled={clearing}
+                  className="w-5 h-5 rounded border-gray-400 mt-0.5"
+                />
+                <span className="text-sm font-semibold text-gray-900 leading-relaxed">
+                  J'ai bien compris que cette action est définitive et irréversible
+                </span>
+              </label>
+            </div>
+          )}
 
           {/* Progress */}
           {clearing && (
@@ -157,24 +224,27 @@ export default function ClearMonthModal({ open, onOpenChange, monthStart, monthE
           )}
 
           {/* Actions */}
-          <div className="flex gap-3 pt-4 border-t">
+          <div className="flex gap-3 pt-4 border-t-2 border-gray-200">
             <Button
-              onClick={() => onOpenChange(false)}
+              onClick={() => {
+                onOpenChange(false);
+                setConfirmChecked(false);
+              }}
               variant="outline"
               disabled={clearing}
-              className="flex-1"
+              className="flex-1 border-gray-400"
             >
               Annuler
             </Button>
             <Button
               onClick={handleClear}
-              disabled={!isConfirmed || clearing || totalItems === 0}
-              className="flex-1 bg-red-600 hover:bg-red-700"
+              disabled={!confirmChecked || clearing || totalItems === 0}
+              className="flex-1 bg-red-600 hover:bg-red-700 disabled:opacity-50"
             >
               {clearing ? (
                 <>
                   <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Suppression...
+                  Suppression du planning en cours...
                 </>
               ) : (
                 <>
