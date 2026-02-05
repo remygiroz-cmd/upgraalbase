@@ -1158,8 +1158,17 @@ export default function Planning() {
         monthStart={new Date(currentYear, currentMonth, 1)}
         monthEnd={new Date(currentYear, currentMonth + 1, 0)}
         onSuccess={() => {
+          // Invalider TOUTES les données du planning pour forcer le rafraîchissement complet
           queryClient.invalidateQueries({ queryKey: ['shifts'] });
           queryClient.invalidateQueries({ queryKey: ['nonShiftEvents'] });
+          queryClient.invalidateQueries({ queryKey: ['paidLeavePeriods'] });
+          queryClient.invalidateQueries({ queryKey: ['monthlyRecaps'] });
+          queryClient.invalidateQueries({ queryKey: ['holidayDates'] });
+          
+          // Refetch immédiat pour mettre à jour l'UI
+          queryClient.refetchQueries({ queryKey: ['shifts', currentYear, currentMonth] });
+          queryClient.refetchQueries({ queryKey: ['nonShiftEvents', currentYear, currentMonth] });
+          queryClient.refetchQueries({ queryKey: ['paidLeavePeriods', currentYear, currentMonth] });
         }}
       />
 
