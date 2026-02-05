@@ -191,9 +191,16 @@ export default function EmployeeFormModal({ open, onClose, employee, isManager =
 
   const createMutation = useMutation({
     mutationFn: (data) => base44.entities.Employee.create(data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['employees'] });
+    onSuccess: async (newEmployee) => {
+      console.log('✅ [CREATE SUCCESS] Nouvel employé:', JSON.stringify(newEmployee, null, 2));
+      console.log('✅ [CREATE SUCCESS] weekly_schedule créé:', newEmployee.weekly_schedule);
+      
+      await queryClient.invalidateQueries({ queryKey: ['employees'] });
       setShowCreationSuccess(true);
+    },
+    onError: (error) => {
+      console.error('❌ [CREATE ERROR]:', error);
+      toast.error('Erreur lors de la création: ' + error.message);
     }
   });
 
@@ -1461,9 +1468,16 @@ ${currentUser.email || '-'}`;
             <Button
               type="submit"
               disabled={createMutation.isPending || updateMutation.isPending || (employee && !isManager && currentUser?.email !== employee.email)}
-              className="bg-orange-600 hover:bg-orange-700"
+              className="bg-orange-600 hover:bg-orange-700 min-w-[140px]"
             >
-              {employee ? 'Mettre à jour' : 'Créer'}
+              {createMutation.isPending || updateMutation.isPending ? (
+                <span className="flex items-center gap-2">
+                  <span className="animate-spin">⏳</span>
+                  Enregistrement...
+                </span>
+              ) : (
+                employee ? 'Mettre à jour' : 'Créer'
+              )}
             </Button>
           </div>
         </form>
