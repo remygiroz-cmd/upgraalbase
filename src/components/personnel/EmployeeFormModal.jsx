@@ -200,9 +200,16 @@ export default function EmployeeFormModal({ open, onClose, employee, isManager =
   const updateMutation = useMutation({
     mutationFn: ({ id, data }) => base44.entities.Employee.update(id, data),
     onSuccess: async (updatedEmployee) => {
+      console.log('✅ [UPDATE SUCCESS] Réponse backend:', JSON.stringify(updatedEmployee, null, 2));
+      console.log('✅ [UPDATE SUCCESS] weekly_schedule reçu:', updatedEmployee.weekly_schedule);
+      
       await queryClient.invalidateQueries({ queryKey: ['employees'] });
       setFormData(updatedEmployee);
       toast.success('Employé mis à jour');
+    },
+    onError: (error) => {
+      console.error('❌ [UPDATE ERROR]:', error);
+      toast.error('Erreur lors de la mise à jour');
     }
   });
 
@@ -227,6 +234,10 @@ export default function EmployeeFormModal({ open, onClose, employee, isManager =
   const handleSubmit = (e) => {
     e.preventDefault();
     
+    // DIAGNOSTIC: Logger le payload complet
+    console.log('🔍 [SUBMIT] FormData avant save:', JSON.stringify(formData, null, 2));
+    console.log('🔍 [SUBMIT] weekly_schedule:', formData.weekly_schedule);
+    
     // Convertir les champs texte en majuscules
     const uppercasedData = {
       ...formData,
@@ -243,8 +254,12 @@ export default function EmployeeFormModal({ open, onClose, employee, isManager =
       coefficient_level: formData.coefficient_level?.toUpperCase() || '',
       social_security_number: formData.social_security_number?.toUpperCase() || '',
       iban: formData.iban?.toUpperCase() || '',
-      bic: formData.bic?.toUpperCase() || ''
+      bic: formData.bic?.toUpperCase() || '',
+      // CRITICAL: Assurer que weekly_schedule est inclus et correctement formaté
+      weekly_schedule: formData.weekly_schedule
     };
+    
+    console.log('🔍 [SUBMIT] Payload après uppercase:', JSON.stringify(uppercasedData, null, 2));
     
     if (employee) {
       updateMutation.mutate({ id: employee.id, data: uppercasedData });
