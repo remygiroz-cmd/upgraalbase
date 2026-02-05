@@ -46,8 +46,16 @@ export default function ClearMonthModal({ open, onOpenChange, monthStart, monthE
       const allPeriods = await base44.entities.PaidLeavePeriod.list();
       const firstDay = formatDate(monthStart);
       const lastDay = formatDate(monthEnd);
-      // Include periods that overlap with the month
-      return allPeriods.filter(p => p.end_cp >= firstDay && p.start_cp <= lastDay);
+      
+      // Include ALL periods that touch the month in any way
+      const filtered = allPeriods.filter(p => {
+        if (!p.start_cp || !p.end_cp) return false;
+        // Period overlaps if: start_cp <= lastDay AND end_cp >= firstDay
+        return p.start_cp <= lastDay && p.end_cp >= firstDay;
+      });
+      
+      console.log('📊 [CLEAR MONTH] CP periods found:', filtered.length, filtered);
+      return filtered;
     },
     enabled: open
   });
@@ -96,10 +104,13 @@ export default function ClearMonthModal({ open, onOpenChange, monthStart, monthE
       }
 
       // Delete all paid leave periods
+      console.log('🗑️ [CLEAR MONTH] Deleting CP periods:', paidLeavePeriods.length);
       for (const period of paidLeavePeriods) {
+        console.log('🗑️ [CLEAR MONTH] Deleting CP period:', period.id, period);
         await base44.entities.PaidLeavePeriod.delete(period.id);
         deletedCP++;
       }
+      console.log('✅ [CLEAR MONTH] CP periods deleted:', deletedCP);
 
       // Delete monthly recaps
       for (const recap of monthlyRecaps) {
