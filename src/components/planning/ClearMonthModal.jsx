@@ -47,14 +47,34 @@ export default function ClearMonthModal({ open, onOpenChange, monthStart, monthE
       const firstDay = formatDate(monthStart);
       const lastDay = formatDate(monthEnd);
       
-      // Include ALL periods that touch the month in any way
+      console.log('📊 [CLEAR MONTH] All CP periods in DB:', allPeriods.length);
+      console.log('📊 [CLEAR MONTH] Month range:', { firstDay, lastDay });
+      
+      // Include ALL periods that touch the month in ANY way
       const filtered = allPeriods.filter(p => {
-        if (!p.start_cp || !p.end_cp) return false;
+        // Handle missing dates
+        if (!p.start_cp && !p.end_cp) return false;
+        
+        // If only one date is present, check if it falls in the month
+        if (!p.end_cp) return p.start_cp >= firstDay && p.start_cp <= lastDay;
+        if (!p.start_cp) return p.end_cp >= firstDay && p.end_cp <= lastDay;
+        
         // Period overlaps if: start_cp <= lastDay AND end_cp >= firstDay
-        return p.start_cp <= lastDay && p.end_cp >= firstDay;
+        const overlaps = p.start_cp <= lastDay && p.end_cp >= firstDay;
+        
+        if (overlaps) {
+          console.log('📊 [CLEAR MONTH] CP period overlaps:', {
+            id: p.id,
+            employee_id: p.employee_id,
+            start_cp: p.start_cp,
+            end_cp: p.end_cp
+          });
+        }
+        
+        return overlaps;
       });
       
-      console.log('📊 [CLEAR MONTH] CP periods found:', filtered.length, filtered);
+      console.log('📊 [CLEAR MONTH] CP periods found for month:', filtered.length, filtered);
       return filtered;
     },
     enabled: open
