@@ -199,17 +199,36 @@ export default function EmployeeFormModal({ open, onClose, employee, isManager =
 
   const updateMutation = useMutation({
     mutationFn: ({ id, data }) => base44.entities.Employee.update(id, data),
-    onSuccess: async (updatedEmployee) => {
+    onSuccess: async (updatedEmployee, variables) => {
       console.log('✅ [UPDATE SUCCESS] Réponse backend:', JSON.stringify(updatedEmployee, null, 2));
       console.log('✅ [UPDATE SUCCESS] weekly_schedule reçu:', updatedEmployee.weekly_schedule);
       
-      await queryClient.invalidateQueries({ queryKey: ['employees'] });
-      setFormData(updatedEmployee);
-      toast.success('Employé mis à jour');
+      // CRITICAL: Refetch pour garantir la source de vérité
+      try {
+        const freshEmployee = await base44.entities.Employee.filter({ id: variables.id });
+        const employeeData = freshEmployee[0];
+        
+        console.log('✅ [REFETCH] Données fraîches:', JSON.stringify(employeeData, null, 2));
+        console.log('✅ [REFETCH] weekly_schedule refetch:', employeeData.weekly_schedule);
+        
+        // Mettre à jour le formulaire avec les données fraîches du serveur
+        setFormData(employeeData);
+        
+        // Invalider le cache global
+        await queryClient.invalidateQueries({ queryKey: ['employees'] });
+        
+        toast.success('✓ Employé mis à jour');
+      } catch (refetchError) {
+        console.error('❌ [REFETCH ERROR]:', refetchError);
+        // Fallback: utiliser la réponse initiale
+        setFormData(updatedEmployee);
+        await queryClient.invalidateQueries({ queryKey: ['employees'] });
+        toast.success('Employé mis à jour');
+      }
     },
     onError: (error) => {
       console.error('❌ [UPDATE ERROR]:', error);
-      toast.error('Erreur lors de la mise à jour');
+      toast.error('Erreur lors de la mise à jour: ' + error.message);
     }
   });
 
