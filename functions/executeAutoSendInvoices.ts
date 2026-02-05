@@ -1,12 +1,12 @@
-import { createClient } from 'npm:@base44/sdk@0.8.6';
+import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
 
 Deno.serve(async (req) => {
   try {
-    // Pour les automations scheduled, utiliser directement un client service role
-    const base44 = createClient({
-      appId: Deno.env.get('BASE44_APP_ID'),
-      serviceRoleKey: true
-    });
+    // Initialiser le client avec le service role pour les automations scheduled
+    const base44 = createClientFromRequest(req);
+    
+    // Utiliser asServiceRole pour toutes les opérations
+    const serviceClient = base44.asServiceRole;
 
     const now = new Date();
     
@@ -45,7 +45,7 @@ Deno.serve(async (req) => {
     console.log(`[executeAutoSendInvoices] Details - Hour: ${parisHour}, Minute: ${parisMinute}`);
 
     // Récupérer toutes les configurations actives
-    const configs = await base44.entities.InvoiceAutomationConfig.filter({ enabled: true });
+    const configs = await serviceClient.entities.InvoiceAutomationConfig.filter({ enabled: true });
     
     console.log(`[executeAutoSendInvoices] Configurations actives trouvées: ${configs.length}`);
     configs.forEach(c => console.log(`  - ${c.name}: ${c.send_day} à ${c.send_time}`));
@@ -87,7 +87,7 @@ Deno.serve(async (req) => {
     for (const config of configsToProcess) {
       try {
         // Récupérer les factures à envoyer
-        const allInvoices = await base44.entities.Invoice.list();
+        const allInvoices = await serviceClient.entities.Invoice.list();
         
         // Filtrer par statut et vérifier qu'il y a un fichier
         const invoicesToSend = allInvoices.filter(inv => 
@@ -160,7 +160,7 @@ Système de gestion des factures`;
         // Récupérer le nom d'expéditeur depuis les paramètres
         let senderName = 'UpGraal';
         try {
-          const settings = await base44.entities.AppSettings.filter({ setting_key: 'email_sender_name' });
+          const settings = await serviceClient.entities.AppSettings.filter({ setting_key: 'email_sender_name' });
           if (settings.length > 0 && settings[0].email_sender_name) {
             senderName = settings[0].email_sender_name;
           }
@@ -215,7 +215,7 @@ Système de gestion des factures`;
             const updatedSendHistory = invoice.send_history || [];
             updatedSendHistory.push(sendHistoryEntry);
 
-            await base44.entities.Invoice.update(invoice.id, {
+            await serviceClient.entities.Invoice.update(invoice.id, {
               status: 'envoyee',
               last_sent_at: new Date().toISOString(),
               last_sent_method: 'automatic',
@@ -271,7 +271,7 @@ Système de gestion des factures`;
           updatedHistory.shift();
         }
 
-        await base44.entities.InvoiceAutomationConfig.update(config.id, {
+        await serviceClient.entities.InvoiceAutomationConfig.update(config.id, {
           last_run_at: new Date().toISOString(),
           last_run_status: 'failed',
           run_history: updatedHistory
