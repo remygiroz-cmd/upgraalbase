@@ -1,18 +1,49 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
 
+// ========== FONCTIONS DE SÉCURITÉ ==========
+
+// Fonction pour échapper les caractères HTML dangereux (protection XSS)
+const escapeHtml = (text: string | null | undefined): string => {
+  if (!text) return '';
+  return String(text)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+};
+
+// Rôles autorisés à envoyer des factures
+const ALLOWED_ROLES = ['admin', 'manager', 'comptable', 'gestionnaire'];
+
 Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
     const user = await base44.auth.me();
 
+    // ========== VÉRIFICATION D'AUTHENTIFICATION ==========
     if (!user) {
       return Response.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    // ========== VÉRIFICATION DES PERMISSIONS ==========
+    if (!ALLOWED_ROLES.includes(user.role)) {
+      console.warn(`[SECURITY] User ${user.id} with role "${user.role}" attempted to send invoices`);
+      return Response.json({ 
+        error: 'Permissions insuffisantes pour envoyer des factures' 
+      }, { status: 403 });
     }
 
     const { invoice_ids, recipient, method = 'manual' } = await req.json();
 
     if (!invoice_ids || !invoice_ids.length || !recipient) {
       return Response.json({ error: 'invoice_ids and recipient are required' }, { status: 400 });
+    }
+
+    // Validation basique de l'email destinataire
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(recipient)) {
+      return Response.json({ error: 'Invalid recipient email format' }, { status: 400 });
     }
 
     // Récupérer les factures
@@ -27,17 +58,16 @@ Deno.serve(async (req) => {
     const establishment = establishments[0] || {};
 
     // Configuration des limites
-    // Note: Avec compression à 900 Ko, les images ne devraient jamais dépasser ces limites
     const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB par fichier
     const MAX_TOTAL_SIZE = 20 * 1024 * 1024; // 20 MB total
-    const RECOMMENDED_SIZE = 5 * 1024 * 1024; // 5 MB recommandé pour compatibilité email
     
     // Télécharger et préparer les fichiers
     const attachments = [];
     const invoiceResults = [];
     let totalAttachmentSize = 0;
     
-    console.log(`\n========== DÉBUT TRAITEMENT ${invoices.length} FACTURES ==========`);
+    // Log sécurisé (sans données sensibles)
+    console.log(`[INFO] Processing ${invoices.length} invoices for sending`);
     
     for (const inv of invoices) {
       const result = {
@@ -52,28 +82,21 @@ Deno.serve(async (req) => {
         signed_url: null
       };
       
-      console.log(`\n--- Facture ${inv.id} ---`);
-      console.log(`Fournisseur: ${inv.supplier}`);
-      console.log(`Fichier: ${inv.file_name || 'N/A'}`);
-      console.log(`MIME: ${inv.file_mime || 'N/A'}`);
-      console.log(`Taille: ${inv.file_size ? `${(inv.file_size / 1024).toFixed(2)} KB` : 'N/A'}`);
-      console.log(`Optimisée: ${inv.optimized_size ? `${(inv.optimized_size / 1024).toFixed(2)} KB` : 'N/A'}`);
-      console.log(`Compression: ${inv.compression_applied ? `Oui (${inv.compression_passes_count} passes)` : 'Non'}`);
-      console.log(`URL: ${inv.file_url ? 'exists' : 'MISSING'}`);
+      // Log sans données sensibles
+      console.log(`[INFO] Processing invoice ${inv.id}`);
       
       if (!inv.file_url) {
         result.status = 'failed';
         result.error = 'Fichier manquant';
-        console.error(`❌ ÉCHEC: Pas de file_url`);
+        console.error(`[ERROR] Invoice ${inv.id}: No file_url`);
         invoiceResults.push(result);
         continue;
       }
       
       // Vérifier la taille avant téléchargement
       if (inv.file_size && inv.file_size > MAX_FILE_SIZE) {
-        console.warn(`⚠️ Fichier trop volumineux (${(inv.file_size / 1024 / 1024).toFixed(2)} MB > 10 MB), création d'un lien sécurisé`);
+        console.log(`[INFO] Invoice ${inv.id}: File too large, creating secure link`);
         try {
-          // Générer un lien sécurisé (valide 72h)
           const { signed_url } = await base44.asServiceRole.integrations.Core.CreateFileSignedUrl({
             file_uri: `${inv.file_bucket}/${inv.file_path}`,
             expires_in: 259200 // 72 heures
@@ -81,24 +104,20 @@ Deno.serve(async (req) => {
           result.status = 'sent_link';
           result.delivery_method = 'link';
           result.signed_url = signed_url;
-          console.log(`✅ Lien sécurisé créé (expire dans 72h)`);
         } catch (err) {
           result.status = 'failed';
           result.error = `Erreur création lien: ${err.message}`;
-          console.error(`❌ ÉCHEC création lien: ${err.message}`);
         }
         invoiceResults.push(result);
         continue;
       }
       
       try {
-        console.log(`📥 Téléchargement depuis ${inv.file_url}`);
         const fileResponse = await fetch(inv.file_url);
         
         if (!fileResponse.ok) {
           result.status = 'failed';
           result.error = `HTTP ${fileResponse.status}`;
-          console.error(`❌ ÉCHEC téléchargement: HTTP ${fileResponse.status}`);
           invoiceResults.push(result);
           continue;
         }
@@ -107,11 +126,8 @@ Deno.serve(async (req) => {
         const fileBuffer = await fileBlob.arrayBuffer();
         const downloadedSize = fileBuffer.byteLength;
         
-        console.log(`📦 Téléchargé: ${(downloadedSize / 1024).toFixed(2)} KB`);
-        
         // Vérifier si l'ajout dépasserait la limite totale
         if (totalAttachmentSize + downloadedSize > MAX_TOTAL_SIZE) {
-          console.warn(`⚠️ Limite totale dépassée (${((totalAttachmentSize + downloadedSize) / 1024 / 1024).toFixed(2)} MB > 20 MB), création d'un lien`);
           try {
             const { signed_url } = await base44.asServiceRole.integrations.Core.CreateFileSignedUrl({
               file_uri: `${inv.file_bucket}/${inv.file_path}`,
@@ -120,23 +136,18 @@ Deno.serve(async (req) => {
             result.status = 'sent_link';
             result.delivery_method = 'link';
             result.signed_url = signed_url;
-            console.log(`✅ Lien sécurisé créé (limite totale)`);
           } catch (err) {
             result.status = 'failed';
             result.error = `Erreur création lien: ${err.message}`;
-            console.error(`❌ ÉCHEC création lien: ${err.message}`);
           }
           invoiceResults.push(result);
           continue;
         }
         
-        // Convertir en base64 de manière sûre (par chunks pour éviter stack overflow)
+        // Convertir en base64
         let base64Content;
         try {
           const uint8Array = new Uint8Array(fileBuffer);
-          console.log(`🔄 Conversion base64 de ${uint8Array.length} bytes...`);
-          
-          // Conversion par chunks pour éviter "Maximum call stack size exceeded"
           const chunkSize = 8192;
           let base64 = '';
           for (let i = 0; i < uint8Array.length; i += chunkSize) {
@@ -144,13 +155,7 @@ Deno.serve(async (req) => {
             base64 += String.fromCharCode.apply(null, chunk);
           }
           base64Content = btoa(base64);
-          console.log(`✅ Converti en base64: ${(base64Content.length / 1024).toFixed(2)} KB`);
         } catch (conversionError) {
-          console.error(`❌ ÉCHEC conversion base64: ${conversionError.message}`);
-          console.error(`Stack trace:`, conversionError.stack);
-          
-          // Fallback: créer un lien sécurisé au lieu d'une PJ
-          console.log(`🔄 Création d'un lien sécurisé de secours...`);
           try {
             const { signed_url } = await base44.asServiceRole.integrations.Core.CreateFileSignedUrl({
               file_uri: `${inv.file_bucket}/${inv.file_path}`,
@@ -159,12 +164,10 @@ Deno.serve(async (req) => {
             result.status = 'sent_link';
             result.delivery_method = 'link';
             result.signed_url = signed_url;
-            result.error = `Conversion échouée, lien créé: ${conversionError.message}`;
-            console.log(`✅ Lien sécurisé créé (fallback conversion)`);
+            result.error = `Conversion échouée, lien créé`;
           } catch (linkError) {
             result.status = 'failed';
-            result.error = `Conversion ET lien échoués: ${conversionError.message} / ${linkError.message}`;
-            console.error(`❌ ÉCHEC total: ${linkError.message}`);
+            result.error = `Échec complet: ${conversionError.message}`;
           }
           invoiceResults.push(result);
           continue;
@@ -174,7 +177,7 @@ Deno.serve(async (req) => {
         const mimeType = inv.file_mime || 
           (inv.file_name?.toLowerCase().endsWith('.pdf') ? 'application/pdf' : 'image/jpeg');
         
-        // Normaliser le nom de fichier avec la bonne extension
+        // Normaliser le nom de fichier
         let filename = inv.normalized_file_name || inv.file_name || `facture_${inv.id}`;
         if (mimeType === 'image/jpeg' && !filename.toLowerCase().match(/\.(jpg|jpeg)$/)) {
           filename = filename.replace(/\.[^.]*$/, '') + '.jpg';
@@ -191,16 +194,9 @@ Deno.serve(async (req) => {
         totalAttachmentSize += downloadedSize;
         result.status = 'sent_attachment';
         result.delivery_method = 'attachment';
-        console.log(`✅ Ajouté en PJ: ${filename}`);
         
       } catch (err) {
-        console.error(`❌ ÉCHEC traitement: ${err.message}`);
-        console.error(`Type d'erreur: ${err.name}`);
-        console.error(`Stack trace:`, err.stack);
-        
-        // Tentative de fallback sur lien sécurisé
         try {
-          console.log(`🔄 Tentative de création d'un lien de secours...`);
           const { signed_url } = await base44.asServiceRole.integrations.Core.CreateFileSignedUrl({
             file_uri: `${inv.file_bucket}/${inv.file_path}`,
             expires_in: 259200
@@ -208,39 +204,27 @@ Deno.serve(async (req) => {
           result.status = 'sent_link';
           result.delivery_method = 'link';
           result.signed_url = signed_url;
-          result.error = `Traitement échoué, lien créé: ${err.message}`;
-          console.log(`✅ Lien sécurisé créé (fallback erreur)`);
+          result.error = `Traitement échoué, lien créé`;
         } catch (linkError) {
           result.status = 'failed';
           result.error = `Échec complet: ${err.message}`;
-          console.error(`❌ Fallback lien échoué: ${linkError.message}`);
         }
       }
       
       invoiceResults.push(result);
     }
     
-    console.log(`\n========== RÉSUMÉ GLOBAL ==========`);
-    console.log(`Factures demandées: ${invoices.length}`);
-    console.log(`PJ attachées: ${attachments.length}`);
-    console.log(`Liens créés: ${invoiceResults.filter(r => r.delivery_method === 'link').length}`);
-    console.log(`Échecs: ${invoiceResults.filter(r => r.status === 'failed').length}`);
-    console.log(`Taille totale PJ: ${(totalAttachmentSize / 1024 / 1024).toFixed(2)} MB`);
-    
-    const failedInvoices = invoiceResults.filter(r => r.status === 'failed');
-    if (failedInvoices.length > 0) {
-      console.log(`\n⚠️ Factures non livrées:`);
-      failedInvoices.forEach(f => {
-        console.log(`  - ${f.supplier} (${f.invoiceId}): ${f.error}`);
-      });
-    }
-    console.log(`========================================\n`);
-
-    // Préparer le corps de l'email avec tableau détaillé
-    const totalTTC = invoices.reduce((sum, inv) => sum + (inv.amount_ttc || 0), 0);
+    // Log résumé (sans données sensibles)
     const attachedCount = invoiceResults.filter(r => r.delivery_method === 'attachment').length;
     const linkCount = invoiceResults.filter(r => r.delivery_method === 'link').length;
     const failedCount = invoiceResults.filter(r => r.status === 'failed').length;
+    console.log(`[INFO] Summary: ${attachedCount} attachments, ${linkCount} links, ${failedCount} failed`);
+
+    // Préparer le corps de l'email avec données échappées
+    const totalTTC = invoices.reduce((sum, inv) => sum + (inv.amount_ttc || 0), 0);
+    
+    // IMPORTANT: Échapper toutes les données utilisateur pour éviter XSS
+    const safeUserName = escapeHtml(user.full_name || user.email);
     
     let htmlBody = `
       <div style="font-family: Arial, sans-serif; max-width: 700px; margin: 0 auto;">
@@ -267,21 +251,24 @@ Deno.serve(async (req) => {
             ${invoices.map((inv, idx) => {
               const result = invoiceResults[idx];
               let statusBadge = '';
-              let fileCell = inv.file_name || 'N/A';
+              // IMPORTANT: Échapper les données fournisseur
+              const safeSupplier = escapeHtml(inv.supplier);
+              const safeFileName = escapeHtml(inv.file_name);
+              let fileCell = safeFileName || 'N/A';
               
               if (result.status === 'sent_attachment') {
                 statusBadge = '<span style="background: #10b981; color: white; padding: 3px 8px; border-radius: 4px; font-size: 12px;">📎 PJ</span>';
               } else if (result.status === 'sent_link') {
                 statusBadge = '<span style="background: #3b82f6; color: white; padding: 3px 8px; border-radius: 4px; font-size: 12px;">🔗 Lien</span>';
-                fileCell = `<a href="${result.signed_url}" style="color: #3b82f6; text-decoration: none;">📥 Télécharger</a>`;
+                fileCell = `<a href="${escapeHtml(result.signed_url)}" style="color: #3b82f6; text-decoration: none;">📥 Télécharger</a>`;
               } else {
                 statusBadge = '<span style="background: #ef4444; color: white; padding: 3px 8px; border-radius: 4px; font-size: 12px;">❌ Échec</span>';
-                fileCell = `<span style="color: #ef4444; font-size: 12px;">${result.error}</span>`;
+                fileCell = `<span style="color: #ef4444; font-size: 12px;">${escapeHtml(result.error)}</span>`;
               }
               
               return `
                 <tr>
-                  <td style="padding: 10px; border: 1px solid #e5e7eb;">${inv.supplier || 'N/A'}</td>
+                  <td style="padding: 10px; border: 1px solid #e5e7eb;">${safeSupplier || 'N/A'}</td>
                   <td style="padding: 10px; border: 1px solid #e5e7eb;">${inv.invoice_date ? new Date(inv.invoice_date).toLocaleDateString('fr-FR') : 'N/A'}</td>
                   <td style="padding: 10px; border: 1px solid #e5e7eb;">${fileCell}</td>
                   <td style="padding: 10px; text-align: right; border: 1px solid #e5e7eb;">${(inv.amount_ttc || 0).toFixed(2)} €</td>
@@ -304,7 +291,7 @@ Deno.serve(async (req) => {
           </p>
         ` : ''}
         
-        <p style="margin-top: 30px;">Cordialement,<br>${user.full_name || user.email}</p>
+        <p style="margin-top: 30px;">Cordialement,<br>${safeUserName}</p>
       </div>
     `;
 
@@ -316,7 +303,7 @@ Deno.serve(async (req) => {
         senderName = settings[0].email_sender_name;
       }
     } catch (err) {
-      console.log('Using establishment name as sender');
+      console.log('[INFO] Using establishment name as sender');
     }
 
     // Envoyer via Resend API
@@ -326,7 +313,7 @@ Deno.serve(async (req) => {
     }
 
     const emailPayload = {
-      from: `${senderName} <noreply@upgraal.com>`,
+      from: `${escapeHtml(senderName)} <noreply@upgraal.com>`,
       to: [recipient],
       subject: `Factures - ${invoices.length} document(s) - ${totalTTC.toFixed(2)} €`,
       html: htmlBody,
@@ -337,12 +324,8 @@ Deno.serve(async (req) => {
       emailPayload.reply_to = [establishment.contact_email];
     }
 
-    console.log('Envoi email avec les données suivantes:', {
-      to: emailPayload.to,
-      subject: emailPayload.subject,
-      hasAttachments: attachments.length,
-      reply_to: emailPayload.reply_to
-    });
+    // Log sécurisé (sans l'email complet du destinataire)
+    console.log(`[INFO] Sending email with ${attachments.length} attachments`);
 
     const response = await fetch('https://api.resend.com/emails', {
       method: 'POST',
@@ -354,13 +337,12 @@ Deno.serve(async (req) => {
     });
 
     const result = await response.json();
-    console.log('Résultat Resend:', result);
 
     if (!response.ok) {
       throw new Error(`Resend API error: ${JSON.stringify(result)}`);
     }
 
-    // Mettre à jour les factures individuellement selon leur statut
+    // Mettre à jour les factures
     for (let i = 0; i < invoices.length; i++) {
       const invoice = invoices[i];
       const result = invoiceResults[i];
@@ -376,12 +358,11 @@ Deno.serve(async (req) => {
         error_message: result.error || null
       };
       
-      // Statut final selon le résultat
       let finalStatus = invoice.status;
       if (result.status === 'sent_attachment' || result.status === 'sent_link') {
         finalStatus = 'envoyee';
       } else if (result.status === 'failed') {
-        finalStatus = 'a_verifier'; // Garde ou marque comme "à vérifier"
+        finalStatus = 'a_verifier';
       }
       
       await base44.asServiceRole.entities.Invoice.update(invoice.id, {
@@ -406,7 +387,7 @@ Deno.serve(async (req) => {
     });
 
   } catch (error) {
-    console.error('Error sending invoices:', error);
+    console.error('[ERROR] Send invoices failed:', error.message);
     return Response.json({ error: error.message }, { status: 500 });
   }
 });
