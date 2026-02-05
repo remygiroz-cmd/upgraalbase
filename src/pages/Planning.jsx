@@ -34,14 +34,17 @@ export default function Planning() {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [showShiftModal, setShowShiftModal] = useState(false);
   const [showPlanningSettings, setShowPlanningSettings] = useState(false);
-  const [showApplyTemplateModal, setShowApplyTemplateModal] = useState(false);
-  const [showAddPaidLeaveModal, setShowAddPaidLeaveModal] = useState(false);
   const [showExportComptaModal, setShowExportComptaModal] = useState(false);
   const [showApplyTemplatesModal, setShowApplyTemplatesModal] = useState(false);
   const [showClearMonthModal, setShowClearMonthModal] = useState(false);
-  const [selectedEmployeeForTemplate, setSelectedEmployeeForTemplate] = useState(null);
-  const [selectedEmployeeForCP, setSelectedEmployeeForCP] = useState(null);
   const [selectedCPPeriod, setSelectedCPPeriod] = useState(null);
+  
+  // État centralisé pour les actions depuis le dropdown
+  const [modalState, setModalState] = useState({
+    isOpen: false,
+    actionType: null, // 'ADD_CP' | 'APPLY_TEMPLATE'
+    selectedEmployee: null
+  });
   const [selectedCell, setSelectedCell] = useState(null);
   const [filterType, setFilterType] = useState('global');
   const [selectedTeam, setSelectedTeam] = useState('');
@@ -369,6 +372,15 @@ export default function Planning() {
     }
     
     return null;
+  };
+
+  // Gérer les actions depuis le dropdown d'employé
+  const handleEmployeeAction = (action, employee) => {
+    setModalState({
+      isOpen: true,
+      actionType: action,
+      selectedEmployee: employee
+    });
   };
 
   // Handle cell click
@@ -819,23 +831,15 @@ export default function Planning() {
                           <Draggable key={employee.id} draggableId={employee.id} index={index}>
                             {(provided, snapshot) => (
                               <EmployeeHeaderCell
-                                ref={provided.innerRef}
-                                employee={employee}
-                                team={team}
-                                isDragging={snapshot.isDragging}
-                                dragHandleProps={provided.dragHandleProps}
-                                displayMode={displayMode}
-                                onAddCP={() => {
-                                  setSelectedEmployeeForCP(employee);
-                                  setSelectedCPPeriod(null);
-                                  setShowAddPaidLeaveModal(true);
-                                }}
-                                onApplyTemplate={() => {
-                                  setSelectedEmployeeForTemplate(employee);
-                                  setShowApplyTemplateModal(true);
-                                }}
-                                style={provided.draggableProps.style}
-                                {...provided.draggableProps}
+                              ref={provided.innerRef}
+                              employee={employee}
+                              team={team}
+                              isDragging={snapshot.isDragging}
+                              dragHandleProps={provided.dragHandleProps}
+                              displayMode={displayMode}
+                              onActionSelect={handleEmployeeAction}
+                              style={provided.draggableProps.style}
+                              {...provided.draggableProps}
                               />
                             )}
                           </Draggable>
@@ -934,18 +938,21 @@ export default function Planning() {
                                 <div className="space-y-1.5 w-full flex flex-col relative" style={{ minHeight: `${Math.max(60, maxEventsInRow * 52)}px` }}>
                                   {/* CP Badge */}
                                   {isLastCPDay && cpPeriod && (
-                                    <div 
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        setSelectedEmployeeForCP(employee);
-                                        setSelectedCPPeriod(cpPeriod);
-                                        setShowAddPaidLeaveModal(true);
-                                      }}
-                                      className="absolute -top-1 -right-1 z-10 bg-green-600 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full shadow-md cursor-pointer hover:bg-green-700 transition-colors"
-                                      title="Cliquer pour modifier"
-                                    >
-                                      🟢 {cpPeriod.cp_days_manual || cpPeriod.cp_days_auto} CP
-                                    </div>
+                                   <div 
+                                     onClick={(e) => {
+                                       e.stopPropagation();
+                                       setModalState({
+                                         isOpen: true,
+                                         actionType: 'ADD_CP',
+                                         selectedEmployee: employee
+                                       });
+                                       setSelectedCPPeriod(cpPeriod);
+                                     }}
+                                     className="absolute -top-1 -right-1 z-10 bg-green-600 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full shadow-md cursor-pointer hover:bg-green-700 transition-colors"
+                                     title="Cliquer pour modifier"
+                                   >
+                                     🟢 {cpPeriod.cp_days_manual || cpPeriod.cp_days_auto} CP
+                                   </div>
                                   )}
                                   
                                   {employeeNonShifts.map((nonShift) => {
@@ -1114,21 +1121,60 @@ export default function Planning() {
         setDisplayMode={setDisplayMode}
       />
 
-      {/* Apply Template Modal */}
-      <ApplyTemplateModal
-        open={showApplyTemplateModal}
-        onOpenChange={setShowApplyTemplateModal}
-        employeeId={selectedEmployeeForTemplate?.id}
-        employeeName={selectedEmployeeForTemplate ? `${selectedEmployeeForTemplate.first_name} ${selectedEmployeeForTemplate.last_name}` : ''}
-      />
-
-      {/* Add Paid Leave Modal */}
-      <AddPaidLeaveModal
-        open={showAddPaidLeaveModal}
-        onOpenChange={setShowAddPaidLeaveModal}
-        employee={selectedEmployeeForCP}
-        existingPeriod={selectedCPPeriod}
-      />
+      {/* Modale centralisée pour les actions employé */}
+      <Dialog 
+        open={modalState.isOpen} 
+        onOpenChange={(open) => {
+          if (!open) {
+            setModalState({ isOpen: false, actionType: null, selectedEmployee: null });
+            setSelectedCPPeriod(null);
+          }
+        }}
+      >
+        <DialogContent className="max-w-4xl w-[90vw] max-h-[90vh] overflow-y-auto">
+          {modalState.actionType === 'ADD_CP' && modalState.selectedEmployee && (
+            <>
+              <DialogHeader>
+                <DialogTitle className="text-xl font-bold text-green-600">
+                  🟢 Ajouter / Modifier Congés Payés
+                </DialogTitle>
+              </DialogHeader>
+              <AddPaidLeaveModal
+                open={true}
+                onOpenChange={(open) => {
+                  if (!open) {
+                    setModalState({ isOpen: false, actionType: null, selectedEmployee: null });
+                    setSelectedCPPeriod(null);
+                  }
+                }}
+                employee={modalState.selectedEmployee}
+                existingPeriod={selectedCPPeriod}
+                embedded={true}
+              />
+            </>
+          )}
+          {modalState.actionType === 'APPLY_TEMPLATE' && modalState.selectedEmployee && (
+            <>
+              <DialogHeader>
+                <DialogTitle className="text-xl font-bold text-blue-600">
+                  📋 Appliquer un template de planning
+                </DialogTitle>
+              </DialogHeader>
+              <ApplyTemplateModal
+                open={true}
+                onOpenChange={(open) => {
+                  if (!open) {
+                    setModalState({ isOpen: false, actionType: null, selectedEmployee: null });
+                  }
+                }}
+                employeeId={modalState.selectedEmployee.id}
+                employeeName={`${modalState.selectedEmployee.first_name} ${modalState.selectedEmployee.last_name}`}
+                embedded={true}
+              />
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
 
       {/* Export Compta Modal */}
       <ExportComptaModal

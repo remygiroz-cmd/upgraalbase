@@ -11,8 +11,7 @@ import { cn } from '@/lib/utils';
 const EmployeeHeaderCell = React.forwardRef(({
   employee,
   team,
-  onAddCP,
-  onApplyTemplate,
+  onActionSelect,
   isDragging,
   dragHandleProps,
   displayMode,
@@ -20,9 +19,17 @@ const EmployeeHeaderCell = React.forwardRef(({
   ...props
 }, ref) => {
   const [showTooltip, setShowTooltip] = useState(false);
+  const [dropdownOpen, setDropdownOpen] = useState(false);
   const fullName = `${employee.first_name} ${employee.last_name}`;
   
   const isNameTruncated = fullName.length > 20;
+
+  const handleAction = (action) => {
+    setDropdownOpen(false);
+    setTimeout(() => {
+      onActionSelect(action, employee);
+    }, 50);
+  };
 
   return (
     <div
@@ -47,29 +54,17 @@ const EmployeeHeaderCell = React.forwardRef(({
 
       {/* Actions menu - only on hover */}
       <div className="hidden group-hover:block absolute right-1 top-1 z-20">
-        <DropdownMenu>
+        <DropdownMenu open={dropdownOpen} onOpenChange={setDropdownOpen}>
           <DropdownMenuTrigger asChild>
             <button className="p-1 rounded hover:bg-gray-200 transition-colors text-gray-500 hover:text-gray-700">
               <MoreVertical className="w-4 h-4" />
             </button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
-            <DropdownMenuItem 
-              onClick={() => {
-                // Fermer le dropdown d'abord, puis ouvrir la modale
-                setTimeout(() => onAddCP(), 10);
-              }}
-              onSelect={(e) => e.preventDefault()}
-            >
+            <DropdownMenuItem onSelect={() => handleAction('ADD_CP')}>
               <span className="mr-2">🟢</span> Ajouter CP
             </DropdownMenuItem>
-            <DropdownMenuItem 
-              onClick={() => {
-                // Fermer le dropdown d'abord, puis ouvrir la modale
-                setTimeout(() => onApplyTemplate(), 10);
-              }}
-              onSelect={(e) => e.preventDefault()}
-            >
+            <DropdownMenuItem onSelect={() => handleAction('APPLY_TEMPLATE')}>
               <Copy className="w-4 h-4 mr-2" /> Appliquer template
             </DropdownMenuItem>
           </DropdownMenuContent>
