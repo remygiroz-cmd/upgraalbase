@@ -8,9 +8,128 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
-import { Trash2, Archive, Upload, User, FileText, Download, Send, BookOpen } from 'lucide-react';
+import { Trash2, Archive, Upload, User, FileText, Download, Send, BookOpen, AlertCircle, CheckCircle } from 'lucide-react';
 import ConfirmDialog from '@/components/ui/ConfirmDialog';
 import TemplateWeeksManager from './TemplateWeeksManager';
+
+const DAYS_FR = [
+  { key: 'monday', label: 'Lun' },
+  { key: 'tuesday', label: 'Mar' },
+  { key: 'wednesday', label: 'Mer' },
+  { key: 'thursday', label: 'Jeu' },
+  { key: 'friday', label: 'Ven' },
+  { key: 'saturday', label: 'Sam' },
+  { key: 'sunday', label: 'Dim' }
+];
+
+function WeeklyScheduleBlock({ schedule, onChange, isManager, expectedDays, expectedWeeklyHours }) {
+  const daysWorked = Object.values(schedule).filter(d => d.worked).length;
+  const totalWeeklyHours = Object.values(schedule).reduce((sum, d) => sum + (d.worked ? parseFloat(d.hours || 0) : 0), 0);
+  
+  const daysMatch = !expectedDays || daysWorked === expectedDays;
+  const hoursMatch = !expectedWeeklyHours || Math.abs(totalWeeklyHours - expectedWeeklyHours) < 0.1;
+
+  return (
+    <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+      <Label className="text-gray-900 font-semibold mb-3 block">
+        Répartition hebdomadaire (jours & heures)
+      </Label>
+      
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-3">
+        {DAYS_FR.map(day => (
+          <div key={day.key} className="bg-white border border-gray-300 rounded-lg p-3">
+            <div className="flex items-center gap-2 mb-2">
+              <input
+                type="checkbox"
+                id={`day-${day.key}`}
+                checked={schedule[day.key]?.worked || false}
+                onChange={(e) => {
+                  const newSchedule = {
+                    ...schedule,
+                    [day.key]: {
+                      worked: e.target.checked,
+                      hours: e.target.checked ? (schedule[day.key]?.hours || 0) : 0
+                    }
+                  };
+                  onChange(newSchedule);
+                }}
+                disabled={!isManager}
+                className="w-4 h-4 rounded border-gray-300"
+              />
+              <Label htmlFor={`day-${day.key}`} className="text-sm font-medium text-gray-900 cursor-pointer">
+                {day.label}
+              </Label>
+            </div>
+            <Input
+              type="number"
+              step="0.5"
+              min="0"
+              max="24"
+              value={schedule[day.key]?.worked ? (schedule[day.key]?.hours || '') : ''}
+              onChange={(e) => {
+                const newSchedule = {
+                  ...schedule,
+                  [day.key]: {
+                    worked: schedule[day.key]?.worked || false,
+                    hours: parseFloat(e.target.value) || 0
+                  }
+                };
+                onChange(newSchedule);
+              }}
+              disabled={!isManager || !schedule[day.key]?.worked}
+              placeholder="h"
+              className="bg-white border-gray-300 text-gray-900 text-sm"
+            />
+          </div>
+        ))}
+      </div>
+
+      <div className="bg-white border border-gray-200 rounded-lg p-3 space-y-2">
+        <div className="flex items-center justify-between text-sm">
+          <span className="text-gray-700">Jours travaillés :</span>
+          <span className={`font-semibold ${daysMatch ? 'text-green-700' : 'text-orange-700'}`}>
+            {daysWorked} {!daysMatch && expectedDays && `(attendu: ${expectedDays})`}
+          </span>
+        </div>
+        <div className="flex items-center justify-between text-sm">
+          <span className="text-gray-700">Total heures/semaine :</span>
+          <span className={`font-semibold ${hoursMatch ? 'text-green-700' : 'text-orange-700'}`}>
+            {totalWeeklyHours.toFixed(2)}h {!hoursMatch && expectedWeeklyHours && `(attendu: ${expectedWeeklyHours.toFixed(2)}h)`}
+          </span>
+        </div>
+        <div className="flex items-center justify-between text-sm">
+          <span className="text-gray-700">Total heures/mois :</span>
+          <span className="font-semibold text-blue-700">
+            {(totalWeeklyHours * 4.3333).toFixed(2)}h
+          </span>
+        </div>
+      </div>
+
+      {(!daysMatch || !hoursMatch) && (
+        <div className="mt-3 bg-orange-50 border border-orange-200 rounded-lg p-3 flex items-start gap-2">
+          <AlertCircle className="w-5 h-5 text-orange-600 flex-shrink-0 mt-0.5" />
+          <div className="text-sm text-orange-800">
+            <p className="font-semibold mb-1">Incohérence détectée</p>
+            <p className="text-xs">La répartition ne correspond pas aux valeurs attendues. Ajustez la répartition ou les champs ci-dessus.</p>
+          </div>
+        </div>
+      )}
+
+      {daysMatch && hoursMatch && daysWorked > 0 && (
+        <div className="mt-3 bg-green-50 border border-green-200 rounded-lg p-3 flex items-center gap-2">
+          <CheckCircle className="w-5 h-5 text-green-600" />
+          <p className="text-sm text-green-800 font-medium">
+            ✓ Répartition cohérente
+          </p>
+        </div>
+      )}
+
+      <p className="text-xs text-gray-600 mt-3">
+        💡 Les champs "Nombre de jours...", "Heures contractuelles/semaine" et "Heures contractuelles/mois" sont mis à jour automatiquement en fonction de la répartition.
+      </p>
+    </div>
+  );
+}
 
 export default function EmployeeFormModal({ open, onClose, employee, isManager = false }) {
   const queryClient = useQueryClient();
