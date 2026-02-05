@@ -54,10 +54,22 @@ const EmployeeHeaderCell = React.forwardRef(({
             </button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
-            <DropdownMenuItem onClick={() => onAddCP()}>
+            <DropdownMenuItem 
+              onClick={() => {
+                // Fermer le dropdown d'abord, puis ouvrir la modale
+                setTimeout(() => onAddCP(), 10);
+              }}
+              onSelect={(e) => e.preventDefault()}
+            >
               <span className="mr-2">🟢</span> Ajouter CP
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => onApplyTemplate()}>
+            <DropdownMenuItem 
+              onClick={() => {
+                // Fermer le dropdown d'abord, puis ouvrir la modale
+                setTimeout(() => onApplyTemplate(), 10);
+              }}
+              onSelect={(e) => e.preventDefault()}
+            >
               <Copy className="w-4 h-4 mr-2" /> Appliquer template
             </DropdownMenuItem>
           </DropdownMenuContent>
