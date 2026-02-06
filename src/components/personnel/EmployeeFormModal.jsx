@@ -234,11 +234,6 @@ export default function EmployeeFormModal({ open, onClose, employee, isManager =
   const handleSubmit = (e) => {
     e.preventDefault();
     
-    // DIAGNOSTIC: Logger le payload complet
-    console.log('🔍 [SUBMIT] FormData avant save:', JSON.stringify(formData, null, 2));
-    console.log('🔍 [SUBMIT] weekly_schedule:', formData.weekly_schedule);
-    
-    // Convertir les champs texte en majuscules
     const uppercasedData = {
       ...formData,
       first_name: formData.first_name?.toUpperCase() || '',
@@ -255,11 +250,8 @@ export default function EmployeeFormModal({ open, onClose, employee, isManager =
       social_security_number: formData.social_security_number?.toUpperCase() || '',
       iban: formData.iban?.toUpperCase() || '',
       bic: formData.bic?.toUpperCase() || '',
-      // CRITICAL: Assurer que weekly_schedule est inclus et correctement formaté
       weekly_schedule: formData.weekly_schedule
     };
-    
-    console.log('🔍 [SUBMIT] Payload après uppercase:', JSON.stringify(uppercasedData, null, 2));
     
     if (employee) {
       updateMutation.mutate({ id: employee.id, data: uppercasedData });
