@@ -61,6 +61,8 @@ export default function WeeklySummary({ employee, shifts, weekStart, onDeleteWee
       hasWeeklySchedule: result.hasWeeklySchedule,
       // Heures hors répartition
       hoursOutsideContract: result.hoursOutsideContract,
+      // Heures manquantes
+      missingHours: result.missingHours,
       // Overtime breakdown (temps complet)
       overtime: result.overtime,
       overtime_outside: result.overtime.outsideContract,
