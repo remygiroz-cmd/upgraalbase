@@ -206,40 +206,13 @@ export default function EmployeeFormModal({ open, onClose, employee, isManager =
 
   const updateMutation = useMutation({
     mutationFn: ({ id, data }) => base44.entities.Employee.update(id, data),
-    onSuccess: async (updatedEmployee, variables) => {
-      console.log('✅ [UPDATE SUCCESS] Réponse backend:', JSON.stringify(updatedEmployee, null, 2));
-      console.log('✅ [UPDATE SUCCESS] weekly_schedule reçu:', updatedEmployee.weekly_schedule);
-      
-      // CRITICAL: Refetch pour garantir la source de vérité
-      try {
-        const freshEmployee = await base44.entities.Employee.filter({ id: variables.id });
-        const employeeData = freshEmployee[0];
-        
-        console.log('✅ [REFETCH] Données fraîches:', JSON.stringify(employeeData, null, 2));
-        console.log('✅ [REFETCH] weekly_schedule refetch:', employeeData.weekly_schedule);
-        
-        // Invalider le cache global
-        await queryClient.invalidateQueries({ queryKey: ['employees'] });
-        
-        toast.success('✓ Employé mis à jour avec succès');
-        
-        // Fermer le modal après un court délai pour que l'utilisateur voie le toast
-        setTimeout(() => {
-          onClose();
-        }, 800);
-      } catch (refetchError) {
-        console.error('❌ [REFETCH ERROR]:', refetchError);
-        await queryClient.invalidateQueries({ queryKey: ['employees'] });
-        toast.success('✓ Employé mis à jour');
-        
-        setTimeout(() => {
-          onClose();
-        }, 800);
-      }
+    onSuccess: async (updatedEmployee) => {
+      await queryClient.invalidateQueries({ queryKey: ['employees'] });
+      toast.success('✓ Enregistré');
+      onClose();
     },
     onError: (error) => {
-      console.error('❌ [UPDATE ERROR]:', error);
-      toast.error('Erreur lors de la mise à jour: ' + error.message);
+      toast.error('Erreur : ' + error.message);
     }
   });
 
