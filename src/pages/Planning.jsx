@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
-import { Calendar, ChevronLeft, ChevronRight, Plus, Filter, GripVertical, Settings, MoreVertical, Copy, ArrowDown, FileText } from 'lucide-react';
+import { Calendar, ChevronLeft, ChevronRight, Plus, Filter, GripVertical, Settings, MoreVertical, Copy, ArrowDown, FileText, X } from 'lucide-react';
 import PageHeader from '@/components/ui/PageHeader';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -52,6 +52,7 @@ export default function Planning() {
   const [copyWeekModal, setCopyWeekModal] = useState({ open: false, weekStart: null, weekAbove: null });
   const [weekConflictMode, setWeekConflictMode] = useState('replace');
   const [displayMode, setDisplayMode] = useState('normal'); // 'compact' | 'normal'
+  const [showFab, setShowFab] = useState(false); // Floating Action Button
   const queryClient = useQueryClient();
 
   // Fetch current user
@@ -644,57 +645,15 @@ export default function Planning() {
           <Calendar className="w-5 h-5 text-orange-600" />
           <h1 className="text-lg font-bold text-gray-900">Planning mensuel</h1>
         </div>
-        <div className="flex items-center gap-2">
-          <Button
-            onClick={() => setModalState({ isOpen: true, actionType: 'ADD_CP', selectedEmployee: null })}
-            variant="outline"
-            size="sm"
-            className="border border-green-400 hover:border-green-600 hover:bg-green-50 text-green-700 font-semibold"
-            title="Ajouter des congés payés"
-          >
-            <span className="mr-1">🟢</span>
-            <span className="hidden sm:inline text-xs">Ajouter CP</span>
-          </Button>
-          <Button
-            onClick={() => setModalState({ isOpen: true, actionType: 'APPLY_TEMPLATE', selectedEmployee: null })}
-            variant="outline"
-            size="sm"
-            className="border border-blue-400 hover:border-blue-600 hover:bg-blue-50 text-blue-700 font-semibold"
-            title="Appliquer les plannings types"
-          >
-            <Calendar className="w-4 h-4 mr-1" />
-            <span className="hidden sm:inline text-xs">Appliquer templates</span>
-          </Button>
-          <Button
-            onClick={() => setShowClearMonthModal(true)}
-            variant="outline"
-            size="sm"
-            className="border border-red-400 hover:border-red-600 hover:bg-red-50 text-red-700 font-semibold"
-            title="Réinitialiser complètement le planning du mois"
-          >
-            <AlertTriangle className="w-4 h-4 mr-1" />
-            <span className="hidden sm:inline text-xs">Réinitialiser mois</span>
-          </Button>
-          <Button
-            onClick={() => setShowExportComptaModal(true)}
-            variant="outline"
-            size="sm"
-            className="border border-gray-300 hover:border-blue-500 hover:bg-blue-50"
-            title="Export comptabilité"
-          >
-            <FileText className="w-4 h-4 mr-1" />
-            <span className="hidden sm:inline text-xs">Export compta</span>
-          </Button>
-          <Button
-            onClick={() => setShowPlanningSettings(true)}
-            variant="outline"
-            size="icon"
-            className="h-8 w-8 border border-gray-300 hover:border-orange-500 hover:bg-orange-50"
-            title="Paramètres du planning"
-          >
-            <Settings className="w-4 h-4" />
-          </Button>
-        </div>
+        <Button
+          onClick={() => setShowPlanningSettings(true)}
+          variant="outline"
+          size="icon"
+          className="h-8 w-8 border border-gray-300 hover:border-orange-500 hover:bg-orange-50"
+          title="Paramètres du planning"
+        >
+          <Settings className="w-4 h-4" />
+        </Button>
       </div>
 
       {/* Month Navigation & Filters */}
@@ -1291,6 +1250,88 @@ export default function Planning() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Floating Action Button */}
+      <div className="fixed bottom-6 right-6 z-50">
+        {showFab && (
+          <div className="absolute bottom-16 right-0 bg-white rounded-lg shadow-2xl border-2 border-gray-200 p-2 space-y-2 min-w-[240px] animate-in slide-in-from-bottom-2">
+            <button
+              onClick={() => {
+                setModalState({ isOpen: true, actionType: 'ADD_CP', selectedEmployee: null });
+                setShowFab(false);
+              }}
+              className="w-full flex items-center gap-3 px-4 py-3 hover:bg-green-50 rounded-lg transition-colors group"
+            >
+              <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center group-hover:bg-green-200 transition-colors">
+                <span className="text-lg">🟢</span>
+              </div>
+              <div className="text-left flex-1">
+                <div className="font-semibold text-sm text-gray-900">Ajouter CP</div>
+                <div className="text-xs text-gray-500">Congés payés</div>
+              </div>
+            </button>
+            
+            <button
+              onClick={() => {
+                setModalState({ isOpen: true, actionType: 'APPLY_TEMPLATE', selectedEmployee: null });
+                setShowFab(false);
+              }}
+              className="w-full flex items-center gap-3 px-4 py-3 hover:bg-blue-50 rounded-lg transition-colors group"
+            >
+              <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center group-hover:bg-blue-200 transition-colors">
+                <Calendar className="w-5 h-5 text-blue-600" />
+              </div>
+              <div className="text-left flex-1">
+                <div className="font-semibold text-sm text-gray-900">Appliquer templates</div>
+                <div className="text-xs text-gray-500">Plannings types</div>
+              </div>
+            </button>
+            
+            <button
+              onClick={() => {
+                setShowClearMonthModal(true);
+                setShowFab(false);
+              }}
+              className="w-full flex items-center gap-3 px-4 py-3 hover:bg-red-50 rounded-lg transition-colors group"
+            >
+              <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center group-hover:bg-red-200 transition-colors">
+                <AlertTriangle className="w-5 h-5 text-red-600" />
+              </div>
+              <div className="text-left flex-1">
+                <div className="font-semibold text-sm text-gray-900">Réinitialiser mois</div>
+                <div className="text-xs text-gray-500">Effacer le planning</div>
+              </div>
+            </button>
+            
+            <button
+              onClick={() => {
+                setShowExportComptaModal(true);
+                setShowFab(false);
+              }}
+              className="w-full flex items-center gap-3 px-4 py-3 hover:bg-gray-50 rounded-lg transition-colors group"
+            >
+              <div className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center group-hover:bg-gray-200 transition-colors">
+                <FileText className="w-5 h-5 text-gray-600" />
+              </div>
+              <div className="text-left flex-1">
+                <div className="font-semibold text-sm text-gray-900">Export compta</div>
+                <div className="text-xs text-gray-500">Envoi comptabilité</div>
+              </div>
+            </button>
+          </div>
+        )}
+        
+        <button
+          onClick={() => setShowFab(!showFab)}
+          className="w-14 h-14 bg-gradient-to-r from-pink-500 to-rose-500 hover:from-pink-600 hover:to-rose-600 rounded-full shadow-2xl flex items-center justify-center transition-all hover:scale-110 active:scale-95"
+        >
+          {showFab ? (
+            <X className="w-6 h-6 text-white" />
+          ) : (
+            <Plus className="w-6 h-6 text-white" />
+          )}
+        </button>
+      </div>
     </div>
   );
 }
