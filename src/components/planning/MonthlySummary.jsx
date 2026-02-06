@@ -49,7 +49,8 @@ export default function MonthlySummary({ employee, shifts, nonShiftEvents = [], 
     const employeeForCalc = {
       id: employee.id,
       work_time_type: employee.work_time_type || 'full_time',
-      contract_hours_weekly: employee.contract_hours_weekly || '35:00'
+      contract_hours_weekly: employee.contract_hours_weekly || '35:00',
+      weekly_schedule: employee.weekly_schedule || null
     };
 
     // Adapter: Convert shifts to the format expected by hoursCalculation.ts
@@ -65,23 +66,28 @@ export default function MonthlySummary({ employee, shifts, nonShiftEvents = [], 
         status: s.status || 'planned'
       }));
 
-    return calculateMonthlyHours(shiftsForCalc, employeeForCalc, year, month);
+    return calculateMonthlyHours(shiftsForCalc, employeeForCalc, year, month, 'overtime');
   }, [shifts, employee, year, month]);
 
   // Extract calculated values
-  const effectiveHours = monthlyCalc.totalActualHours > 0
-    ? monthlyCalc.totalActualHours
-    : monthlyCalc.totalPlannedHours;
+  const effectiveHours = monthlyCalc.totalEffectiveHours;
   const autoDaysWorked = monthlyCalc.daysWorkedActual > 0
     ? monthlyCalc.daysWorkedActual
     : monthlyCalc.daysWorkedPlanned;
   const autoTotalHours = effectiveHours;
   const autoMonthlyContractHours = monthlyCalc.contractHoursMonthly;
 
-  // Overtime/complementary totals
-  const totalOvertime = monthlyCalc.totalOvertime25 + monthlyCalc.totalOvertime50;
-  const totalComplementary = monthlyCalc.totalComplementary10 + monthlyCalc.totalComplementary25;
+  // Overtime/complementary breakdown (avec hors répartition)
+  const overtimeOutside = monthlyCalc.overtime?.outsideContract || 0;
+  const overtimeClassic = (monthlyCalc.overtime?.classic25 || 0) + (monthlyCalc.overtime?.classic50 || 0);
+  const totalOvertime = monthlyCalc.overtime?.total || 0;
+
+  const complementaryOutside = monthlyCalc.complementary?.outsideContract || 0;
+  const complementaryClassic = (monthlyCalc.complementary?.classic10 || 0) + (monthlyCalc.complementary?.classic25 || 0);
+  const totalComplementary = monthlyCalc.complementary?.total || 0;
+
   const hasExcess = totalOvertime > 0 || totalComplementary > 0;
+  const hasOutsideContract = overtimeOutside > 0 || complementaryOutside > 0;
 
   // CP days count
   const autoCPDays = calculateMonthlyCPTotal(cpPeriods, monthStart, monthEnd);
@@ -130,19 +136,47 @@ export default function MonthlySummary({ employee, shifts, nonShiftEvents = [], 
           Base: {contractHours.toFixed(1)}h
         </div>
 
-        {/* Heures supplémentaires / complémentaires */}
+        {/* Heures supplémentaires / complémentaires avec détail hors répartition */}
         {hasExcess && (
-          <div className="bg-orange-50 border border-orange-200 rounded p-1.5 mb-2 text-[10px]">
+          <div className="bg-orange-50 border border-orange-200 rounded p-1.5 mb-2 text-[10px] space-y-0.5">
+            {/* Heures supplémentaires (temps complet) */}
             {totalOvertime > 0 && (
-              <div className="text-orange-700 font-semibold flex items-center gap-1">
-                <AlertTriangle className="w-3 h-3" />
-                HS: +{totalOvertime.toFixed(1)}h
-              </div>
+              <>
+                <div className="text-orange-700 font-semibold flex items-center gap-1">
+                  <AlertTriangle className="w-3 h-3" />
+                  HS: +{totalOvertime.toFixed(1)}h
+                </div>
+                {/* Détail si heures hors répartition */}
+                {hasOutsideContract && overtimeOutside > 0 && (
+                  <div className="text-purple-700 text-[9px] pl-4" title="Heures sur jour hors contrat">
+                    dont {overtimeOutside.toFixed(1)}h hors rép.
+                  </div>
+                )}
+                {overtimeClassic > 0 && hasOutsideContract && (
+                  <div className="text-orange-600 text-[9px] pl-4">
+                    dont {overtimeClassic.toFixed(1)}h classiques
+                  </div>
+                )}
+              </>
             )}
+            {/* Heures complémentaires (temps partiel) */}
             {totalComplementary > 0 && (
-              <div className="text-green-700 font-semibold">
-                HC: +{totalComplementary.toFixed(1)}h
-              </div>
+              <>
+                <div className="text-green-700 font-semibold">
+                  HC: +{totalComplementary.toFixed(1)}h
+                </div>
+                {/* Détail si heures hors répartition */}
+                {hasOutsideContract && complementaryOutside > 0 && (
+                  <div className="text-purple-700 text-[9px] pl-4" title="Heures sur jour hors contrat">
+                    dont {complementaryOutside.toFixed(1)}h hors rép.
+                  </div>
+                )}
+                {complementaryClassic > 0 && hasOutsideContract && (
+                  <div className="text-green-600 text-[9px] pl-4">
+                    dont {complementaryClassic.toFixed(1)}h classiques
+                  </div>
+                )}
+              </>
             )}
           </div>
         )}

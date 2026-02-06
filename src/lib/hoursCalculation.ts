@@ -12,6 +12,11 @@
  * - Heures supplémentaires: >35h (25% jusqu'à 43h, 50% au-delà)
  * - Temps partiel: heures complémentaires (10% jusqu'à +10% contrat, 25% au-delà)
  * - Plafond temps partiel: ne peut pas dépasser 35h/semaine
+ *
+ * NOUVELLE LOGIQUE "HORS REPARTITION":
+ * - Si un shift est sur un jour non prévu au contrat → HS/HC_HORS_REPARTITION
+ * - Ces heures comptent comme heures sup/complémentaires même si total < base contrat
+ * - Allocation: HS_hors d'abord, puis HS_classiques = max(total - base - HS_hors, 0)
  */
 
 // =============================================================================
@@ -23,6 +28,29 @@ export type ShiftStatus = 'planned' | 'confirmed' | 'completed' | 'cancelled';
 
 /** Type de temps de travail */
 export type WorkTimeType = 'full_time' | 'part_time';
+
+/** Jour de la semaine (format clé pour weekly_schedule) */
+export type WeekdayKey = 'monday' | 'tuesday' | 'wednesday' | 'thursday' | 'friday' | 'saturday' | 'sunday';
+
+/** Configuration d'un jour dans le planning hebdomadaire */
+export interface DaySchedule {
+  worked: boolean;
+  hours: number;
+}
+
+/** Planning hebdomadaire contractuel */
+export interface WeeklySchedule {
+  monday: DaySchedule;
+  tuesday: DaySchedule;
+  wednesday: DaySchedule;
+  thursday: DaySchedule;
+  friday: DaySchedule;
+  saturday: DaySchedule;
+  sunday: DaySchedule;
+}
+
+/** Politique pour les heures hors répartition */
+export type OutsideContractPolicy = 'overtime' | 'normal';
 
 /** Shift minimal pour les calculs */
 export interface ShiftForCalculation {
@@ -40,18 +68,41 @@ export interface EmployeeForCalculation {
   id: string;
   work_time_type: WorkTimeType;
   contract_hours_weekly: string;  // Ex: "35:00" ou "25"
+  weekly_schedule?: WeeklySchedule | null;
 }
 
-/** Résultat du calcul quotidien */
+/** Résultat du calcul quotidien (enrichi) */
 export interface DailyHoursResult {
   date: string;
+  dayOfWeek: WeekdayKey;
   totalPlanned: number;
   totalActual: number;
   shiftsPlanned: number;
   shiftsActual: number;
+  // Nouveau: info sur le contrat
+  isContractDay: boolean;         // true si jour prévu au contrat
+  contractHoursForDay: number;    // heures prévues ce jour (0 si pas prévu)
+  hoursOutsideContract: number;   // heures travaillées un jour non prévu
 }
 
-/** Résultat du calcul hebdomadaire */
+/** Détail des heures supplémentaires */
+export interface OvertimeBreakdown {
+  outsideContract: number;  // HS hors répartition (jour non prévu)
+  classic25: number;        // HS classiques majorées 25% (36h-43h)
+  classic50: number;        // HS classiques majorées 50% (>43h)
+  total: number;            // Total HS
+}
+
+/** Détail des heures complémentaires (temps partiel) */
+export interface ComplementaryBreakdown {
+  outsideContract: number;  // HC hors répartition (jour non prévu)
+  classic10: number;        // HC classiques majorées 10%
+  classic25: number;        // HC classiques majorées 25%
+  total: number;            // Total HC
+  exceedsLimit: boolean;    // Dépasse 35h
+}
+
+/** Résultat du calcul hebdomadaire (enrichi) */
 export interface WeeklyHoursResult {
   weekStart: string;
   weekEnd: string;
@@ -59,19 +110,28 @@ export interface WeeklyHoursResult {
   // Totaux
   totalPlannedHours: number;
   totalActualHours: number;
+  totalEffectiveHours: number;  // Actual si dispo, sinon Planned
 
   // Base contractuelle
   contractHoursWeekly: number;
   workTimeType: WorkTimeType;
+  hasWeeklySchedule: boolean;
 
-  // Temps complet - Heures supplémentaires
-  overtime25: number;       // HS majorées à 25% (36h-43h)
-  overtime50: number;       // HS majorées à 50% (>43h)
+  // NOUVEAU: Détail des heures hors contrat
+  hoursOutsideContract: number;  // Total heures sur jours non prévus
+
+  // Temps complet - Heures supplémentaires (enrichi)
+  overtime: OvertimeBreakdown;
+  // Legacy fields pour compatibilité
+  overtime25: number;
+  overtime50: number;
   totalOvertime: number;
 
-  // Temps partiel - Heures complémentaires
-  complementary10: number;  // HC majorées à 10% (≤ +10% contrat)
-  complementary25: number;  // HC majorées à 25% (> +10% contrat)
+  // Temps partiel - Heures complémentaires (enrichi)
+  complementary: ComplementaryBreakdown;
+  // Legacy fields pour compatibilité
+  complementary10: number;
+  complementary25: number;
   totalComplementary: number;
 
   // Alertes
@@ -81,7 +141,7 @@ export interface WeeklyHoursResult {
   dailyBreakdown: DailyHoursResult[];
 }
 
-/** Résultat du calcul mensuel */
+/** Résultat du calcul mensuel (enrichi) */
 export interface MonthlyHoursResult {
   year: number;
   month: number;
@@ -89,6 +149,7 @@ export interface MonthlyHoursResult {
   // Totaux
   totalPlannedHours: number;
   totalActualHours: number;
+  totalEffectiveHours: number;
 
   // Jours travaillés
   daysWorkedPlanned: number;
@@ -98,11 +159,18 @@ export interface MonthlyHoursResult {
   contractHoursMonthly: number;
   workTimeType: WorkTimeType;
 
-  // Agrégation des heures sup/complémentaires
-  totalOvertime25: number;
-  totalOvertime50: number;
-  totalComplementary10: number;
-  totalComplementary25: number;
+  // NOUVEAU: Heures hors contrat
+  hoursOutsideContract: number;
+
+  // Agrégation des heures sup (enrichi)
+  overtime: OvertimeBreakdown;
+  totalOvertime25: number;  // Legacy
+  totalOvertime50: number;  // Legacy
+
+  // Agrégation des heures complémentaires (enrichi)
+  complementary: ComplementaryBreakdown;
+  totalComplementary10: number;  // Legacy
+  totalComplementary25: number;  // Legacy
 
   // Alertes
   alerts: HoursAlert[];
@@ -113,12 +181,14 @@ export interface MonthlyHoursResult {
 
 /** Type d'alerte */
 export type AlertType =
-  | 'overtime_warning'        // Heures sup détectées
-  | 'overtime_high'           // >48h/semaine
-  | 'complementary_limit'     // HC > 10% contrat
-  | 'part_time_exceeded'      // Temps partiel > 35h
-  | 'rest_insufficient'       // Repos < 11h
-  | 'daily_amplitude_high';   // Amplitude > 10h/jour
+  | 'overtime_warning'          // Heures sup détectées
+  | 'overtime_outside_contract' // HS hors répartition détectées
+  | 'overtime_high'             // >48h/semaine
+  | 'complementary_limit'       // HC > 10% contrat
+  | 'complementary_outside'     // HC hors répartition détectées
+  | 'part_time_exceeded'        // Temps partiel > 35h
+  | 'rest_insufficient'         // Repos < 11h
+  | 'daily_amplitude_high';     // Amplitude > 10h/jour
 
 /** Alerte générée par les calculs */
 export interface HoursAlert {
@@ -127,6 +197,25 @@ export interface HoursAlert {
   message: string;
   date?: string;
   value?: number;
+}
+
+/** Override manuel pour les récap */
+export interface ManualOverride {
+  weekKey?: string;        // Format: YYYY-WXX
+  monthKey?: string;       // Format: YYYY-MM
+  employeeId: string;
+  // Overrides temps complet
+  overtimeTotal?: number;
+  overtimeOutside?: number;
+  overtimeClassic?: number;
+  // Overrides temps partiel
+  complementaryTotal?: number;
+  complementaryOutside?: number;
+  complementaryClassic?: number;
+  // Méta
+  reason?: string;
+  updatedAt: string;
+  updatedBy: string;
 }
 
 // =============================================================================
@@ -147,6 +236,17 @@ export const COMPLEMENTARY_10_PERCENT = 0.10;
 
 /** Moyenne de semaines par mois */
 export const WEEKS_PER_MONTH = 4.33;
+
+/** Mapping jour de semaine JS (0-6) vers clé WeeklySchedule */
+const JS_DAY_TO_KEY: WeekdayKey[] = [
+  'sunday',    // 0
+  'monday',    // 1
+  'tuesday',   // 2
+  'wednesday', // 3
+  'thursday',  // 4
+  'friday',    // 5
+  'saturday'   // 6
+];
 
 // =============================================================================
 // FONCTIONS UTILITAIRES
@@ -261,17 +361,65 @@ export function getIsoWeekEnd(date: Date): Date {
   return weekEnd;
 }
 
+/**
+ * Convertit une date string en clé de jour de semaine
+ */
+export function getWeekdayKey(dateStr: string): WeekdayKey {
+  const date = parseLocalDate(dateStr);
+  return JS_DAY_TO_KEY[date.getDay()];
+}
+
+/**
+ * Vérifie si un jour est prévu dans le planning contractuel
+ */
+export function isDayInContract(
+  dateStr: string,
+  weeklySchedule: WeeklySchedule | null | undefined
+): { isContractDay: boolean; contractHours: number } {
+  if (!weeklySchedule) {
+    // Pas de planning défini = tous les jours sont considérés comme "dans le contrat"
+    return { isContractDay: true, contractHours: 0 };
+  }
+
+  const dayKey = getWeekdayKey(dateStr);
+  const daySchedule = weeklySchedule[dayKey];
+
+  if (!daySchedule) {
+    return { isContractDay: true, contractHours: 0 };
+  }
+
+  const isContractDay = daySchedule.worked === true && (daySchedule.hours > 0);
+  const contractHours = daySchedule.worked ? (daySchedule.hours || 0) : 0;
+
+  return { isContractDay, contractHours };
+}
+
+/**
+ * Vérifie si un weekly_schedule est défini et valide
+ */
+export function hasValidWeeklySchedule(schedule: WeeklySchedule | null | undefined): boolean {
+  if (!schedule) return false;
+
+  // Vérifie qu'au moins un jour est coché avec des heures > 0
+  const days: WeekdayKey[] = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
+  return days.some(day => {
+    const daySchedule = schedule[day];
+    return daySchedule && daySchedule.worked === true && daySchedule.hours > 0;
+  });
+}
+
 // =============================================================================
 // CALCULS QUOTIDIENS
 // =============================================================================
 
 /**
- * Calcule les heures pour une journée donnée
+ * Calcule les heures pour une journée donnée (enrichi avec info contrat)
  */
 export function calculateDailyHours(
   shifts: ShiftForCalculation[],
   employeeId: string,
-  date: string
+  date: string,
+  weeklySchedule: WeeklySchedule | null | undefined
 ): DailyHoursResult {
   const dayShifts = shifts.filter(
     s => s.employee_id === employeeId && s.date === date && isShiftCountable(s)
@@ -294,12 +442,26 @@ export function calculateDailyHours(
     }
   }
 
+  // Déterminer si ce jour est dans le contrat
+  const { isContractDay, contractHours } = isDayInContract(date, weeklySchedule);
+  const dayOfWeek = getWeekdayKey(date);
+
+  // Heures effectives (actual si dispo, sinon planned)
+  const effectiveHours = totalActual > 0 ? totalActual : totalPlanned;
+
+  // Si le jour n'est pas prévu au contrat, toutes les heures sont "hors contrat"
+  const hoursOutsideContract = !isContractDay ? effectiveHours : 0;
+
   return {
     date,
+    dayOfWeek,
     totalPlanned,
     totalActual,
     shiftsPlanned,
-    shiftsActual
+    shiftsActual,
+    isContractDay,
+    contractHoursForDay: contractHours,
+    hoursOutsideContract
   };
 }
 
@@ -308,12 +470,71 @@ export function calculateDailyHours(
 // =============================================================================
 
 /**
- * Calcule les heures supplémentaires (temps complet)
+ * Calcule les heures supplémentaires avec distinction hors répartition / classiques
  *
- * Règles:
- * - Base légale: 35h/semaine
- * - 36h → 43h: majorées à 25%
- * - >43h: majorées à 50%
+ * LOGIQUE:
+ * 1. hoursOutsideContract = somme des heures sur jours non prévus → HS_HORS
+ * 2. totalOverWeekly = max(effectiveHours - contractHoursWeekly, 0)
+ * 3. HS_classiques = max(totalOverWeekly - hoursOutsideContract, 0)
+ * 4. HS_total = HS_hors + HS_classiques (peut être > 0 même si effectiveHours <= 35h)
+ */
+export function calculateOvertimeWithOutsideContract(
+  effectiveHours: number,
+  contractHoursWeekly: number,
+  hoursOutsideContract: number,
+  policy: OutsideContractPolicy = 'overtime'
+): OvertimeBreakdown {
+  // Si policy = 'normal', on ignore le hors contrat et on calcule comme avant
+  if (policy === 'normal') {
+    const { overtime25, overtime50 } = calculateOvertime(effectiveHours);
+    return {
+      outsideContract: 0,
+      classic25: overtime25,
+      classic50: overtime50,
+      total: overtime25 + overtime50
+    };
+  }
+
+  // Policy = 'overtime' (défaut)
+  // Les heures hors répartition sont toujours considérées comme HS
+  const outsideContract = hoursOutsideContract;
+
+  // Heures au-delà de la base contractuelle
+  const totalOverContract = Math.max(effectiveHours - contractHoursWeekly, 0);
+
+  // HS classiques = ce qui dépasse le contrat MOINS ce qui est déjà compté comme "hors répartition"
+  const classicOvertime = Math.max(totalOverContract - hoursOutsideContract, 0);
+
+  // Répartition des HS classiques en 25% et 50%
+  let classic25 = 0;
+  let classic50 = 0;
+
+  if (classicOvertime > 0) {
+    // Les HS classiques commencent à partir de la base (35h pour temps plein)
+    // Seuil 25%: 35h → 43h (8h)
+    // Seuil 50%: >43h
+    const threshold25Max = OVERTIME_25_THRESHOLD - LEGAL_WEEKLY_HOURS; // 8h
+
+    if (classicOvertime <= threshold25Max) {
+      classic25 = classicOvertime;
+    } else {
+      classic25 = threshold25Max;
+      classic50 = classicOvertime - threshold25Max;
+    }
+  }
+
+  const total = outsideContract + classic25 + classic50;
+
+  return {
+    outsideContract,
+    classic25,
+    classic50,
+    total
+  };
+}
+
+/**
+ * Calcule les heures supplémentaires (temps complet) - Version legacy
  */
 export function calculateOvertime(totalHours: number): { overtime25: number; overtime50: number } {
   if (totalHours <= LEGAL_WEEKLY_HOURS) {
@@ -323,25 +544,73 @@ export function calculateOvertime(totalHours: number): { overtime25: number; ove
   const overtime = totalHours - LEGAL_WEEKLY_HOURS;
 
   if (totalHours <= OVERTIME_25_THRESHOLD) {
-    // Tout en HS 25%
     return { overtime25: overtime, overtime50: 0 };
   }
 
-  // Mix HS 25% et HS 50%
-  const overtime25 = OVERTIME_25_THRESHOLD - LEGAL_WEEKLY_HOURS; // 8h
+  const overtime25 = OVERTIME_25_THRESHOLD - LEGAL_WEEKLY_HOURS;
   const overtime50 = totalHours - OVERTIME_25_THRESHOLD;
 
   return { overtime25, overtime50 };
 }
 
 /**
- * Calcule les heures complémentaires (temps partiel)
- *
- * Règles:
- * - Base: heures contractuelles
- * - Jusqu'à +10% du contrat: majorées à 10%
- * - Au-delà: majorées à 25%
- * - Plafond: 35h/semaine max
+ * Calcule les heures complémentaires avec distinction hors répartition / classiques (temps partiel)
+ */
+export function calculateComplementaryWithOutsideContract(
+  effectiveHours: number,
+  contractHoursWeekly: number,
+  hoursOutsideContract: number,
+  policy: OutsideContractPolicy = 'overtime'
+): ComplementaryBreakdown {
+  if (policy === 'normal') {
+    const result = calculateComplementary(effectiveHours, contractHoursWeekly);
+    return {
+      outsideContract: 0,
+      classic10: result.complementary10,
+      classic25: result.complementary25,
+      total: result.complementary10 + result.complementary25,
+      exceedsLimit: result.exceedsLimit
+    };
+  }
+
+  // Policy = 'overtime'
+  const outsideContract = hoursOutsideContract;
+  const exceedsLimit = effectiveHours > LEGAL_WEEKLY_HOURS;
+
+  // Heures au-delà du contrat (plafonnées à 35h)
+  const effectiveCapped = Math.min(effectiveHours, LEGAL_WEEKLY_HOURS);
+  const totalOverContract = Math.max(effectiveCapped - contractHoursWeekly, 0);
+
+  // HC classiques = dépassement - hors répartition
+  const classicComplementary = Math.max(totalOverContract - hoursOutsideContract, 0);
+
+  // Répartition en 10% et 25%
+  const threshold10 = contractHoursWeekly * COMPLEMENTARY_10_PERCENT;
+  let classic10 = 0;
+  let classic25 = 0;
+
+  if (classicComplementary > 0) {
+    if (classicComplementary <= threshold10) {
+      classic10 = classicComplementary;
+    } else {
+      classic10 = threshold10;
+      classic25 = classicComplementary - threshold10;
+    }
+  }
+
+  const total = outsideContract + classic10 + classic25;
+
+  return {
+    outsideContract,
+    classic10,
+    classic25,
+    total,
+    exceedsLimit
+  };
+}
+
+/**
+ * Calcule les heures complémentaires (temps partiel) - Version legacy
  */
 export function calculateComplementary(
   totalHours: number,
@@ -358,14 +627,12 @@ export function calculateComplementary(
     return { complementary10: 0, complementary25: 0, exceedsLimit };
   }
 
-  // Seuil de 10% du contrat
   const threshold10 = contractHours * COMPLEMENTARY_10_PERCENT;
 
   if (complementaryTotal <= threshold10) {
     return { complementary10: complementaryTotal, complementary25: 0, exceedsLimit };
   }
 
-  // Mix HC 10% et HC 25%
   return {
     complementary10: threshold10,
     complementary25: complementaryTotal - threshold10,
@@ -374,12 +641,13 @@ export function calculateComplementary(
 }
 
 /**
- * Calcule les heures pour une semaine donnée
+ * Calcule les heures pour une semaine donnée (enrichi)
  */
 export function calculateWeeklyHours(
   shifts: ShiftForCalculation[],
   employee: EmployeeForCalculation,
-  weekStart: Date
+  weekStart: Date,
+  policy: OutsideContractPolicy = 'overtime'
 ): WeeklyHoursResult {
   const weekEnd = getIsoWeekEnd(weekStart);
   const weekStartStr = formatLocalDate(weekStart);
@@ -387,6 +655,8 @@ export function calculateWeeklyHours(
 
   const contractHoursWeekly = parseContractHours(employee.contract_hours_weekly);
   const workTimeType = employee.work_time_type || 'full_time';
+  const weeklySchedule = employee.weekly_schedule;
+  const hasSchedule = hasValidWeeklySchedule(weeklySchedule);
 
   // Filtrer les shifts de la semaine pour cet employé
   const weekShifts = shifts.filter(s => {
@@ -398,67 +668,89 @@ export function calculateWeeklyHours(
   const dailyBreakdown: DailyHoursResult[] = [];
   let totalPlannedHours = 0;
   let totalActualHours = 0;
+  let hoursOutsideContract = 0;
 
   // Parcourir les 7 jours de la semaine
   const currentDate = new Date(weekStart);
   for (let i = 0; i < 7; i++) {
     const dateStr = formatLocalDate(currentDate);
-    const daily = calculateDailyHours(weekShifts, employee.id, dateStr);
+    const daily = calculateDailyHours(weekShifts, employee.id, dateStr, weeklySchedule);
     dailyBreakdown.push(daily);
     totalPlannedHours += daily.totalPlanned;
     totalActualHours += daily.totalActual;
+    hoursOutsideContract += daily.hoursOutsideContract;
     currentDate.setDate(currentDate.getDate() + 1);
   }
 
-  // Utiliser les heures réelles si disponibles, sinon les planifiées
-  const effectiveHours = totalActualHours > 0 ? totalActualHours : totalPlannedHours;
+  // Heures effectives (actual si dispo, sinon planned)
+  const totalEffectiveHours = totalActualHours > 0 ? totalActualHours : totalPlannedHours;
 
-  // Calculer les heures sup/complémentaires
-  let overtime25 = 0;
-  let overtime50 = 0;
-  let totalOvertime = 0;
-  let complementary10 = 0;
-  let complementary25 = 0;
-  let totalComplementary = 0;
+  // Calculer les heures sup/complémentaires avec la nouvelle logique
   const alerts: HoursAlert[] = [];
+  let overtime: OvertimeBreakdown = { outsideContract: 0, classic25: 0, classic50: 0, total: 0 };
+  let complementary: ComplementaryBreakdown = { outsideContract: 0, classic10: 0, classic25: 0, total: 0, exceedsLimit: false };
 
   if (workTimeType === 'full_time') {
-    // Temps complet - calcul des heures supplémentaires
-    const overtime = calculateOvertime(effectiveHours);
-    overtime25 = overtime.overtime25;
-    overtime50 = overtime.overtime50;
-    totalOvertime = overtime25 + overtime50;
+    // Temps complet - calcul des heures supplémentaires avec hors répartition
+    overtime = calculateOvertimeWithOutsideContract(
+      totalEffectiveHours,
+      contractHoursWeekly,
+      hoursOutsideContract,
+      hasSchedule ? policy : 'normal' // Si pas de schedule, pas de distinction
+    );
 
-    if (totalOvertime > 0) {
+    // Alertes
+    if (overtime.outsideContract > 0) {
+      alerts.push({
+        type: 'overtime_outside_contract',
+        severity: 'warning',
+        message: `${overtime.outsideContract.toFixed(1)}h hors répartition contractuelle`,
+        value: overtime.outsideContract
+      });
+    }
+
+    if (overtime.total > 0) {
       alerts.push({
         type: 'overtime_warning',
         severity: 'info',
-        message: `${totalOvertime.toFixed(1)}h supplémentaires cette semaine`,
-        value: totalOvertime
+        message: `${overtime.total.toFixed(1)}h supplémentaires cette semaine`,
+        value: overtime.total
       });
     }
 
-    if (effectiveHours > OVERTIME_MAX_THRESHOLD) {
+    if (totalEffectiveHours > OVERTIME_MAX_THRESHOLD) {
       alerts.push({
         type: 'overtime_high',
         severity: 'error',
-        message: `Dépassement du plafond de 48h/semaine (${effectiveHours.toFixed(1)}h)`,
-        value: effectiveHours
+        message: `Dépassement du plafond de 48h/semaine (${totalEffectiveHours.toFixed(1)}h)`,
+        value: totalEffectiveHours
       });
     }
   } else {
-    // Temps partiel - calcul des heures complémentaires
-    const complementary = calculateComplementary(effectiveHours, contractHoursWeekly);
-    complementary10 = complementary.complementary10;
-    complementary25 = complementary.complementary25;
-    totalComplementary = complementary10 + complementary25;
+    // Temps partiel - calcul des heures complémentaires avec hors répartition
+    complementary = calculateComplementaryWithOutsideContract(
+      totalEffectiveHours,
+      contractHoursWeekly,
+      hoursOutsideContract,
+      hasSchedule ? policy : 'normal'
+    );
 
-    if (complementary25 > 0) {
+    // Alertes
+    if (complementary.outsideContract > 0) {
+      alerts.push({
+        type: 'complementary_outside',
+        severity: 'warning',
+        message: `${complementary.outsideContract.toFixed(1)}h complémentaires hors répartition`,
+        value: complementary.outsideContract
+      });
+    }
+
+    if (complementary.classic25 > 0) {
       alerts.push({
         type: 'complementary_limit',
         severity: 'warning',
-        message: `HC au-delà de 10% du contrat: ${complementary25.toFixed(1)}h majorées à 25%`,
-        value: complementary25
+        message: `HC au-delà de 10% du contrat: ${complementary.classic25.toFixed(1)}h majorées à 25%`,
+        value: complementary.classic25
       });
     }
 
@@ -466,8 +758,8 @@ export function calculateWeeklyHours(
       alerts.push({
         type: 'part_time_exceeded',
         severity: 'error',
-        message: `Temps partiel dépassant 35h/semaine (${effectiveHours.toFixed(1)}h)`,
-        value: effectiveHours
+        message: `Temps partiel dépassant 35h/semaine (${totalEffectiveHours.toFixed(1)}h)`,
+        value: totalEffectiveHours
       });
     }
   }
@@ -477,14 +769,21 @@ export function calculateWeeklyHours(
     weekEnd: weekEndStr,
     totalPlannedHours,
     totalActualHours,
+    totalEffectiveHours,
     contractHoursWeekly,
     workTimeType,
-    overtime25,
-    overtime50,
-    totalOvertime,
-    complementary10,
-    complementary25,
-    totalComplementary,
+    hasWeeklySchedule: hasSchedule,
+    hoursOutsideContract,
+    // Nouveau format enrichi
+    overtime,
+    complementary,
+    // Legacy fields pour compatibilité
+    overtime25: overtime.classic25,
+    overtime50: overtime.classic50,
+    totalOvertime: overtime.total,
+    complementary10: complementary.classic10,
+    complementary25: complementary.classic25,
+    totalComplementary: complementary.total,
     alerts,
     dailyBreakdown
   };
@@ -500,9 +799,8 @@ export function calculateWeeklyHours(
 export function getWeeksInMonth(year: number, month: number): Date[] {
   const weeks: Date[] = [];
   const monthStart = new Date(year, month - 1, 1);
-  const monthEnd = new Date(year, month, 0); // Dernier jour du mois
+  const monthEnd = new Date(year, month, 0);
 
-  // Première semaine qui contient le 1er du mois
   let currentWeekStart = getIsoWeekStart(monthStart);
 
   while (currentWeekStart <= monthEnd) {
@@ -514,13 +812,14 @@ export function getWeeksInMonth(year: number, month: number): Date[] {
 }
 
 /**
- * Calcule les heures pour un mois donné
+ * Calcule les heures pour un mois donné (enrichi)
  */
 export function calculateMonthlyHours(
   shifts: ShiftForCalculation[],
   employee: EmployeeForCalculation,
   year: number,
-  month: number
+  month: number,
+  policy: OutsideContractPolicy = 'overtime'
 ): MonthlyHoursResult {
   const contractHoursWeekly = parseContractHours(employee.contract_hours_weekly);
   const contractHoursMonthly = contractHoursWeekly * WEEKS_PER_MONTH;
@@ -533,14 +832,15 @@ export function calculateMonthlyHours(
 
   let totalPlannedHours = 0;
   let totalActualHours = 0;
-  let totalOvertime25 = 0;
-  let totalOvertime50 = 0;
-  let totalComplementary10 = 0;
-  let totalComplementary25 = 0;
+  let hoursOutsideContract = 0;
+
+  // Agrégation overtime/complementary
+  const overtime: OvertimeBreakdown = { outsideContract: 0, classic25: 0, classic50: 0, total: 0 };
+  const complementary: ComplementaryBreakdown = { outsideContract: 0, classic10: 0, classic25: 0, total: 0, exceedsLimit: false };
   const allAlerts: HoursAlert[] = [];
 
   for (const weekStart of weeks) {
-    const weekResult = calculateWeeklyHours(shifts, employee, weekStart);
+    const weekResult = calculateWeeklyHours(shifts, employee, weekStart, policy);
     weeklyBreakdown.push(weekResult);
 
     // Pour le total mensuel, on ne compte que les jours du mois
@@ -548,14 +848,24 @@ export function calculateMonthlyHours(
       if (daily.date >= monthStartStr && daily.date <= monthEndStr) {
         totalPlannedHours += daily.totalPlanned;
         totalActualHours += daily.totalActual;
+        hoursOutsideContract += daily.hoursOutsideContract;
       }
     }
 
-    // Agréger les heures sup/complémentaires
-    totalOvertime25 += weekResult.overtime25;
-    totalOvertime50 += weekResult.overtime50;
-    totalComplementary10 += weekResult.complementary10;
-    totalComplementary25 += weekResult.complementary25;
+    // Agréger overtime
+    overtime.outsideContract += weekResult.overtime.outsideContract;
+    overtime.classic25 += weekResult.overtime.classic25;
+    overtime.classic50 += weekResult.overtime.classic50;
+    overtime.total += weekResult.overtime.total;
+
+    // Agréger complementary
+    complementary.outsideContract += weekResult.complementary.outsideContract;
+    complementary.classic10 += weekResult.complementary.classic10;
+    complementary.classic25 += weekResult.complementary.classic25;
+    complementary.total += weekResult.complementary.total;
+    if (weekResult.complementary.exceedsLimit) {
+      complementary.exceedsLimit = true;
+    }
 
     // Collecter les alertes
     allAlerts.push(...weekResult.alerts);
@@ -577,19 +887,27 @@ export function calculateMonthlyHours(
     }
   }
 
+  const totalEffectiveHours = totalActualHours > 0 ? totalActualHours : totalPlannedHours;
+
   return {
     year,
     month,
     totalPlannedHours,
     totalActualHours,
+    totalEffectiveHours,
     daysWorkedPlanned: daysWorked.size,
     daysWorkedActual: daysWorkedActual.size,
     contractHoursMonthly,
     workTimeType,
-    totalOvertime25,
-    totalOvertime50,
-    totalComplementary10,
-    totalComplementary25,
+    hoursOutsideContract,
+    // Nouveau format enrichi
+    overtime,
+    complementary,
+    // Legacy fields
+    totalOvertime25: overtime.classic25,
+    totalOvertime50: overtime.classic50,
+    totalComplementary10: complementary.classic10,
+    totalComplementary25: complementary.classic25,
     alerts: allAlerts,
     weeklyBreakdown
   };
@@ -603,19 +921,23 @@ export function calculateMonthlyHours(
  * Détermine le total effectif à afficher (réalisé si dispo, sinon planifié)
  */
 export function getEffectiveHours(result: WeeklyHoursResult | MonthlyHoursResult): number {
-  if ('totalActualHours' in result && result.totalActualHours > 0) {
-    return result.totalActualHours;
-  }
-  return result.totalPlannedHours;
+  return result.totalEffectiveHours;
 }
 
 /**
  * Vérifie s'il y a des dépassements d'heures
  */
 export function hasExcess(result: WeeklyHoursResult): boolean {
-  return result.totalOvertime > 0 ||
-         result.totalComplementary > 0 ||
+  return result.overtime.total > 0 ||
+         result.complementary.total > 0 ||
          result.alerts.some(a => a.severity === 'error');
+}
+
+/**
+ * Vérifie s'il y a des heures hors répartition
+ */
+export function hasOutsideContractHours(result: WeeklyHoursResult | MonthlyHoursResult): boolean {
+  return result.hoursOutsideContract > 0;
 }
 
 /**
@@ -626,4 +948,13 @@ export function formatHours(hours: number): string {
   const m = Math.round((hours - h) * 60);
   if (m === 0) return `${h}h`;
   return `${h}h${m.toString().padStart(2, '0')}`;
+}
+
+/**
+ * Formate les heures en format HH:MM
+ */
+export function formatHoursHHMM(hours: number): string {
+  const h = Math.floor(hours);
+  const m = Math.round((hours - h) * 60);
+  return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
 }

@@ -28,7 +28,8 @@ export default function WeeklySummary({ employee, shifts, weekStart, onDeleteWee
     const employeeForCalc = {
       id: employee.id,
       work_time_type: employee.work_time_type || 'full_time',
-      contract_hours_weekly: employee.contract_hours_weekly || '35:00'
+      contract_hours_weekly: employee.contract_hours_weekly || '35:00',
+      weekly_schedule: employee.weekly_schedule || null
     };
 
     // Adapter: Convert shifts to the format expected by hoursCalculation.ts
@@ -44,37 +45,50 @@ export default function WeeklySummary({ employee, shifts, weekStart, onDeleteWee
         status: s.status || 'planned'
       }));
 
-    // Call new calculation function
-    const result = newCalculateWeeklyHours(shiftsForCalc, employeeForCalc, weekStart);
+    // Call new calculation function with 'overtime' policy for outside contract hours
+    const result = newCalculateWeeklyHours(shiftsForCalc, employeeForCalc, weekStart, 'overtime');
 
     // Get effective hours (actual if available, otherwise planned)
     const effectiveHours = getEffectiveHours(result);
 
-    // Adapter: Convert result to legacy format expected by UI
+    // Adapter: Convert result to format expected by UI (enrichi avec hors répartition)
     return {
       total: effectiveHours,
       totalPlanned: result.totalPlannedHours,
       totalActual: result.totalActualHours,
+      contractHoursWeekly: result.contractHoursWeekly,
       type: result.workTimeType,
-      overtime_25: result.overtime25,
-      overtime_50: result.overtime50,
-      total_overtime: result.totalOvertime,
-      complementary_10: result.complementary10,
-      complementary_25: result.complementary25,
-      total_complementary: result.totalComplementary,
-      exceeds_limit: result.alerts.some(a => a.type === 'part_time_exceeded'),
-      hasOvertime: result.totalOvertime > 0,
-      overtime: result.totalOvertime,
+      hasWeeklySchedule: result.hasWeeklySchedule,
+      // Heures hors répartition
+      hoursOutsideContract: result.hoursOutsideContract,
+      // Overtime breakdown (temps complet)
+      overtime: result.overtime,
+      overtime_outside: result.overtime.outsideContract,
+      overtime_25: result.overtime.classic25,
+      overtime_50: result.overtime.classic50,
+      total_overtime: result.overtime.total,
+      // Complementary breakdown (temps partiel)
+      complementary: result.complementary,
+      complementary_outside: result.complementary.outsideContract,
+      complementary_10: result.complementary.classic10,
+      complementary_25: result.complementary.classic25,
+      total_complementary: result.complementary.total,
+      exceeds_limit: result.complementary.exceedsLimit,
+      // Legacy
+      hasOvertime: result.overtime.total > 0,
       alerts: result.alerts,
       dailyBreakdown: result.dailyBreakdown,
-      // Debug info for backward compatibility
+      // Debug info
       debugInfo: debugMode ? result.dailyBreakdown.map(d => ({
         type: 'shift',
         date: d.date,
+        dayOfWeek: d.dayOfWeek,
+        isContractDay: d.isContractDay,
         durationMinutes: Math.round((d.totalPlanned + d.totalActual) * 60),
+        hoursOutside: d.hoursOutsideContract,
         included: d.totalPlanned > 0 || d.totalActual > 0
       })) : null,
-      nonShiftHours: 0 // TODO: intégrer non-shifts si nécessaire
+      nonShiftHours: 0
     };
   }, [shifts, employee, weekStart, debugMode]);
 
@@ -176,14 +190,22 @@ export default function WeeklySummary({ employee, shifts, weekStart, onDeleteWee
         </div>
       )}
       
-      {/* Mode hebdomadaire activé */}
+      {/* Mode hebdomadaire activé - Temps complet */}
       {calculationMode === 'weekly' && weekHours.type === 'full_time' && weekHours.total_overtime > 0 && (
         <div className="text-[10px] space-y-0.5">
+          {/* HS hors répartition (jour non prévu au contrat) */}
+          {weekHours.overtime_outside > 0 && (
+            <div className="text-purple-700 font-semibold" title="Heures sur jour hors contrat">
+              +{weekHours.overtime_outside.toFixed(1)}h (hors rép.)
+            </div>
+          )}
+          {/* HS classiques 25% */}
           {weekHours.overtime_25 > 0 && (
             <div className="text-orange-700 font-semibold">
               +{weekHours.overtime_25.toFixed(1)}h (+25%)
             </div>
           )}
+          {/* HS classiques 50% */}
           {weekHours.overtime_50 > 0 && (
             <div className="text-red-700 font-semibold">
               +{weekHours.overtime_50.toFixed(1)}h (+50%)
@@ -192,13 +214,22 @@ export default function WeeklySummary({ employee, shifts, weekStart, onDeleteWee
         </div>
       )}
 
+      {/* Mode hebdomadaire activé - Temps partiel */}
       {calculationMode === 'weekly' && weekHours.type === 'part_time' && weekHours.total_complementary > 0 && (
         <div className="text-[10px] space-y-0.5">
+          {/* HC hors répartition */}
+          {weekHours.complementary_outside > 0 && (
+            <div className="text-purple-700 font-semibold" title="Heures sur jour hors contrat">
+              +{weekHours.complementary_outside.toFixed(1)}h (hors rép.)
+            </div>
+          )}
+          {/* HC classiques 10% */}
           {weekHours.complementary_10 > 0 && (
             <div className="text-green-700 font-semibold">
               +{weekHours.complementary_10.toFixed(1)}h (+10%)
             </div>
           )}
+          {/* HC classiques 25% */}
           {weekHours.complementary_25 > 0 && (
             <div className="text-orange-700 font-semibold">
               +{weekHours.complementary_25.toFixed(1)}h (+25%)
