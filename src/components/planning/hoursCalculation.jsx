@@ -91,8 +91,14 @@ export function calculateWeeklyHours(shifts, employee, weekStart, policy = 'over
   const workTimeType = employee.work_time_type || 'full_time';
   const hasWeeklySchedule = !!employee.weekly_schedule;
 
+  // Convert weekStart to string if it's a Date object
+  let weekStartStr = weekStart;
+  if (weekStart instanceof Date) {
+    weekStartStr = `${weekStart.getFullYear()}-${String(weekStart.getMonth() + 1).padStart(2, '0')}-${String(weekStart.getDate()).padStart(2, '0')}`;
+  }
+
   // Calculer les dates de la semaine
-  const [year, month, day] = weekStart.split('-').map(Number);
+  const [year, month, day] = weekStartStr.split('-').map(Number);
   const startDate = new Date(year, month - 1, day);
   const weekDates = [];
   
