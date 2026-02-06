@@ -120,23 +120,27 @@ export default function InvoiceUploadModal({ open, onClose }) {
         // 3. Launch AI extraction (async)
         base44.functions.invoke('extractInvoiceData', {
           file_url
-        }).then(async (extractedData) => {
+        }).then(async (response) => {
+          // Get data from response (response.data contains the actual data)
+          const extractedData = response.data;
+          console.log('Extracted data:', extractedData);
+
           // Update invoice with extracted data
-          const normalizedName = `${extractedData.data.invoice_date || 'XXXX-XX-XX'}__${(extractedData.data.supplier || 'FOURNISSEUR').replace(/[^a-zA-Z0-9]/g, '_')}__${(extractedData.data.amount_ttc || 0).toFixed(2)}.pdf`;
+          const normalizedName = `${extractedData.invoice_date || 'XXXX-XX-XX'}__${(extractedData.supplier || 'FOURNISSEUR').replace(/[^a-zA-Z0-9]/g, '_')}__${(extractedData.amount_ttc || 0).toFixed(2)}.pdf`;
 
           await base44.entities.Invoice.update(invoice.id, {
             normalized_file_name: normalizedName,
-            supplier: extractedData.data.supplier,
-            invoice_date: extractedData.data.invoice_date,
-            categories: extractedData.data.categories || [],
-            short_description: extractedData.data.short_description,
-            accounting_account: extractedData.data.accounting_account,
-            amount_ht: extractedData.data.amount_ht,
-            amount_ttc: extractedData.data.amount_ttc,
-            vat: extractedData.data.vat,
-            indexed_text: extractedData.data.indexed_text,
-            ai_confidence: extractedData.data.confidence,
-            status: extractedData.data.status,
+            supplier: extractedData.supplier,
+            invoice_date: extractedData.invoice_date,
+            categories: extractedData.categories || [],
+            short_description: extractedData.short_description,
+            accounting_account: extractedData.accounting_account,
+            amount_ht: extractedData.amount_ht,
+            amount_ttc: extractedData.amount_ttc,
+            vat: extractedData.vat,
+            indexed_text: extractedData.indexed_text,
+            ai_confidence: extractedData.confidence,
+            status: extractedData.status,
             ai_processing: false
           });
 
@@ -145,7 +149,8 @@ export default function InvoiceUploadModal({ open, onClose }) {
           console.error('Extraction error:', err);
           // Mark as failed processing
           await base44.entities.Invoice.update(invoice.id, {
-            ai_processing: false
+            ai_processing: false,
+            status: 'a_verifier'
           });
           queryClient.invalidateQueries({ queryKey: ['invoices'] });
         });
