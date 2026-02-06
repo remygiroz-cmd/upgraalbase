@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
-import { Trash2, Archive, Upload, User, FileText, Download, Send, BookOpen, AlertCircle, CheckCircle } from 'lucide-react';
+import { Trash2, Archive, Upload, User, FileText, Download, Send, BookOpen, AlertCircle, CheckCircle, Loader2 } from 'lucide-react';
 import ConfirmDialog from '@/components/ui/ConfirmDialog';
 import TemplateWeeksManager from './TemplateWeeksManager';
 
