@@ -1438,11 +1438,11 @@ ${currentUser.email || '-'}`;
             >
               {createMutation.isPending || updateMutation.isPending ? (
                 <span className="flex items-center gap-2">
-                  <span className="animate-spin">⏳</span>
+                  <Loader2 className="w-4 h-4 animate-spin" />
                   Enregistrement...
                 </span>
               ) : (
-                employee ? 'Mettre à jour' : 'Créer'
+                'Enregistrer'
               )}
             </Button>
           </div>
