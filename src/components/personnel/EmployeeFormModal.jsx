@@ -218,19 +218,23 @@ export default function EmployeeFormModal({ open, onClose, employee, isManager =
         console.log('✅ [REFETCH] Données fraîches:', JSON.stringify(employeeData, null, 2));
         console.log('✅ [REFETCH] weekly_schedule refetch:', employeeData.weekly_schedule);
         
-        // Mettre à jour le formulaire avec les données fraîches du serveur
-        setFormData(employeeData);
-        
         // Invalider le cache global
         await queryClient.invalidateQueries({ queryKey: ['employees'] });
         
-        toast.success('✓ Employé mis à jour');
+        toast.success('✓ Employé mis à jour avec succès');
+        
+        // Fermer le modal après un court délai pour que l'utilisateur voie le toast
+        setTimeout(() => {
+          onClose();
+        }, 800);
       } catch (refetchError) {
         console.error('❌ [REFETCH ERROR]:', refetchError);
-        // Fallback: utiliser la réponse initiale
-        setFormData(updatedEmployee);
         await queryClient.invalidateQueries({ queryKey: ['employees'] });
-        toast.success('Employé mis à jour');
+        toast.success('✓ Employé mis à jour');
+        
+        setTimeout(() => {
+          onClose();
+        }, 800);
       }
     },
     onError: (error) => {
