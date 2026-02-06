@@ -32,6 +32,12 @@ Deno.serve(async (req) => {
 
     const { pdfUrl, pdfFilename, monthName, year, settings, customMessage } = await req.json();
 
+    // Vérifier RESEND_API_KEY en premier
+    const resendApiKey = Deno.env.get('RESEND_API_KEY');
+    if (!resendApiKey) {
+      return Response.json({ error: 'Configuration email manquante (RESEND_API_KEY)' }, { status: 500 });
+    }
+
     // Validate settings
     if (!settings.emailCompta || !settings.etablissementName || !settings.responsableName || !settings.responsableEmail) {
       return Response.json({ error: 'Paramètres comptabilité incomplets' }, { status: 400 });
@@ -75,12 +81,7 @@ Deno.serve(async (req) => {
     const safeMonthName = escapeHtml(monthName);
     const safeEtablissementName = escapeHtml(settings.etablissementName);
 
-    // Send email via Resend
-    const resendApiKey = Deno.env.get('RESEND_API_KEY');
-    if (!resendApiKey) {
-      throw new Error('RESEND_API_KEY non configurée');
-    }
-
+    // Préparer l'email
     const emailBody = `Bonjour,
 
 ${customMessage ? customMessage + '\n\n' : ''}Veuillez trouver ci-joint le document d'export comptable pour ${monthName} ${year}.
