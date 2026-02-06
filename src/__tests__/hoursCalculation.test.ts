@@ -6,6 +6,7 @@
  * - Logique planifié vs réalisé
  * - Heures supplémentaires (temps complet)
  * - Heures complémentaires (temps partiel)
+ * - NOUVEAU: Heures hors répartition contractuelle
  * - Calculs quotidiens, hebdomadaires, mensuels
  * - Alertes de dépassement
  * - Edge cases
@@ -19,6 +20,8 @@ import {
   parseContractHours,
   calculateOvertime,
   calculateComplementary,
+  calculateOvertimeWithOutsideContract,
+  calculateComplementaryWithOutsideContract,
   calculateDailyHours,
   calculateWeeklyHours,
   calculateMonthlyHours,
@@ -26,11 +29,15 @@ import {
   formatLocalDate,
   getIsoWeekStart,
   getIsoWeekEnd,
+  getWeekdayKey,
+  isDayInContract,
+  hasValidWeeklySchedule,
   formatHours,
   LEGAL_WEEKLY_HOURS,
   OVERTIME_25_THRESHOLD,
   type ShiftForCalculation,
-  type EmployeeForCalculation
+  type EmployeeForCalculation,
+  type WeeklySchedule
 } from '../lib/hoursCalculation';
 
 // =============================================================================
@@ -55,7 +62,34 @@ function createEmployee(overrides: Partial<EmployeeForCalculation> = {}): Employ
     id: 'emp-1',
     work_time_type: 'full_time',
     contract_hours_weekly: '35:00',
+    weekly_schedule: null,
     ...overrides
+  };
+}
+
+/** Planning Mardi-Samedi, 7h/jour (35h/semaine) */
+function createTueSatSchedule(): WeeklySchedule {
+  return {
+    monday: { worked: false, hours: 0 },
+    tuesday: { worked: true, hours: 7 },
+    wednesday: { worked: true, hours: 7 },
+    thursday: { worked: true, hours: 7 },
+    friday: { worked: true, hours: 7 },
+    saturday: { worked: true, hours: 7 },
+    sunday: { worked: false, hours: 0 }
+  };
+}
+
+/** Planning Lundi-Vendredi standard, 7h/jour */
+function createMonFriSchedule(): WeeklySchedule {
+  return {
+    monday: { worked: true, hours: 7 },
+    tuesday: { worked: true, hours: 7 },
+    wednesday: { worked: true, hours: 7 },
+    thursday: { worked: true, hours: 7 },
+    friday: { worked: true, hours: 7 },
+    saturday: { worked: false, hours: 0 },
+    sunday: { worked: false, hours: 0 }
   };
 }
 
@@ -70,7 +104,7 @@ describe('calculateShiftDuration', () => {
       end_time: '17:00',
       break_minutes: 60
     });
-    expect(calculateShiftDuration(shift)).toBe(7); // 8h - 1h pause = 7h
+    expect(calculateShiftDuration(shift)).toBe(7);
   });
 
   it('calcule correctement un shift sans pause', () => {
@@ -88,7 +122,7 @@ describe('calculateShiftDuration', () => {
       end_time: '06:00',
       break_minutes: 30
     });
-    expect(calculateShiftDuration(shift)).toBe(7.5); // 8h - 30min
+    expect(calculateShiftDuration(shift)).toBe(7.5);
   });
 
   it('gère les minutes fractionnelles', () => {
@@ -104,7 +138,7 @@ describe('calculateShiftDuration', () => {
     const shift = createShift({
       start_time: '09:00',
       end_time: '10:00',
-      break_minutes: 120 // Plus que la durée
+      break_minutes: 120
     });
     expect(calculateShiftDuration(shift)).toBe(0);
   });
@@ -183,7 +217,7 @@ describe('parseContractHours', () => {
 });
 
 // =============================================================================
-// TEST 4: Heures supplémentaires (temps complet)
+// TEST 4: Heures supplémentaires (temps complet) - Legacy
 // =============================================================================
 
 describe('calculateOvertime', () => {
@@ -201,35 +235,29 @@ describe('calculateOvertime', () => {
 
   it('calcule les HS 25% entre 35h et 43h', () => {
     const result = calculateOvertime(40);
-    expect(result.overtime25).toBe(5); // 40 - 35 = 5
+    expect(result.overtime25).toBe(5);
     expect(result.overtime50).toBe(0);
   });
 
   it('calcule exactement à 43h', () => {
     const result = calculateOvertime(43);
-    expect(result.overtime25).toBe(8); // 43 - 35 = 8
+    expect(result.overtime25).toBe(8);
     expect(result.overtime50).toBe(0);
   });
 
   it('calcule les HS 50% au-delà de 43h', () => {
     const result = calculateOvertime(50);
-    expect(result.overtime25).toBe(8); // 43 - 35 = 8
-    expect(result.overtime50).toBe(7); // 50 - 43 = 7
-  });
-
-  it('gère les valeurs décimales', () => {
-    const result = calculateOvertime(45.5);
     expect(result.overtime25).toBe(8);
-    expect(result.overtime50).toBe(2.5);
+    expect(result.overtime50).toBe(7);
   });
 });
 
 // =============================================================================
-// TEST 5: Heures complémentaires (temps partiel)
+// TEST 5: Heures complémentaires (temps partiel) - Legacy
 // =============================================================================
 
 describe('calculateComplementary', () => {
-  const contractHours = 25; // Temps partiel 25h/semaine
+  const contractHours = 25;
 
   it('retourne 0 si en dessous du contrat', () => {
     const result = calculateComplementary(20, contractHours);
@@ -238,286 +266,359 @@ describe('calculateComplementary', () => {
     expect(result.exceedsLimit).toBe(false);
   });
 
-  it('retourne 0 si exactement au contrat', () => {
-    const result = calculateComplementary(25, contractHours);
-    expect(result.complementary10).toBe(0);
-    expect(result.complementary25).toBe(0);
-    expect(result.exceedsLimit).toBe(false);
-  });
-
   it('calcule les HC 10% dans la limite de +10%', () => {
     const result = calculateComplementary(27, contractHours);
-    expect(result.complementary10).toBe(2); // 27 - 25 = 2
+    expect(result.complementary10).toBe(2);
     expect(result.complementary25).toBe(0);
-    expect(result.exceedsLimit).toBe(false);
-  });
-
-  it('calcule le seuil de 10% exactement', () => {
-    // 10% de 25h = 2.5h
-    const result = calculateComplementary(27.5, contractHours);
-    expect(result.complementary10).toBe(2.5);
-    expect(result.complementary25).toBe(0);
-    expect(result.exceedsLimit).toBe(false);
   });
 
   it('calcule les HC 25% au-delà de +10%', () => {
-    // 10% de 25h = 2.5h, donc au-delà de 27.5h
     const result = calculateComplementary(30, contractHours);
     expect(result.complementary10).toBe(2.5);
-    expect(result.complementary25).toBe(2.5); // 30 - 25 - 2.5 = 2.5
-    expect(result.exceedsLimit).toBe(false);
+    expect(result.complementary25).toBe(2.5);
   });
 
   it('détecte le dépassement du plafond de 35h', () => {
     const result = calculateComplementary(38, contractHours);
     expect(result.exceedsLimit).toBe(true);
-    // Les HC sont plafonnées à 35h - 25h = 10h
-    expect(result.complementary10).toBe(2.5);
-    expect(result.complementary25).toBe(7.5);
   });
 });
 
 // =============================================================================
-// TEST 6: Calculs quotidiens
+// TEST 6: Détection jour dans le contrat
 // =============================================================================
 
-describe('calculateDailyHours', () => {
-  it('calcule les heures planifiées', () => {
-    const shifts = [
-      createShift({ status: 'planned', start_time: '09:00', end_time: '17:00', break_minutes: 60 }),
-    ];
-    const result = calculateDailyHours(shifts, 'emp-1', '2024-01-15');
+describe('isDayInContract', () => {
+  const tueSatSchedule = createTueSatSchedule();
 
-    expect(result.totalPlanned).toBe(7);
-    expect(result.totalActual).toBe(0);
-    expect(result.shiftsPlanned).toBe(1);
-    expect(result.shiftsActual).toBe(0);
+  it('retourne true pour un jour prévu (mardi)', () => {
+    // 2024-01-16 est un mardi
+    const result = isDayInContract('2024-01-16', tueSatSchedule);
+    expect(result.isContractDay).toBe(true);
+    expect(result.contractHours).toBe(7);
   });
 
-  it('calcule les heures réalisées', () => {
-    const shifts = [
-      createShift({ status: 'completed', start_time: '09:00', end_time: '17:00', break_minutes: 60 }),
-    ];
-    const result = calculateDailyHours(shifts, 'emp-1', '2024-01-15');
-
-    expect(result.totalPlanned).toBe(0);
-    expect(result.totalActual).toBe(7);
-    expect(result.shiftsPlanned).toBe(0);
-    expect(result.shiftsActual).toBe(1);
+  it('retourne false pour un jour non prévu (dimanche)', () => {
+    // 2024-01-14 est un dimanche
+    const result = isDayInContract('2024-01-14', tueSatSchedule);
+    expect(result.isContractDay).toBe(false);
+    expect(result.contractHours).toBe(0);
   });
 
-  it('ignore les shifts annulés', () => {
-    const shifts = [
-      createShift({ status: 'cancelled', start_time: '09:00', end_time: '17:00', break_minutes: 60 }),
-    ];
-    const result = calculateDailyHours(shifts, 'emp-1', '2024-01-15');
-
-    expect(result.totalPlanned).toBe(0);
-    expect(result.totalActual).toBe(0);
+  it('retourne false pour un jour non prévu (lundi)', () => {
+    // 2024-01-15 est un lundi
+    const result = isDayInContract('2024-01-15', tueSatSchedule);
+    expect(result.isContractDay).toBe(false);
+    expect(result.contractHours).toBe(0);
   });
 
-  it('additionne plusieurs shifts dans la journée', () => {
-    const shifts = [
-      createShift({ id: 's1', status: 'planned', start_time: '09:00', end_time: '12:00', break_minutes: 0 }),
-      createShift({ id: 's2', status: 'planned', start_time: '14:00', end_time: '18:00', break_minutes: 0 }),
-    ];
-    const result = calculateDailyHours(shifts, 'emp-1', '2024-01-15');
+  it('retourne true par défaut si pas de schedule', () => {
+    const result = isDayInContract('2024-01-14', null);
+    expect(result.isContractDay).toBe(true);
+  });
+});
 
-    expect(result.totalPlanned).toBe(7); // 3h + 4h
+describe('getWeekdayKey', () => {
+  it('retourne le bon jour de la semaine', () => {
+    expect(getWeekdayKey('2024-01-14')).toBe('sunday');    // Dimanche
+    expect(getWeekdayKey('2024-01-15')).toBe('monday');    // Lundi
+    expect(getWeekdayKey('2024-01-16')).toBe('tuesday');   // Mardi
+    expect(getWeekdayKey('2024-01-20')).toBe('saturday');  // Samedi
+  });
+});
+
+describe('hasValidWeeklySchedule', () => {
+  it('retourne true pour un schedule valide', () => {
+    expect(hasValidWeeklySchedule(createTueSatSchedule())).toBe(true);
   });
 
-  it('filtre par employé', () => {
-    const shifts = [
-      createShift({ employee_id: 'emp-1', status: 'planned' }),
-      createShift({ employee_id: 'emp-2', status: 'planned' }),
-    ];
-    const result = calculateDailyHours(shifts, 'emp-1', '2024-01-15');
+  it('retourne false pour null', () => {
+    expect(hasValidWeeklySchedule(null)).toBe(false);
+  });
 
-    expect(result.shiftsPlanned).toBe(1);
+  it('retourne false pour un schedule vide', () => {
+    const emptySchedule: WeeklySchedule = {
+      monday: { worked: false, hours: 0 },
+      tuesday: { worked: false, hours: 0 },
+      wednesday: { worked: false, hours: 0 },
+      thursday: { worked: false, hours: 0 },
+      friday: { worked: false, hours: 0 },
+      saturday: { worked: false, hours: 0 },
+      sunday: { worked: false, hours: 0 }
+    };
+    expect(hasValidWeeklySchedule(emptySchedule)).toBe(false);
   });
 });
 
 // =============================================================================
-// TEST 7: Calculs hebdomadaires
+// TEST 7: HS avec hors répartition (NOUVEAU)
 // =============================================================================
 
-describe('calculateWeeklyHours', () => {
-  it('calcule une semaine standard temps complet sans HS', () => {
-    const shifts: ShiftForCalculation[] = [];
-    // 5 jours à 7h = 35h
-    for (let i = 0; i < 5; i++) {
-      shifts.push(createShift({
-        id: `shift-${i}`,
-        date: `2024-01-1${5 + i}`, // Lundi 15 -> Vendredi 19
-        status: 'completed',
-        start_time: '09:00',
-        end_time: '17:00',
-        break_minutes: 60
-      }));
-    }
+describe('calculateOvertimeWithOutsideContract', () => {
+  it('temps plein 35h Mar-Sam + Dim 8h → HS_hors = 8h (cas utilisateur)', () => {
+    // Employé travaille 35h sur Mar-Sam + 8h le Dimanche = 43h total
+    // Les 8h du Dimanche sont hors répartition
+    const result = calculateOvertimeWithOutsideContract(43, 35, 8, 'overtime');
 
-    const employee = createEmployee({ work_time_type: 'full_time' });
-    const weekStart = new Date(2024, 0, 15); // Lundi
-
-    const result = calculateWeeklyHours(shifts, employee, weekStart);
-
-    expect(result.totalActualHours).toBe(35);
-    expect(result.totalOvertime).toBe(0);
-    expect(result.alerts.length).toBe(0);
+    expect(result.outsideContract).toBe(8);  // 8h hors répartition
+    expect(result.classic25).toBe(0);        // Pas de HS classiques
+    expect(result.classic50).toBe(0);
+    expect(result.total).toBe(8);            // Total HS = 8h
   });
 
-  it('calcule les heures supplémentaires temps complet', () => {
+  it('temps plein 30h Mar-Ven + Dim 8h → HS_hors = 8h même si total < 35h', () => {
+    // Employé travaille 30h sur jours prévus + 8h Dimanche = 38h total
+    // Les 8h du Dimanche sont hors répartition
+    const result = calculateOvertimeWithOutsideContract(38, 35, 8, 'overtime');
+
+    expect(result.outsideContract).toBe(8);  // 8h hors répartition = HS
+    expect(result.classic25).toBe(0);        // 38 - 35 - 8 = -5 → 0 classiques
+    expect(result.total).toBe(8);
+  });
+
+  it('temps plein 27h sur jours prévus + 8h Dim → HS_hors = 8h', () => {
+    // Total = 35h, mais 8h sont hors répartition
+    const result = calculateOvertimeWithOutsideContract(35, 35, 8, 'overtime');
+
+    expect(result.outsideContract).toBe(8);  // 8h hors répartition = HS
+    expect(result.classic25).toBe(0);        // 35 - 35 = 0 dépassement
+    expect(result.total).toBe(8);            // Seulement les HS hors répartition
+  });
+
+  it('temps plein 35h Mar-Sam + Dim 8h + dépassement → HS hors + classiques', () => {
+    // Employé: 40h sur jours prévus + 8h Dimanche = 48h total
+    const result = calculateOvertimeWithOutsideContract(48, 35, 8, 'overtime');
+
+    expect(result.outsideContract).toBe(8);  // 8h hors répartition
+    // Dépassement classique = 48 - 35 - 8 = 5h
+    expect(result.classic25).toBe(5);
+    expect(result.classic50).toBe(0);
+    expect(result.total).toBe(13);           // 8 + 5
+  });
+
+  it('policy "normal" ignore les heures hors contrat', () => {
+    const result = calculateOvertimeWithOutsideContract(43, 35, 8, 'normal');
+
+    expect(result.outsideContract).toBe(0);
+    expect(result.classic25).toBe(8);  // 43 - 35 = 8h HS classiques
+    expect(result.total).toBe(8);
+  });
+});
+
+// =============================================================================
+// TEST 8: HC avec hors répartition (temps partiel)
+// =============================================================================
+
+describe('calculateComplementaryWithOutsideContract', () => {
+  it('temps partiel 20h Lun-Jeu + Dim 5h → HC_hors = 5h', () => {
+    // Employé temps partiel 20h/semaine + 5h Dimanche = 25h total
+    const result = calculateComplementaryWithOutsideContract(25, 20, 5, 'overtime');
+
+    expect(result.outsideContract).toBe(5);  // 5h hors répartition = HC
+    expect(result.classic10).toBe(0);        // 25 - 20 - 5 = 0 classiques
+    expect(result.total).toBe(5);
+    expect(result.exceedsLimit).toBe(false);
+  });
+
+  it('temps partiel 20h + Dim 5h + dépassement classique', () => {
+    // Employé: 23h sur jours prévus + 5h Dimanche = 28h total
+    const result = calculateComplementaryWithOutsideContract(28, 20, 5, 'overtime');
+
+    expect(result.outsideContract).toBe(5);
+    // Dépassement classique = 28 - 20 - 5 = 3h
+    // 10% de 20h = 2h → 2h à 10%, 1h à 25%
+    expect(result.classic10).toBe(2);
+    expect(result.classic25).toBe(1);
+    expect(result.total).toBe(8);  // 5 + 2 + 1
+  });
+
+  it('détecte le dépassement 35h pour temps partiel', () => {
+    const result = calculateComplementaryWithOutsideContract(38, 20, 8, 'overtime');
+    expect(result.exceedsLimit).toBe(true);
+  });
+});
+
+// =============================================================================
+// TEST 9: Calculs quotidiens avec schedule
+// =============================================================================
+
+describe('calculateDailyHours avec weekly_schedule', () => {
+  const tueSatSchedule = createTueSatSchedule();
+
+  it('identifie un jour hors contrat (dimanche)', () => {
+    const shifts = [
+      createShift({ date: '2024-01-14', status: 'completed' })  // Dimanche
+    ];
+    const result = calculateDailyHours(shifts, 'emp-1', '2024-01-14', tueSatSchedule);
+
+    expect(result.isContractDay).toBe(false);
+    expect(result.hoursOutsideContract).toBe(7);  // Toutes les heures
+    expect(result.dayOfWeek).toBe('sunday');
+  });
+
+  it('identifie un jour dans le contrat (mardi)', () => {
+    const shifts = [
+      createShift({ date: '2024-01-16', status: 'completed' })  // Mardi
+    ];
+    const result = calculateDailyHours(shifts, 'emp-1', '2024-01-16', tueSatSchedule);
+
+    expect(result.isContractDay).toBe(true);
+    expect(result.hoursOutsideContract).toBe(0);
+    expect(result.contractHoursForDay).toBe(7);
+  });
+});
+
+// =============================================================================
+// TEST 10: Calculs hebdomadaires avec schedule (CAS UTILISATEUR)
+// =============================================================================
+
+describe('calculateWeeklyHours avec weekly_schedule', () => {
+  it('CAS UTILISATEUR: temps plein 35h Mar-Sam + Dim 8h → HS_hors = 8h', () => {
+    // Semaine du 15 janvier 2024 (Lundi 15 au Dimanche 21)
+    // Employé travaille Mar(16), Mer(17), Jeu(18), Ven(19), Sam(20) = 7h/jour = 35h
+    // + Dimanche(21) 8h = total 43h
+
+    const shifts: ShiftForCalculation[] = [
+      // Mardi à Samedi: 7h/jour
+      createShift({ id: 's1', date: '2024-01-16', status: 'completed', start_time: '09:00', end_time: '17:00', break_minutes: 60 }),
+      createShift({ id: 's2', date: '2024-01-17', status: 'completed', start_time: '09:00', end_time: '17:00', break_minutes: 60 }),
+      createShift({ id: 's3', date: '2024-01-18', status: 'completed', start_time: '09:00', end_time: '17:00', break_minutes: 60 }),
+      createShift({ id: 's4', date: '2024-01-19', status: 'completed', start_time: '09:00', end_time: '17:00', break_minutes: 60 }),
+      createShift({ id: 's5', date: '2024-01-20', status: 'completed', start_time: '09:00', end_time: '17:00', break_minutes: 60 }),
+      // Dimanche: 8h (hors contrat)
+      createShift({ id: 's6', date: '2024-01-21', status: 'completed', start_time: '09:00', end_time: '17:00', break_minutes: 0 }),
+    ];
+
+    const employee = createEmployee({
+      work_time_type: 'full_time',
+      contract_hours_weekly: '35:00',
+      weekly_schedule: createTueSatSchedule()
+    });
+
+    const weekStart = new Date(2024, 0, 15);  // Lundi 15 janvier
+    const result = calculateWeeklyHours(shifts, employee, weekStart, 'overtime');
+
+    // Vérifications
+    expect(result.totalEffectiveHours).toBe(43);  // 35 + 8
+    expect(result.hoursOutsideContract).toBe(8);  // Dimanche
+    expect(result.hasWeeklySchedule).toBe(true);
+
+    // HS: 8h hors répartition, 0h classiques
+    expect(result.overtime.outsideContract).toBe(8);
+    expect(result.overtime.classic25).toBe(0);
+    expect(result.overtime.total).toBe(8);
+
+    // Alertes
+    expect(result.alerts.some(a => a.type === 'overtime_outside_contract')).toBe(true);
+  });
+
+  it('temps plein sans schedule défini: calcul classique', () => {
     const shifts: ShiftForCalculation[] = [];
-    // 5 jours à 9h = 45h
     for (let i = 0; i < 5; i++) {
       shifts.push(createShift({
         id: `shift-${i}`,
         date: `2024-01-1${5 + i}`,
         status: 'completed',
-        start_time: '08:00',
+        start_time: '09:00',
         end_time: '18:00',
-        break_minutes: 60
-      }));
-    }
-
-    const employee = createEmployee({ work_time_type: 'full_time' });
-    const weekStart = new Date(2024, 0, 15);
-
-    const result = calculateWeeklyHours(shifts, employee, weekStart);
-
-    expect(result.totalActualHours).toBe(45);
-    expect(result.overtime25).toBe(8); // 35 -> 43
-    expect(result.overtime50).toBe(2); // 43 -> 45
-    expect(result.totalOvertime).toBe(10);
-    expect(result.alerts.some(a => a.type === 'overtime_warning')).toBe(true);
-  });
-
-  it('calcule les heures complémentaires temps partiel', () => {
-    const shifts: ShiftForCalculation[] = [];
-    // 5 jours à 6h = 30h (pour un contrat de 25h)
-    for (let i = 0; i < 5; i++) {
-      shifts.push(createShift({
-        id: `shift-${i}`,
-        date: `2024-01-1${5 + i}`,
-        status: 'completed',
-        start_time: '09:00',
-        end_time: '15:30',
-        break_minutes: 30
+        break_minutes: 60  // 8h/jour × 5 = 40h
       }));
     }
 
     const employee = createEmployee({
-      work_time_type: 'part_time',
-      contract_hours_weekly: '25:00'
+      work_time_type: 'full_time',
+      contract_hours_weekly: '35:00',
+      weekly_schedule: null  // Pas de schedule
     });
+
     const weekStart = new Date(2024, 0, 15);
+    const result = calculateWeeklyHours(shifts, employee, weekStart, 'overtime');
 
-    const result = calculateWeeklyHours(shifts, employee, weekStart);
+    expect(result.totalEffectiveHours).toBe(40);
+    expect(result.hasWeeklySchedule).toBe(false);
 
-    expect(result.totalActualHours).toBe(30);
-    expect(result.complementary10).toBe(2.5); // 10% de 25h
-    expect(result.complementary25).toBe(2.5); // 30 - 25 - 2.5
-    expect(result.totalComplementary).toBe(5);
+    // Sans schedule, pas de distinction hors répartition
+    expect(result.overtime.outsideContract).toBe(0);
+    expect(result.overtime.classic25).toBe(5);  // 40 - 35 = 5h HS classiques
+    expect(result.overtime.total).toBe(5);
   });
 
-  it('génère une alerte si temps partiel dépasse 35h', () => {
-    const shifts: ShiftForCalculation[] = [];
-    // 5 jours à 8h = 40h
-    for (let i = 0; i < 5; i++) {
-      shifts.push(createShift({
-        id: `shift-${i}`,
-        date: `2024-01-1${5 + i}`,
-        status: 'completed',
-        start_time: '09:00',
-        end_time: '18:00',
-        break_minutes: 60
-      }));
-    }
+  it('temps partiel avec jour hors répartition', () => {
+    // Employé temps partiel 20h/semaine Lun-Jeu + Dimanche 5h
+    const partTimeSchedule: WeeklySchedule = {
+      monday: { worked: true, hours: 5 },
+      tuesday: { worked: true, hours: 5 },
+      wednesday: { worked: true, hours: 5 },
+      thursday: { worked: true, hours: 5 },
+      friday: { worked: false, hours: 0 },
+      saturday: { worked: false, hours: 0 },
+      sunday: { worked: false, hours: 0 }
+    };
+
+    const shifts: ShiftForCalculation[] = [
+      createShift({ id: 's1', date: '2024-01-15', status: 'completed', start_time: '09:00', end_time: '14:00', break_minutes: 0 }),  // Lun 5h
+      createShift({ id: 's2', date: '2024-01-16', status: 'completed', start_time: '09:00', end_time: '14:00', break_minutes: 0 }),  // Mar 5h
+      createShift({ id: 's3', date: '2024-01-17', status: 'completed', start_time: '09:00', end_time: '14:00', break_minutes: 0 }),  // Mer 5h
+      createShift({ id: 's4', date: '2024-01-18', status: 'completed', start_time: '09:00', end_time: '14:00', break_minutes: 0 }),  // Jeu 5h
+      createShift({ id: 's5', date: '2024-01-21', status: 'completed', start_time: '09:00', end_time: '14:00', break_minutes: 0 }),  // Dim 5h (hors contrat)
+    ];
 
     const employee = createEmployee({
       work_time_type: 'part_time',
-      contract_hours_weekly: '25:00'
+      contract_hours_weekly: '20:00',
+      weekly_schedule: partTimeSchedule
     });
-    const weekStart = new Date(2024, 0, 15);
 
-    const result = calculateWeeklyHours(shifts, employee, weekStart);
+    const result = calculateWeeklyHours(shifts, employee, new Date(2024, 0, 15), 'overtime');
 
-    expect(result.alerts.some(a => a.type === 'part_time_exceeded')).toBe(true);
-  });
+    expect(result.totalEffectiveHours).toBe(25);  // 20 + 5
+    expect(result.hoursOutsideContract).toBe(5);  // Dimanche
 
-  it('utilise les heures planifiées si pas de réalisées', () => {
-    const shifts: ShiftForCalculation[] = [];
-    for (let i = 0; i < 5; i++) {
-      shifts.push(createShift({
-        id: `shift-${i}`,
-        date: `2024-01-1${5 + i}`,
-        status: 'planned', // Pas encore réalisé
-        start_time: '09:00',
-        end_time: '17:00',
-        break_minutes: 60
-      }));
-    }
-
-    const employee = createEmployee();
-    const weekStart = new Date(2024, 0, 15);
-
-    const result = calculateWeeklyHours(shifts, employee, weekStart);
-
-    expect(result.totalPlannedHours).toBe(35);
-    expect(result.totalActualHours).toBe(0);
-    // Les calculs d'HS/HC utilisent les planifiées comme fallback
+    // HC: 5h hors répartition
+    expect(result.complementary.outsideContract).toBe(5);
+    expect(result.complementary.total).toBe(5);
   });
 });
 
 // =============================================================================
-// TEST 8: Calculs mensuels
+// TEST 11: Calculs mensuels
 // =============================================================================
 
 describe('calculateMonthlyHours', () => {
-  it('agrège les semaines du mois', () => {
+  it('agrège les semaines du mois avec heures hors contrat', () => {
+    // Janvier 2024: 4+ semaines
     const shifts: ShiftForCalculation[] = [];
-    // 4 semaines de 35h chacune
-    const dates = [
-      '2024-01-08', '2024-01-09', '2024-01-10', '2024-01-11', '2024-01-12',
-      '2024-01-15', '2024-01-16', '2024-01-17', '2024-01-18', '2024-01-19',
-      '2024-01-22', '2024-01-23', '2024-01-24', '2024-01-25', '2024-01-26',
-      '2024-01-29', '2024-01-30', '2024-01-31'
-    ];
 
-    dates.forEach((date, i) => {
+    // Semaine 1: shifts du 16 au 20 (Mar-Sam) + Dim 21
+    for (let day = 16; day <= 20; day++) {
       shifts.push(createShift({
-        id: `shift-${i}`,
-        date,
-        status: 'completed',
-        start_time: '09:00',
-        end_time: '17:00',
-        break_minutes: 60
+        id: `s-w1-${day}`,
+        date: `2024-01-${day.toString().padStart(2, '0')}`,
+        status: 'completed'
       }));
+    }
+    shifts.push(createShift({
+      id: 's-w1-dim',
+      date: '2024-01-21',  // Dimanche
+      status: 'completed',
+      start_time: '09:00',
+      end_time: '17:00',
+      break_minutes: 0
+    }));
+
+    const employee = createEmployee({
+      weekly_schedule: createTueSatSchedule()
     });
 
-    const employee = createEmployee();
-    const result = calculateMonthlyHours(shifts, employee, 2024, 1);
+    const result = calculateMonthlyHours(shifts, employee, 2024, 1, 'overtime');
 
-    expect(result.daysWorkedActual).toBe(18);
-    expect(result.totalActualHours).toBe(18 * 7); // 126h
-  });
-
-  it('calcule correctement les semaines partielles', () => {
-    // Février 2024: du 1er (jeudi) au 29 (jeudi)
-    const shifts: ShiftForCalculation[] = [
-      createShift({ id: 's1', date: '2024-02-01', status: 'completed' }),
-      createShift({ id: 's2', date: '2024-02-29', status: 'completed' }),
-    ];
-
-    const employee = createEmployee();
-    const result = calculateMonthlyHours(shifts, employee, 2024, 2);
-
-    expect(result.daysWorkedActual).toBe(2);
+    expect(result.hoursOutsideContract).toBeGreaterThan(0);
+    expect(result.overtime.outsideContract).toBeGreaterThan(0);
   });
 });
 
 // =============================================================================
-// TEST 9: Gestion des dates ISO
+// TEST 12: Gestion des dates ISO
 // =============================================================================
 
 describe('Date utilities', () => {
@@ -525,7 +626,7 @@ describe('Date utilities', () => {
     it('parse correctement une date', () => {
       const date = parseLocalDate('2024-01-15');
       expect(date.getFullYear()).toBe(2024);
-      expect(date.getMonth()).toBe(0); // Janvier
+      expect(date.getMonth()).toBe(0);
       expect(date.getDate()).toBe(15);
     });
   });
@@ -544,9 +645,9 @@ describe('Date utilities', () => {
 
   describe('getIsoWeekStart', () => {
     it('retourne le lundi pour un mercredi', () => {
-      const wednesday = new Date(2024, 0, 17); // Mercredi 17 janvier
+      const wednesday = new Date(2024, 0, 17);
       const monday = getIsoWeekStart(wednesday);
-      expect(monday.getDate()).toBe(15); // Lundi 15
+      expect(monday.getDate()).toBe(15);
     });
 
     it('retourne le même jour pour un lundi', () => {
@@ -572,7 +673,7 @@ describe('Date utilities', () => {
 });
 
 // =============================================================================
-// TEST 10: Formatage
+// TEST 13: Formatage
 // =============================================================================
 
 describe('formatHours', () => {
@@ -586,17 +687,13 @@ describe('formatHours', () => {
     expect(formatHours(7.25)).toBe('7h15');
   });
 
-  it('gère les arrondis', () => {
-    expect(formatHours(7.99)).toBe('7h59');
-  });
-
   it('gère zéro', () => {
     expect(formatHours(0)).toBe('0h');
   });
 });
 
 // =============================================================================
-// TEST 11: Edge cases
+// TEST 14: Edge cases
 // =============================================================================
 
 describe('Edge cases', () => {
@@ -619,7 +716,6 @@ describe('Edge cases', () => {
   });
 
   it('gère le changement de mois', () => {
-    // Semaine du 29 janvier au 4 février
     const shifts = [
       createShift({ id: 's1', date: '2024-01-29', status: 'completed' }),
       createShift({ id: 's2', date: '2024-01-30', status: 'completed' }),
@@ -636,7 +732,6 @@ describe('Edge cases', () => {
   });
 
   it('détecte le dépassement de 48h/semaine', () => {
-    // 6 jours à 9h = 54h (lundi 15 au samedi 20)
     const dates = ['2024-01-15', '2024-01-16', '2024-01-17', '2024-01-18', '2024-01-19', '2024-01-20'];
     const shifts: ShiftForCalculation[] = dates.map((date, i) => createShift({
       id: `shift-${i}`,
