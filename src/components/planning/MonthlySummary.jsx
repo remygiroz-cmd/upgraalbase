@@ -2,7 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { cn } from '@/lib/utils';
 import { Edit2, AlertTriangle } from 'lucide-react';
 import { calculateMonthlyCPTotal } from './paidLeaveCalculations';
-import { calculateMonthlyHours } from '@/lib/hoursCalculation';
+import { calculateMonthlyHours } from './hoursCalculation';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';

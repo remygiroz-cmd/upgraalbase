@@ -4,7 +4,7 @@ import { AlertTriangle, Trash2, ArrowDown, Bug } from 'lucide-react';
 import {
   calculateWeeklyHours as newCalculateWeeklyHours,
   getEffectiveHours
-} from '@/lib/hoursCalculation';
+} from './hoursCalculation';
 import { useQuery } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 
@@ -191,8 +191,14 @@ export default function WeeklySummary({ employee, shifts, weekStart, onDeleteWee
       )}
       
       {/* Mode hebdomadaire activé - Temps complet */}
-      {calculationMode === 'weekly' && weekHours.type === 'full_time' && weekHours.total_overtime > 0 && (
+      {calculationMode === 'weekly' && weekHours.type === 'full_time' && (
         <div className="text-[10px] space-y-0.5">
+          {/* Heures manquantes */}
+          {weekHours.missingHours > 0 && (
+            <div className="text-red-600 font-semibold" title="Heures manquantes par rapport au contrat">
+              -{weekHours.missingHours.toFixed(1)}h manquantes
+            </div>
+          )}
           {/* HS hors répartition (jour non prévu au contrat) */}
           {weekHours.overtime_outside > 0 && (
             <div className="text-purple-700 font-semibold" title="Heures sur jour hors contrat">
@@ -215,8 +221,14 @@ export default function WeeklySummary({ employee, shifts, weekStart, onDeleteWee
       )}
 
       {/* Mode hebdomadaire activé - Temps partiel */}
-      {calculationMode === 'weekly' && weekHours.type === 'part_time' && weekHours.total_complementary > 0 && (
+      {calculationMode === 'weekly' && weekHours.type === 'part_time' && (
         <div className="text-[10px] space-y-0.5">
+          {/* Heures manquantes */}
+          {weekHours.missingHours > 0 && (
+            <div className="text-red-600 font-semibold" title="Heures manquantes par rapport au contrat">
+              -{weekHours.missingHours.toFixed(1)}h manquantes
+            </div>
+          )}
           {/* HC hors répartition */}
           {weekHours.complementary_outside > 0 && (
             <div className="text-purple-700 font-semibold" title="Heures sur jour hors contrat">
