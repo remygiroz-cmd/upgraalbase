@@ -1,8 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { cn } from '@/lib/utils';
-import { Edit2 } from 'lucide-react';
-import { calculateShiftDuration } from './LegalChecks';
+import { Edit2, AlertTriangle } from 'lucide-react';
 import { calculateMonthlyCPTotal } from './paidLeaveCalculations';
+import { calculateMonthlyHours } from '@/lib/hoursCalculation';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
@@ -43,24 +43,45 @@ export default function MonthlySummary({ employee, shifts, nonShiftEvents = [], 
 
   const manualRecap = recaps[0];
 
-  // Calculate automatic values - SIMPLE PROTOCOL ONLY
-  const employeeShifts = shifts.filter(s => s.employee_id === employee.id);
+  // Calculate automatic values using new TypeScript implementation
+  const monthlyCalc = useMemo(() => {
+    // Adapter: Convert employee to the format expected by hoursCalculation.ts
+    const employeeForCalc = {
+      id: employee.id,
+      work_time_type: employee.work_time_type || 'full_time',
+      contract_hours_weekly: employee.contract_hours_weekly || '35:00'
+    };
 
-  // Days worked (only shifts)
-  const daysWithShifts = new Set(employeeShifts.map(s => s.date));
-  const autoDaysWorked = daysWithShifts.size;
+    // Adapter: Convert shifts to the format expected by hoursCalculation.ts
+    const shiftsForCalc = shifts
+      .filter(s => s.employee_id === employee.id)
+      .map(s => ({
+        id: s.id,
+        date: s.date,
+        employee_id: s.employee_id,
+        start_time: s.start_time,
+        end_time: s.end_time,
+        break_minutes: s.break_minutes || 0,
+        status: s.status || 'planned'
+      }));
 
-  // Total hours actually worked
-  const autoTotalHours = employeeShifts.reduce((sum, shift) => sum + calculateShiftDuration(shift), 0);
+    return calculateMonthlyHours(shiftsForCalc, employeeForCalc, year, month);
+  }, [shifts, employee, year, month]);
 
-  // Contract hours: monthly base from employee record
-  const isFullTime = employee?.work_time_type === 'full_time';
-  const contractHoursWeekly = employee?.contract_hours_weekly 
-    ? parseFloat(employee.contract_hours_weekly.replace(':', '.').replace(/h/g, ''))
-    : (isFullTime ? 35 : 0);
-  
-  const weeksInMonth = 4.33; // Average
-  const autoMonthlyContractHours = contractHoursWeekly * weeksInMonth;
+  // Extract calculated values
+  const effectiveHours = monthlyCalc.totalActualHours > 0
+    ? monthlyCalc.totalActualHours
+    : monthlyCalc.totalPlannedHours;
+  const autoDaysWorked = monthlyCalc.daysWorkedActual > 0
+    ? monthlyCalc.daysWorkedActual
+    : monthlyCalc.daysWorkedPlanned;
+  const autoTotalHours = effectiveHours;
+  const autoMonthlyContractHours = monthlyCalc.contractHoursMonthly;
+
+  // Overtime/complementary totals
+  const totalOvertime = monthlyCalc.totalOvertime25 + monthlyCalc.totalOvertime50;
+  const totalComplementary = monthlyCalc.totalComplementary10 + monthlyCalc.totalComplementary25;
+  const hasExcess = totalOvertime > 0 || totalComplementary > 0;
 
   // CP days count
   const autoCPDays = calculateMonthlyCPTotal(cpPeriods, monthStart, monthEnd);
@@ -108,6 +129,23 @@ export default function MonthlySummary({ employee, shifts, nonShiftEvents = [], 
         <div className="text-xs text-gray-600 mb-2">
           Base: {contractHours.toFixed(1)}h
         </div>
+
+        {/* Heures supplémentaires / complémentaires */}
+        {hasExcess && (
+          <div className="bg-orange-50 border border-orange-200 rounded p-1.5 mb-2 text-[10px]">
+            {totalOvertime > 0 && (
+              <div className="text-orange-700 font-semibold flex items-center gap-1">
+                <AlertTriangle className="w-3 h-3" />
+                HS: +{totalOvertime.toFixed(1)}h
+              </div>
+            )}
+            {totalComplementary > 0 && (
+              <div className="text-green-700 font-semibold">
+                HC: +{totalComplementary.toFixed(1)}h
+              </div>
+            )}
+          </div>
+        )}
 
         {/* CP count */}
         {cpDays > 0 && (
