@@ -1,13 +1,23 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
 import { jsPDF } from 'npm:jspdf@2.5.2';
 
+// Rôles autorisés à envoyer des commandes
+const ALLOWED_ROLES = ['admin', 'manager', 'gestionnaire', 'cuisinier'];
+
 Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
     const user = await base44.auth.me();
 
+    // Vérification authentification
     if (!user) {
       return Response.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    // Vérification des permissions
+    if (!ALLOWED_ROLES.includes(user.role)) {
+      console.warn(`[SECURITY] User ${user.id} attempted to send order email without permission`);
+      return Response.json({ error: 'Permissions insuffisantes' }, { status: 403 });
     }
 
     const { orderId } = await req.json();
@@ -30,9 +40,9 @@ Deno.serve(async (req) => {
 
     // Générer le PDF
     const doc = new jsPDF();
-    
+
     let yPos = 20;
-    
+
     // Informations de l'établissement
     if (establishment.name) {
       doc.setFontSize(16);
@@ -40,7 +50,7 @@ Deno.serve(async (req) => {
       doc.text(establishment.name.toUpperCase(), 20, yPos);
       doc.setFont(undefined, 'normal');
       yPos += 7;
-      
+
       doc.setFontSize(9);
       if (establishment.postal_address) {
         const addressLines = establishment.postal_address.split('\n');
@@ -59,7 +69,7 @@ Deno.serve(async (req) => {
       }
       yPos += 5;
     }
-    
+
     // Référence client interne
     if (supplier.internal_reference) {
       doc.setFontSize(10);
@@ -68,12 +78,12 @@ Deno.serve(async (req) => {
       doc.setFont(undefined, 'normal');
       yPos += 7;
     }
-    
+
     // En-tête de commande
     doc.setFontSize(20);
-    doc.text(`COMMANDE ${order.supplier_name.toUpperCase()}`, 20, yPos);
+    doc.text(`COMMANDE ${(order.supplier_name || '').toUpperCase()}`, 20, yPos);
     yPos += 10;
-    
+
     doc.setFontSize(10);
     const orderDate = new Date(order.date);
     doc.text(`Date: ${orderDate.toLocaleDateString('fr-FR')}`, 20, yPos);
@@ -82,65 +92,65 @@ Deno.serve(async (req) => {
       doc.text(`Livraison souhaitée: ${order.desired_delivery_day}`, 20, yPos);
       yPos += 5;
     }
-    doc.text(`Statut: ${order.status.toUpperCase()}`, 20, yPos);
+    doc.text(`Statut: ${(order.status || '').toUpperCase()}`, 20, yPos);
     yPos += 10;
-    
+
     // Tableau des articles
     doc.setFontSize(12);
     doc.text('DÉSIGNATION', 20, yPos);
     doc.text('QUANTITÉ', 120, yPos);
     doc.text('TOTAL HT', 170, yPos);
-    
+
     let y = yPos + 10;
     let totalAmount = 0;
-    
+
     doc.setFontSize(10);
     (order.items || []).forEach((item) => {
       if (y > 270) {
         doc.addPage();
         y = 20;
       }
-      
-      doc.text(item.product_name, 20, y);
+
+      doc.text(item.product_name || '', 20, y);
       if (item.supplier_reference) {
         doc.setFontSize(8);
         doc.text(`Réf: ${item.supplier_reference}`, 20, y + 4);
         doc.setFontSize(10);
       }
-      
-      const qtyText = item.unit === 'pièce' ? `${item.quantity} pièce` : 
-                      item.unit === 'sac' ? `${item.quantity} sac` : 
+
+      const qtyText = item.unit === 'pièce' ? `${item.quantity} pièce` :
+                      item.unit === 'sac' ? `${item.quantity} sac` :
                       item.unit === 'bidon' ? `${item.quantity} bidon` :
                       item.unit === 'SACHET' ? `${item.quantity} SACHET` :
                       item.unit === 'Sacs' ? `${item.quantity} Sacs` :
                       `${item.quantity} ${item.unit || ''}`;
       doc.text(qtyText, 120, y);
-      
+
       if (item.unit_price && item.unit_price > 0) {
         const itemTotal = item.quantity * item.unit_price;
         totalAmount += itemTotal;
         doc.text(`${itemTotal.toFixed(2)} €`, 170, y);
       }
-      
+
       y += item.supplier_reference ? 10 : 8;
     });
-    
+
     // Total
     y += 10;
     doc.setFontSize(14);
     doc.text('TOTAL ESTIMÉ HT', 20, y);
     doc.text(`${totalAmount.toFixed(2)} €`, 170, y);
-    
+
     // Convertir en base64
     const pdfBase64 = doc.output('datauristring').split(',')[1];
 
     // Construire le corps du message
     let emailBody = '';
-    
+
     // Informations de l'établissement
     if (establishment.name) {
       emailBody += `🏢 ${establishment.name.toUpperCase()}\n\n`;
-      
+
       if (establishment.postal_address) {
         emailBody += `📍 Adresse:\n${establishment.postal_address}\n\n`;
       }
@@ -161,16 +171,16 @@ Deno.serve(async (req) => {
       }
       emailBody += '\n';
     }
-    
+
     // Référence client
     if (supplier.internal_reference) {
       emailBody += `📋 Référence Client: ${supplier.internal_reference}\n\n`;
     }
-    
+
     if (supplier.custom_message) {
       emailBody += supplier.custom_message + '\n\n';
     }
-    
+
     emailBody += '─────────────────────────────────\n\n';
     emailBody += `📦 DÉTAILS DE LA COMMANDE\n\n`;
     emailBody += `Date: ${orderDate.toLocaleDateString('fr-FR')}\n`;
@@ -178,14 +188,14 @@ Deno.serve(async (req) => {
       emailBody += `🚚 Livraison souhaitée: ${order.desired_delivery_day}\n`;
     }
     emailBody += `Fournisseur: ${order.supplier_name}\n\n`;
-    
+
     (order.items || []).forEach((item, idx) => {
       emailBody += `${idx + 1}. ${item.product_name}\n`;
       if (item.supplier_reference) {
         emailBody += `   Réf: ${item.supplier_reference}\n`;
       }
-      const qtyText = item.unit === 'pièce' ? `${item.quantity} pièce` : 
-                      item.unit === 'sac' ? `${item.quantity} sac` : 
+      const qtyText = item.unit === 'pièce' ? `${item.quantity} pièce` :
+                      item.unit === 'sac' ? `${item.quantity} sac` :
                       item.unit === 'bidon' ? `${item.quantity} bidon` :
                       item.unit === 'SACHET' ? `${item.quantity} SACHET` :
                       item.unit === 'Sacs' ? `${item.quantity} Sacs` :
@@ -197,11 +207,11 @@ Deno.serve(async (req) => {
       }
       emailBody += '\n';
     });
-    
+
     emailBody += `\n💰 TOTAL ESTIMÉ HT: ${totalAmount.toFixed(2)} €\n`;
 
     // Préparer les emails CC
-    const ccEmails = supplier.cc_emails 
+    const ccEmails = supplier.cc_emails
       ? supplier.cc_emails.split(',').map(e => e.trim()).filter(e => e)
       : [];
 
@@ -213,7 +223,7 @@ Deno.serve(async (req) => {
         senderName = settings[0].email_sender_name;
       }
     } catch (err) {
-      console.log('Using default sender name');
+      // Use default sender name
     }
 
     // Préparer l'email avec pièce jointe
@@ -228,7 +238,7 @@ Deno.serve(async (req) => {
       emailSubject += ` - Livraison souhaitée ${order.desired_delivery_day.toLowerCase()}`;
     }
 
-    const emailPayload = {
+    const emailPayload: any = {
       from: `${senderName} <noreply@upgraal.com>`,
       to: [supplier.email],
       subject: emailSubject,
@@ -249,23 +259,17 @@ Deno.serve(async (req) => {
       emailPayload.reply_to = [establishment.contact_email];
     }
 
-    console.log('Envoi email avec les données suivantes:', {
-      to: emailPayload.to,
-      cc: emailPayload.cc,
-      subject: emailPayload.subject,
-      hasAttachment: !!emailPayload.attachments
-    });
+    // Log sécurisé (sans données sensibles)
+    console.log(`[INFO] Sending order email for order ${order.id}`);
 
     // Préparer l'historique
     const currentHistory = order.history || [];
-    const emailList = [supplier.email, ...ccEmails].join(', ');
-    
+
     currentHistory.push({
       timestamp: new Date().toISOString(),
       action: 'email_sent',
-      details: `Email envoyé à: ${emailList}`,
-      user_email: user.email,
-      user_name: user.full_name || user.email
+      details: `Email envoyé`,
+      user_id: user.id
     });
 
     // Envoyer via Resend API
@@ -279,10 +283,9 @@ Deno.serve(async (req) => {
     });
 
     const result = await response.json();
-    console.log('Résultat Resend:', result);
 
     if (!response.ok) {
-      return Response.json({ 
+      return Response.json({
         error: 'Erreur lors de l\'envoi de l\'email',
         details: result
       }, { status: response.status });
@@ -293,16 +296,18 @@ Deno.serve(async (req) => {
       history: currentHistory
     });
 
-    return Response.json({ 
+    console.log(`[INFO] Order email sent successfully for order ${order.id}`);
+
+    return Response.json({
       success: true,
       message: 'Email envoyé avec succès',
       emailId: result.id
     });
 
   } catch (error) {
-    console.error('Erreur:', error);
-    return Response.json({ 
-      error: error.message 
+    console.error('[ERROR] sendOrderEmail:', error.message);
+    return Response.json({
+      error: error.message
     }, { status: 500 });
   }
 });

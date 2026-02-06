@@ -316,13 +316,23 @@ const calculateEssayEndDate = (startDate, essayDays) => {
   return d.toISOString().split('T')[0];
 };
 
+// Rôles autorisés à générer des contrats
+const ALLOWED_ROLES = ['admin', 'manager', 'rh', 'gestionnaire'];
+
 Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
     const user = await base44.auth.me();
 
+    // Vérification authentification
     if (!user) {
       return Response.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    // Vérification des permissions
+    if (!ALLOWED_ROLES.includes(user.role)) {
+      console.warn(`[SECURITY] User ${user.id} attempted to generate contract without permission`);
+      return Response.json({ error: 'Permissions insuffisantes pour générer des contrats' }, { status: 403 });
     }
 
     const { templateId, employeeId, options = {}, customData = {} } = await req.json();

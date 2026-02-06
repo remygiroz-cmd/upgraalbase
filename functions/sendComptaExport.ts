@@ -1,12 +1,33 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
 
+// Rôles autorisés à envoyer des exports compta
+const ALLOWED_ROLES = ['admin', 'manager', 'comptable'];
+
+// Fonction pour échapper les caractères HTML dangereux (protection XSS)
+const escapeHtml = (text: string | null | undefined): string => {
+  if (!text) return '';
+  return String(text)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+};
+
 Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
     const user = await base44.auth.me();
 
+    // Vérification authentification
     if (!user) {
       return Response.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    // Vérification des permissions
+    if (!ALLOWED_ROLES.includes(user.role)) {
+      console.warn(`[SECURITY] User ${user.id} attempted to send compta export without permission`);
+      return Response.json({ error: 'Permissions insuffisantes' }, { status: 403 });
     }
 
     const { pdfUrl, pdfFilename, monthName, year, settings, customMessage } = await req.json();
@@ -20,13 +41,8 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'PDF URL manquant' }, { status: 400 });
     }
 
-    console.log('Envoi email compta:', {
-      to: settings.emailCompta,
-      monthName,
-      year,
-      pdfUrl,
-      pdfFilename
-    });
+    // Log sécurisé (sans données sensibles)
+    console.log(`[INFO] Sending compta export for ${monthName} ${year}`);
 
     // Télécharger le PDF depuis l'URL
     const pdfResponse = await fetch(pdfUrl);
@@ -36,31 +52,35 @@ Deno.serve(async (req) => {
 
     const pdfBuffer = await pdfResponse.arrayBuffer();
     const pdfSize = pdfBuffer.byteLength;
-    
-    console.log('PDF téléchargé, taille:', (pdfSize / 1024).toFixed(2), 'KB');
-    
+
     if (pdfSize === 0) {
       throw new Error('Le PDF téléchargé est vide');
     }
-    
+
     // Conversion base64 par chunks pour éviter stack overflow
     const uint8Array = new Uint8Array(pdfBuffer);
     const chunkSize = 8192;
     let base64String = '';
     for (let i = 0; i < uint8Array.length; i += chunkSize) {
       const chunk = uint8Array.slice(i, i + chunkSize);
-      base64String += String.fromCharCode.apply(null, chunk);
+      base64String += String.fromCharCode.apply(null, Array.from(chunk));
     }
     const pdfBase64 = btoa(base64String);
 
-    console.log('PDF encodé en base64, taille:', (pdfBase64.length / 1024).toFixed(2), 'KB');
+    // Échapper les données utilisateur pour éviter XSS
+    const safeResponsableName = escapeHtml(settings.responsableName);
+    const safeResponsableCoords = escapeHtml(settings.responsableCoords);
+    const safeCustomMessage = escapeHtml(customMessage);
+    const safePdfFilename = escapeHtml(pdfFilename);
+    const safeMonthName = escapeHtml(monthName);
+    const safeEtablissementName = escapeHtml(settings.etablissementName);
 
     // Send email via Resend
     const resendApiKey = Deno.env.get('RESEND_API_KEY');
     if (!resendApiKey) {
       throw new Error('RESEND_API_KEY non configurée');
     }
-    
+
     const emailBody = `Bonjour,
 
 ${customMessage ? customMessage + '\n\n' : ''}Veuillez trouver ci-joint le document d'export comptable pour ${monthName} ${year}.
@@ -75,15 +95,15 @@ ${settings.responsableCoords || ''}`;
 
     const htmlBody = `
       <div style="font-family: Arial, sans-serif; max-width: 700px; margin: 0 auto; padding: 20px;">
-        <h2 style="color: #f97316;">Éléments de paie - ${monthName} ${year}</h2>
+        <h2 style="color: #f97316;">Éléments de paie - ${safeMonthName} ${year}</h2>
         <p>Bonjour,</p>
-        ${customMessage ? `<p style="background: #f3f4f6; padding: 12px; border-radius: 6px; border-left: 3px solid #f97316;">${customMessage.replace(/\n/g, '<br>')}</p>` : ''}
-        <p>Veuillez trouver ci-joint le document d'export comptable pour ${monthName} ${year}.</p>
-        
+        ${safeCustomMessage ? `<p style="background: #f3f4f6; padding: 12px; border-radius: 6px; border-left: 3px solid #f97316;">${safeCustomMessage.replace(/\n/g, '<br>')}</p>` : ''}
+        <p>Veuillez trouver ci-joint le document d'export comptable pour ${safeMonthName} ${year}.</p>
+
         <div style="background: #eff6ff; padding: 15px; border-radius: 6px; border-left: 3px solid #3b82f6; margin: 20px 0;">
           <p style="margin: 0; font-size: 14px; color: #1e40af;">
             <strong>📎 Document joint :</strong><br>
-            <span style="color: #374151;">${pdfFilename}</span>
+            <span style="color: #374151;">${safePdfFilename}</span>
           </p>
           <p style="margin: 8px 0 0 0; font-size: 13px; color: #6b7280;">
             Contient : tableau récapitulatif de paie + planning mensuel complet
@@ -92,8 +112,8 @@ ${settings.responsableCoords || ''}`;
 
         <p style="margin-top: 30px;">
           Cordialement,<br>
-          <strong>${settings.responsableName}</strong><br>
-          ${settings.responsableCoords ? settings.responsableCoords.replace(/\n/g, '<br>') : ''}
+          <strong>${safeResponsableName}</strong><br>
+          ${safeResponsableCoords ? safeResponsableCoords.replace(/\n/g, '<br>') : ''}
         </p>
 
         <p style="font-size: 11px; color: #999; margin-top: 40px; border-top: 1px solid #e5e7eb; padding-top: 15px;">
@@ -109,7 +129,7 @@ ${settings.responsableCoords || ''}`;
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        from: `${settings.etablissementName} <noreply@upgraal.com>`,
+        from: `${safeEtablissementName} <noreply@upgraal.com>`,
         reply_to: settings.responsableEmail,
         to: [settings.emailCompta],
         subject: `Éléments de paie - ${monthName} ${year}`,
@@ -126,10 +146,8 @@ ${settings.responsableCoords || ''}`;
     });
 
     const result = await emailResponse.json();
-    
+
     if (!emailResponse.ok) {
-      console.error('Erreur Resend:', result);
-      
       // Messages d'erreur clairs selon le code HTTP
       let errorMessage = 'Erreur lors de l\'envoi de l\'email';
       if (emailResponse.status === 403) {
@@ -139,27 +157,25 @@ ${settings.responsableCoords || ''}`;
       } else if (result.message) {
         errorMessage = result.message;
       }
-      
-      return Response.json({ 
+
+      return Response.json({
         error: errorMessage,
-        details: result,
         status: emailResponse.status
       }, { status: emailResponse.status });
     }
 
-    console.log('Email envoyé avec succès:', result);
+    console.log(`[INFO] Compta export email sent successfully`);
 
-    return Response.json({ 
+    return Response.json({
       success: true,
       emailId: result.id,
       message: 'Email envoyé avec succès'
     });
 
   } catch (error) {
-    console.error('Error in sendComptaExport:', error);
-    return Response.json({ 
-      error: error.message,
-      details: 'Erreur lors du traitement de l\'export comptabilité'
+    console.error('[ERROR] sendComptaExport:', error.message);
+    return Response.json({
+      error: error.message
     }, { status: 500 });
   }
 });
