@@ -329,6 +329,24 @@ export default function CoffreFactures() {
               Désélectionner
             </Button>
             <Button
+              variant="outline"
+              onClick={async () => {
+                if (confirm(`Supprimer définitivement ${selectedInvoices.length} facture(s) ?`)) {
+                  try {
+                    await Promise.all(selectedInvoices.map(id => base44.entities.Invoice.delete(id)));
+                    queryClient.invalidateQueries({ queryKey: ['invoices'] });
+                    setSelectedInvoices([]);
+                  } catch (error) {
+                    alert('Erreur lors de la suppression');
+                  }
+                }
+              }}
+              className="border-red-300 text-red-600 hover:bg-red-50"
+            >
+              <Trash2 className="w-4 h-4 mr-2" />
+              Supprimer
+            </Button>
+            <Button
               onClick={() => setShowSend(true)}
               className="bg-orange-600 hover:bg-orange-700"
             >
