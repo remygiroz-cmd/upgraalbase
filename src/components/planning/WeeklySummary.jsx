@@ -1,7 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { cn } from '@/lib/utils';
 import { AlertTriangle, Trash2, ArrowDown, Bug } from 'lucide-react';
-import { calculateWeeklyHours } from './LegalChecks';
+import {
+  calculateWeeklyHours as newCalculateWeeklyHours,
+  getEffectiveHours
+} from '@/lib/hoursCalculation';
 import { useQuery } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 
@@ -19,8 +22,61 @@ export default function WeeklySummary({ employee, shifts, weekStart, onDeleteWee
 
   const calculationMode = settings[0]?.planning_calculation_mode || 'disabled';
 
-  // Calculate hours (TO BE REBUILT: Simple protocol from scratch)
-  const weekHours = calculateWeeklyHours(shifts, employee.id, weekStart, debugMode, nonShiftEvents, nonShiftTypes, employee);
+  // Calculate hours using new TypeScript implementation
+  const weekHours = useMemo(() => {
+    // Adapter: Convert employee to the format expected by hoursCalculation.ts
+    const employeeForCalc = {
+      id: employee.id,
+      work_time_type: employee.work_time_type || 'full_time',
+      contract_hours_weekly: employee.contract_hours_weekly || '35:00'
+    };
+
+    // Adapter: Convert shifts to the format expected by hoursCalculation.ts
+    const shiftsForCalc = shifts
+      .filter(s => s.employee_id === employee.id)
+      .map(s => ({
+        id: s.id,
+        date: s.date,
+        employee_id: s.employee_id,
+        start_time: s.start_time,
+        end_time: s.end_time,
+        break_minutes: s.break_minutes || 0,
+        status: s.status || 'planned'
+      }));
+
+    // Call new calculation function
+    const result = newCalculateWeeklyHours(shiftsForCalc, employeeForCalc, weekStart);
+
+    // Get effective hours (actual if available, otherwise planned)
+    const effectiveHours = getEffectiveHours(result);
+
+    // Adapter: Convert result to legacy format expected by UI
+    return {
+      total: effectiveHours,
+      totalPlanned: result.totalPlannedHours,
+      totalActual: result.totalActualHours,
+      type: result.workTimeType,
+      overtime_25: result.overtime25,
+      overtime_50: result.overtime50,
+      total_overtime: result.totalOvertime,
+      complementary_10: result.complementary10,
+      complementary_25: result.complementary25,
+      total_complementary: result.totalComplementary,
+      exceeds_limit: result.alerts.some(a => a.type === 'part_time_exceeded'),
+      hasOvertime: result.totalOvertime > 0,
+      overtime: result.totalOvertime,
+      alerts: result.alerts,
+      dailyBreakdown: result.dailyBreakdown,
+      // Debug info for backward compatibility
+      debugInfo: debugMode ? result.dailyBreakdown.map(d => ({
+        type: 'shift',
+        date: d.date,
+        durationMinutes: Math.round((d.totalPlanned + d.totalActual) * 60),
+        included: d.totalPlanned > 0 || d.totalActual > 0
+      })) : null,
+      nonShiftHours: 0 // TODO: intégrer non-shifts si nécessaire
+    };
+  }, [shifts, employee, weekStart, debugMode]);
 
   const handleDelete = () => {
     if (onDeleteWeek) {
