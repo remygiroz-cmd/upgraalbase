@@ -40,35 +40,31 @@ export default function WeeklySummary({
   const queryClient = useQueryClient();
   const weekStartStr = formatLocalDate(weekStart);
 
-  // 🔍 LOG 1: État initial au render
-  React.useEffect(() => {
-    console.log('[WeeklySummary] 📊 RENDER STATE:', {
-      employeeId: employee.id,
-      employeeName: employee.first_name + ' ' + employee.last_name,
-      weekStart: weekStart,
-      weekStartStr: weekStartStr,
-      weeklyRecap: weeklyRecap,
-      baseOverrideFromDB: weeklyRecap?.base_override_hours,
-      hasRecap: !!weeklyRecap,
-      recapId: weeklyRecap?.id
-    });
-  }, [weeklyRecap, weekStartStr, employee.id]);
-
   // Heures contractuelles par semaine depuis l'employé
   const contractHoursPerWeek = parseContractHours(employee?.contract_hours_weekly) || 0;
   const workDaysPerWeek = employee?.work_days_per_week || 5;
 
   // weeklyRecap est maintenant passé en props depuis le parent
   const baseOverrideFromDB = weeklyRecap?.base_override_hours ?? null;
-  
-  // 🔍 LOG 2: Valeur override au moment du calcul
-  console.log('[WeeklySummary] 💾 BASE OVERRIDE VALUE:', {
-    employeeId: employee.id,
-    weekStartStr,
-    baseOverrideFromDB,
-    isNull: baseOverrideFromDB === null,
-    weeklyRecap: weeklyRecap ? { id: weeklyRecap.id, base_override_hours: weeklyRecap.base_override_hours } : 'NULL'
-  });
+
+  // ============================================
+  // 🔍 A) ÉTAT INITIAL (avant édition)
+  // ============================================
+  React.useEffect(() => {
+    console.log('═══════════════════════════════════════════════════');
+    console.log('A) ÉTAT INITIAL - AVANT ÉDITION');
+    console.log('═══════════════════════════════════════════════════');
+    console.log('employeeId:', employee.id);
+    console.log('employeeName:', employee.first_name + ' ' + employee.last_name);
+    console.log('weekStart (Date object):', weekStart);
+    console.log('weekStartStr (string YYYY-MM-DD):', weekStartStr);
+    console.log('baseDefault (calculé):', contractHoursPerWeek);
+    console.log('base_override_hours (DB):', baseOverrideFromDB);
+    console.log('weeklyRecap existant?:', !!weeklyRecap);
+    console.log('weeklyRecap.id:', weeklyRecap?.id || 'N/A');
+    console.log('valeur qui sera affichée:', baseOverrideFromDB !== null ? baseOverrideFromDB : contractHoursPerWeek);
+    console.log('═══════════════════════════════════════════════════\n');
+  }, [weeklyRecap, weekStartStr, employee.id]);
 
   // =====================================================
   // PRORATISATION SEMAINE INCOMPLÈTE
@@ -199,73 +195,60 @@ export default function WeeklySummary({
   // Mutation pour sauvegarder/mettre à jour le recap
   const saveMutation = useMutation({
     mutationFn: async (baseValue) => {
-      console.log('[WeeklySummary] 🔄 MUTATION START - Saving base override:', {
-        employeeId: employee.id,
-        employeeName: employee.first_name + ' ' + employee.last_name,
-        weekStart: weekStartStr,
-        baseValue,
-        existingRecap: weeklyRecap
-      });
-
       const data = {
         employee_id: employee.id,
         week_start: weekStartStr,
         base_override_hours: baseValue
       };
 
+      console.log('═══════════════════════════════════════════════════');
+      console.log('C) MUTATION - ENVOI AU SERVEUR');
+      console.log('═══════════════════════════════════════════════════');
+      console.log('payload envoyé:');
+      console.log('  - employee_id:', data.employee_id);
+      console.log('  - week_start:', data.week_start);
+      console.log('  - base_override_hours:', data.base_override_hours);
+      console.log('action:', weeklyRecap?.id ? 'UPDATE (ID: ' + weeklyRecap.id + ')' : 'CREATE');
+      console.log('═══════════════════════════════════════════════════\n');
+
       try {
         let result;
         if (weeklyRecap?.id) {
-          console.log('[WeeklySummary] ✏️ UPDATING existing recap:', weeklyRecap.id);
           result = await base44.entities.WeeklyRecap.update(weeklyRecap.id, {
             base_override_hours: baseValue
           });
         } else {
-          console.log('[WeeklySummary] ➕ CREATING new recap');
           result = await base44.entities.WeeklyRecap.create(data);
         }
-        console.log('[WeeklySummary] ✅ Save SUCCESS - Result:', result);
+        
+        console.log('═══════════════════════════════════════════════════');
+        console.log('C) MUTATION - RÉPONSE DU SERVEUR');
+        console.log('═══════════════════════════════════════════════════');
+        console.log('response.id:', result.id);
+        console.log('response.employee_id:', result.employee_id);
+        console.log('response.week_start:', result.week_start);
+        console.log('response.base_override_hours:', result.base_override_hours);
+        console.log('✅ base_override_hours présent?:', result.base_override_hours !== null && result.base_override_hours !== undefined);
+        console.log('═══════════════════════════════════════════════════\n');
+        
         return result;
       } catch (err) {
-        console.error('[WeeklySummary] ❌ Save ERROR:', err);
+        console.error('❌ MUTATION ERROR:', err);
         throw err;
       }
     },
     onSuccess: (data) => {
-      console.log('[WeeklySummary] ✅ MUTATION SUCCESS - Data:', data);
-      console.log('[WeeklySummary] 📤 SAVED VALUES:', {
-        employeeId: employee.id,
-        weekStartStr: weekStartStr,
-        savedBaseOverride: data.base_override_hours,
-        responseId: data.id
-      });
-      
       setIsEditingBase(false);
       setBaseDraft('');
       
       // Invalider et refetch
       queryClient.invalidateQueries({ queryKey: ['allWeeklyRecaps'] });
-      if (onRecapUpdate) {
-        console.log('[WeeklySummary] 🔄 Calling onRecapUpdate callback');
-        onRecapUpdate();
-      }
-      
-      // Attendre un peu pour laisser le temps au refetch, puis vérifier
-      setTimeout(() => {
-        console.log('[WeeklySummary] 🔍 POST-REFETCH CHECK:', {
-          employeeId: employee.id,
-          weekStartStr: weekStartStr,
-          currentWeeklyRecap: weeklyRecap,
-          currentBaseOverride: weeklyRecap?.base_override_hours
-        });
-      }, 500);
+      if (onRecapUpdate) onRecapUpdate();
       
       toast.success('Base enregistrée ✓');
     },
     onError: (error) => {
-      console.error('[WeeklySummary] ❌ MUTATION ERROR:', error);
       toast.error(`Erreur: ${error.message || 'Échec de la sauvegarde'}`);
-      // Ne pas fermer l'édition en cas d'erreur
     }
   });
 
@@ -311,17 +294,8 @@ export default function WeeklySummary({
   const handleSaveBase = useCallback(() => {
     const trimmed = baseDraft.trim().replace(',', '.'); // Support virgule française
 
-    console.log('[WeeklySummary] handleSaveBase called:', {
-      baseDraft,
-      trimmed,
-      baseDefault,
-      weeklyRecap,
-      baseOverrideFromDB
-    });
-
     // Si vide, on supprime le override (retour à la base par défaut)
     if (trimmed === '') {
-      console.log('[WeeklySummary] Empty value, deleting override');
       if (weeklyRecap) {
         deleteMutation.mutate();
       }
@@ -331,28 +305,33 @@ export default function WeeklySummary({
     }
 
     const newValue = parseFloat(trimmed);
-    console.log('[WeeklySummary] Parsed value:', newValue);
 
     if (isNaN(newValue) || newValue < 0) {
-      console.error('[WeeklySummary] Invalid value:', newValue);
       toast.error('Valeur invalide');
       return;
     }
 
     // Si identique à la base par défaut, supprimer l'override
     if (Math.abs(newValue - baseDefault) < 0.01) {
-      console.log('[WeeklySummary] Value equals default base, removing override');
       if (weeklyRecap) {
         deleteMutation.mutate();
       }
       setIsEditingBase(false);
       setBaseDraft('');
     } else {
-      console.log('[WeeklySummary] Saving new override:', newValue, 'for week:', weekStartStr);
+      console.log('═══════════════════════════════════════════════════');
+      console.log('B) CLÉ DE MATCHING (point critique)');
+      console.log('═══════════════════════════════════════════════════');
+      console.log('employeeId:', employee.id);
+      console.log('weekStartStr (DOIT être YYYY-MM-DD):', weekStartStr);
+      console.log('format correct?:', /^\d{4}-\d{2}-\d{2}$/.test(weekStartStr));
+      console.log('clé de matching attendue:', `${employee.id}_${weekStartStr}`);
+      console.log('valeur à sauvegarder:', newValue);
+      console.log('═══════════════════════════════════════════════════\n');
+      
       saveMutation.mutate(newValue);
-      // Ne pas fermer l'édition tout de suite - attendre le succès de la mutation
     }
-  }, [baseDraft, baseDefault, weeklyRecap, saveMutation, deleteMutation, weekStartStr, baseOverrideFromDB]);
+  }, [baseDraft, baseDefault, weeklyRecap, saveMutation, deleteMutation, weekStartStr, baseOverrideFromDB, employee.id]);
 
   const handleKeyDown = useCallback((e) => {
     if (e.key === 'Enter') {
@@ -372,6 +351,16 @@ export default function WeeklySummary({
 
   // Valeur affichée pour la base (quand pas en édition)
   const displayedBase = baseOverrideFromDB !== null ? baseOverrideFromDB : baseDefault;
+  
+  // 🔍 LOG FINAL: Valeur qui sera rendue
+  React.useEffect(() => {
+    console.log('🎨 RENDU FINAL:');
+    console.log('  baseOverrideFromDB:', baseOverrideFromDB);
+    console.log('  baseDefault:', baseDefault);
+    console.log('  displayedBase (affiché):', displayedBase);
+    console.log('  logique: override != null ?', baseOverrideFromDB !== null, '→', displayedBase);
+    console.log('');
+  }, [baseOverrideFromDB, baseDefault, displayedBase]);
 
   return (
     <div className={cn(
