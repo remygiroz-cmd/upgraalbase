@@ -1,11 +1,11 @@
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { cn } from '@/lib/utils';
 import { Trash2, ArrowDown, Check, X } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { toast } from 'sonner';
 import {
-  calculateWeeklyHours,
+  calculateShiftDuration,
   parseContractHours,
   formatLocalDate
 } from '@/lib/weeklyHoursCalculation';
@@ -16,8 +16,8 @@ import {
  * Affiche:
  * - Base: heures contractuelles (éditable pour surcharger)
  * - Réalisé: heures effectivement travaillées
- * - Heures +: max(0, Réalisé - Base)
- * - Heures -: max(0, Base - Réalisé)
+ * - Heures +: max(0, Réalisé - Base) - toujours >= 0
+ * - Heures -: max(0, Base - Réalisé) - toujours >= 0, affiché SANS signe négatif
  */
 export default function WeeklySummary({
   employee,
@@ -28,7 +28,7 @@ export default function WeeklySummary({
 }) {
   const [showConfirm, setShowConfirm] = useState(false);
   const [isEditingBase, setIsEditingBase] = useState(false);
-  const [tempBaseValue, setTempBaseValue] = useState('');
+  const [baseDraft, setBaseDraft] = useState('');
 
   const queryClient = useQueryClient();
   const weekStartStr = formatLocalDate(weekStart);
@@ -37,46 +37,110 @@ export default function WeeklySummary({
   const contractHoursPerWeek = parseContractHours(employee?.contract_hours_weekly) || 0;
 
   // Fetch weekly recap override
-  const { data: weeklyRecaps = [] } = useQuery({
+  const { data: weeklyRecaps = [], isLoading, error } = useQuery({
     queryKey: ['weeklyRecaps', employee.id, weekStartStr],
     queryFn: async () => {
-      return await base44.entities.WeeklyRecap.filter({
-        employee_id: employee.id,
-        week_start: weekStartStr
-      });
+      try {
+        const result = await base44.entities.WeeklyRecap.filter({
+          employee_id: employee.id,
+          week_start: weekStartStr
+        });
+        console.log('[WeeklySummary] Loaded WeeklyRecap:', { employeeId: employee.id, weekStart: weekStartStr, result });
+        return result;
+      } catch (err) {
+        console.error('[WeeklySummary] Error loading WeeklyRecap:', err);
+        return [];
+      }
     },
-    staleTime: 30000
+    staleTime: 10000
   });
 
   const weeklyRecap = weeklyRecaps[0];
-  const baseOverride = weeklyRecap?.base_override_hours ?? null;
+  const baseOverrideFromDB = weeklyRecap?.base_override_hours ?? null;
 
-  // Calcul des heures
-  const weekHours = useMemo(() => {
-    return calculateWeeklyHours(
-      shifts,
-      employee.id,
-      weekStart,
-      contractHoursPerWeek,
-      baseOverride
-    );
-  }, [shifts, employee.id, weekStart, contractHoursPerWeek, baseOverride]);
+  // Calculer les heures travaillées (workedHours)
+  const workedHours = useMemo(() => {
+    const weekEnd = new Date(weekStart);
+    weekEnd.setDate(weekEnd.getDate() + 6);
+    const weekEndStr = formatLocalDate(weekEnd);
+
+    const weekShifts = shifts.filter(s => {
+      if (s.employee_id !== employee.id) return false;
+      if (s.date < weekStartStr || s.date > weekEndStr) return false;
+      if (s.status === 'cancelled') return false;
+      return true;
+    });
+
+    return weekShifts.reduce((sum, shift) => {
+      return sum + calculateShiftDuration(shift);
+    }, 0);
+  }, [shifts, employee.id, weekStart, weekStartStr]);
+
+  // Compter les shifts
+  const shiftsCount = useMemo(() => {
+    const weekEnd = new Date(weekStart);
+    weekEnd.setDate(weekEnd.getDate() + 6);
+    const weekEndStr = formatLocalDate(weekEnd);
+
+    return shifts.filter(s => {
+      if (s.employee_id !== employee.id) return false;
+      if (s.date < weekStartStr || s.date > weekEndStr) return false;
+      if (s.status === 'cancelled') return false;
+      return true;
+    }).length;
+  }, [shifts, employee.id, weekStart, weekStartStr]);
+
+  // =====================================================
+  // CALCUL OPTIMISTE: baseUsed prend en compte baseDraft
+  // =====================================================
+  const baseUsedForUI = useMemo(() => {
+    // Si on est en train d'éditer et qu'il y a une valeur draft valide, l'utiliser
+    if (isEditingBase && baseDraft !== '') {
+      const parsed = parseFloat(baseDraft);
+      if (!isNaN(parsed) && parsed >= 0) {
+        return parsed;
+      }
+    }
+    // Sinon, utiliser la valeur DB ou le contrat
+    return baseOverrideFromDB !== null ? baseOverrideFromDB : contractHoursPerWeek;
+  }, [isEditingBase, baseDraft, baseOverrideFromDB, contractHoursPerWeek]);
+
+  // Calcul des écarts - TOUJOURS POSITIFS
+  const plusHours = Math.max(0, workedHours - baseUsedForUI);
+  const minusHours = Math.max(0, baseUsedForUI - workedHours);
 
   // Mutation pour sauvegarder/mettre à jour le recap
   const saveMutation = useMutation({
     mutationFn: async (baseValue) => {
+      console.log('[WeeklySummary] Saving base override:', {
+        employeeId: employee.id,
+        weekStart: weekStartStr,
+        baseValue,
+        existingRecap: weeklyRecap
+      });
+
       const data = {
         employee_id: employee.id,
         week_start: weekStartStr,
         base_override_hours: baseValue
       };
 
-      if (weeklyRecap) {
-        return await base44.entities.WeeklyRecap.update(weeklyRecap.id, {
-          base_override_hours: baseValue
-        });
-      } else {
-        return await base44.entities.WeeklyRecap.create(data);
+      try {
+        let result;
+        if (weeklyRecap) {
+          console.log('[WeeklySummary] Updating existing recap:', weeklyRecap.id);
+          result = await base44.entities.WeeklyRecap.update(weeklyRecap.id, {
+            base_override_hours: baseValue
+          });
+        } else {
+          console.log('[WeeklySummary] Creating new recap');
+          result = await base44.entities.WeeklyRecap.create(data);
+        }
+        console.log('[WeeklySummary] Save result:', result);
+        return result;
+      } catch (err) {
+        console.error('[WeeklySummary] Save error:', err);
+        throw err;
       }
     },
     onSuccess: () => {
@@ -84,8 +148,8 @@ export default function WeeklySummary({
       toast.success('Base mise à jour');
     },
     onError: (error) => {
-      console.error('Error saving weekly recap:', error);
-      toast.error('Erreur lors de la sauvegarde');
+      console.error('[WeeklySummary] Mutation error:', error);
+      toast.error(`Erreur: ${error.message || 'Échec de la sauvegarde'}`);
     }
   });
 
@@ -93,12 +157,17 @@ export default function WeeklySummary({
   const deleteMutation = useMutation({
     mutationFn: async () => {
       if (weeklyRecap) {
+        console.log('[WeeklySummary] Deleting recap:', weeklyRecap.id);
         return await base44.entities.WeeklyRecap.delete(weeklyRecap.id);
       }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['weeklyRecaps', employee.id] });
       toast.success('Base remise par défaut');
+    },
+    onError: (error) => {
+      console.error('[WeeklySummary] Delete error:', error);
+      toast.error(`Erreur: ${error.message}`);
     }
   });
 
@@ -110,35 +179,52 @@ export default function WeeklySummary({
   };
 
   const handleStartEdit = useCallback(() => {
-    setTempBaseValue(weekHours.baseUsed.toString());
+    // Initialiser baseDraft avec la valeur actuelle
+    const currentBase = baseOverrideFromDB !== null ? baseOverrideFromDB : contractHoursPerWeek;
+    setBaseDraft(currentBase.toString());
     setIsEditingBase(true);
-  }, [weekHours.baseUsed]);
+  }, [baseOverrideFromDB, contractHoursPerWeek]);
 
   const handleCancelEdit = useCallback(() => {
     setIsEditingBase(false);
-    setTempBaseValue('');
+    setBaseDraft('');
   }, []);
 
   const handleSaveBase = useCallback(() => {
-    const newValue = parseFloat(tempBaseValue);
+    const trimmed = baseDraft.trim();
+
+    // Si vide, on supprime le override (retour au contrat)
+    if (trimmed === '' || trimmed === contractHoursPerWeek.toString()) {
+      console.log('[WeeklySummary] Resetting to contract hours');
+      if (weeklyRecap) {
+        deleteMutation.mutate();
+      }
+      setIsEditingBase(false);
+      setBaseDraft('');
+      return;
+    }
+
+    const newValue = parseFloat(trimmed);
 
     if (isNaN(newValue) || newValue < 0) {
       toast.error('Valeur invalide');
       return;
     }
 
-    // Si la valeur est identique au contrat, supprimer le override
+    // Si identique au contrat, supprimer l'override
     if (Math.abs(newValue - contractHoursPerWeek) < 0.01) {
+      console.log('[WeeklySummary] Value equals contract, removing override');
       if (weeklyRecap) {
         deleteMutation.mutate();
       }
     } else {
+      console.log('[WeeklySummary] Saving new override:', newValue);
       saveMutation.mutate(newValue);
     }
 
     setIsEditingBase(false);
-    setTempBaseValue('');
-  }, [tempBaseValue, contractHoursPerWeek, weeklyRecap, saveMutation, deleteMutation]);
+    setBaseDraft('');
+  }, [baseDraft, contractHoursPerWeek, weeklyRecap, saveMutation, deleteMutation]);
 
   const handleKeyDown = useCallback((e) => {
     if (e.key === 'Enter') {
@@ -148,8 +234,16 @@ export default function WeeklySummary({
     }
   }, [handleSaveBase, handleCancelEdit]);
 
-  const hasShifts = weekHours.shiftsCount > 0;
-  const hasOverride = baseOverride !== null;
+  // Sauvegarder aussi sur blur
+  const handleBlur = useCallback(() => {
+    handleSaveBase();
+  }, [handleSaveBase]);
+
+  const hasShifts = shiftsCount > 0;
+  const hasOverride = baseOverrideFromDB !== null;
+
+  // Valeur affichée pour la base (quand pas en édition)
+  const displayedBase = baseOverrideFromDB !== null ? baseOverrideFromDB : contractHoursPerWeek;
 
   return (
     <div className={cn(
@@ -179,9 +273,10 @@ export default function WeeklySummary({
               type="number"
               step="0.5"
               min="0"
-              value={tempBaseValue}
-              onChange={(e) => setTempBaseValue(e.target.value)}
+              value={baseDraft}
+              onChange={(e) => setBaseDraft(e.target.value)}
               onKeyDown={handleKeyDown}
+              onBlur={handleBlur}
               className="w-14 text-center text-sm font-bold border rounded px-1 py-0.5"
               autoFocus
             />
@@ -209,7 +304,7 @@ export default function WeeklySummary({
             )}
             title="Cliquer pour modifier"
           >
-            {weekHours.baseUsed.toFixed(1)}h
+            {displayedBase.toFixed(1)}h
             {hasOverride && <span className="text-[8px] ml-1">*</span>}
           </button>
         )}
@@ -219,23 +314,24 @@ export default function WeeklySummary({
       <div className="mb-1">
         <div className="text-[9px] text-gray-500 uppercase font-semibold">Réalisé</div>
         <div className="text-lg font-bold text-gray-900">
-          {weekHours.workedHours.toFixed(1)}h
+          {workedHours.toFixed(1)}h
         </div>
       </div>
 
-      {/* HEURES + / HEURES - */}
+      {/* HEURES + / HEURES - (toujours positifs dans l'affichage) */}
       <div className="flex justify-center gap-2 text-[11px]">
-        {weekHours.plusHours > 0 && (
+        {plusHours > 0 && (
           <div className="text-green-700 font-bold bg-green-50 px-1.5 py-0.5 rounded">
-            +{weekHours.plusHours.toFixed(1)}h
+            +{plusHours.toFixed(1)}h
           </div>
         )}
-        {weekHours.minusHours > 0 && (
+        {minusHours > 0 && (
           <div className="text-red-700 font-bold bg-red-50 px-1.5 py-0.5 rounded">
-            -{weekHours.minusHours.toFixed(1)}h
+            {/* CORRECTION: pas de signe négatif, minusHours est déjà positif */}
+            {minusHours.toFixed(1)}h -
           </div>
         )}
-        {weekHours.plusHours === 0 && weekHours.minusHours === 0 && weekHours.workedHours > 0 && (
+        {plusHours === 0 && minusHours === 0 && workedHours > 0 && (
           <div className="text-gray-500 font-medium">
             = 0h
           </div>
