@@ -176,11 +176,73 @@ export default function Planning() {
     queryFn: async () => {
       const firstDay = formatLocalDate(new Date(currentYear, currentMonth, 1));
       const lastDay = formatLocalDate(new Date(currentYear, currentMonth + 1, 0));
-      
+
       const allHolidays = await base44.entities.HolidayDate.list();
       return allHolidays.filter(h => h.date >= firstDay && h.date <= lastDay);
     }
   });
+
+  // =====================================================
+  // OPTIMISATION: Fetch ALL weekly recaps in ONE query
+  // Instead of N queries (one per employee per week)
+  // =====================================================
+  const { data: allWeeklyRecaps = [] } = useQuery({
+    queryKey: ['allWeeklyRecaps', currentYear, currentMonth],
+    queryFn: async () => {
+      // Get all weeks that intersect with current month
+      const firstDay = formatLocalDate(new Date(currentYear, currentMonth, 1));
+      const lastDay = formatLocalDate(new Date(currentYear, currentMonth + 1, 0));
+
+      // Fetch all weekly recaps (limited to reasonable timeframe)
+      const allRecaps = await base44.entities.WeeklyRecap.list();
+      // Filter to recaps that might be relevant to this month
+      return allRecaps.filter(r => r.week_start >= firstDay.substring(0, 7) + '-01' && r.week_start <= lastDay);
+    }
+  });
+
+  // =====================================================
+  // OPTIMISATION: Fetch ALL monthly recaps in ONE query
+  // Instead of N queries (one per employee)
+  // =====================================================
+  const { data: allMonthlyRecaps = [] } = useQuery({
+    queryKey: ['allMonthlyRecaps', currentYear, currentMonth],
+    queryFn: async () => {
+      return await base44.entities.MonthlyRecap.filter({
+        year: currentYear,
+        month: currentMonth + 1 // month is 0-indexed in JS but 1-indexed in DB
+      });
+    }
+  });
+
+  // Create lookup maps for quick access (O(1) instead of O(n))
+  const weeklyRecapsLookup = React.useMemo(() => {
+    const lookup = new Map();
+    for (const recap of allWeeklyRecaps) {
+      const key = `${recap.employee_id}_${recap.week_start}`;
+      lookup.set(key, recap);
+    }
+    return lookup;
+  }, [allWeeklyRecaps]);
+
+  const monthlyRecapsLookup = React.useMemo(() => {
+    const lookup = new Map();
+    for (const recap of allMonthlyRecaps) {
+      lookup.set(recap.employee_id, recap);
+    }
+    return lookup;
+  }, [allMonthlyRecaps]);
+
+  // Create lookup for CP periods by employee
+  const cpPeriodsLookup = React.useMemo(() => {
+    const lookup = new Map();
+    for (const period of paidLeavePeriods) {
+      if (!lookup.has(period.employee_id)) {
+        lookup.set(period.employee_id, []);
+      }
+      lookup.get(period.employee_id).push(period);
+    }
+    return lookup;
+  }, [paidLeavePeriods]);
 
   const saveShiftMutation = useMutation({
     mutationFn: ({ id, data }) => {
@@ -1040,14 +1102,20 @@ export default function Planning() {
                               const hasEmployeeEventsAbove = eventsAbove.shifts.some(s => s.employee_id === employee.id) ||
                                                               eventsAbove.nonShifts.some(ns => ns.employee_id === employee.id);
                               
+                              // Get weeklyRecap from lookup (O(1) instead of individual query)
+                              const weekStartStr = formatLocalDate(weekStart);
+                              const weeklyRecapKey = `${employee.id}_${weekStartStr}`;
+                              const weeklyRecap = weeklyRecapsLookup.get(weeklyRecapKey) || null;
+
                               return (
                                 <div key={employee.id} className="border-r border-gray-200 min-w-[140px] w-[140px] sm:w-[180px]">
                                   <WeeklySummary
                                     employee={employee}
                                     shifts={shifts}
                                     weekStart={weekStart}
+                                    weeklyRecap={weeklyRecap}
                                     onDeleteWeek={handleDeleteWeek}
-                                    onCopyFromAbove={hasEmployeeEventsAbove && weekAbove.getMonth() >= new Date(currentYear, currentMonth, 1).getMonth() 
+                                    onCopyFromAbove={hasEmployeeEventsAbove && weekAbove.getMonth() >= new Date(currentYear, currentMonth, 1).getMonth()
                                       ? () => handleCopyEmployeeWeekFromAbove(employee.id, weekStart)
                                       : null
                                     }
@@ -1072,20 +1140,28 @@ export default function Planning() {
                       </div>
                     </div>
                     <div className="flex flex-1">
-                      {employees.map(employee => (
-                        <div key={employee.id} className="border-r border-blue-200 min-w-[140px] w-[140px] sm:w-[180px]">
-                          <MonthlySummary
-                            employee={employee}
-                            shifts={shifts}
-                            nonShiftEvents={nonShiftEvents}
-                            nonShiftTypes={nonShiftTypes}
-                            monthStart={new Date(currentYear, currentMonth, 1)}
-                            monthEnd={new Date(currentYear, currentMonth + 1, 0)}
-                            holidayDates={holidayDates}
+                      {employees.map(employee => {
+                        // Get data from lookups (O(1) instead of individual queries)
+                        const employeeCpPeriods = cpPeriodsLookup.get(employee.id) || [];
+                        const monthlyRecap = monthlyRecapsLookup.get(employee.id) || null;
+
+                        return (
+                          <div key={employee.id} className="border-r border-blue-200 min-w-[140px] w-[140px] sm:w-[180px]">
+                            <MonthlySummary
+                              employee={employee}
+                              shifts={shifts}
+                              nonShiftEvents={nonShiftEvents}
+                              nonShiftTypes={nonShiftTypes}
+                              monthStart={new Date(currentYear, currentMonth, 1)}
+                              monthEnd={new Date(currentYear, currentMonth + 1, 0)}
+                              holidayDates={holidayDates}
+                              cpPeriods={employeeCpPeriods}
+                              monthlyRecap={monthlyRecap}
                             />
-                            </div>
-                            ))}
-                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
                             </div>
                             </>
                             )}

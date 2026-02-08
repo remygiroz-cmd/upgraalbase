@@ -4,7 +4,7 @@ import { Edit2 } from 'lucide-react';
 import { calculateMonthlyCPTotal } from './paidLeaveCalculations';
 import { calculateShiftDuration } from './LegalChecks';
 import { parseContractHours } from '@/lib/weeklyHoursCalculation';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -15,43 +15,35 @@ import { toast } from 'sonner';
 /**
  * Récap mensuel simplifié
  *
+ * OPTIMISÉ: Ne fait plus de requête individuelle.
+ * Les données cpPeriods et monthlyRecap sont passées en props depuis le parent.
+ *
  * Affiche:
  * - Jours travaillés
  * - Heures effectuées
  * - Base contractuelle
  * - CP décomptés
  */
-export default function MonthlySummary({ employee, shifts, nonShiftEvents = [], nonShiftTypes = [], monthStart, monthEnd, holidayDates = [] }) {
+export default function MonthlySummary({
+  employee,
+  shifts,
+  nonShiftEvents = [],
+  nonShiftTypes = [],
+  monthStart,
+  monthEnd,
+  holidayDates = [],
+  cpPeriods = [], // NOUVEAU: reçu depuis le parent
+  monthlyRecap = null, // NOUVEAU: reçu depuis le parent
+  onRecapUpdate // NOUVEAU: callback pour notifier le parent de rafraîchir
+}) {
   const [showEditDialog, setShowEditDialog] = useState(false);
   const queryClient = useQueryClient();
 
   const year = monthStart.getFullYear();
   const month = monthStart.getMonth() + 1;
 
-  // Fetch CP periods
-  const { data: cpPeriods = [] } = useQuery({
-    queryKey: ['paidLeavePeriods', employee.id, year, month],
-    queryFn: async () => {
-      const all = await base44.entities.PaidLeavePeriod.filter({
-        employee_id: employee.id
-      });
-      return all;
-    }
-  });
-
-  // Fetch manual overrides
-  const { data: recaps = [] } = useQuery({
-    queryKey: ['monthlyRecaps', employee.id, year, month],
-    queryFn: async () => {
-      return await base44.entities.MonthlyRecap.filter({
-        employee_id: employee.id,
-        year,
-        month
-      });
-    }
-  });
-
-  const manualRecap = recaps[0];
+  // cpPeriods et monthlyRecap sont maintenant passés en props depuis le parent
+  const manualRecap = monthlyRecap;
 
   // Calculate automatic values - SIMPLE
   const { autoDaysWorked, autoTotalHours, autoMonthlyContractHours } = useMemo(() => {
@@ -150,12 +142,13 @@ export default function MonthlySummary({ employee, shifts, nonShiftEvents = [], 
           cpDays: autoCPDays
         }}
         currentRecap={manualRecap}
+        onRecapUpdate={onRecapUpdate}
       />
     </>
   );
 }
 
-function EditMonthlyRecapDialog({ open, onOpenChange, employee, year, month, autoValues, currentRecap }) {
+function EditMonthlyRecapDialog({ open, onOpenChange, employee, year, month, autoValues, currentRecap, onRecapUpdate }) {
   const queryClient = useQueryClient();
   const [formData, setFormData] = useState({});
 
@@ -185,7 +178,9 @@ function EditMonthlyRecapDialog({ open, onOpenChange, employee, year, month, aut
       }
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['monthlyRecaps'] });
+      // Invalidate la requête globale (1 seule pour tous les employés)
+      queryClient.invalidateQueries({ queryKey: ['allMonthlyRecaps'] });
+      if (onRecapUpdate) onRecapUpdate();
       toast.success('Récapitulatif enregistré');
       onOpenChange(false);
     }
@@ -198,7 +193,9 @@ function EditMonthlyRecapDialog({ open, onOpenChange, employee, year, month, aut
       }
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['monthlyRecaps'] });
+      // Invalidate la requête globale (1 seule pour tous les employés)
+      queryClient.invalidateQueries({ queryKey: ['allMonthlyRecaps'] });
+      if (onRecapUpdate) onRecapUpdate();
       toast.success('Modifications supprimées');
       onOpenChange(false);
     }
