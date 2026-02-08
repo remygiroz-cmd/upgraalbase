@@ -24,7 +24,9 @@ export default function WeeklySummary({
   shifts,
   weekStart,
   onDeleteWeek,
-  onCopyFromAbove
+  onCopyFromAbove,
+  currentMonth,
+  currentYear
 }) {
   const [showConfirm, setShowConfirm] = useState(false);
   const [isEditingBase, setIsEditingBase] = useState(false);
@@ -35,6 +37,7 @@ export default function WeeklySummary({
 
   // Heures contractuelles par semaine depuis l'employé
   const contractHoursPerWeek = parseContractHours(employee?.contract_hours_weekly) || 0;
+  const workDaysPerWeek = employee?.work_days_per_week || 5;
 
   // Fetch weekly recap override
   const { data: weeklyRecaps = [], isLoading, error } = useQuery({
@@ -57,6 +60,77 @@ export default function WeeklySummary({
 
   const weeklyRecap = weeklyRecaps[0];
   const baseOverrideFromDB = weeklyRecap?.base_override_hours ?? null;
+
+  // =====================================================
+  // PRORATISATION SEMAINE INCOMPLÈTE
+  // =====================================================
+  const { isPartialWeek, workingDaysInPartialWeek, proratedBase } = useMemo(() => {
+    if (!currentMonth || currentMonth === undefined || !currentYear || currentYear === undefined) {
+      // Si pas de mois/année fourni, pas de proratisation
+      return { isPartialWeek: false, workingDaysInPartialWeek: workDaysPerWeek, proratedBase: contractHoursPerWeek };
+    }
+
+    const monthStart = new Date(currentYear, currentMonth, 1);
+    const monthEnd = new Date(currentYear, currentMonth + 1, 0);
+    
+    const weekEnd = new Date(weekStart);
+    weekEnd.setDate(weekEnd.getDate() + 6);
+    
+    // Vérifier si la semaine est incomplète (ne contient pas 7 jours dans le mois)
+    const daysInMonth = [];
+    for (let d = new Date(weekStart); d <= weekEnd; d.setDate(d.getDate() + 1)) {
+      const current = new Date(d);
+      if (current >= monthStart && current <= monthEnd) {
+        daysInMonth.push(current.getDay()); // 0=dimanche, 1=lundi, etc.
+      }
+    }
+    
+    const totalDaysInWeekWithinMonth = daysInMonth.length;
+    const isPartial = totalDaysInWeekWithinMonth < 7;
+    
+    if (!isPartial) {
+      return { isPartialWeek: false, workingDaysInPartialWeek: workDaysPerWeek, proratedBase: contractHoursPerWeek };
+    }
+    
+    // Déterminer les jours travaillés attendus pour cet employé
+    // On utilise weekly_schedule si disponible, sinon on suppose une répartition uniforme
+    const weeklySchedule = employee?.weekly_schedule;
+    let expectedWorkingDays = new Set();
+    
+    if (weeklySchedule) {
+      // Mapper les jours travaillés depuis weekly_schedule
+      const dayMap = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+      dayMap.forEach((dayName, dayIndex) => {
+        if (weeklySchedule[dayName]?.worked) {
+          expectedWorkingDays.add(dayIndex);
+        }
+      });
+    }
+    
+    // Si pas de schedule ou vide, on suppose que l'employé travaille workDaysPerWeek jours consécutifs à partir du lundi
+    if (expectedWorkingDays.size === 0) {
+      // Par défaut : lundi à vendredi pour 5 jours, etc.
+      for (let i = 0; i < workDaysPerWeek; i++) {
+        expectedWorkingDays.add((i + 1) % 7); // 1=lundi, 2=mardi, etc.
+      }
+    }
+    
+    // Compter combien de jours travaillés dans la portion de semaine dans le mois
+    const workingDaysCount = daysInMonth.filter(dayOfWeek => expectedWorkingDays.has(dayOfWeek)).length;
+    
+    // Calculer base proratisée
+    const basePerDay = contractHoursPerWeek / workDaysPerWeek;
+    const prorated = basePerDay * workingDaysCount;
+    
+    return {
+      isPartialWeek: true,
+      workingDaysInPartialWeek: workingDaysCount,
+      proratedBase: prorated
+    };
+  }, [weekStart, currentMonth, currentYear, employee, contractHoursPerWeek, workDaysPerWeek]);
+
+  // Base par défaut (proratisée si semaine incomplète, sinon contrat)
+  const baseDefault = isPartialWeek ? proratedBase : contractHoursPerWeek;
 
   // Calculer les heures travaillées (workedHours)
   const workedHours = useMemo(() => {
@@ -101,9 +175,9 @@ export default function WeeklySummary({
         return parsed;
       }
     }
-    // Sinon, utiliser la valeur DB ou le contrat
-    return baseOverrideFromDB !== null ? baseOverrideFromDB : contractHoursPerWeek;
-  }, [isEditingBase, baseDraft, baseOverrideFromDB, contractHoursPerWeek]);
+    // Sinon, utiliser la valeur DB ou la base par défaut (proratisée si nécessaire)
+    return baseOverrideFromDB !== null ? baseOverrideFromDB : baseDefault;
+  }, [isEditingBase, baseDraft, baseOverrideFromDB, baseDefault]);
 
   // Calcul des écarts - TOUJOURS POSITIFS
   const plusHours = Math.max(0, workedHours - baseUsedForUI);
@@ -180,10 +254,10 @@ export default function WeeklySummary({
 
   const handleStartEdit = useCallback(() => {
     // Initialiser baseDraft avec la valeur actuelle
-    const currentBase = baseOverrideFromDB !== null ? baseOverrideFromDB : contractHoursPerWeek;
+    const currentBase = baseOverrideFromDB !== null ? baseOverrideFromDB : baseDefault;
     setBaseDraft(currentBase.toString());
     setIsEditingBase(true);
-  }, [baseOverrideFromDB, contractHoursPerWeek]);
+  }, [baseOverrideFromDB, baseDefault]);
 
   const handleCancelEdit = useCallback(() => {
     setIsEditingBase(false);
@@ -193,9 +267,9 @@ export default function WeeklySummary({
   const handleSaveBase = useCallback(() => {
     const trimmed = baseDraft.trim();
 
-    // Si vide, on supprime le override (retour au contrat)
-    if (trimmed === '' || trimmed === contractHoursPerWeek.toString()) {
-      console.log('[WeeklySummary] Resetting to contract hours');
+    // Si vide, on supprime le override (retour à la base par défaut)
+    if (trimmed === '' || trimmed === baseDefault.toString()) {
+      console.log('[WeeklySummary] Resetting to default base');
       if (weeklyRecap) {
         deleteMutation.mutate();
       }
@@ -211,9 +285,9 @@ export default function WeeklySummary({
       return;
     }
 
-    // Si identique au contrat, supprimer l'override
-    if (Math.abs(newValue - contractHoursPerWeek) < 0.01) {
-      console.log('[WeeklySummary] Value equals contract, removing override');
+    // Si identique à la base par défaut, supprimer l'override
+    if (Math.abs(newValue - baseDefault) < 0.01) {
+      console.log('[WeeklySummary] Value equals default base, removing override');
       if (weeklyRecap) {
         deleteMutation.mutate();
       }
@@ -224,7 +298,7 @@ export default function WeeklySummary({
 
     setIsEditingBase(false);
     setBaseDraft('');
-  }, [baseDraft, contractHoursPerWeek, weeklyRecap, saveMutation, deleteMutation]);
+  }, [baseDraft, baseDefault, weeklyRecap, saveMutation, deleteMutation]);
 
   const handleKeyDown = useCallback((e) => {
     if (e.key === 'Enter') {
@@ -243,12 +317,13 @@ export default function WeeklySummary({
   const hasOverride = baseOverrideFromDB !== null;
 
   // Valeur affichée pour la base (quand pas en édition)
-  const displayedBase = baseOverrideFromDB !== null ? baseOverrideFromDB : contractHoursPerWeek;
+  const displayedBase = baseOverrideFromDB !== null ? baseOverrideFromDB : baseDefault;
 
   return (
     <div className={cn(
       "px-2 py-2 text-center relative group",
-      hasOverride && "bg-blue-50"
+      hasOverride && "bg-blue-50",
+      isPartialWeek && !hasOverride && "bg-amber-50/30"
     )}>
       {/* Bouton supprimer semaine */}
       {hasShifts && (
@@ -266,7 +341,12 @@ export default function WeeklySummary({
 
       {/* BASE (éditable) */}
       <div className="mb-1">
-        <div className="text-[9px] text-gray-500 uppercase font-semibold">Base</div>
+        <div className="text-[9px] text-gray-500 uppercase font-semibold flex items-center justify-center gap-1">
+          Base
+          {isPartialWeek && !hasOverride && (
+            <span title="Semaine incomplète - base proratisée">⚠️</span>
+          )}
+        </div>
         {isEditingBase ? (
           <div className="flex items-center justify-center gap-1">
             <input
@@ -338,10 +418,15 @@ export default function WeeklySummary({
         )}
       </div>
 
-      {/* Indicateur de surcharge */}
+      {/* Indicateur de surcharge ou proratisation */}
       {hasOverride && (
         <div className="mt-1 text-[8px] text-blue-600">
-          (contrat: {contractHoursPerWeek}h)
+          (défaut: {baseDefault.toFixed(1)}h)
+        </div>
+      )}
+      {isPartialWeek && !hasOverride && (
+        <div className="mt-1 text-[8px] text-amber-700">
+          Semaine incomplète ({workingDaysInPartialWeek}j)
         </div>
       )}
 
