@@ -56,6 +56,7 @@ export default function ShiftFormModal({
     start_time: '09:00',
     end_time: '17:00',
     break_minutes: 0,
+    base_hours_override: '',
     status: 'planned',
     notes: ''
   });
@@ -103,6 +104,7 @@ export default function ShiftFormModal({
         start_time: selectedEditShift.start_time || '09:00',
         end_time: selectedEditShift.end_time || '17:00',
         break_minutes: selectedEditShift.break_minutes || 0,
+        base_hours_override: selectedEditShift.base_hours_override || '',
         status: selectedEditShift.status || 'planned',
         notes: selectedEditShift.notes || ''
       });
@@ -115,6 +117,7 @@ export default function ShiftFormModal({
       start_time: '09:00',
       end_time: '17:00',
       break_minutes: 0,
+      base_hours_override: '',
       status: 'planned',
       notes: ''
     });
@@ -517,11 +520,30 @@ export default function ShiftFormModal({
                 </div>
               </div>
 
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 flex items-center gap-2">
-                <Clock className="w-5 h-5 text-blue-600" />
-                <span className="text-sm font-semibold text-blue-900">
-                  Durée travaillée : {calculateDuration()}
-                </span>
+              <div className="space-y-3">
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 flex items-center gap-2">
+                  <Clock className="w-5 h-5 text-blue-600" />
+                  <span className="text-sm font-semibold text-blue-900">
+                    Durée travaillée : {calculateDuration()}
+                  </span>
+                </div>
+
+                <div>
+                  <Label className="block mb-2 font-semibold text-gray-700">
+                    Surcharge heures de base (optionnel)
+                  </Label>
+                  <Input
+                    type="number"
+                    step="0.1"
+                    value={formData.base_hours_override}
+                    onChange={(e) => setFormData(prev => ({ ...prev, base_hours_override: parseFloat(e.target.value) || '' }))}
+                    placeholder="Ex: 7.5"
+                    className="h-11"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    Définir manuellement les heures de base pour ce shift (laissez vide pour calcul automatique)
+                  </p>
+                </div>
               </div>
 
               <div>
