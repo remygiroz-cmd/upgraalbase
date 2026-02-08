@@ -1,26 +1,106 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import { cn } from '@/lib/utils';
-import { AlertTriangle, Trash2, ArrowDown, Bug } from 'lucide-react';
-import { calculateWeeklyHours } from './LegalChecks';
-import { useQuery } from '@tanstack/react-query';
+import { Trash2, ArrowDown, Check, X } from 'lucide-react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
+import { toast } from 'sonner';
+import {
+  calculateWeeklyHours,
+  parseContractHours,
+  formatLocalDate
+} from '@/lib/weeklyHoursCalculation';
 
-export default function WeeklySummary({ employee, shifts, weekStart, onDeleteWeek, onCopyFromAbove, nonShiftEvents = [], nonShiftTypes = [] }) {
+/**
+ * Récap semaine simplifié
+ *
+ * Affiche:
+ * - Base: heures contractuelles (éditable pour surcharger)
+ * - Réalisé: heures effectivement travaillées
+ * - Heures +: max(0, Réalisé - Base)
+ * - Heures -: max(0, Base - Réalisé)
+ */
+export default function WeeklySummary({
+  employee,
+  shifts,
+  weekStart,
+  onDeleteWeek,
+  onCopyFromAbove
+}) {
   const [showConfirm, setShowConfirm] = useState(false);
-  const [debugMode, setDebugMode] = useState(false);
+  const [isEditingBase, setIsEditingBase] = useState(false);
+  const [tempBaseValue, setTempBaseValue] = useState('');
 
-  // Fetch calculation mode
-  const { data: settings = [] } = useQuery({
-    queryKey: ['appSettings', 'planning_calculation_mode'],
+  const queryClient = useQueryClient();
+  const weekStartStr = formatLocalDate(weekStart);
+
+  // Heures contractuelles par semaine depuis l'employé
+  const contractHoursPerWeek = parseContractHours(employee?.contract_hours_weekly) || 0;
+
+  // Fetch weekly recap override
+  const { data: weeklyRecaps = [] } = useQuery({
+    queryKey: ['weeklyRecaps', employee.id, weekStartStr],
     queryFn: async () => {
-      return await base44.entities.AppSettings.filter({ setting_key: 'planning_calculation_mode' });
+      return await base44.entities.WeeklyRecap.filter({
+        employee_id: employee.id,
+        week_start: weekStartStr
+      });
+    },
+    staleTime: 30000
+  });
+
+  const weeklyRecap = weeklyRecaps[0];
+  const baseOverride = weeklyRecap?.base_override_hours ?? null;
+
+  // Calcul des heures
+  const weekHours = useMemo(() => {
+    return calculateWeeklyHours(
+      shifts,
+      employee.id,
+      weekStart,
+      contractHoursPerWeek,
+      baseOverride
+    );
+  }, [shifts, employee.id, weekStart, contractHoursPerWeek, baseOverride]);
+
+  // Mutation pour sauvegarder/mettre à jour le recap
+  const saveMutation = useMutation({
+    mutationFn: async (baseValue) => {
+      const data = {
+        employee_id: employee.id,
+        week_start: weekStartStr,
+        base_override_hours: baseValue
+      };
+
+      if (weeklyRecap) {
+        return await base44.entities.WeeklyRecap.update(weeklyRecap.id, {
+          base_override_hours: baseValue
+        });
+      } else {
+        return await base44.entities.WeeklyRecap.create(data);
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['weeklyRecaps', employee.id] });
+      toast.success('Base mise à jour');
+    },
+    onError: (error) => {
+      console.error('Error saving weekly recap:', error);
+      toast.error('Erreur lors de la sauvegarde');
     }
   });
 
-  const calculationMode = settings[0]?.planning_calculation_mode || 'disabled';
-
-  // Calculate hours (TO BE REBUILT: Simple protocol from scratch)
-  const weekHours = calculateWeeklyHours(shifts, employee.id, weekStart, debugMode, nonShiftEvents, nonShiftTypes, employee);
+  // Mutation pour supprimer le recap (reset à défaut)
+  const deleteMutation = useMutation({
+    mutationFn: async () => {
+      if (weeklyRecap) {
+        return await base44.entities.WeeklyRecap.delete(weeklyRecap.id);
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['weeklyRecaps', employee.id] });
+      toast.success('Base remise par défaut');
+    }
+  });
 
   const handleDelete = () => {
     if (onDeleteWeek) {
@@ -29,20 +109,55 @@ export default function WeeklySummary({ employee, shifts, weekStart, onDeleteWee
     setShowConfirm(false);
   };
 
-  const hasOvertime = weekHours.total_overtime > 0 || weekHours.total_complementary > 0 || weekHours.exceeds_limit;
+  const handleStartEdit = useCallback(() => {
+    setTempBaseValue(weekHours.baseUsed.toString());
+    setIsEditingBase(true);
+  }, [weekHours.baseUsed]);
+
+  const handleCancelEdit = useCallback(() => {
+    setIsEditingBase(false);
+    setTempBaseValue('');
+  }, []);
+
+  const handleSaveBase = useCallback(() => {
+    const newValue = parseFloat(tempBaseValue);
+
+    if (isNaN(newValue) || newValue < 0) {
+      toast.error('Valeur invalide');
+      return;
+    }
+
+    // Si la valeur est identique au contrat, supprimer le override
+    if (Math.abs(newValue - contractHoursPerWeek) < 0.01) {
+      if (weeklyRecap) {
+        deleteMutation.mutate();
+      }
+    } else {
+      saveMutation.mutate(newValue);
+    }
+
+    setIsEditingBase(false);
+    setTempBaseValue('');
+  }, [tempBaseValue, contractHoursPerWeek, weeklyRecap, saveMutation, deleteMutation]);
+
+  const handleKeyDown = useCallback((e) => {
+    if (e.key === 'Enter') {
+      handleSaveBase();
+    } else if (e.key === 'Escape') {
+      handleCancelEdit();
+    }
+  }, [handleSaveBase, handleCancelEdit]);
+
+  const hasShifts = weekHours.shiftsCount > 0;
+  const hasOverride = baseOverride !== null;
 
   return (
     <div className={cn(
-      "px-2 py-3 text-center relative group",
-      hasOvertime && "bg-orange-100"
+      "px-2 py-2 text-center relative group",
+      hasOverride && "bg-blue-50"
     )}>
-      {hasOvertime && (
-        <div className="absolute top-1 right-1">
-          <AlertTriangle className="w-4 h-4 text-orange-600" />
-        </div>
-      )}
-
-      {weekHours.total > 0 && (
+      {/* Bouton supprimer semaine */}
+      {hasShifts && (
         <button
           onClick={(e) => {
             e.stopPropagation();
@@ -54,122 +169,87 @@ export default function WeeklySummary({ employee, shifts, weekStart, onDeleteWee
           <Trash2 className="w-3 h-3 text-red-600" />
         </button>
       )}
-      
-      <button
-        onClick={(e) => {
-          e.stopPropagation();
-          setDebugMode(!debugMode);
-        }}
-        className={cn(
-          "absolute bottom-1 right-1 p-1 rounded transition-colors opacity-0 group-hover:opacity-100",
-          debugMode ? "bg-purple-200" : "hover:bg-gray-200"
-        )}
-        title="Mode debug"
-      >
-        <Bug className="w-3 h-3 text-purple-600" />
-      </button>
-      
-      <div className="text-lg font-bold text-gray-900">
-        {weekHours.total.toFixed(1)}h
-      </div>
-      
-      {debugMode && weekHours.debugInfo && (
-        <div className="absolute left-0 top-full mt-1 bg-white border-2 border-purple-500 rounded p-2 shadow-lg z-50 text-[9px] w-64 max-h-96 overflow-y-auto">
-          <div className="font-bold text-purple-900 mb-1">Debug:</div>
-          
-          <div className="mb-2">
-            <div className="font-semibold text-gray-700">Shifts:</div>
-            {weekHours.debugInfo.filter(i => i.type === 'shift').map((info, i) => (
-              <div key={i} className={cn(
-                "font-mono",
-                info.included ? "text-green-700" : "text-red-500"
-              )}>
-                {info.date}: {info.durationMinutes}min {info.included ? '✓' : '✗'}
-              </div>
-            ))}
+
+      {/* BASE (éditable) */}
+      <div className="mb-1">
+        <div className="text-[9px] text-gray-500 uppercase font-semibold">Base</div>
+        {isEditingBase ? (
+          <div className="flex items-center justify-center gap-1">
+            <input
+              type="number"
+              step="0.5"
+              min="0"
+              value={tempBaseValue}
+              onChange={(e) => setTempBaseValue(e.target.value)}
+              onKeyDown={handleKeyDown}
+              className="w-14 text-center text-sm font-bold border rounded px-1 py-0.5"
+              autoFocus
+            />
+            <button
+              onClick={handleSaveBase}
+              className="p-0.5 hover:bg-green-100 rounded"
+              title="Valider"
+            >
+              <Check className="w-3 h-3 text-green-600" />
+            </button>
+            <button
+              onClick={handleCancelEdit}
+              className="p-0.5 hover:bg-red-100 rounded"
+              title="Annuler"
+            >
+              <X className="w-3 h-3 text-red-600" />
+            </button>
           </div>
-          
-          {weekHours.debugInfo.filter(i => i.type === 'non-shift').length > 0 && (
-            <div className="mb-2 border-t border-purple-200 pt-1">
-              <div className="font-semibold text-blue-700">Non-shifts (génère heures):</div>
-              {weekHours.debugInfo.filter(i => i.type === 'non-shift').map((info, i) => (
-                <div key={i} className={cn(
-                  "font-mono text-[8px]",
-                  info.generatesHours ? "text-blue-600" : "text-gray-400"
-                )}>
-                  {info.date}: {info.label}<br/>
-                  {info.generatesHours ? `✓ ${info.hoursGenerated.toFixed(2)}h (${info.method})` : '✗ Pas d\'heures'}
-                </div>
-              ))}
-            </div>
-          )}
-          
-          <div className="border-t border-purple-300 mt-1 pt-1">
-            <div className="font-bold text-green-700">
-              Shifts: {(weekHours.total - (weekHours.nonShiftHours || 0)).toFixed(2)}h
-            </div>
-            {weekHours.nonShiftHours > 0 && (
-              <div className="font-bold text-blue-700">
-                Non-shifts: {weekHours.nonShiftHours.toFixed(2)}h
-              </div>
+        ) : (
+          <button
+            onClick={handleStartEdit}
+            className={cn(
+              "text-sm font-bold hover:bg-gray-100 px-2 py-0.5 rounded transition-colors",
+              hasOverride ? "text-blue-700" : "text-gray-700"
             )}
-            <div className="font-bold text-purple-900">
-              Total: {weekHours.total.toFixed(2)}h
-            </div>
+            title="Cliquer pour modifier"
+          >
+            {weekHours.baseUsed.toFixed(1)}h
+            {hasOverride && <span className="text-[8px] ml-1">*</span>}
+          </button>
+        )}
+      </div>
+
+      {/* RÉALISÉ */}
+      <div className="mb-1">
+        <div className="text-[9px] text-gray-500 uppercase font-semibold">Réalisé</div>
+        <div className="text-lg font-bold text-gray-900">
+          {weekHours.workedHours.toFixed(1)}h
+        </div>
+      </div>
+
+      {/* HEURES + / HEURES - */}
+      <div className="flex justify-center gap-2 text-[11px]">
+        {weekHours.plusHours > 0 && (
+          <div className="text-green-700 font-bold bg-green-50 px-1.5 py-0.5 rounded">
+            +{weekHours.plusHours.toFixed(1)}h
           </div>
-        </div>
-      )}
-      
-      {/* Mode hebdomadaire activé */}
-      {calculationMode === 'weekly' && weekHours.type === 'full_time' && weekHours.total_overtime > 0 && (
-        <div className="text-[10px] space-y-0.5">
-          {weekHours.overtime_25 > 0 && (
-            <div className="text-orange-700 font-semibold">
-              +{weekHours.overtime_25.toFixed(1)}h (+25%)
-            </div>
-          )}
-          {weekHours.overtime_50 > 0 && (
-            <div className="text-red-700 font-semibold">
-              +{weekHours.overtime_50.toFixed(1)}h (+50%)
-            </div>
-          )}
+        )}
+        {weekHours.minusHours > 0 && (
+          <div className="text-red-700 font-bold bg-red-50 px-1.5 py-0.5 rounded">
+            -{weekHours.minusHours.toFixed(1)}h
+          </div>
+        )}
+        {weekHours.plusHours === 0 && weekHours.minusHours === 0 && weekHours.workedHours > 0 && (
+          <div className="text-gray-500 font-medium">
+            = 0h
+          </div>
+        )}
+      </div>
+
+      {/* Indicateur de surcharge */}
+      {hasOverride && (
+        <div className="mt-1 text-[8px] text-blue-600">
+          (contrat: {contractHoursPerWeek}h)
         </div>
       )}
 
-      {calculationMode === 'weekly' && weekHours.type === 'part_time' && weekHours.total_complementary > 0 && (
-        <div className="text-[10px] space-y-0.5">
-          {weekHours.complementary_10 > 0 && (
-            <div className="text-green-700 font-semibold">
-              +{weekHours.complementary_10.toFixed(1)}h (+10%)
-            </div>
-          )}
-          {weekHours.complementary_25 > 0 && (
-            <div className="text-orange-700 font-semibold">
-              +{weekHours.complementary_25.toFixed(1)}h (+25%)
-            </div>
-          )}
-          {weekHours.exceeds_limit && (
-            <div className="text-red-700 font-bold">
-              ⚠️ Plafond dépassé
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* Mode désactivé - affichage simple */}
-      {calculationMode === 'disabled' && weekHours.total > 0 && (
-        <div className="text-[10px] text-gray-500">
-          {weekHours.hasOvertime ? `+${weekHours.overtime?.toFixed(1)}h` : 'Normal'}
-        </div>
-      )}
-
-      {/* Mode mensuel - info uniquement */}
-      {calculationMode === 'monthly' && weekHours.total > 0 && (
-        <div className="text-[10px] text-gray-500">
-          Calcul mensuel
-        </div>
-      )}
-
+      {/* Bouton copier */}
       {onCopyFromAbove && (
         <button
           onClick={(e) => {
@@ -180,10 +260,11 @@ export default function WeeklySummary({ employee, shifts, weekStart, onDeleteWee
           title="Copier ma semaine du dessus"
         >
           <ArrowDown className="w-3 h-3" />
-          Copier ↑
+          Copier
         </button>
       )}
 
+      {/* Confirmation suppression */}
       {showConfirm && (
         <div className="absolute inset-0 bg-white border-2 border-red-500 rounded z-50 flex flex-col items-center justify-center p-2 shadow-lg">
           <p className="text-xs font-semibold text-red-900 mb-2 text-center">
