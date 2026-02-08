@@ -193,15 +193,27 @@ export default function Planning() {
       const firstDay = formatLocalDate(new Date(currentYear, currentMonth, 1));
       const lastDay = formatLocalDate(new Date(currentYear, currentMonth + 1, 0));
 
-      // Fetch all weekly recaps (limited to reasonable timeframe)
+      // CORRECTION: Récupérer aussi les semaines qui COMMENCENT avant le mois mais qui l'intersectent
+      // Une semaine dure 7 jours, donc on prend 7 jours avant le début du mois
+      const startRange = new Date(currentYear, currentMonth, 1);
+      startRange.setDate(startRange.getDate() - 7);
+      const startRangeStr = formatLocalDate(startRange);
+
+      // Fetch all weekly recaps
       const allRecaps = await base44.entities.WeeklyRecap.list();
       
-      // Filter to recaps that might be relevant to this month
-      const filtered = allRecaps.filter(r => r.week_start >= firstDay.substring(0, 7) + '-01' && r.week_start <= lastDay);
+      // Filter: semaines qui commencent entre [firstDay - 7j] et [lastDay]
+      // Cela capture les semaines qui intersectent avec le mois actuel
+      const filtered = allRecaps.filter(r => {
+        // La semaine doit commencer au plus tôt 7 jours avant le mois
+        // et au plus tard le dernier jour du mois
+        return r.week_start >= startRangeStr && r.week_start <= lastDay;
+      });
       
       console.log('═══════════════════════════════════════════════════');
       console.log('D) REFETCH - APRÈS MUTATION SUCCESS');
       console.log('═══════════════════════════════════════════════════');
+      console.log('Plage de recherche: [', startRangeStr, '-', lastDay, ']');
       console.log('Total recaps récupérés:', allRecaps.length);
       console.log('Recaps filtrés pour ce mois:', filtered.length);
       console.log('\nDétails des recaps avec override:');
