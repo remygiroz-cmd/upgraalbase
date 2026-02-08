@@ -76,6 +76,18 @@ export default function Planning() {
     queryFn: () => base44.entities.Team.filter({ is_active: true })
   });
 
+  // Fetch shifts for current month (needed for filtering archived employees)
+  const { data: shifts = [] } = useQuery({
+    queryKey: ['shifts', currentYear, currentMonth],
+    queryFn: async () => {
+      const firstDay = formatLocalDate(new Date(currentYear, currentMonth, 1));
+      const lastDay = formatLocalDate(new Date(currentYear, currentMonth + 1, 0));
+      
+      const allShifts = await base44.entities.Shift.list();
+      return allShifts.filter(s => s.date >= firstDay && s.date <= lastDay);
+    }
+  });
+
   const updateTeamMutation = useMutation({
     mutationFn: ({ id, data }) => base44.entities.Team.update(id, data),
     onSuccess: () => {
@@ -142,18 +154,6 @@ export default function Planning() {
     }
     return sortedEmployees;
   }, [sortedEmployees, filterType, selectedEmployee, selectedTeam]);
-
-  // Fetch shifts for current month
-  const { data: shifts = [] } = useQuery({
-    queryKey: ['shifts', currentYear, currentMonth],
-    queryFn: async () => {
-      const firstDay = formatLocalDate(new Date(currentYear, currentMonth, 1));
-      const lastDay = formatLocalDate(new Date(currentYear, currentMonth + 1, 0));
-      
-      const allShifts = await base44.entities.Shift.list();
-      return allShifts.filter(s => s.date >= firstDay && s.date <= lastDay);
-    }
-  });
 
   // Fetch non-shift events for current month
   const { data: nonShiftEvents = [] } = useQuery({
