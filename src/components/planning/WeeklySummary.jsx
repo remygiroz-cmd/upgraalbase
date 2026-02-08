@@ -47,25 +47,6 @@ export default function WeeklySummary({
   // weeklyRecap est maintenant passé en props depuis le parent
   const baseOverrideFromDB = weeklyRecap?.base_override_hours ?? null;
 
-  // ============================================
-  // 🔍 A) ÉTAT INITIAL (avant édition)
-  // ============================================
-  React.useEffect(() => {
-    console.log('═══════════════════════════════════════════════════');
-    console.log('A) ÉTAT INITIAL - AVANT ÉDITION');
-    console.log('═══════════════════════════════════════════════════');
-    console.log('employeeId:', employee.id);
-    console.log('employeeName:', employee.first_name + ' ' + employee.last_name);
-    console.log('weekStart (Date object):', weekStart);
-    console.log('weekStartStr (string YYYY-MM-DD):', weekStartStr);
-    console.log('baseDefault (calculé):', contractHoursPerWeek);
-    console.log('base_override_hours (DB):', baseOverrideFromDB);
-    console.log('weeklyRecap existant?:', !!weeklyRecap);
-    console.log('weeklyRecap.id:', weeklyRecap?.id || 'N/A');
-    console.log('valeur qui sera affichée:', baseOverrideFromDB !== null ? baseOverrideFromDB : contractHoursPerWeek);
-    console.log('═══════════════════════════════════════════════════\n');
-  }, [weeklyRecap, weekStartStr, employee.id]);
-
   // =====================================================
   // PRORATISATION SEMAINE INCOMPLÈTE
   // =====================================================
@@ -140,6 +121,30 @@ export default function WeeklySummary({
 
   // Base par défaut (proratisée si semaine incomplète, sinon contrat)
   const baseDefault = isPartialWeek ? proratedBase : contractHoursPerWeek;
+
+  // ============================================
+  // SOURCE DE VÉRITÉ UNIQUE POUR L'AFFICHAGE
+  // Priorité: override > baseDefault
+  // ============================================
+  const displayedBase = useMemo(() => {
+    const value = baseOverrideFromDB !== null ? baseOverrideFromDB : baseDefault;
+    
+    console.log('═══════════════════════════════════════════════════');
+    console.log('🎨 RENDER VALUE - VALEUR RÉELLEMENT AFFICHÉE');
+    console.log('═══════════════════════════════════════════════════');
+    console.log('employeeId:', employee.id);
+    console.log('employeeName:', employee.first_name + ' ' + employee.last_name);
+    console.log('weekStartStr:', weekStartStr);
+    console.log('baseOverrideFromDB:', baseOverrideFromDB);
+    console.log('baseDefault:', baseDefault);
+    console.log('isEditingBase:', isEditingBase);
+    console.log('baseDraft:', baseDraft);
+    console.log('weeklyRecap:', weeklyRecap);
+    console.log('VALEUR FINALE AFFICHÉE:', value);
+    console.log('═══════════════════════════════════════════════════\n');
+    
+    return value;
+  }, [baseOverrideFromDB, baseDefault, employee.id, weekStartStr, isEditingBase, baseDraft, weeklyRecap, employee.first_name, employee.last_name]);
 
   // Calculer les heures travaillées (workedHours)
   const workedHours = useMemo(() => {
@@ -365,30 +370,6 @@ export default function WeeklySummary({
 
   const hasShifts = shiftsCount > 0;
   const hasOverride = baseOverrideFromDB !== null;
-
-  // ============================================
-  // SOURCE DE VÉRITÉ UNIQUE POUR L'AFFICHAGE
-  // Priorité: override > baseDefault
-  // ============================================
-  const displayedBase = useMemo(() => {
-    const value = baseOverrideFromDB !== null ? baseOverrideFromDB : baseDefault;
-    
-    console.log('═══════════════════════════════════════════════════');
-    console.log('🎨 RENDER VALUE - VALEUR RÉELLEMENT AFFICHÉE');
-    console.log('═══════════════════════════════════════════════════');
-    console.log('employeeId:', employee.id);
-    console.log('employeeName:', employee.first_name + ' ' + employee.last_name);
-    console.log('weekStartStr:', weekStartStr);
-    console.log('baseOverrideFromDB:', baseOverrideFromDB);
-    console.log('baseDefault:', baseDefault);
-    console.log('isEditingBase:', isEditingBase);
-    console.log('baseDraft:', baseDraft);
-    console.log('weeklyRecap:', weeklyRecap);
-    console.log('VALEUR FINALE AFFICHÉE:', value);
-    console.log('═══════════════════════════════════════════════════\n');
-    
-    return value;
-  }, [baseOverrideFromDB, baseDefault, employee.id, weekStartStr, isEditingBase, baseDraft, weeklyRecap, employee.first_name, employee.last_name]);
 
   return (
     <div className={cn(
