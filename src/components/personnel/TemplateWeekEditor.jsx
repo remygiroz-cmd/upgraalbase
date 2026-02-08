@@ -148,7 +148,7 @@ export default function TemplateWeekEditor({ week, onClose }) {
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-3 pb-4 border-b">
-        <Button variant="ghost" size="sm" onClick={onClose}>
+        <Button type="button" variant="ghost" size="sm" onClick={onClose}>
           <ArrowLeft className="w-4 h-4 mr-2" />
           Retour
         </Button>
@@ -172,6 +172,7 @@ export default function TemplateWeekEditor({ week, onClose }) {
       <div className="grid grid-cols-7 gap-2">
         {DAYS.map(day => (
           <Button
+            type="button"
             key={day.value}
             variant={selectedDay === day.value ? "default" : "outline"}
             onClick={() => setSelectedDay(day.value)}
@@ -191,6 +192,7 @@ export default function TemplateWeekEditor({ week, onClose }) {
             {DAYS.find(d => d.value === selectedDay)?.label}
           </h4>
           <Button
+            type="button"
             onClick={() => setShowShiftForm(true)}
             size="sm"
             className="bg-orange-600 hover:bg-orange-700"
@@ -271,10 +273,10 @@ export default function TemplateWeekEditor({ week, onClose }) {
               </div>
 
               <div className="flex gap-2">
-                <Button onClick={handleSaveShift} className="flex-1">
+                <Button type="button" onClick={handleSaveShift} className="flex-1">
                   {editingShift ? 'Modifier' : 'Ajouter'}
                 </Button>
-                <Button variant="outline" onClick={resetShiftForm}>
+                <Button type="button" variant="outline" onClick={resetShiftForm}>
                   Annuler
                 </Button>
               </div>
@@ -332,6 +334,7 @@ export default function TemplateWeekEditor({ week, onClose }) {
                       </div>
                     </div>
                     <Button
+                      type="button"
                       variant="ghost"
                       size="sm"
                       onClick={(e) => {

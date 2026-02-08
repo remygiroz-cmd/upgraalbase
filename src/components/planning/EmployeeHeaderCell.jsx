@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { cn } from '@/lib/utils';
 
-const EmployeeHeaderCell = React.forwardRef(({
+const EmployeeHeaderCell = React.memo(React.forwardRef(({
   employee,
   team,
   isDragging,
@@ -72,7 +72,7 @@ const EmployeeHeaderCell = React.forwardRef(({
       )}
     </div>
   );
-});
+}));
 
 EmployeeHeaderCell.displayName = 'EmployeeHeaderCell';
 

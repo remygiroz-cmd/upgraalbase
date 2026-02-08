@@ -2,7 +2,7 @@ import React from 'react';
 import { Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
-export default function NonShiftCard({ nonShift, nonShiftType, onClick, onDelete }) {
+const NonShiftCard = React.memo(function NonShiftCard({ nonShift, nonShiftType, onClick, onDelete }) {
   if (!nonShiftType) return null;
 
   return (
@@ -37,4 +37,6 @@ export default function NonShiftCard({ nonShift, nonShiftType, onClick, onDelete
       </button>
     </div>
   );
-}
+});
+
+export default NonShiftCard;
