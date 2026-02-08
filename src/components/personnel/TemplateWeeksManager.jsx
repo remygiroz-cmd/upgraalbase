@@ -17,13 +17,16 @@ export default function TemplateWeeksManager({ employeeId }) {
   const [newWeekName, setNewWeekName] = useState('');
   const queryClient = useQueryClient();
 
-  const { data: templateWeeks = [] } = useQuery({
+  const { data: templateWeeks = [], isLoading, error } = useQuery({
     queryKey: ['templateWeeks', employeeId],
     queryFn: async () => {
       const weeks = await base44.entities.TemplateWeek.filter({ employee_id: employeeId });
       return weeks.sort((a, b) => (a.order || 0) - (b.order || 0));
     },
-    enabled: !!employeeId
+    enabled: !!employeeId,
+    staleTime: 5 * 60 * 1000,
+    cacheTime: 10 * 60 * 1000,
+    retry: 2
   });
 
   const createWeekMutation = useMutation({
@@ -118,6 +121,30 @@ export default function TemplateWeeksManager({ employeeId }) {
           setSelectedWeek(null);
         }}
       />
+    );
+  }
+
+  if (isLoading) {
+    return (
+      <div className="flex flex-col items-center justify-center py-12 gap-3">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-600"></div>
+        <p className="text-sm text-gray-600">Chargement des plannings types...</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center py-12 gap-3">
+        <p className="text-sm text-red-600">
+          {error?.message?.includes('Rate limit') 
+            ? 'Trop de requêtes, veuillez patienter...'
+            : 'Erreur de chargement'}
+        </p>
+        <Button onClick={() => queryClient.invalidateQueries({ queryKey: ['templateWeeks', employeeId] })} variant="outline">
+          Réessayer
+        </Button>
+      </div>
     );
   }
 
