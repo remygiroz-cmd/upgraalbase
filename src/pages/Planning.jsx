@@ -64,10 +64,10 @@ export default function Planning() {
   const currentMonth = currentDate.getMonth();
   const currentYear = currentDate.getFullYear();
 
-  // Fetch employees
+  // Fetch ALL employees (including archived)
   const { data: allEmployees = [] } = useQuery({
     queryKey: ['employees'],
-    queryFn: () => base44.entities.Employee.filter({ is_active: true })
+    queryFn: () => base44.entities.Employee.list()
   });
 
   // Fetch teams
@@ -83,9 +83,37 @@ export default function Planning() {
     }
   });
 
-  // Sort employees by team order
+  // Filter and sort employees based on archive status and month
   const sortedEmployees = React.useMemo(() => {
-    return [...allEmployees].sort((a, b) => {
+    const today = new Date();
+    const currentMonthDate = new Date(currentYear, currentMonth, 1);
+    
+    // Déterminer si le mois affiché est passé, présent ou futur
+    const isPastMonth = currentMonthDate < new Date(today.getFullYear(), today.getMonth(), 1);
+    const isCurrentMonth = currentMonthDate.getFullYear() === today.getFullYear() && 
+                           currentMonthDate.getMonth() === today.getMonth();
+    const isFutureMonth = currentMonthDate > new Date(today.getFullYear(), today.getMonth(), 1);
+    
+    // Filtrer les employés selon la règle
+    let filteredEmployees = allEmployees;
+    
+    if (isFutureMonth) {
+      // Mois futur: uniquement employés actifs
+      filteredEmployees = allEmployees.filter(emp => emp.is_active === true);
+    } else if (isCurrentMonth) {
+      // Mois en cours: employés actifs + archivés avec au moins 1 shift ce mois
+      filteredEmployees = allEmployees.filter(emp => {
+        if (emp.is_active === true) return true;
+        
+        // Employé archivé: vérifier s'il a au moins 1 shift ce mois
+        const hasShiftsThisMonth = shifts.some(s => s.employee_id === emp.id);
+        return hasShiftsThisMonth;
+      });
+    }
+    // Si mois passé (isPastMonth): afficher tous les employés (pas de filtre)
+    
+    // Trier par équipe puis par nom
+    return [...filteredEmployees].sort((a, b) => {
       const teamA = allTeams.find(t => t.id === a.team_id);
       const teamB = allTeams.find(t => t.id === b.team_id);
       
@@ -97,7 +125,7 @@ export default function Planning() {
       // Same team, sort by name
       return (a.first_name || '').localeCompare(b.first_name || '');
     });
-  }, [allEmployees, allTeams]);
+  }, [allEmployees, allTeams, currentYear, currentMonth, shifts]);
 
   // Get teams sorted by order
   const teams = React.useMemo(() => {
