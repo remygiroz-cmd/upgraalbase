@@ -1114,6 +1114,8 @@ export default function Planning() {
                                     shifts={shifts}
                                     weekStart={weekStart}
                                     weeklyRecap={weeklyRecap}
+                                    currentMonth={currentMonth}
+                                    currentYear={currentYear}
                                     onDeleteWeek={handleDeleteWeek}
                                     onCopyFromAbove={hasEmployeeEventsAbove && weekAbove.getMonth() >= new Date(currentYear, currentMonth, 1).getMonth()
                                       ? () => handleCopyEmployeeWeekFromAbove(employee.id, weekStart)

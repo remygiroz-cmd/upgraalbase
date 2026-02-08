@@ -23,11 +23,96 @@ const DAYS_FR = [
 ];
 
 function WeeklyScheduleBlock({ schedule, onChange, isManager, expectedDays, expectedWeeklyHours }) {
+  const [manualOverrides, setManualOverrides] = React.useState(new Set());
+  
   const daysWorked = Object.values(schedule).filter(d => d.worked).length;
   const totalWeeklyHours = Object.values(schedule).reduce((sum, d) => sum + (d.worked ? parseFloat(d.hours || 0) : 0), 0);
   
   const daysMatch = !expectedDays || daysWorked === expectedDays;
   const hoursMatch = !expectedWeeklyHours || Math.abs(totalWeeklyHours - expectedWeeklyHours) < 0.1;
+
+  const handleDayToggle = (dayKey, checked) => {
+    const newSchedule = {
+      ...schedule,
+      [dayKey]: {
+        worked: checked,
+        hours: checked ? (schedule[dayKey]?.hours || 0) : 0
+      }
+    };
+    onChange(newSchedule);
+  };
+
+  const handleHoursChange = (dayKey, value) => {
+    // Marquer comme modification manuelle
+    setManualOverrides(prev => new Set(prev).add(dayKey));
+    
+    const newSchedule = {
+      ...schedule,
+      [dayKey]: {
+        worked: schedule[dayKey]?.worked || false,
+        hours: parseFloat(value) || 0
+      }
+    };
+    onChange(newSchedule);
+  };
+
+  const handleAutoDistribute = () => {
+    console.log('[Auto-distribute] Click', { 
+      expectedWeeklyHours, 
+      daysWorked,
+      schedule 
+    });
+
+    // Validation
+    if (!expectedWeeklyHours || expectedWeeklyHours <= 0) {
+      toast.error('⚠️ Renseignez d\'abord les heures contractuelles/semaine');
+      return;
+    }
+
+    const workedDays = DAYS_FR.filter(day => schedule[day.key]?.worked).map(d => d.key);
+    if (workedDays.length === 0) {
+      toast.error('⚠️ Cochez au moins un jour de travail');
+      return;
+    }
+
+    // Calcul avec arrondi au quart d'heure
+    const nbDays = workedDays.length;
+    const baseHours = expectedWeeklyHours / nbDays;
+    const roundedBase = Math.round(baseHours * 4) / 4;
+
+    const updatedSchedule = { ...schedule };
+    let totalAssigned = 0;
+
+    // Assigner les heures arrondies à tous les jours travaillés
+    workedDays.forEach((dayKey, index) => {
+      if (index < workedDays.length - 1) {
+        updatedSchedule[dayKey] = {
+          worked: true,
+          hours: roundedBase
+        };
+        totalAssigned += roundedBase;
+      }
+    });
+
+    // Ajuster le dernier jour pour atteindre exactement le total
+    const lastDay = workedDays[workedDays.length - 1];
+    const remainingHours = expectedWeeklyHours - totalAssigned;
+    const adjustedLastHours = Math.round(remainingHours * 4) / 4;
+    
+    updatedSchedule[lastDay] = {
+      worked: true,
+      hours: adjustedLastHours
+    };
+
+    console.log('[Auto-distribute] Calculated', updatedSchedule);
+
+    // Réinitialiser les overrides manuels
+    setManualOverrides(new Set());
+
+    // Appliquer les changements
+    onChange(updatedSchedule);
+    toast.success('✓ Répartition automatique appliquée');
+  };
 
   return (
     <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
@@ -43,16 +128,7 @@ function WeeklyScheduleBlock({ schedule, onChange, isManager, expectedDays, expe
                 type="checkbox"
                 id={`day-${day.key}`}
                 checked={schedule[day.key]?.worked || false}
-                onChange={(e) => {
-                  const newSchedule = {
-                    ...schedule,
-                    [day.key]: {
-                      worked: e.target.checked,
-                      hours: e.target.checked ? (schedule[day.key]?.hours || 0) : 0
-                    }
-                  };
-                  onChange(newSchedule);
-                }}
+                onChange={(e) => handleDayToggle(day.key, e.target.checked)}
                 disabled={!isManager}
                 className="w-4 h-4 rounded border-gray-300"
               />
@@ -62,20 +138,11 @@ function WeeklyScheduleBlock({ schedule, onChange, isManager, expectedDays, expe
             </div>
             <Input
               type="number"
-              step="0.5"
+              step="0.25"
               min="0"
               max="24"
               value={schedule[day.key]?.worked ? (schedule[day.key]?.hours || '') : ''}
-              onChange={(e) => {
-                const newSchedule = {
-                  ...schedule,
-                  [day.key]: {
-                    worked: schedule[day.key]?.worked || false,
-                    hours: parseFloat(e.target.value) || 0
-                  }
-                };
-                onChange(newSchedule);
-              }}
+              onChange={(e) => handleHoursChange(day.key, e.target.value)}
               disabled={!isManager || !schedule[day.key]?.worked}
               placeholder="h"
               className="bg-white border-gray-300 text-gray-900 text-sm"
@@ -83,6 +150,20 @@ function WeeklyScheduleBlock({ schedule, onChange, isManager, expectedDays, expe
           </div>
         ))}
       </div>
+
+      {daysWorked > 0 && isManager && (
+        <div className="mb-3">
+          <Button
+            type="button"
+            onClick={handleAutoDistribute}
+            variant="outline"
+            size="sm"
+            className="w-full border-blue-400 text-blue-700 hover:bg-blue-50"
+          >
+            🔄 Répartir automatiquement
+          </Button>
+        </div>
+      )}
 
       <div className="bg-white border border-gray-200 rounded-lg p-3 space-y-2">
         <div className="flex items-center justify-between text-sm">
