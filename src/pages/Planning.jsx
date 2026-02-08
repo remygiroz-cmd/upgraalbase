@@ -1121,6 +1121,11 @@ export default function Planning() {
                                       ? () => handleCopyEmployeeWeekFromAbove(employee.id, weekStart)
                                       : null
                                     }
+                                    onRecapUpdate={() => {
+                                      console.log('[Planning] 🔄 Refetching weekly recaps after update');
+                                      queryClient.invalidateQueries({ queryKey: ['allWeeklyRecaps'] });
+                                      queryClient.refetchQueries({ queryKey: ['allWeeklyRecaps', currentYear, currentMonth] });
+                                    }}
                                     nonShiftEvents={nonShiftEvents}
                                     nonShiftTypes={nonShiftTypes}
                                   />
