@@ -333,27 +333,20 @@ export default function WeeklySummary({
       return;
     }
 
-    // Si identique à la base par défaut, supprimer l'override
-    if (Math.abs(newValue - baseDefault) < 0.01) {
-      if (weeklyRecap) {
-        deleteMutation.mutate();
-      }
-      setIsEditingBase(false);
-      setBaseDraft('');
-    } else {
-      console.log('═══════════════════════════════════════════════════');
-      console.log('B) CLÉ DE MATCHING (point critique)');
-      console.log('═══════════════════════════════════════════════════');
-      console.log('employeeId:', employee.id);
-      console.log('weekStartStr (DOIT être YYYY-MM-DD):', weekStartStr);
-      console.log('format correct?:', /^\d{4}-\d{2}-\d{2}$/.test(weekStartStr));
-      console.log('clé de matching attendue:', `${employee.id}_${weekStartStr}`);
-      console.log('valeur à sauvegarder:', newValue);
-      console.log('═══════════════════════════════════════════════════\n');
-      
-      saveMutation.mutate(newValue);
-    }
-  }, [baseDraft, baseDefault, weeklyRecap, saveMutation, deleteMutation, weekStartStr, baseOverrideFromDB, employee.id]);
+    // Toujours sauvegarder la valeur entrée, même si elle est égale au défaut
+    // L'utilisateur peut vouloir "verrouiller" une valeur spécifique
+    console.log('═══════════════════════════════════════════════════');
+    console.log('B) CLÉ DE MATCHING (point critique)');
+    console.log('═══════════════════════════════════════════════════');
+    console.log('employeeId:', employee.id);
+    console.log('weekStartStr (DOIT être YYYY-MM-DD):', weekStartStr);
+    console.log('format correct?:', /^\d{4}-\d{2}-\d{2}$/.test(weekStartStr));
+    console.log('clé de matching attendue:', `${employee.id}_${weekStartStr}`);
+    console.log('valeur à sauvegarder:', newValue);
+    console.log('═══════════════════════════════════════════════════\n');
+    
+    saveMutation.mutate(newValue);
+  }, [baseDraft, weeklyRecap, saveMutation, deleteMutation, weekStartStr, employee.id]);
 
   const handleKeyDown = useCallback((e) => {
     if (e.key === 'Enter') {
