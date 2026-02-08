@@ -237,13 +237,29 @@ export default function WeeklySummary({
         throw err;
       }
     },
-    onSuccess: (data) => {
+    onSuccess: async (data) => {
+      console.log('[WeeklySummary] ✅ MUTATION SUCCESS - Closing edit mode');
+      
+      // D'abord fermer l'édition
       setIsEditingBase(false);
       setBaseDraft('');
       
-      // Invalider et refetch
+      // Puis invalider et refetch
       queryClient.invalidateQueries({ queryKey: ['allWeeklyRecaps'] });
-      if (onRecapUpdate) onRecapUpdate();
+      if (onRecapUpdate) {
+        await onRecapUpdate();
+      }
+      
+      // Vérifier après un court délai que les props ont bien changé
+      setTimeout(() => {
+        console.log('[WeeklySummary] 🔄 POST-SUCCESS CHECK:', {
+          employeeId: employee.id,
+          weekStartStr,
+          weeklyRecap: weeklyRecap,
+          baseOverrideFromDB: weeklyRecap?.base_override_hours,
+          expectedValue: data.base_override_hours
+        });
+      }, 200);
       
       toast.success('Base enregistrée ✓');
     },
@@ -280,11 +296,12 @@ export default function WeeklySummary({
   };
 
   const handleStartEdit = useCallback(() => {
-    // Initialiser baseDraft avec la valeur actuelle
-    const currentBase = baseOverrideFromDB !== null ? baseOverrideFromDB : baseDefault;
+    // Initialiser baseDraft avec la valeur RÉELLEMENT AFFICHÉE (source de vérité)
+    const currentBase = displayedBase;
+    console.log('[WeeklySummary] 🖊️ START EDIT - initializing baseDraft with:', currentBase);
     setBaseDraft(currentBase.toString());
     setIsEditingBase(true);
-  }, [baseOverrideFromDB, baseDefault]);
+  }, [displayedBase]);
 
   const handleCancelEdit = useCallback(() => {
     setIsEditingBase(false);
@@ -349,18 +366,29 @@ export default function WeeklySummary({
   const hasShifts = shiftsCount > 0;
   const hasOverride = baseOverrideFromDB !== null;
 
-  // Valeur affichée pour la base (quand pas en édition)
-  const displayedBase = baseOverrideFromDB !== null ? baseOverrideFromDB : baseDefault;
-  
-  // 🔍 LOG FINAL: Valeur qui sera rendue
-  React.useEffect(() => {
-    console.log('🎨 RENDU FINAL:');
-    console.log('  baseOverrideFromDB:', baseOverrideFromDB);
-    console.log('  baseDefault:', baseDefault);
-    console.log('  displayedBase (affiché):', displayedBase);
-    console.log('  logique: override != null ?', baseOverrideFromDB !== null, '→', displayedBase);
-    console.log('');
-  }, [baseOverrideFromDB, baseDefault, displayedBase]);
+  // ============================================
+  // SOURCE DE VÉRITÉ UNIQUE POUR L'AFFICHAGE
+  // Priorité: override > baseDefault
+  // ============================================
+  const displayedBase = useMemo(() => {
+    const value = baseOverrideFromDB !== null ? baseOverrideFromDB : baseDefault;
+    
+    console.log('═══════════════════════════════════════════════════');
+    console.log('🎨 RENDER VALUE - VALEUR RÉELLEMENT AFFICHÉE');
+    console.log('═══════════════════════════════════════════════════');
+    console.log('employeeId:', employee.id);
+    console.log('employeeName:', employee.first_name + ' ' + employee.last_name);
+    console.log('weekStartStr:', weekStartStr);
+    console.log('baseOverrideFromDB:', baseOverrideFromDB);
+    console.log('baseDefault:', baseDefault);
+    console.log('isEditingBase:', isEditingBase);
+    console.log('baseDraft:', baseDraft);
+    console.log('weeklyRecap:', weeklyRecap);
+    console.log('VALEUR FINALE AFFICHÉE:', value);
+    console.log('═══════════════════════════════════════════════════\n');
+    
+    return value;
+  }, [baseOverrideFromDB, baseDefault, employee.id, weekStartStr, isEditingBase, baseDraft, weeklyRecap, employee.first_name, employee.last_name]);
 
   return (
     <div className={cn(
