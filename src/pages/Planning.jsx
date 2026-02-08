@@ -148,6 +148,15 @@ export default function Planning() {
     }
   });
 
+  // Fetch positions (once for all ShiftCards)
+  const { data: positions = [] } = useQuery({
+    queryKey: ['positions'],
+    queryFn: async () => {
+      const all = await base44.entities.Position.filter({ is_active: true });
+      return all.sort((a, b) => (a.order || 0) - (b.order || 0));
+    }
+  });
+
   // Fetch CP periods for current month
   const { data: paidLeavePeriods = [] } = useQuery({
     queryKey: ['paidLeavePeriods', currentYear, currentMonth],
@@ -228,18 +237,22 @@ export default function Planning() {
     }
   });
 
-  // Get days in month with week info
-  const getDaysInMonth = () => {
+  // Get days in month with week info - memoized for performance
+  const daysArray = React.useMemo(() => {
     const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
     const days = [];
-    
+    const today = new Date();
+    const todayDay = today.getDate();
+    const todayMonth = today.getMonth();
+    const todayYear = today.getFullYear();
+
     for (let day = 1; day <= daysInMonth; day++) {
       const date = new Date(currentYear, currentMonth, day);
       const dayOfWeek = date.getDay();
       const adjustedDay = dayOfWeek === 0 ? 6 : dayOfWeek - 1; // Monday = 0, Sunday = 6
       const isFirstDayOfWeek = adjustedDay === 0;
       const isLastDayOfWeek = adjustedDay === 6;
-      
+
       days.push({
         day,
         date,
@@ -248,16 +261,14 @@ export default function Planning() {
         isFirstDayOfWeek,
         isLastDayOfWeek,
         isWeekend: dayOfWeek === 0 || dayOfWeek === 6,
-        isToday: day === new Date().getDate() && 
-                 currentMonth === new Date().getMonth() && 
-                 currentYear === new Date().getFullYear()
+        isToday: day === todayDay &&
+                 currentMonth === todayMonth &&
+                 currentYear === todayYear
       });
     }
-    
-    return days;
-  };
 
-  const daysArray = getDaysInMonth();
+    return days;
+  }, [currentYear, currentMonth]);
 
   // Navigate months
   const previousMonth = () => {
@@ -335,20 +346,45 @@ export default function Planning() {
     };
   }, [employees.length]);
 
-  // Get shifts for employee and date (sorted chronologically)
-  const getShiftsForEmployeeAndDate = (employeeId, dateStr) => {
-    return shifts
-      .filter(s => s.employee_id === employeeId && s.date === dateStr)
-      .sort((a, b) => {
-        // Sort by start_time
-        return a.start_time.localeCompare(b.start_time);
-      });
-  };
+  // Pre-compute shift lookups for O(1) access - major performance improvement
+  const shiftsLookup = React.useMemo(() => {
+    const lookup = new Map();
+    for (const shift of shifts) {
+      const key = `${shift.employee_id}_${shift.date}`;
+      if (!lookup.has(key)) {
+        lookup.set(key, []);
+      }
+      lookup.get(key).push(shift);
+    }
+    // Sort each employee's shifts by start_time
+    for (const [key, empShifts] of lookup) {
+      empShifts.sort((a, b) => a.start_time.localeCompare(b.start_time));
+    }
+    return lookup;
+  }, [shifts]);
 
-  // Get non-shift events for employee and date
-  const getNonShiftsForEmployeeAndDate = (employeeId, dateStr) => {
-    return nonShiftEvents.filter(e => e.employee_id === employeeId && e.date === dateStr);
-  };
+  // Pre-compute non-shift lookups for O(1) access
+  const nonShiftsLookup = React.useMemo(() => {
+    const lookup = new Map();
+    for (const event of nonShiftEvents) {
+      const key = `${event.employee_id}_${event.date}`;
+      if (!lookup.has(key)) {
+        lookup.set(key, []);
+      }
+      lookup.get(key).push(event);
+    }
+    return lookup;
+  }, [nonShiftEvents]);
+
+  // Get shifts for employee and date (O(1) lookup)
+  const getShiftsForEmployeeAndDate = React.useCallback((employeeId, dateStr) => {
+    return shiftsLookup.get(`${employeeId}_${dateStr}`) || [];
+  }, [shiftsLookup]);
+
+  // Get non-shift events for employee and date (O(1) lookup)
+  const getNonShiftsForEmployeeAndDate = React.useCallback((employeeId, dateStr) => {
+    return nonShiftsLookup.get(`${employeeId}_${dateStr}`) || [];
+  }, [nonShiftsLookup]);
 
   // Find the last non-empty cell above for copying
   const getLastNonEmptyCellAbove = (employeeId, dateStr) => {
@@ -945,6 +981,7 @@ export default function Planning() {
                                       <div key={shift.id} className={totalEvents === 1 ? "flex-1" : ""}>
                                         <ShiftCard
                                           shift={shift}
+                                          positions={positions}
                                           onClick={(e) => {
                                             e.stopPropagation();
                                             handleCellClick(employee.id, dateStr, dayInfo);

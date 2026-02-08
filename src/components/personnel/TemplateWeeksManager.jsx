@@ -131,6 +131,7 @@ export default function TemplateWeeksManager({ employeeId }) {
           </p>
         </div>
         <Button
+          type="button"
           onClick={() => setShowCreateForm(true)}
           className="bg-orange-600 hover:bg-orange-700"
         >
@@ -150,10 +151,11 @@ export default function TemplateWeeksManager({ employeeId }) {
               onKeyDown={(e) => e.key === 'Enter' && handleCreateWeek()}
             />
             <div className="flex gap-2">
-              <Button onClick={handleCreateWeek} className="flex-1">
+              <Button type="button" onClick={handleCreateWeek} className="flex-1">
                 Créer
               </Button>
               <Button
+                type="button"
                 variant="outline"
                 onClick={() => {
                   setShowCreateForm(false);
@@ -204,6 +206,7 @@ export default function TemplateWeeksManager({ employeeId }) {
                 <div className="flex gap-1">
                   {!week.is_default && (
                     <Button
+                      type="button"
                       variant="ghost"
                       size="sm"
                       onClick={() => setDefaultMutation.mutate(week.id)}
@@ -213,6 +216,7 @@ export default function TemplateWeeksManager({ employeeId }) {
                     </Button>
                   )}
                   <Button
+                    type="button"
                     variant="ghost"
                     size="sm"
                     onClick={() => {
@@ -223,6 +227,7 @@ export default function TemplateWeeksManager({ employeeId }) {
                     <Edit className="w-4 h-4" />
                   </Button>
                   <Button
+                    type="button"
                     variant="ghost"
                     size="sm"
                     onClick={() => duplicateWeekMutation.mutate(week)}
@@ -230,6 +235,7 @@ export default function TemplateWeeksManager({ employeeId }) {
                     <Copy className="w-4 h-4" />
                   </Button>
                   <Button
+                    type="button"
                     variant="ghost"
                     size="sm"
                     onClick={() => {

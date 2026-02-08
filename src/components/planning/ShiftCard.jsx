@@ -1,6 +1,4 @@
 import React from 'react';
-import { useQuery } from '@tanstack/react-query';
-import { base44 } from '@/api/base44Client';
 import { cn } from '@/lib/utils';
 import { Clock, Coffee, AlertTriangle, Trash2 } from 'lucide-react';
 
@@ -20,15 +18,7 @@ const STATUS_ICONS = {
   cancelled: '❌'
 };
 
-export default function ShiftCard({ shift, onClick, onDelete, hasRestWarning, hasOvertimeWarning }) {
-  const { data: positions = [] } = useQuery({
-    queryKey: ['positions'],
-    queryFn: async () => {
-      const all = await base44.entities.Position.filter({ is_active: true });
-      return all;
-    }
-  });
-
+const ShiftCard = React.memo(function ShiftCard({ shift, positions = [], onClick, onDelete, hasRestWarning, hasOvertimeWarning }) {
   const calculateDuration = () => {
     const [startH, startM] = shift.start_time.split(':').map(Number);
     const [endH, endM] = shift.end_time.split(':').map(Number);
@@ -109,4 +99,6 @@ export default function ShiftCard({ shift, onClick, onDelete, hasRestWarning, ha
       </div>
     </div>
   );
-}
+});
+
+export default ShiftCard;
