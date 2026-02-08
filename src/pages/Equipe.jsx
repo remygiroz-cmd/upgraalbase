@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
-import { Users, User, FileText, Download, Printer, Upload, Trash2, FileJson, DollarSign, File } from 'lucide-react';
+import { Users, User, FileText, Download, Printer, Upload, Trash2, FileJson, DollarSign, File, AlertCircle } from 'lucide-react';
 import PageHeader from '@/components/ui/PageHeader';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
@@ -30,10 +30,12 @@ export default function Equipe() {
     queryFn: () => base44.entities.Establishment.list()
   });
 
-  const { data: registryEntries = [], isLoading } = useQuery({
+  const { data: registryEntries = [], isLoading, error: registryError } = useQuery({
     queryKey: ['personnelRegistry'],
     queryFn: () => base44.entities.PersonnelRegistry.list('start_date'),
-    enabled: activeTab === 'registre'
+    enabled: activeTab === 'registre',
+    staleTime: 2 * 60 * 1000,
+    retry: 2
   });
 
   // Check if user is manager/admin
@@ -254,7 +256,31 @@ export default function Equipe() {
   );
 
   if (isLoading && activeTab === 'registre') {
-    return <LoadingSpinner />;
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[400px] gap-4">
+        <LoadingSpinner />
+        <p className="text-sm text-gray-600">Chargement du registre...</p>
+      </div>
+    );
+  }
+
+  if (registryError && activeTab === 'registre') {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[400px] gap-4">
+        <AlertCircle className="w-12 h-12 text-red-500" />
+        <div className="text-center">
+          <h3 className="text-lg font-semibold text-gray-900 mb-2">Erreur de chargement</h3>
+          <p className="text-sm text-gray-600 mb-4">
+            {registryError?.message?.includes('Rate limit')
+              ? 'Trop de requêtes, veuillez patienter...'
+              : 'Impossible de charger le registre'}
+          </p>
+          <Button onClick={() => window.location.reload()} variant="outline">
+            Réessayer
+          </Button>
+        </div>
+      </div>
+    );
   }
 
   return (
