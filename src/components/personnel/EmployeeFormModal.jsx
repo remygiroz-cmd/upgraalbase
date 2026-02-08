@@ -23,11 +23,108 @@ const DAYS_FR = [
 ];
 
 function WeeklyScheduleBlock({ schedule, onChange, isManager, expectedDays, expectedWeeklyHours }) {
+  const [manualOverrides, setManualOverrides] = React.useState(new Set());
+  
   const daysWorked = Object.values(schedule).filter(d => d.worked).length;
   const totalWeeklyHours = Object.values(schedule).reduce((sum, d) => sum + (d.worked ? parseFloat(d.hours || 0) : 0), 0);
   
   const daysMatch = !expectedDays || daysWorked === expectedDays;
   const hoursMatch = !expectedWeeklyHours || Math.abs(totalWeeklyHours - expectedWeeklyHours) < 0.1;
+
+  // Auto-préremplissage des heures journalières
+  const autoFillHours = React.useCallback((newSchedule, resetOverrides = false) => {
+    if (resetOverrides) {
+      setManualOverrides(new Set());
+    }
+
+    if (!expectedWeeklyHours || expectedWeeklyHours <= 0) {
+      return newSchedule;
+    }
+
+    const workedDays = DAYS_FR.filter(day => newSchedule[day.key]?.worked).map(d => d.key);
+    const nbDays = workedDays.length;
+
+    if (nbDays === 0) {
+      return newSchedule;
+    }
+
+    // Calcul avec arrondi au quart d'heure (0.25h)
+    const baseHours = expectedWeeklyHours / nbDays;
+    const roundedBase = Math.round(baseHours * 4) / 4; // Arrondi à 0.25h près
+
+    const updatedSchedule = { ...newSchedule };
+    let totalAssigned = 0;
+
+    // Assigner les heures arrondies à tous les jours (sauf ceux avec override)
+    workedDays.forEach((dayKey, index) => {
+      if (!resetOverrides && manualOverrides.has(dayKey)) {
+        // Garder la valeur manuelle
+        totalAssigned += parseFloat(updatedSchedule[dayKey]?.hours || 0);
+      } else {
+        updatedSchedule[dayKey] = {
+          ...updatedSchedule[dayKey],
+          hours: roundedBase
+        };
+        totalAssigned += roundedBase;
+      }
+    });
+
+    // Ajuster le dernier jour pour atteindre exactement le total
+    const lastDay = workedDays[workedDays.length - 1];
+    if (!resetOverrides && !manualOverrides.has(lastDay)) {
+      const delta = expectedWeeklyHours - totalAssigned;
+      const adjustedHours = Math.round((roundedBase + delta) * 4) / 4;
+      updatedSchedule[lastDay] = {
+        ...updatedSchedule[lastDay],
+        hours: adjustedHours
+      };
+    }
+
+    return updatedSchedule;
+  }, [expectedWeeklyHours, manualOverrides]);
+
+  // Effet pour auto-préremplir quand les heures contractuelles changent
+  React.useEffect(() => {
+    if (expectedWeeklyHours && daysWorked > 0) {
+      const newSchedule = autoFillHours(schedule, false);
+      if (JSON.stringify(newSchedule) !== JSON.stringify(schedule)) {
+        onChange(newSchedule);
+      }
+    }
+  }, [expectedWeeklyHours]);
+
+  const handleDayToggle = (dayKey, checked) => {
+    const newSchedule = {
+      ...schedule,
+      [dayKey]: {
+        worked: checked,
+        hours: checked ? (schedule[dayKey]?.hours || 0) : 0
+      }
+    };
+    
+    // Auto-préremplir après le toggle
+    const filledSchedule = autoFillHours(newSchedule, false);
+    onChange(filledSchedule);
+  };
+
+  const handleHoursChange = (dayKey, value) => {
+    // Marquer comme modification manuelle
+    setManualOverrides(prev => new Set(prev).add(dayKey));
+    
+    const newSchedule = {
+      ...schedule,
+      [dayKey]: {
+        worked: schedule[dayKey]?.worked || false,
+        hours: parseFloat(value) || 0
+      }
+    };
+    onChange(newSchedule);
+  };
+
+  const handleAutoDistribute = () => {
+    const newSchedule = autoFillHours(schedule, true);
+    onChange(newSchedule);
+  };
 
   return (
     <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
@@ -43,16 +140,7 @@ function WeeklyScheduleBlock({ schedule, onChange, isManager, expectedDays, expe
                 type="checkbox"
                 id={`day-${day.key}`}
                 checked={schedule[day.key]?.worked || false}
-                onChange={(e) => {
-                  const newSchedule = {
-                    ...schedule,
-                    [day.key]: {
-                      worked: e.target.checked,
-                      hours: e.target.checked ? (schedule[day.key]?.hours || 0) : 0
-                    }
-                  };
-                  onChange(newSchedule);
-                }}
+                onChange={(e) => handleDayToggle(day.key, e.target.checked)}
                 disabled={!isManager}
                 className="w-4 h-4 rounded border-gray-300"
               />
@@ -62,20 +150,11 @@ function WeeklyScheduleBlock({ schedule, onChange, isManager, expectedDays, expe
             </div>
             <Input
               type="number"
-              step="0.5"
+              step="0.25"
               min="0"
               max="24"
               value={schedule[day.key]?.worked ? (schedule[day.key]?.hours || '') : ''}
-              onChange={(e) => {
-                const newSchedule = {
-                  ...schedule,
-                  [day.key]: {
-                    worked: schedule[day.key]?.worked || false,
-                    hours: parseFloat(e.target.value) || 0
-                  }
-                };
-                onChange(newSchedule);
-              }}
+              onChange={(e) => handleHoursChange(day.key, e.target.value)}
               disabled={!isManager || !schedule[day.key]?.worked}
               placeholder="h"
               className="bg-white border-gray-300 text-gray-900 text-sm"
@@ -83,6 +162,20 @@ function WeeklyScheduleBlock({ schedule, onChange, isManager, expectedDays, expe
           </div>
         ))}
       </div>
+
+      {daysWorked > 0 && isManager && (
+        <div className="mb-3">
+          <Button
+            type="button"
+            onClick={handleAutoDistribute}
+            variant="outline"
+            size="sm"
+            className="w-full border-blue-400 text-blue-700 hover:bg-blue-50"
+          >
+            🔄 Répartir automatiquement
+          </Button>
+        </div>
+      )}
 
       <div className="bg-white border border-gray-200 rounded-lg p-3 space-y-2">
         <div className="flex items-center justify-between text-sm">
