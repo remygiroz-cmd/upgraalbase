@@ -104,14 +104,18 @@ export default function WeeklySummary({
     // Compter combien de jours travaillés dans la portion de semaine dans le mois
     const workingDaysCount = daysInMonth.filter(dayOfWeek => expectedWorkingDays.has(dayOfWeek)).length;
     
-    // Calculer base proratisée
+    // Calculer base proratisée avec arrondi au quart d'heure
     const basePerDay = contractHoursPerWeek / workDaysPerWeek;
     const prorated = basePerDay * workingDaysCount;
+    
+    // Arrondir au quart d'heure: convertir en minutes, arrondir à 15min, reconvertir
+    const proratedMinutes = Math.round((prorated * 60) / 15) * 15;
+    const proratedRounded = proratedMinutes / 60;
     
     return {
       isPartialWeek: true,
       workingDaysInPartialWeek: workingDaysCount,
-      proratedBase: prorated
+      proratedBase: proratedRounded
     };
   }, [weekStart, currentMonth, currentYear, employee, contractHoursPerWeek, workDaysPerWeek]);
 
@@ -374,7 +378,7 @@ export default function WeeklySummary({
             )}
             title="Cliquer pour modifier"
           >
-            {displayedBase.toFixed(1)}h
+            {displayedBase.toFixed(2)}h
             {hasOverride && <span className="text-[8px] ml-1">*</span>}
           </button>
         )}
@@ -384,7 +388,7 @@ export default function WeeklySummary({
       <div className="mb-1">
         <div className="text-[9px] text-gray-500 uppercase font-semibold">Réalisé</div>
         <div className="text-lg font-bold text-gray-900">
-          {workedHours.toFixed(1)}h
+          {workedHours.toFixed(2)}h
         </div>
       </div>
 
@@ -392,13 +396,13 @@ export default function WeeklySummary({
       <div className="flex justify-center gap-2 text-[11px]">
         {plusHours > 0 && (
           <div className="text-green-700 font-bold bg-green-50 px-1.5 py-0.5 rounded">
-            +{plusHours.toFixed(1)}h
+            +{plusHours.toFixed(2)}h
           </div>
         )}
         {minusHours > 0 && (
           <div className="text-red-700 font-bold bg-red-50 px-1.5 py-0.5 rounded">
             {/* CORRECTION: pas de signe négatif, minusHours est déjà positif */}
-            {minusHours.toFixed(1)}h -
+            {minusHours.toFixed(2)}h -
           </div>
         )}
         {plusHours === 0 && minusHours === 0 && workedHours > 0 && (
@@ -411,7 +415,7 @@ export default function WeeklySummary({
       {/* Indicateur de surcharge ou proratisation */}
       {hasOverride && (
         <div className="mt-1 text-[8px] text-blue-600">
-          (défaut: {baseDefault.toFixed(1)}h)
+          (défaut: {baseDefault.toFixed(2)}h)
         </div>
       )}
       {isPartialWeek && !hasOverride && (
