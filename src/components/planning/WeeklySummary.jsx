@@ -40,12 +40,35 @@ export default function WeeklySummary({
   const queryClient = useQueryClient();
   const weekStartStr = formatLocalDate(weekStart);
 
+  // 🔍 LOG 1: État initial au render
+  React.useEffect(() => {
+    console.log('[WeeklySummary] 📊 RENDER STATE:', {
+      employeeId: employee.id,
+      employeeName: employee.first_name + ' ' + employee.last_name,
+      weekStart: weekStart,
+      weekStartStr: weekStartStr,
+      weeklyRecap: weeklyRecap,
+      baseOverrideFromDB: weeklyRecap?.base_override_hours,
+      hasRecap: !!weeklyRecap,
+      recapId: weeklyRecap?.id
+    });
+  }, [weeklyRecap, weekStartStr, employee.id]);
+
   // Heures contractuelles par semaine depuis l'employé
   const contractHoursPerWeek = parseContractHours(employee?.contract_hours_weekly) || 0;
   const workDaysPerWeek = employee?.work_days_per_week || 5;
 
   // weeklyRecap est maintenant passé en props depuis le parent
   const baseOverrideFromDB = weeklyRecap?.base_override_hours ?? null;
+  
+  // 🔍 LOG 2: Valeur override au moment du calcul
+  console.log('[WeeklySummary] 💾 BASE OVERRIDE VALUE:', {
+    employeeId: employee.id,
+    weekStartStr,
+    baseOverrideFromDB,
+    isNull: baseOverrideFromDB === null,
+    weeklyRecap: weeklyRecap ? { id: weeklyRecap.id, base_override_hours: weeklyRecap.base_override_hours } : 'NULL'
+  });
 
   // =====================================================
   // PRORATISATION SEMAINE INCOMPLÈTE
@@ -210,12 +233,32 @@ export default function WeeklySummary({
     },
     onSuccess: (data) => {
       console.log('[WeeklySummary] ✅ MUTATION SUCCESS - Data:', data);
+      console.log('[WeeklySummary] 📤 SAVED VALUES:', {
+        employeeId: employee.id,
+        weekStartStr: weekStartStr,
+        savedBaseOverride: data.base_override_hours,
+        responseId: data.id
+      });
+      
       setIsEditingBase(false);
       setBaseDraft('');
       
       // Invalider et refetch
       queryClient.invalidateQueries({ queryKey: ['allWeeklyRecaps'] });
-      if (onRecapUpdate) onRecapUpdate();
+      if (onRecapUpdate) {
+        console.log('[WeeklySummary] 🔄 Calling onRecapUpdate callback');
+        onRecapUpdate();
+      }
+      
+      // Attendre un peu pour laisser le temps au refetch, puis vérifier
+      setTimeout(() => {
+        console.log('[WeeklySummary] 🔍 POST-REFETCH CHECK:', {
+          employeeId: employee.id,
+          weekStartStr: weekStartStr,
+          currentWeeklyRecap: weeklyRecap,
+          currentBaseOverride: weeklyRecap?.base_override_hours
+        });
+      }, 500);
       
       toast.success('Base enregistrée ✓');
     },

@@ -193,10 +193,17 @@ export default function Planning() {
       const firstDay = formatLocalDate(new Date(currentYear, currentMonth, 1));
       const lastDay = formatLocalDate(new Date(currentYear, currentMonth + 1, 0));
 
+      console.log('[Planning] 📥 FETCHING WEEKLY RECAPS:', { firstDay, lastDay });
+
       // Fetch all weekly recaps (limited to reasonable timeframe)
       const allRecaps = await base44.entities.WeeklyRecap.list();
+      console.log('[Planning] 📊 ALL RECAPS FROM DB:', allRecaps.length, allRecaps);
+      
       // Filter to recaps that might be relevant to this month
-      return allRecaps.filter(r => r.week_start >= firstDay.substring(0, 7) + '-01' && r.week_start <= lastDay);
+      const filtered = allRecaps.filter(r => r.week_start >= firstDay.substring(0, 7) + '-01' && r.week_start <= lastDay);
+      console.log('[Planning] ✅ FILTERED RECAPS FOR MONTH:', filtered);
+      
+      return filtered;
     }
   });
 
@@ -220,7 +227,13 @@ export default function Planning() {
     for (const recap of allWeeklyRecaps) {
       const key = `${recap.employee_id}_${recap.week_start}`;
       lookup.set(key, recap);
+      console.log('[Planning] 🗂️ RECAP LOOKUP ENTRY:', {
+        key,
+        baseOverride: recap.base_override_hours,
+        recapId: recap.id
+      });
     }
+    console.log('[Planning] 📚 TOTAL LOOKUP ENTRIES:', lookup.size);
     return lookup;
   }, [allWeeklyRecaps]);
 
@@ -1106,6 +1119,17 @@ export default function Planning() {
                               const weekStartStr = formatLocalDate(weekStart);
                               const weeklyRecapKey = `${employee.id}_${weekStartStr}`;
                               const weeklyRecap = weeklyRecapsLookup.get(weeklyRecapKey) || null;
+                              
+                              // 🔍 LOG: Matching recap
+                              console.log('[Planning] 🔎 LOOKUP RECAP:', {
+                                employeeId: employee.id,
+                                employeeName: employee.first_name + ' ' + employee.last_name,
+                                weekStart: weekStart,
+                                weekStartStr: weekStartStr,
+                                lookupKey: weeklyRecapKey,
+                                foundRecap: !!weeklyRecap,
+                                recapData: weeklyRecap ? { id: weeklyRecap.id, base_override: weeklyRecap.base_override_hours } : 'NOT FOUND'
+                              });
 
                               return (
                                 <div key={employee.id} className="border-r border-gray-200 min-w-[140px] w-[140px] sm:w-[180px]">
@@ -1121,10 +1145,20 @@ export default function Planning() {
                                       ? () => handleCopyEmployeeWeekFromAbove(employee.id, weekStart)
                                       : null
                                     }
-                                    onRecapUpdate={() => {
-                                      console.log('[Planning] 🔄 Refetching weekly recaps after update');
+                                    onRecapUpdate={async () => {
+                                      console.log('[Planning] 🔄 onRecapUpdate TRIGGERED');
+                                      console.log('[Planning] ⏰ BEFORE INVALIDATE - Current recaps in cache:', allWeeklyRecaps.length);
+                                      
                                       queryClient.invalidateQueries({ queryKey: ['allWeeklyRecaps'] });
-                                      queryClient.refetchQueries({ queryKey: ['allWeeklyRecaps', currentYear, currentMonth] });
+                                      await queryClient.refetchQueries({ queryKey: ['allWeeklyRecaps', currentYear, currentMonth] });
+                                      
+                                      console.log('[Planning] ✅ AFTER REFETCH - Recaps should be updated');
+                                      
+                                      // Vérifier immédiatement si le lookup a changé
+                                      setTimeout(() => {
+                                        const newRecaps = queryClient.getQueryData(['allWeeklyRecaps', currentYear, currentMonth]);
+                                        console.log('[Planning] 🆕 NEW RECAPS DATA:', newRecaps);
+                                      }, 100);
                                     }}
                                     nonShiftEvents={nonShiftEvents}
                                     nonShiftTypes={nonShiftTypes}
