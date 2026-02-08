@@ -1,7 +1,7 @@
-import React, { useState, useMemo, useCallback, useEffect } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import { cn } from '@/lib/utils';
 import { Trash2, ArrowDown, Check, X } from 'lucide-react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { toast } from 'sonner';
 import {
@@ -13,6 +13,9 @@ import {
 /**
  * Récap semaine simplifié
  *
+ * OPTIMISÉ: Ne fait plus de requête individuelle.
+ * Les données weeklyRecap sont passées en props depuis le parent.
+ *
  * Affiche:
  * - Base: heures contractuelles (éditable pour surcharger)
  * - Réalisé: heures effectivement travaillées
@@ -23,8 +26,10 @@ export default function WeeklySummary({
   employee,
   shifts,
   weekStart,
+  weeklyRecap = null, // NOUVEAU: reçu depuis le parent, plus de requête individuelle
   onDeleteWeek,
   onCopyFromAbove,
+  onRecapUpdate, // NOUVEAU: callback pour notifier le parent de rafraîchir
   currentMonth,
   currentYear
 }) {
@@ -39,26 +44,7 @@ export default function WeeklySummary({
   const contractHoursPerWeek = parseContractHours(employee?.contract_hours_weekly) || 0;
   const workDaysPerWeek = employee?.work_days_per_week || 5;
 
-  // Fetch weekly recap override
-  const { data: weeklyRecaps = [], isLoading, error } = useQuery({
-    queryKey: ['weeklyRecaps', employee.id, weekStartStr],
-    queryFn: async () => {
-      try {
-        const result = await base44.entities.WeeklyRecap.filter({
-          employee_id: employee.id,
-          week_start: weekStartStr
-        });
-        console.log('[WeeklySummary] Loaded WeeklyRecap:', { employeeId: employee.id, weekStart: weekStartStr, result });
-        return result;
-      } catch (err) {
-        console.error('[WeeklySummary] Error loading WeeklyRecap:', err);
-        return [];
-      }
-    },
-    staleTime: 10000
-  });
-
-  const weeklyRecap = weeklyRecaps[0];
+  // weeklyRecap est maintenant passé en props depuis le parent
   const baseOverrideFromDB = weeklyRecap?.base_override_hours ?? null;
 
   // =====================================================
@@ -218,7 +204,9 @@ export default function WeeklySummary({
       }
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['weeklyRecaps', employee.id] });
+      // Notifier le parent de rafraîchir les données (1 seule requête pour tous)
+      queryClient.invalidateQueries({ queryKey: ['allWeeklyRecaps'] });
+      if (onRecapUpdate) onRecapUpdate();
       toast.success('Base mise à jour');
     },
     onError: (error) => {
@@ -236,7 +224,9 @@ export default function WeeklySummary({
       }
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['weeklyRecaps', employee.id] });
+      // Notifier le parent de rafraîchir les données (1 seule requête pour tous)
+      queryClient.invalidateQueries({ queryKey: ['allWeeklyRecaps'] });
+      if (onRecapUpdate) onRecapUpdate();
       toast.success('Base remise par défaut');
     },
     onError: (error) => {
