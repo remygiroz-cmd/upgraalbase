@@ -302,10 +302,10 @@ export default function WeeklySummary({
     }
   }, [handleSaveBase, handleCancelEdit]);
 
-  // Sauvegarder aussi sur blur
+  // Retirer le blur automatique pour éviter les conflits avec le clic sur valider
   const handleBlur = useCallback(() => {
-    handleSaveBase();
-  }, [handleSaveBase]);
+    // Ne rien faire - la sauvegarde se fait uniquement via Enter ou le bouton Valider
+  }, []);
 
   const hasShifts = shiftsCount > 0;
   const hasOverride = baseOverrideFromDB !== null;
@@ -355,14 +355,20 @@ export default function WeeklySummary({
               autoFocus
             />
             <button
-              onClick={handleSaveBase}
+              onMouseDown={(e) => {
+                e.preventDefault();
+                handleSaveBase();
+              }}
               className="p-0.5 hover:bg-green-100 rounded"
               title="Valider"
             >
               <Check className="w-3 h-3 text-green-600" />
             </button>
             <button
-              onClick={handleCancelEdit}
+              onMouseDown={(e) => {
+                e.preventDefault();
+                handleCancelEdit();
+              }}
               className="p-0.5 hover:bg-red-100 rounded"
               title="Annuler"
             >
