@@ -6,6 +6,10 @@ export default defineConfig({
     globals: true,
     environment: 'node',
     include: ['src/__tests__/**/*.test.ts'],
+    coverage: {
+      reporter: ['text', 'json', 'html'],
+      include: ['src/lib/**/*.ts']
+    }
   },
   resolve: {
     alias: {

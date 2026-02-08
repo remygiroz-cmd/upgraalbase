@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
-import { Trash2, Archive, Upload, User, FileText, Download, Send, BookOpen, AlertCircle, CheckCircle } from 'lucide-react';
+import { Trash2, Archive, Upload, User, FileText, Download, Send, BookOpen, AlertCircle, CheckCircle, Loader2 } from 'lucide-react';
 import ConfirmDialog from '@/components/ui/ConfirmDialog';
 import TemplateWeeksManager from './TemplateWeeksManager';
 
@@ -191,51 +191,25 @@ export default function EmployeeFormModal({ open, onClose, employee, isManager =
 
   const createMutation = useMutation({
     mutationFn: (data) => base44.entities.Employee.create(data),
-    onSuccess: async (newEmployee) => {
-      console.log('✅ [CREATE SUCCESS] Nouvel employé:', JSON.stringify(newEmployee, null, 2));
-      console.log('✅ [CREATE SUCCESS] weekly_schedule créé:', newEmployee.weekly_schedule);
-      
+    onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ['employees'] });
-      setShowCreationSuccess(true);
+      toast.success('✓ Employé créé');
+      onClose();
     },
     onError: (error) => {
-      console.error('❌ [CREATE ERROR]:', error);
-      toast.error('Erreur lors de la création: ' + error.message);
+      toast.error('Erreur : ' + error.message);
     }
   });
 
   const updateMutation = useMutation({
     mutationFn: ({ id, data }) => base44.entities.Employee.update(id, data),
-    onSuccess: async (updatedEmployee, variables) => {
-      console.log('✅ [UPDATE SUCCESS] Réponse backend:', JSON.stringify(updatedEmployee, null, 2));
-      console.log('✅ [UPDATE SUCCESS] weekly_schedule reçu:', updatedEmployee.weekly_schedule);
-      
-      // CRITICAL: Refetch pour garantir la source de vérité
-      try {
-        const freshEmployee = await base44.entities.Employee.filter({ id: variables.id });
-        const employeeData = freshEmployee[0];
-        
-        console.log('✅ [REFETCH] Données fraîches:', JSON.stringify(employeeData, null, 2));
-        console.log('✅ [REFETCH] weekly_schedule refetch:', employeeData.weekly_schedule);
-        
-        // Mettre à jour le formulaire avec les données fraîches du serveur
-        setFormData(employeeData);
-        
-        // Invalider le cache global
-        await queryClient.invalidateQueries({ queryKey: ['employees'] });
-        
-        toast.success('✓ Employé mis à jour');
-      } catch (refetchError) {
-        console.error('❌ [REFETCH ERROR]:', refetchError);
-        // Fallback: utiliser la réponse initiale
-        setFormData(updatedEmployee);
-        await queryClient.invalidateQueries({ queryKey: ['employees'] });
-        toast.success('Employé mis à jour');
-      }
+    onSuccess: async (updatedEmployee) => {
+      await queryClient.invalidateQueries({ queryKey: ['employees'] });
+      toast.success('✓ Enregistré');
+      onClose();
     },
     onError: (error) => {
-      console.error('❌ [UPDATE ERROR]:', error);
-      toast.error('Erreur lors de la mise à jour: ' + error.message);
+      toast.error('Erreur : ' + error.message);
     }
   });
 
@@ -260,11 +234,6 @@ export default function EmployeeFormModal({ open, onClose, employee, isManager =
   const handleSubmit = (e) => {
     e.preventDefault();
     
-    // DIAGNOSTIC: Logger le payload complet
-    console.log('🔍 [SUBMIT] FormData avant save:', JSON.stringify(formData, null, 2));
-    console.log('🔍 [SUBMIT] weekly_schedule:', formData.weekly_schedule);
-    
-    // Convertir les champs texte en majuscules
     const uppercasedData = {
       ...formData,
       first_name: formData.first_name?.toUpperCase() || '',
@@ -281,11 +250,8 @@ export default function EmployeeFormModal({ open, onClose, employee, isManager =
       social_security_number: formData.social_security_number?.toUpperCase() || '',
       iban: formData.iban?.toUpperCase() || '',
       bic: formData.bic?.toUpperCase() || '',
-      // CRITICAL: Assurer que weekly_schedule est inclus et correctement formaté
       weekly_schedule: formData.weekly_schedule
     };
-    
-    console.log('🔍 [SUBMIT] Payload après uppercase:', JSON.stringify(uppercasedData, null, 2));
     
     if (employee) {
       updateMutation.mutate({ id: employee.id, data: uppercasedData });
@@ -1472,11 +1438,11 @@ ${currentUser.email || '-'}`;
             >
               {createMutation.isPending || updateMutation.isPending ? (
                 <span className="flex items-center gap-2">
-                  <span className="animate-spin">⏳</span>
+                  <Loader2 className="w-4 h-4 animate-spin" />
                   Enregistrement...
                 </span>
               ) : (
-                employee ? 'Mettre à jour' : 'Créer'
+                'Enregistrer'
               )}
             </Button>
           </div>

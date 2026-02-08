@@ -90,7 +90,12 @@ export default function ApplyTemplateGlobalModal({ currentMonth, currentYear, on
         for (let d = new Date(firstDay); d <= lastDay; d.setDate(d.getDate() + 1)) {
           const jsDay = d.getDay();
           const dayOfWeek = jsDay === 0 ? 7 : jsDay;
-          const dateStr = d.toISOString().split('T')[0];
+
+          // Format date locally to avoid UTC offset
+          const year = d.getFullYear();
+          const month = String(d.getMonth() + 1).padStart(2, '0');
+          const day = String(d.getDate()).padStart(2, '0');
+          const dateStr = `${year}-${month}-${day}`;
 
           const dayTemplates = templateShifts.filter(ts => ts.day_of_week === dayOfWeek);
 
@@ -127,7 +132,12 @@ export default function ApplyTemplateGlobalModal({ currentMonth, currentYear, on
           for (let d = new Date(firstDay); d <= lastDay; d.setDate(d.getDate() + 1)) {
             const jsDay = d.getDay();
             const dayOfWeek = jsDay === 0 ? 7 : jsDay;
-            const dateStr = d.toISOString().split('T')[0];
+            
+            // Format date locally to avoid UTC offset
+            const year = d.getFullYear();
+            const month = String(d.getMonth() + 1).padStart(2, '0');
+            const day = String(d.getDate()).padStart(2, '0');
+            const dateStr = `${year}-${month}-${day}`;
 
             const dayTemplates = empTemplateShifts.filter(ts => ts.day_of_week === dayOfWeek);
 

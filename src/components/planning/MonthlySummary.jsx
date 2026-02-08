@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { cn } from '@/lib/utils';
 import { Edit2 } from 'lucide-react';
-import { calculateShiftDuration } from './LegalChecks';
 import { calculateMonthlyCPTotal } from './paidLeaveCalculations';
+import { calculateShiftDuration } from './LegalChecks';
+import { parseContractHours } from '@/lib/weeklyHoursCalculation';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
@@ -11,6 +12,15 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
 
+/**
+ * Récap mensuel simplifié
+ *
+ * Affiche:
+ * - Jours travaillés
+ * - Heures effectuées
+ * - Base contractuelle
+ * - CP décomptés
+ */
 export default function MonthlySummary({ employee, shifts, nonShiftEvents = [], nonShiftTypes = [], monthStart, monthEnd, holidayDates = [] }) {
   const [showEditDialog, setShowEditDialog] = useState(false);
   const queryClient = useQueryClient();
@@ -43,24 +53,26 @@ export default function MonthlySummary({ employee, shifts, nonShiftEvents = [], 
 
   const manualRecap = recaps[0];
 
-  // Calculate automatic values - SIMPLE PROTOCOL ONLY
-  const employeeShifts = shifts.filter(s => s.employee_id === employee.id);
+  // Calculate automatic values - SIMPLE
+  const { autoDaysWorked, autoTotalHours, autoMonthlyContractHours } = useMemo(() => {
+    const employeeShifts = shifts.filter(s => s.employee_id === employee.id);
 
-  // Days worked (only shifts)
-  const daysWithShifts = new Set(employeeShifts.map(s => s.date));
-  const autoDaysWorked = daysWithShifts.size;
+    // Days worked (unique dates with shifts)
+    const daysWithShifts = new Set(employeeShifts.map(s => s.date));
+    const autoDaysWorked = daysWithShifts.size;
 
-  // Total hours actually worked
-  const autoTotalHours = employeeShifts.reduce((sum, shift) => sum + calculateShiftDuration(shift), 0);
+    // Total hours worked
+    const autoTotalHours = employeeShifts.reduce((sum, shift) => {
+      return sum + calculateShiftDuration(shift);
+    }, 0);
 
-  // Contract hours: monthly base from employee record
-  const isFullTime = employee?.work_time_type === 'full_time';
-  const contractHoursWeekly = employee?.contract_hours_weekly 
-    ? parseFloat(employee.contract_hours_weekly.replace(':', '.').replace(/h/g, ''))
-    : (isFullTime ? 35 : 0);
-  
-  const weeksInMonth = 4.33; // Average
-  const autoMonthlyContractHours = contractHoursWeekly * weeksInMonth;
+    // Contract hours: weekly * 4.33
+    const contractHoursWeekly = parseContractHours(employee?.contract_hours_weekly) || 0;
+    const weeksInMonth = 4.33;
+    const autoMonthlyContractHours = contractHoursWeekly * weeksInMonth;
+
+    return { autoDaysWorked, autoTotalHours, autoMonthlyContractHours };
+  }, [shifts, employee]);
 
   // CP days count
   const autoCPDays = calculateMonthlyCPTotal(cpPeriods, monthStart, monthEnd);
@@ -88,7 +100,7 @@ export default function MonthlySummary({ employee, shifts, nonShiftEvents = [], 
         </button>
 
         <div className="text-[10px] font-bold text-gray-600 uppercase mb-1">
-          📊 Récap mois
+          Récap mois
         </div>
 
         {/* Days worked */}
@@ -104,7 +116,7 @@ export default function MonthlySummary({ employee, shifts, nonShiftEvents = [], 
           Effectuées
         </div>
 
-        {/* Base contractuelle (info statique) */}
+        {/* Base contractuelle */}
         <div className="text-xs text-gray-600 mb-2">
           Base: {contractHours.toFixed(1)}h
         </div>
@@ -113,14 +125,14 @@ export default function MonthlySummary({ employee, shifts, nonShiftEvents = [], 
         {cpDays > 0 && (
           <div className="mt-2 pt-2 border-t border-gray-200">
             <div className="text-[10px] font-semibold text-green-700">
-              🟢 CP décomptés : {cpDays} j
+              CP décomptés : {cpDays} j
             </div>
           </div>
         )}
 
         {hasManualOverride && (
           <div className="mt-1 text-[9px] text-blue-700 font-semibold">
-            ✏️ Modifié
+            Modifié
           </div>
         )}
       </div>
@@ -223,7 +235,7 @@ function EditMonthlyRecapDialog({ open, onOpenChange, employee, year, month, aut
 
         <div className="space-y-4 mt-4">
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-xs text-gray-700">
-            ℹ️ <strong>Récapitulatif simple :</strong> Saisir les heures effectuées et la base contractuelle.
+            <strong>Récapitulatif simple :</strong> Saisir les heures effectuées et la base contractuelle.
           </div>
 
           {/* Days and hours */}
