@@ -1,8 +1,9 @@
 import React, { useState, useMemo } from 'react';
 import { cn } from '@/lib/utils';
-import { Edit2, AlertTriangle } from 'lucide-react';
+import { Edit2 } from 'lucide-react';
 import { calculateMonthlyCPTotal } from './paidLeaveCalculations';
-import { calculateMonthlyHours } from './hoursCalculation';
+import { calculateShiftDuration } from './LegalChecks';
+import { parseContractHours } from '@/lib/weeklyHoursCalculation';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
@@ -11,6 +12,15 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
 
+/**
+ * Récap mensuel simplifié
+ *
+ * Affiche:
+ * - Jours travaillés
+ * - Heures effectuées
+ * - Base contractuelle
+ * - CP décomptés
+ */
 export default function MonthlySummary({ employee, shifts, nonShiftEvents = [], nonShiftTypes = [], monthStart, monthEnd, holidayDates = [] }) {
   const [showEditDialog, setShowEditDialog] = useState(false);
   const queryClient = useQueryClient();
@@ -43,51 +53,26 @@ export default function MonthlySummary({ employee, shifts, nonShiftEvents = [], 
 
   const manualRecap = recaps[0];
 
-  // Calculate automatic values using new TypeScript implementation
-  const monthlyCalc = useMemo(() => {
-    // Adapter: Convert employee to the format expected by hoursCalculation.ts
-    const employeeForCalc = {
-      id: employee.id,
-      work_time_type: employee.work_time_type || 'full_time',
-      contract_hours_weekly: employee.contract_hours_weekly || '35:00',
-      weekly_schedule: employee.weekly_schedule || null
-    };
+  // Calculate automatic values - SIMPLE
+  const { autoDaysWorked, autoTotalHours, autoMonthlyContractHours } = useMemo(() => {
+    const employeeShifts = shifts.filter(s => s.employee_id === employee.id);
 
-    // Adapter: Convert shifts to the format expected by hoursCalculation.ts
-    const shiftsForCalc = shifts
-      .filter(s => s.employee_id === employee.id)
-      .map(s => ({
-        id: s.id,
-        date: s.date,
-        employee_id: s.employee_id,
-        start_time: s.start_time,
-        end_time: s.end_time,
-        break_minutes: s.break_minutes || 0,
-        status: s.status || 'planned'
-      }));
+    // Days worked (unique dates with shifts)
+    const daysWithShifts = new Set(employeeShifts.map(s => s.date));
+    const autoDaysWorked = daysWithShifts.size;
 
-    return calculateMonthlyHours(shiftsForCalc, employeeForCalc, year, month, 'overtime');
-  }, [shifts, employee, year, month]);
+    // Total hours worked
+    const autoTotalHours = employeeShifts.reduce((sum, shift) => {
+      return sum + calculateShiftDuration(shift);
+    }, 0);
 
-  // Extract calculated values
-  const effectiveHours = monthlyCalc.totalEffectiveHours;
-  const autoDaysWorked = monthlyCalc.daysWorkedActual > 0
-    ? monthlyCalc.daysWorkedActual
-    : monthlyCalc.daysWorkedPlanned;
-  const autoTotalHours = effectiveHours;
-  const autoMonthlyContractHours = monthlyCalc.contractHoursMonthly;
+    // Contract hours: weekly * 4.33
+    const contractHoursWeekly = parseContractHours(employee?.contract_hours_weekly) || 0;
+    const weeksInMonth = 4.33;
+    const autoMonthlyContractHours = contractHoursWeekly * weeksInMonth;
 
-  // Overtime/complementary breakdown (avec hors répartition)
-  const overtimeOutside = monthlyCalc.overtime?.outsideContract || 0;
-  const overtimeClassic = (monthlyCalc.overtime?.classic25 || 0) + (monthlyCalc.overtime?.classic50 || 0);
-  const totalOvertime = monthlyCalc.overtime?.total || 0;
-
-  const complementaryOutside = monthlyCalc.complementary?.outsideContract || 0;
-  const complementaryClassic = (monthlyCalc.complementary?.classic10 || 0) + (monthlyCalc.complementary?.classic25 || 0);
-  const totalComplementary = monthlyCalc.complementary?.total || 0;
-
-  const hasExcess = totalOvertime > 0 || totalComplementary > 0;
-  const hasOutsideContract = overtimeOutside > 0 || complementaryOutside > 0;
+    return { autoDaysWorked, autoTotalHours, autoMonthlyContractHours };
+  }, [shifts, employee]);
 
   // CP days count
   const autoCPDays = calculateMonthlyCPTotal(cpPeriods, monthStart, monthEnd);
@@ -115,7 +100,7 @@ export default function MonthlySummary({ employee, shifts, nonShiftEvents = [], 
         </button>
 
         <div className="text-[10px] font-bold text-gray-600 uppercase mb-1">
-          📊 Récap mois
+          Récap mois
         </div>
 
         {/* Days worked */}
@@ -131,68 +116,23 @@ export default function MonthlySummary({ employee, shifts, nonShiftEvents = [], 
           Effectuées
         </div>
 
-        {/* Base contractuelle (info statique) */}
+        {/* Base contractuelle */}
         <div className="text-xs text-gray-600 mb-2">
           Base: {contractHours.toFixed(1)}h
         </div>
-
-        {/* Heures supplémentaires / complémentaires avec détail hors répartition */}
-        {hasExcess && (
-          <div className="bg-orange-50 border border-orange-200 rounded p-1.5 mb-2 text-[10px] space-y-0.5">
-            {/* Heures supplémentaires (temps complet) */}
-            {totalOvertime > 0 && (
-              <>
-                <div className="text-orange-700 font-semibold flex items-center gap-1">
-                  <AlertTriangle className="w-3 h-3" />
-                  HS: +{totalOvertime.toFixed(1)}h
-                </div>
-                {/* Détail si heures hors répartition */}
-                {hasOutsideContract && overtimeOutside > 0 && (
-                  <div className="text-purple-700 text-[9px] pl-4" title="Heures sur jour hors contrat">
-                    dont {overtimeOutside.toFixed(1)}h hors rép.
-                  </div>
-                )}
-                {overtimeClassic > 0 && hasOutsideContract && (
-                  <div className="text-orange-600 text-[9px] pl-4">
-                    dont {overtimeClassic.toFixed(1)}h classiques
-                  </div>
-                )}
-              </>
-            )}
-            {/* Heures complémentaires (temps partiel) */}
-            {totalComplementary > 0 && (
-              <>
-                <div className="text-green-700 font-semibold">
-                  HC: +{totalComplementary.toFixed(1)}h
-                </div>
-                {/* Détail si heures hors répartition */}
-                {hasOutsideContract && complementaryOutside > 0 && (
-                  <div className="text-purple-700 text-[9px] pl-4" title="Heures sur jour hors contrat">
-                    dont {complementaryOutside.toFixed(1)}h hors rép.
-                  </div>
-                )}
-                {complementaryClassic > 0 && hasOutsideContract && (
-                  <div className="text-green-600 text-[9px] pl-4">
-                    dont {complementaryClassic.toFixed(1)}h classiques
-                  </div>
-                )}
-              </>
-            )}
-          </div>
-        )}
 
         {/* CP count */}
         {cpDays > 0 && (
           <div className="mt-2 pt-2 border-t border-gray-200">
             <div className="text-[10px] font-semibold text-green-700">
-              🟢 CP décomptés : {cpDays} j
+              CP décomptés : {cpDays} j
             </div>
           </div>
         )}
 
         {hasManualOverride && (
           <div className="mt-1 text-[9px] text-blue-700 font-semibold">
-            ✏️ Modifié
+            Modifié
           </div>
         )}
       </div>
@@ -295,7 +235,7 @@ function EditMonthlyRecapDialog({ open, onOpenChange, employee, year, month, aut
 
         <div className="space-y-4 mt-4">
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-xs text-gray-700">
-            ℹ️ <strong>Récapitulatif simple :</strong> Saisir les heures effectuées et la base contractuelle.
+            <strong>Récapitulatif simple :</strong> Saisir les heures effectuées et la base contractuelle.
           </div>
 
           {/* Days and hours */}
