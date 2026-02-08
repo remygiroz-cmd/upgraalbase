@@ -31,68 +31,6 @@ function WeeklyScheduleBlock({ schedule, onChange, isManager, expectedDays, expe
   const daysMatch = !expectedDays || daysWorked === expectedDays;
   const hoursMatch = !expectedWeeklyHours || Math.abs(totalWeeklyHours - expectedWeeklyHours) < 0.1;
 
-  // Auto-préremplissage des heures journalières
-  const autoFillHours = React.useCallback((newSchedule, resetOverrides = false) => {
-    if (resetOverrides) {
-      setManualOverrides(new Set());
-    }
-
-    if (!expectedWeeklyHours || expectedWeeklyHours <= 0) {
-      return newSchedule;
-    }
-
-    const workedDays = DAYS_FR.filter(day => newSchedule[day.key]?.worked).map(d => d.key);
-    const nbDays = workedDays.length;
-
-    if (nbDays === 0) {
-      return newSchedule;
-    }
-
-    // Calcul avec arrondi au quart d'heure (0.25h)
-    const baseHours = expectedWeeklyHours / nbDays;
-    const roundedBase = Math.round(baseHours * 4) / 4; // Arrondi à 0.25h près
-
-    const updatedSchedule = { ...newSchedule };
-    let totalAssigned = 0;
-
-    // Assigner les heures arrondies à tous les jours (sauf ceux avec override)
-    workedDays.forEach((dayKey, index) => {
-      if (!resetOverrides && manualOverrides.has(dayKey)) {
-        // Garder la valeur manuelle
-        totalAssigned += parseFloat(updatedSchedule[dayKey]?.hours || 0);
-      } else {
-        updatedSchedule[dayKey] = {
-          ...updatedSchedule[dayKey],
-          hours: roundedBase
-        };
-        totalAssigned += roundedBase;
-      }
-    });
-
-    // Ajuster le dernier jour pour atteindre exactement le total
-    const lastDay = workedDays[workedDays.length - 1];
-    if (!resetOverrides && !manualOverrides.has(lastDay)) {
-      const delta = expectedWeeklyHours - totalAssigned;
-      const adjustedHours = Math.round((roundedBase + delta) * 4) / 4;
-      updatedSchedule[lastDay] = {
-        ...updatedSchedule[lastDay],
-        hours: adjustedHours
-      };
-    }
-
-    return updatedSchedule;
-  }, [expectedWeeklyHours, manualOverrides]);
-
-  // Effet pour auto-préremplir quand les heures contractuelles changent
-  React.useEffect(() => {
-    if (expectedWeeklyHours && daysWorked > 0) {
-      const newSchedule = autoFillHours(schedule, false);
-      if (JSON.stringify(newSchedule) !== JSON.stringify(schedule)) {
-        onChange(newSchedule);
-      }
-    }
-  }, [expectedWeeklyHours]);
-
   const handleDayToggle = (dayKey, checked) => {
     const newSchedule = {
       ...schedule,
@@ -101,10 +39,7 @@ function WeeklyScheduleBlock({ schedule, onChange, isManager, expectedDays, expe
         hours: checked ? (schedule[dayKey]?.hours || 0) : 0
       }
     };
-    
-    // Auto-préremplir après le toggle
-    const filledSchedule = autoFillHours(newSchedule, false);
-    onChange(filledSchedule);
+    onChange(newSchedule);
   };
 
   const handleHoursChange = (dayKey, value) => {
@@ -122,8 +57,61 @@ function WeeklyScheduleBlock({ schedule, onChange, isManager, expectedDays, expe
   };
 
   const handleAutoDistribute = () => {
-    const newSchedule = autoFillHours(schedule, true);
-    onChange(newSchedule);
+    console.log('[Auto-distribute] Click', { 
+      expectedWeeklyHours, 
+      daysWorked,
+      schedule 
+    });
+
+    // Validation
+    if (!expectedWeeklyHours || expectedWeeklyHours <= 0) {
+      toast.error('⚠️ Renseignez d\'abord les heures contractuelles/semaine');
+      return;
+    }
+
+    const workedDays = DAYS_FR.filter(day => schedule[day.key]?.worked).map(d => d.key);
+    if (workedDays.length === 0) {
+      toast.error('⚠️ Cochez au moins un jour de travail');
+      return;
+    }
+
+    // Calcul avec arrondi au quart d'heure
+    const nbDays = workedDays.length;
+    const baseHours = expectedWeeklyHours / nbDays;
+    const roundedBase = Math.round(baseHours * 4) / 4;
+
+    const updatedSchedule = { ...schedule };
+    let totalAssigned = 0;
+
+    // Assigner les heures arrondies à tous les jours travaillés
+    workedDays.forEach((dayKey, index) => {
+      if (index < workedDays.length - 1) {
+        updatedSchedule[dayKey] = {
+          worked: true,
+          hours: roundedBase
+        };
+        totalAssigned += roundedBase;
+      }
+    });
+
+    // Ajuster le dernier jour pour atteindre exactement le total
+    const lastDay = workedDays[workedDays.length - 1];
+    const remainingHours = expectedWeeklyHours - totalAssigned;
+    const adjustedLastHours = Math.round(remainingHours * 4) / 4;
+    
+    updatedSchedule[lastDay] = {
+      worked: true,
+      hours: adjustedLastHours
+    };
+
+    console.log('[Auto-distribute] Calculated', updatedSchedule);
+
+    // Réinitialiser les overrides manuels
+    setManualOverrides(new Set());
+
+    // Appliquer les changements
+    onChange(updatedSchedule);
+    toast.success('✓ Répartition automatique appliquée');
   };
 
   return (
