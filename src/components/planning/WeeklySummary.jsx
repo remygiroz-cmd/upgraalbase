@@ -176,8 +176,9 @@ export default function WeeklySummary({
   // Mutation pour sauvegarder/mettre à jour le recap
   const saveMutation = useMutation({
     mutationFn: async (baseValue) => {
-      console.log('[WeeklySummary] Saving base override:', {
+      console.log('[WeeklySummary] 🔄 MUTATION START - Saving base override:', {
         employeeId: employee.id,
+        employeeName: employee.first_name + ' ' + employee.last_name,
         weekStart: weekStartStr,
         baseValue,
         existingRecap: weeklyRecap
@@ -191,31 +192,37 @@ export default function WeeklySummary({
 
       try {
         let result;
-        if (weeklyRecap) {
-          console.log('[WeeklySummary] Updating existing recap:', weeklyRecap.id);
+        if (weeklyRecap?.id) {
+          console.log('[WeeklySummary] ✏️ UPDATING existing recap:', weeklyRecap.id);
           result = await base44.entities.WeeklyRecap.update(weeklyRecap.id, {
             base_override_hours: baseValue
           });
         } else {
-          console.log('[WeeklySummary] Creating new recap');
+          console.log('[WeeklySummary] ➕ CREATING new recap');
           result = await base44.entities.WeeklyRecap.create(data);
         }
-        console.log('[WeeklySummary] Save result:', result);
+        console.log('[WeeklySummary] ✅ Save SUCCESS - Result:', result);
         return result;
       } catch (err) {
-        console.error('[WeeklySummary] Save error:', err);
+        console.error('[WeeklySummary] ❌ Save ERROR:', err);
         throw err;
       }
     },
-    onSuccess: () => {
-      // Notifier le parent de rafraîchir les données (1 seule requête pour tous)
+    onSuccess: (data) => {
+      console.log('[WeeklySummary] ✅ MUTATION SUCCESS - Data:', data);
+      setIsEditingBase(false);
+      setBaseDraft('');
+      
+      // Invalider et refetch
       queryClient.invalidateQueries({ queryKey: ['allWeeklyRecaps'] });
       if (onRecapUpdate) onRecapUpdate();
-      toast.success('Base mise à jour');
+      
+      toast.success('Base enregistrée ✓');
     },
     onError: (error) => {
-      console.error('[WeeklySummary] Mutation error:', error);
+      console.error('[WeeklySummary] ❌ MUTATION ERROR:', error);
       toast.error(`Erreur: ${error.message || 'Échec de la sauvegarde'}`);
+      // Ne pas fermer l'édition en cas d'erreur
     }
   });
 
@@ -259,11 +266,19 @@ export default function WeeklySummary({
   }, []);
 
   const handleSaveBase = useCallback(() => {
-    const trimmed = baseDraft.trim();
+    const trimmed = baseDraft.trim().replace(',', '.'); // Support virgule française
+
+    console.log('[WeeklySummary] handleSaveBase called:', {
+      baseDraft,
+      trimmed,
+      baseDefault,
+      weeklyRecap,
+      baseOverrideFromDB
+    });
 
     // Si vide, on supprime le override (retour à la base par défaut)
-    if (trimmed === '' || trimmed === baseDefault.toString()) {
-      console.log('[WeeklySummary] Resetting to default base');
+    if (trimmed === '') {
+      console.log('[WeeklySummary] Empty value, deleting override');
       if (weeklyRecap) {
         deleteMutation.mutate();
       }
@@ -273,8 +288,10 @@ export default function WeeklySummary({
     }
 
     const newValue = parseFloat(trimmed);
+    console.log('[WeeklySummary] Parsed value:', newValue);
 
     if (isNaN(newValue) || newValue < 0) {
+      console.error('[WeeklySummary] Invalid value:', newValue);
       toast.error('Valeur invalide');
       return;
     }
@@ -285,14 +302,14 @@ export default function WeeklySummary({
       if (weeklyRecap) {
         deleteMutation.mutate();
       }
+      setIsEditingBase(false);
+      setBaseDraft('');
     } else {
-      console.log('[WeeklySummary] Saving new override:', newValue);
+      console.log('[WeeklySummary] Saving new override:', newValue, 'for week:', weekStartStr);
       saveMutation.mutate(newValue);
+      // Ne pas fermer l'édition tout de suite - attendre le succès de la mutation
     }
-
-    setIsEditingBase(false);
-    setBaseDraft('');
-  }, [baseDraft, baseDefault, weeklyRecap, saveMutation, deleteMutation]);
+  }, [baseDraft, baseDefault, weeklyRecap, saveMutation, deleteMutation, weekStartStr, baseOverrideFromDB]);
 
   const handleKeyDown = useCallback((e) => {
     if (e.key === 'Enter') {
@@ -344,25 +361,31 @@ export default function WeeklySummary({
         {isEditingBase ? (
           <div className="flex items-center justify-center gap-1">
             <input
-              type="number"
-              step="0.5"
-              min="0"
+              type="text"
+              inputMode="decimal"
               value={baseDraft}
               onChange={(e) => setBaseDraft(e.target.value)}
               onKeyDown={handleKeyDown}
               onBlur={handleBlur}
               className="w-14 text-center text-sm font-bold border rounded px-1 py-0.5"
+              placeholder="7.5"
               autoFocus
+              disabled={saveMutation.isPending}
             />
             <button
               onMouseDown={(e) => {
                 e.preventDefault();
                 handleSaveBase();
               }}
-              className="p-0.5 hover:bg-green-100 rounded"
+              className="p-0.5 hover:bg-green-100 rounded disabled:opacity-50"
               title="Valider"
+              disabled={saveMutation.isPending}
             >
-              <Check className="w-3 h-3 text-green-600" />
+              {saveMutation.isPending ? (
+                <div className="w-3 h-3 border-2 border-green-600 border-t-transparent rounded-full animate-spin" />
+              ) : (
+                <Check className="w-3 h-3 text-green-600" />
+              )}
             </button>
             <button
               onMouseDown={(e) => {
