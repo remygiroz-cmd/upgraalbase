@@ -1,11 +1,8 @@
 import React, { useState, useMemo } from 'react';
 import { cn } from '@/lib/utils';
-import { Edit2 } from 'lucide-react';
-import { calculateMonthlyCPTotal } from './paidLeaveCalculations';
-import { calculateShiftDuration } from './LegalChecks';
-import { parseContractHours } from '@/lib/weeklyHoursCalculation';
-import { calculateDayHours } from '@/components/utils/nonShiftHoursCalculation';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { Edit2, RotateCcw } from 'lucide-react';
+import { calculateMonthlyRecap } from '@/components/utils/monthlyRecapCalculations';
+import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -14,16 +11,13 @@ import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
 
 /**
- * Récap mensuel simplifié
+ * Récap mensuel COMPLET avec 3 modes de calcul
  *
- * OPTIMISÉ: Ne fait plus de requête individuelle.
- * Les données cpPeriods et monthlyRecap sont passées en props depuis le parent.
+ * MODE 1 - DÉSACTIVÉ: Aucun calcul automatique
+ * MODE 2 - HEBDOMADAIRE: Heures comp/sup calculées à la semaine
+ * MODE 3 - MENSUEL: Lissage mensuel pour temps partiel
  *
- * Affiche:
- * - Jours travaillés
- * - Heures effectuées
- * - Base contractuelle
- * - CP décomptés
+ * Tous les champs sont surchargeables manuellement
  */
 export default function MonthlySummary({
   employee,
@@ -33,9 +27,10 @@ export default function MonthlySummary({
   monthStart,
   monthEnd,
   holidayDates = [],
-  cpPeriods = [], // NOUVEAU: reçu depuis le parent
-  monthlyRecap = null, // NOUVEAU: reçu depuis le parent
-  onRecapUpdate // NOUVEAU: callback pour notifier le parent de rafraîchir
+  cpPeriods = [],
+  monthlyRecap = null,
+  weeklyRecaps = [], // Pour le calcul des heures comp/sup
+  onRecapUpdate
 }) {
   const [showEditDialog, setShowEditDialog] = useState(false);
   const queryClient = useQueryClient();
@@ -43,119 +38,157 @@ export default function MonthlySummary({
   const year = monthStart.getFullYear();
   const month = monthStart.getMonth() + 1;
 
-  // cpPeriods et monthlyRecap sont maintenant passés en props depuis le parent
-  const manualRecap = monthlyRecap;
+  // Récupérer le mode de calcul depuis AppSettings
+  const { data: appSettings = [] } = useQuery({
+    queryKey: ['appSettings'],
+    queryFn: () => base44.entities.AppSettings.filter({ setting_key: 'planning_calculation_mode' })
+  });
 
-  // Calculate automatic values - including non-shifts that generate hours
-  const { autoDaysWorked, autoTotalHours, autoMonthlyContractHours } = useMemo(() => {
-    const employeeShifts = shifts.filter(s => s.employee_id === employee.id);
-    const employeeNonShifts = nonShiftEvents.filter(ns => ns.employee_id === employee.id);
+  const calculationMode = appSettings[0]?.planning_calculation_mode || 'disabled';
 
-    // Group shifts and non-shifts by date
-    const dateMap = new Map();
-    
-    // Add shifts to map
-    employeeShifts.forEach(shift => {
-      if (!dateMap.has(shift.date)) {
-        dateMap.set(shift.date, { shifts: [], nonShifts: [] });
-      }
-      dateMap.get(shift.date).shifts.push(shift);
-    });
-    
-    // Add non-shifts to map
-    employeeNonShifts.forEach(ns => {
-      if (!dateMap.has(ns.date)) {
-        dateMap.set(ns.date, { shifts: [], nonShifts: [] });
-      }
-      dateMap.get(ns.date).nonShifts.push(ns);
-    });
+  // Calculer le récap automatique selon le mode
+  const autoRecap = useMemo(() => {
+    return calculateMonthlyRecap(
+      calculationMode,
+      employee,
+      shifts,
+      nonShiftEvents,
+      nonShiftTypes,
+      weeklyRecaps,
+      cpPeriods,
+      holidayDates,
+      monthStart,
+      monthEnd
+    );
+  }, [calculationMode, employee, shifts, nonShiftEvents, nonShiftTypes, weeklyRecaps, cpPeriods, holidayDates, monthStart, monthEnd]);
 
-    // Days worked (unique dates with shifts OR non-shifts that generate hours)
-    let autoDaysWorked = 0;
-    let autoTotalHours = 0;
+  // Appliquer les surcharges manuelles (priorité sur l'auto)
+  const displayedRecap = {
+    expectedDays: monthlyRecap?.manual_expected_days ?? autoRecap.expectedDays,
+    actualDaysWorked: monthlyRecap?.manual_actual_days ?? autoRecap.actualDaysWorked,
+    extraDays: monthlyRecap?.manual_extra_days ?? autoRecap.extraDays,
+    expectedHours: monthlyRecap?.manual_expected_hours ?? autoRecap.expectedHours,
+    deductedHours: monthlyRecap?.manual_deducted_hours ?? autoRecap.deductedHours,
+    adjustedExpectedHours: monthlyRecap?.manual_adjusted_expected_hours ?? autoRecap.adjustedExpectedHours,
+    overtime25: monthlyRecap?.manual_overtime_25 ?? autoRecap.overtime25,
+    overtime50: monthlyRecap?.manual_overtime_50 ?? autoRecap.overtime50,
+    complementary10: monthlyRecap?.manual_complementary_10 ?? autoRecap.complementary10,
+    complementary25: monthlyRecap?.manual_complementary_25 ?? autoRecap.complementary25,
+    nonShiftsByType: monthlyRecap?.manual_non_shifts ?? autoRecap.nonShiftsByType,
+    holidaysWorked: monthlyRecap?.manual_holidays_worked ?? autoRecap.holidaysWorked,
+    holidaysHours: monthlyRecap?.manual_holidays_hours ?? autoRecap.holidaysHours,
+    cpDays: monthlyRecap?.manual_cp_days ?? autoRecap.cpDays
+  };
 
-    dateMap.forEach((dayData, date) => {
-      const { hours } = calculateDayHours(
-        dayData.shifts, 
-        dayData.nonShifts, 
-        nonShiftTypes, 
-        employee, 
-        calculateShiftDuration
-      );
-      
-      if (hours > 0 || dayData.shifts.length > 0) {
-        autoDaysWorked++;
-      }
-      autoTotalHours += hours;
-    });
+  const hasManualOverride = !!monthlyRecap;
 
-    // Contract hours: weekly * 4.33
-    const contractHoursWeekly = parseContractHours(employee?.contract_hours_weekly) || 0;
-    const weeksInMonth = 4.33;
-    const autoMonthlyContractHours = contractHoursWeekly * weeksInMonth;
-
-    return { autoDaysWorked, autoTotalHours, autoMonthlyContractHours };
-  }, [shifts, employee, nonShiftEvents, nonShiftTypes]);
-
-  // CP days count
-  const autoCPDays = calculateMonthlyCPTotal(cpPeriods, monthStart, monthEnd);
-
-  // Apply manual overrides
-  const daysWorked = manualRecap?.manual_days_worked ?? autoDaysWorked;
-  const totalHours = manualRecap?.manual_total_hours ?? autoTotalHours;
-  const contractHours = manualRecap?.manual_contract_hours ?? autoMonthlyContractHours;
-  const cpDays = manualRecap?.manual_cp_days ?? autoCPDays;
-
-  const hasManualOverride = !!manualRecap;
+  const isPartTime = employee?.work_time_type === 'part_time';
 
   return (
     <>
       <div className={cn(
-        "px-2 py-3 text-center relative group border-t-2 border-gray-300",
+        "px-2 py-2 text-center relative group border-t-2 border-gray-300 max-h-[350px] overflow-y-auto",
         hasManualOverride && "bg-blue-50"
       )}>
         <button
           onClick={() => setShowEditDialog(true)}
-          className="absolute top-1 right-1 p-1 rounded hover:bg-gray-200 transition-colors opacity-0 group-hover:opacity-100"
+          className="absolute top-1 right-1 p-1 rounded hover:bg-gray-200 transition-colors opacity-0 group-hover:opacity-100 z-10"
           title="Éditer le récapitulatif"
         >
           <Edit2 className="w-3 h-3 text-blue-600" />
         </button>
 
-        <div className="text-[10px] font-bold text-gray-600 uppercase mb-1">
+        <div className="text-[10px] font-bold text-gray-600 uppercase mb-2">
           Récap mois
         </div>
 
-        {/* Days worked */}
-        <div className="text-xs text-gray-700 mb-1">
-          <span className="font-semibold">{daysWorked}</span> jour{daysWorked > 1 ? 's' : ''}
-        </div>
+        {/* Jours prévus / réalisés / supplémentaires */}
+        {displayedRecap.expectedDays !== null && (
+          <div className="text-[10px] text-gray-700 mb-1 space-y-0.5">
+            <div>Jours prévus : <strong>{displayedRecap.expectedDays}</strong></div>
+            <div>Jours travaillés : <strong>{displayedRecap.actualDaysWorked}</strong></div>
+            {displayedRecap.extraDays > 0 && (
+              <div className="text-green-700 font-bold">
+                Jours supp : +{displayedRecap.extraDays}
+              </div>
+            )}
+          </div>
+        )}
 
-        {/* Heures effectuées (MAIN) */}
-        <div className="text-xl font-bold text-blue-900 mb-0.5">
-          {totalHours.toFixed(1)}h
-        </div>
-        <div className="text-[9px] text-gray-600 font-semibold mb-2">
-          Effectuées
-        </div>
+        {/* Heures mensuelles prévues ajustées */}
+        {displayedRecap.adjustedExpectedHours !== null && (
+          <div className="text-xs text-gray-700 mb-2 pt-2 border-t border-gray-200">
+            <div className="font-semibold">Heures prévues ajustées</div>
+            <div>{displayedRecap.adjustedExpectedHours.toFixed(1)}h</div>
+            {displayedRecap.deductedHours > 0 && (
+              <div className="text-[9px] text-red-600">
+                (−{displayedRecap.deductedHours.toFixed(1)}h déduites)
+              </div>
+            )}
+          </div>
+        )}
 
-        {/* Base contractuelle */}
-        <div className="text-xs text-gray-600 mb-2">
-          Base: {contractHours.toFixed(1)}h
-        </div>
-
-        {/* CP count */}
-        {cpDays > 0 && (
-          <div className="mt-2 pt-2 border-t border-gray-200">
-            <div className="text-[10px] font-semibold text-green-700">
-              CP décomptés : {cpDays} j
+        {/* Heures complémentaires (temps partiel) */}
+        {isPartTime && (displayedRecap.complementary10 > 0 || displayedRecap.complementary25 > 0) && (
+          <div className="text-[10px] text-green-700 mb-2 pt-2 border-t border-gray-200">
+            <div className="font-bold mb-1">Heures complémentaires</div>
+            {displayedRecap.complementary10 > 0 && (
+              <div>+10% : {displayedRecap.complementary10.toFixed(1)}h</div>
+            )}
+            {displayedRecap.complementary25 > 0 && (
+              <div>+25% : {displayedRecap.complementary25.toFixed(1)}h</div>
+            )}
+            <div className="font-bold mt-0.5">
+              Total : {((displayedRecap.complementary10 || 0) + (displayedRecap.complementary25 || 0)).toFixed(1)}h
             </div>
           </div>
         )}
 
+        {/* Heures supplémentaires (temps plein) */}
+        {!isPartTime && (displayedRecap.overtime25 > 0 || displayedRecap.overtime50 > 0) && (
+          <div className="text-[10px] text-orange-700 mb-2 pt-2 border-t border-gray-200">
+            <div className="font-bold mb-1">Heures supplémentaires</div>
+            {displayedRecap.overtime25 > 0 && (
+              <div>+25% : {displayedRecap.overtime25.toFixed(1)}h</div>
+            )}
+            {displayedRecap.overtime50 > 0 && (
+              <div>+50% : {displayedRecap.overtime50.toFixed(1)}h</div>
+            )}
+            <div className="font-bold mt-0.5">
+              Total : {((displayedRecap.overtime25 || 0) + (displayedRecap.overtime50 || 0)).toFixed(1)}h
+            </div>
+          </div>
+        )}
+
+        {/* Non-shifts par type */}
+        {displayedRecap.nonShiftsByType && Object.keys(displayedRecap.nonShiftsByType).length > 0 && (
+          <div className="text-[10px] text-gray-700 mb-2 pt-2 border-t border-gray-200">
+            <div className="font-bold mb-1">Absences</div>
+            {Object.entries(displayedRecap.nonShiftsByType).map(([type, count]) => (
+              <div key={type}>{type} : {count}j</div>
+            ))}
+          </div>
+        )}
+
+        {/* Jours fériés travaillés */}
+        {displayedRecap.holidaysWorked > 0 && (
+          <div className="text-[10px] text-purple-700 mb-2 pt-2 border-t border-gray-200">
+            <div className="font-bold">Jours fériés travaillés</div>
+            <div>{displayedRecap.holidaysWorked} jour{displayedRecap.holidaysWorked > 1 ? 's' : ''}</div>
+            <div>{displayedRecap.holidaysHours.toFixed(1)}h</div>
+          </div>
+        )}
+
+        {/* CP décomptés */}
+        {displayedRecap.cpDays > 0 && (
+          <div className="text-[10px] font-semibold text-green-700 pt-2 border-t border-gray-200">
+            CP : {displayedRecap.cpDays}j
+          </div>
+        )}
+
         {hasManualOverride && (
-          <div className="mt-1 text-[9px] text-blue-700 font-semibold">
-            Modifié
+          <div className="mt-2 text-[9px] text-blue-700 font-semibold">
+            ✏️ Modifié
           </div>
         )}
       </div>
@@ -166,29 +199,35 @@ export default function MonthlySummary({
         employee={employee}
         year={year}
         month={month}
-        autoValues={{
-          daysWorked: autoDaysWorked,
-          totalHours: autoTotalHours,
-          contractHours: autoMonthlyContractHours,
-          cpDays: autoCPDays
-        }}
-        currentRecap={manualRecap}
+        autoRecap={autoRecap}
+        currentRecap={monthlyRecap}
         onRecapUpdate={onRecapUpdate}
+        calculationMode={calculationMode}
+        isPartTime={isPartTime}
       />
     </>
   );
 }
 
-function EditMonthlyRecapDialog({ open, onOpenChange, employee, year, month, autoValues, currentRecap, onRecapUpdate }) {
+function EditMonthlyRecapDialog({ open, onOpenChange, employee, year, month, autoRecap, currentRecap, onRecapUpdate, calculationMode, isPartTime }) {
   const queryClient = useQueryClient();
   const [formData, setFormData] = useState({});
 
   React.useEffect(() => {
     if (open) {
       setFormData({
-        manual_days_worked: currentRecap?.manual_days_worked ?? '',
-        manual_total_hours: currentRecap?.manual_total_hours ?? '',
-        manual_contract_hours: currentRecap?.manual_contract_hours ?? '',
+        manual_expected_days: currentRecap?.manual_expected_days ?? '',
+        manual_actual_days: currentRecap?.manual_actual_days ?? '',
+        manual_extra_days: currentRecap?.manual_extra_days ?? '',
+        manual_expected_hours: currentRecap?.manual_expected_hours ?? '',
+        manual_deducted_hours: currentRecap?.manual_deducted_hours ?? '',
+        manual_adjusted_expected_hours: currentRecap?.manual_adjusted_expected_hours ?? '',
+        manual_overtime_25: currentRecap?.manual_overtime_25 ?? '',
+        manual_overtime_50: currentRecap?.manual_overtime_50 ?? '',
+        manual_complementary_10: currentRecap?.manual_complementary_10 ?? '',
+        manual_complementary_25: currentRecap?.manual_complementary_25 ?? '',
+        manual_holidays_worked: currentRecap?.manual_holidays_worked ?? '',
+        manual_holidays_hours: currentRecap?.manual_holidays_hours ?? '',
         manual_cp_days: currentRecap?.manual_cp_days ?? '',
         notes: currentRecap?.notes || ''
       });
@@ -251,7 +290,7 @@ function EditMonthlyRecapDialog({ open, onOpenChange, employee, year, month, aut
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl">
+      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="text-xl font-bold text-blue-600">
             Éditer le récapitulatif mensuel
@@ -259,62 +298,204 @@ function EditMonthlyRecapDialog({ open, onOpenChange, employee, year, month, aut
           <p className="text-sm text-gray-600">
             {employee.first_name} {employee.last_name} - {monthNames[month - 1]} {year}
           </p>
+          <p className="text-xs text-gray-500">
+            Mode: {calculationMode === 'disabled' ? 'Désactivé' : calculationMode === 'weekly' ? 'Hebdomadaire' : 'Mensuel (lissage)'} • 
+            {isPartTime ? ' Temps partiel' : ' Temps plein'}
+          </p>
         </DialogHeader>
 
         <div className="space-y-4 mt-4">
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-xs text-gray-700">
-            <strong>Récapitulatif simple :</strong> Saisir les heures effectuées et la base contractuelle.
+            <strong>Tous les champs sont surchargeables.</strong> Laissez vide pour utiliser la valeur automatique.
           </div>
 
-          {/* Days and hours */}
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <Label className="text-xs text-gray-700">Jours travaillés</Label>
-              <Input
-                type="number"
-                step="1"
-                min="0"
-                placeholder={`Auto: ${autoValues.daysWorked}`}
-                value={formData.manual_days_worked}
-                onChange={(e) => setFormData({...formData, manual_days_worked: e.target.value})}
-                className="mt-1"
-              />
-            </div>
-            <div>
-              <Label className="text-xs text-gray-700">Heures effectuées</Label>
-              <Input
-                type="number"
-                step="0.1"
-                min="0"
-                placeholder={`Auto: ${autoValues.totalHours.toFixed(1)}`}
-                value={formData.manual_total_hours}
-                onChange={(e) => setFormData({...formData, manual_total_hours: e.target.value})}
-                className="mt-1"
-              />
-            </div>
-          </div>
+          {/* Jours */}
+          {calculationMode !== 'disabled' && (
+            <>
+              <div className="font-semibold text-sm text-gray-800">📅 Jours</div>
+              <div className="grid grid-cols-3 gap-3">
+                <div>
+                  <Label className="text-xs text-gray-700">Jours prévus</Label>
+                  <Input
+                    type="number"
+                    step="1"
+                    min="0"
+                    placeholder={`Auto: ${autoRecap.expectedDays || 0}`}
+                    value={formData.manual_expected_days}
+                    onChange={(e) => setFormData({...formData, manual_expected_days: e.target.value})}
+                    className="mt-1"
+                  />
+                </div>
+                <div>
+                  <Label className="text-xs text-gray-700">Jours travaillés</Label>
+                  <Input
+                    type="number"
+                    step="1"
+                    min="0"
+                    placeholder={`Auto: ${autoRecap.actualDaysWorked || 0}`}
+                    value={formData.manual_actual_days}
+                    onChange={(e) => setFormData({...formData, manual_actual_days: e.target.value})}
+                    className="mt-1"
+                  />
+                </div>
+                <div>
+                  <Label className="text-xs text-gray-700">Jours supp</Label>
+                  <Input
+                    type="number"
+                    step="1"
+                    min="0"
+                    placeholder={`Auto: ${autoRecap.extraDays || 0}`}
+                    value={formData.manual_extra_days}
+                    onChange={(e) => setFormData({...formData, manual_extra_days: e.target.value})}
+                    className="mt-1"
+                  />
+                </div>
+              </div>
 
-          <div>
-            <Label className="text-xs text-gray-700">Base contractuelle</Label>
-            <Input
-              type="number"
-              step="0.1"
-              min="0"
-              placeholder={`Auto: ${autoValues.contractHours.toFixed(1)}`}
-              value={formData.manual_contract_hours}
-              onChange={(e) => setFormData({...formData, manual_contract_hours: e.target.value})}
-              className="mt-1"
-            />
-          </div>
+              {/* Heures mensuelles */}
+              <div className="font-semibold text-sm text-gray-800">⏱️ Heures mensuelles</div>
+              <div className="grid grid-cols-3 gap-3">
+                <div>
+                  <Label className="text-xs text-gray-700">Heures prévues</Label>
+                  <Input
+                    type="number"
+                    step="0.1"
+                    min="0"
+                    placeholder={`Auto: ${autoRecap.expectedHours?.toFixed(1) || 0}`}
+                    value={formData.manual_expected_hours}
+                    onChange={(e) => setFormData({...formData, manual_expected_hours: e.target.value})}
+                    className="mt-1"
+                  />
+                </div>
+                <div>
+                  <Label className="text-xs text-gray-700">Heures déduites</Label>
+                  <Input
+                    type="number"
+                    step="0.1"
+                    min="0"
+                    placeholder={`Auto: ${autoRecap.deductedHours?.toFixed(1) || 0}`}
+                    value={formData.manual_deducted_hours}
+                    onChange={(e) => setFormData({...formData, manual_deducted_hours: e.target.value})}
+                    className="mt-1"
+                  />
+                </div>
+                <div>
+                  <Label className="text-xs text-gray-700">Heures ajustées</Label>
+                  <Input
+                    type="number"
+                    step="0.1"
+                    min="0"
+                    placeholder={`Auto: ${autoRecap.adjustedExpectedHours?.toFixed(1) || 0}`}
+                    value={formData.manual_adjusted_expected_hours}
+                    onChange={(e) => setFormData({...formData, manual_adjusted_expected_hours: e.target.value})}
+                    className="mt-1"
+                  />
+                </div>
+              </div>
 
-          {/* CP Days */}
+              {/* Heures complémentaires / supplémentaires */}
+              {isPartTime ? (
+                <>
+                  <div className="font-semibold text-sm text-gray-800">✅ Heures complémentaires</div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <Label className="text-xs text-gray-700">Comp +10%</Label>
+                      <Input
+                        type="number"
+                        step="0.1"
+                        min="0"
+                        placeholder={`Auto: ${autoRecap.complementary10?.toFixed(1) || 0}`}
+                        value={formData.manual_complementary_10}
+                        onChange={(e) => setFormData({...formData, manual_complementary_10: e.target.value})}
+                        className="mt-1"
+                      />
+                    </div>
+                    <div>
+                      <Label className="text-xs text-gray-700">Comp +25%</Label>
+                      <Input
+                        type="number"
+                        step="0.1"
+                        min="0"
+                        placeholder={`Auto: ${autoRecap.complementary25?.toFixed(1) || 0}`}
+                        value={formData.manual_complementary_25}
+                        onChange={(e) => setFormData({...formData, manual_complementary_25: e.target.value})}
+                        className="mt-1"
+                      />
+                    </div>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="font-semibold text-sm text-gray-800">⚡ Heures supplémentaires</div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <Label className="text-xs text-gray-700">Supp +25%</Label>
+                      <Input
+                        type="number"
+                        step="0.1"
+                        min="0"
+                        placeholder={`Auto: ${autoRecap.overtime25?.toFixed(1) || 0}`}
+                        value={formData.manual_overtime_25}
+                        onChange={(e) => setFormData({...formData, manual_overtime_25: e.target.value})}
+                        className="mt-1"
+                      />
+                    </div>
+                    <div>
+                      <Label className="text-xs text-gray-700">Supp +50%</Label>
+                      <Input
+                        type="number"
+                        step="0.1"
+                        min="0"
+                        placeholder={`Auto: ${autoRecap.overtime50?.toFixed(1) || 0}`}
+                        value={formData.manual_overtime_50}
+                        onChange={(e) => setFormData({...formData, manual_overtime_50: e.target.value})}
+                        className="mt-1"
+                      />
+                    </div>
+                  </div>
+                </>
+              )}
+
+              {/* Jours fériés */}
+              <div className="font-semibold text-sm text-gray-800">🎉 Jours fériés travaillés</div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <Label className="text-xs text-gray-700">Jours fériés</Label>
+                  <Input
+                    type="number"
+                    step="1"
+                    min="0"
+                    placeholder={`Auto: ${autoRecap.holidaysWorked || 0}`}
+                    value={formData.manual_holidays_worked}
+                    onChange={(e) => setFormData({...formData, manual_holidays_worked: e.target.value})}
+                    className="mt-1"
+                  />
+                </div>
+                <div>
+                  <Label className="text-xs text-gray-700">Heures fériées</Label>
+                  <Input
+                    type="number"
+                    step="0.1"
+                    min="0"
+                    placeholder={`Auto: ${autoRecap.holidaysHours?.toFixed(1) || 0}`}
+                    value={formData.manual_holidays_hours}
+                    onChange={(e) => setFormData({...formData, manual_holidays_hours: e.target.value})}
+                    className="mt-1"
+                  />
+                </div>
+              </div>
+            </>
+          )}
+
+          {/* CP */}
+          <div className="font-semibold text-sm text-gray-800">🟢 Congés payés</div>
           <div>
             <Label className="text-xs text-gray-700">CP décomptés</Label>
             <Input
               type="number"
               step="0.5"
               min="0"
-              placeholder={`Auto: ${autoValues.cpDays || 0}`}
+              placeholder={`Auto: ${autoRecap.cpDays || 0}`}
               value={formData.manual_cp_days}
               onChange={(e) => setFormData({...formData, manual_cp_days: e.target.value})}
               className="mt-1"
@@ -326,7 +507,7 @@ function EditMonthlyRecapDialog({ open, onOpenChange, employee, year, month, aut
             <Label className="text-xs text-gray-700">Notes</Label>
             <textarea
               className="w-full mt-1 px-3 py-2 border border-gray-300 rounded-md text-sm"
-              rows={3}
+              rows={2}
               placeholder="Commentaires..."
               value={formData.notes}
               onChange={(e) => setFormData({...formData, notes: e.target.value})}
@@ -345,9 +526,10 @@ function EditMonthlyRecapDialog({ open, onOpenChange, employee, year, month, aut
               <Button
                 onClick={() => deleteMutation.mutate()}
                 variant="outline"
-                className="border-red-300 text-red-700 hover:bg-red-50"
+                className="border-red-300 text-red-700 hover:bg-red-50 flex items-center gap-2"
               >
-                Supprimer les modifications
+                <RotateCcw className="w-4 h-4" />
+                Réinitialiser
               </Button>
             )}
             <Button
