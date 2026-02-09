@@ -4,7 +4,7 @@ import { Edit2 } from 'lucide-react';
 import { calculateMonthlyCPTotal } from './paidLeaveCalculations';
 import { calculateShiftDuration } from './LegalChecks';
 import { parseContractHours } from '@/lib/weeklyHoursCalculation';
-import { calculateDayHours } from '@/lib/nonShiftHoursCalculation';
+import { calculateDayHours } from '@/components/utils/nonShiftHoursCalculation';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
