@@ -44,6 +44,7 @@ export default function AddPaidLeaveModalContent({ employee, existingPeriod = nu
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['paidLeavePeriods'] });
+      queryClient.invalidateQueries({ queryKey: ['shifts'] });
       toast.success(existingPeriod ? 'Période CP modifiée' : 'Période CP créée');
       onClose();
     }
@@ -57,6 +58,7 @@ export default function AddPaidLeaveModalContent({ employee, existingPeriod = nu
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['paidLeavePeriods'] });
+      queryClient.invalidateQueries({ queryKey: ['shifts'] });
       toast.success('Période CP supprimée');
       onClose();
     }
