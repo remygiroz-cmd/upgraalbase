@@ -1241,7 +1241,6 @@ export default function Planning() {
                               holidayDates={holidayDates}
                               cpPeriods={employeeCpPeriods}
                               monthlyRecap={monthlyRecap}
-                              weeklyRecaps={allWeeklyRecaps.filter(r => r.employee_id === employee.id)}
                             />
                           </div>
                         );
