@@ -4,6 +4,7 @@ import { Edit2 } from 'lucide-react';
 import { calculateMonthlyCPTotal } from './paidLeaveCalculations';
 import { calculateShiftDuration } from './LegalChecks';
 import { parseContractHours } from '@/lib/weeklyHoursCalculation';
+import { calculateDayHours } from '@/lib/nonShiftHoursCalculation';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
@@ -45,18 +46,48 @@ export default function MonthlySummary({
   // cpPeriods et monthlyRecap sont maintenant passés en props depuis le parent
   const manualRecap = monthlyRecap;
 
-  // Calculate automatic values - SIMPLE
+  // Calculate automatic values - including non-shifts that generate hours
   const { autoDaysWorked, autoTotalHours, autoMonthlyContractHours } = useMemo(() => {
     const employeeShifts = shifts.filter(s => s.employee_id === employee.id);
+    const employeeNonShifts = nonShiftEvents.filter(ns => ns.employee_id === employee.id);
 
-    // Days worked (unique dates with shifts)
-    const daysWithShifts = new Set(employeeShifts.map(s => s.date));
-    const autoDaysWorked = daysWithShifts.size;
+    // Group shifts and non-shifts by date
+    const dateMap = new Map();
+    
+    // Add shifts to map
+    employeeShifts.forEach(shift => {
+      if (!dateMap.has(shift.date)) {
+        dateMap.set(shift.date, { shifts: [], nonShifts: [] });
+      }
+      dateMap.get(shift.date).shifts.push(shift);
+    });
+    
+    // Add non-shifts to map
+    employeeNonShifts.forEach(ns => {
+      if (!dateMap.has(ns.date)) {
+        dateMap.set(ns.date, { shifts: [], nonShifts: [] });
+      }
+      dateMap.get(ns.date).nonShifts.push(ns);
+    });
 
-    // Total hours worked
-    const autoTotalHours = employeeShifts.reduce((sum, shift) => {
-      return sum + calculateShiftDuration(shift);
-    }, 0);
+    // Days worked (unique dates with shifts OR non-shifts that generate hours)
+    let autoDaysWorked = 0;
+    let autoTotalHours = 0;
+
+    dateMap.forEach((dayData, date) => {
+      const { hours } = calculateDayHours(
+        dayData.shifts, 
+        dayData.nonShifts, 
+        nonShiftTypes, 
+        employee, 
+        calculateShiftDuration
+      );
+      
+      if (hours > 0 || dayData.shifts.length > 0) {
+        autoDaysWorked++;
+      }
+      autoTotalHours += hours;
+    });
 
     // Contract hours: weekly * 4.33
     const contractHoursWeekly = parseContractHours(employee?.contract_hours_weekly) || 0;
@@ -64,7 +95,7 @@ export default function MonthlySummary({
     const autoMonthlyContractHours = contractHoursWeekly * weeksInMonth;
 
     return { autoDaysWorked, autoTotalHours, autoMonthlyContractHours };
-  }, [shifts, employee]);
+  }, [shifts, employee, nonShiftEvents, nonShiftTypes]);
 
   // CP days count
   const autoCPDays = calculateMonthlyCPTotal(cpPeriods, monthStart, monthEnd);
