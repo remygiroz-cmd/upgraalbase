@@ -9,6 +9,7 @@ import {
   parseContractHours,
   formatLocalDate
 } from '@/lib/weeklyHoursCalculation';
+import { calculateDayHours } from '@/components/utils/nonShiftHoursCalculation';
 
 /**
  * Récap semaine simplifié
@@ -31,7 +32,9 @@ export default function WeeklySummary({
   onCopyFromAbove,
   onRecapUpdate, // NOUVEAU: callback pour notifier le parent de rafraîchir
   currentMonth,
-  currentYear
+  currentYear,
+  nonShiftEvents = [],
+  nonShiftTypes = []
 }) {
   const [showConfirm, setShowConfirm] = useState(false);
   const [isEditingBase, setIsEditingBase] = useState(false);
@@ -146,7 +149,7 @@ export default function WeeklySummary({
     return value;
   }, [baseOverrideFromDB, baseDefault, employee.id, weekStartStr, isEditingBase, baseDraft, weeklyRecap, employee.first_name, employee.last_name]);
 
-  // Calculer les heures travaillées (workedHours)
+  // Calculer les heures travaillées (workedHours) - including non-shifts that generate hours
   const workedHours = useMemo(() => {
     const weekEnd = new Date(weekStart);
     weekEnd.setDate(weekEnd.getDate() + 6);
@@ -159,10 +162,42 @@ export default function WeeklySummary({
       return true;
     });
 
-    return weekShifts.reduce((sum, shift) => {
-      return sum + calculateShiftDuration(shift);
-    }, 0);
-  }, [shifts, employee.id, weekStart, weekStartStr]);
+    const weekNonShifts = nonShiftEvents.filter(ns => 
+      ns.employee_id === employee.id && ns.date >= weekStartStr && ns.date <= weekEndStr
+    );
+
+    // Group by date
+    const dateMap = new Map();
+    
+    weekShifts.forEach(shift => {
+      if (!dateMap.has(shift.date)) {
+        dateMap.set(shift.date, { shifts: [], nonShifts: [] });
+      }
+      dateMap.get(shift.date).shifts.push(shift);
+    });
+    
+    weekNonShifts.forEach(ns => {
+      if (!dateMap.has(ns.date)) {
+        dateMap.set(ns.date, { shifts: [], nonShifts: [] });
+      }
+      dateMap.get(ns.date).nonShifts.push(ns);
+    });
+    
+    // Calculate total hours for the week
+    let totalHours = 0;
+    dateMap.forEach((dayData) => {
+      const { hours } = calculateDayHours(
+        dayData.shifts, 
+        dayData.nonShifts, 
+        nonShiftTypes, 
+        employee, 
+        calculateShiftDuration
+      );
+      totalHours += hours;
+    });
+
+    return totalHours;
+  }, [shifts, employee.id, weekStart, weekStartStr, nonShiftEvents, nonShiftTypes, employee]);
 
   // Compter les shifts
   const shiftsCount = useMemo(() => {

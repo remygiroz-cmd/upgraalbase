@@ -19,6 +19,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
+import { findTodayActiveSession } from '@/components/utils/todayListManager';
 
 export default function MiseEnPlace() {
   const queryClient = useQueryClient();
@@ -206,19 +207,25 @@ export default function MiseEnPlace() {
     queryFn: () => base44.auth.me()
   });
 
-  // Récupère la session active (sans filtrage par date)
-  const { data: activeSessions = [] } = useQuery({
+  // Récupère TOUTES les sessions actives (source de vérité unique)
+  const { data: activeSessions = [], isLoading: loadingSessions } = useQuery({
     queryKey: ['workSessions', 'active'],
-    queryFn: () => base44.entities.WorkSession.filter({ status: 'active' })
+    queryFn: () => base44.entities.WorkSession.filter({ status: 'active' }),
+    staleTime: 0, // Toujours rafraîchir
+    refetchOnMount: true,
+    refetchOnWindowFocus: true
   });
 
-  const hasActiveSession = activeSessions.length > 0;
-  const activeSession = activeSessions[0];
+  // Utiliser la fonction centralisée pour trouver la session active
+  const activeSession = findTodayActiveSession(activeSessions);
+  const hasActiveSession = activeSession !== null;
 
   const createSessionMutation = useMutation({
     mutationFn: (data) => base44.entities.WorkSession.create(data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['workSessions'] });
+    onSuccess: async () => {
+      // Invalider et forcer le refetch immédiat
+      await queryClient.invalidateQueries({ queryKey: ['workSessions'] });
+      await queryClient.refetchQueries({ queryKey: ['workSessions', 'active'] });
       setSelectedTasks(new Set());
       setShowSuccessOverlay(true);
     }
@@ -226,8 +233,10 @@ export default function MiseEnPlace() {
 
   const updateSessionMutation = useMutation({
     mutationFn: ({ id, data }) => base44.entities.WorkSession.update(id, data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['workSessions'] });
+    onSuccess: async () => {
+      // Invalider et forcer le refetch immédiat
+      await queryClient.invalidateQueries({ queryKey: ['workSessions'] });
+      await queryClient.refetchQueries({ queryKey: ['workSessions', 'active'] });
       setSelectedTasks(new Set());
       setShowSuccessOverlay(true);
     }
@@ -607,26 +616,33 @@ export default function MiseEnPlace() {
                       <span className="hidden sm:inline">Tâche ponctuelle</span>
                       <span className="sm:hidden">Ponctuelle</span>
                     </Button>
-                    {hasActiveSession ? (
-                      <Button
-                        onClick={handleAddToSession}
-                        disabled={updateSessionMutation.isPending}
-                        className="flex-1 sm:flex-none bg-white text-orange-600 hover:bg-orange-50 font-semibold text-sm whitespace-nowrap"
-                      >
-                        <Plus className="w-4 h-4 mr-1 lg:mr-2" />
-                        <span className="hidden sm:inline">Ajouter à la liste</span>
-                        <span className="sm:hidden">Ajouter</span>
-                      </Button>
+                    {loadingSessions ? (
+                     <Button
+                       disabled
+                       className="flex-1 sm:flex-none bg-white text-orange-600 opacity-50 font-semibold text-sm whitespace-nowrap"
+                     >
+                       <span>Chargement...</span>
+                     </Button>
+                    ) : hasActiveSession ? (
+                     <Button
+                       onClick={handleAddToSession}
+                       disabled={updateSessionMutation.isPending}
+                       className="flex-1 sm:flex-none bg-white text-orange-600 hover:bg-orange-50 font-semibold text-sm whitespace-nowrap"
+                     >
+                       <Plus className="w-4 h-4 mr-1 lg:mr-2" />
+                       <span className="hidden sm:inline">Ajouter à la liste</span>
+                       <span className="sm:hidden">Ajouter</span>
+                     </Button>
                     ) : (
-                      <Button
-                        onClick={handleCreateNewSession}
-                        disabled={createSessionMutation.isPending}
-                        className="flex-1 sm:flex-none bg-white text-orange-600 hover:bg-orange-50 font-semibold text-sm whitespace-nowrap"
-                      >
-                        <Plus className="w-4 h-4 mr-1 lg:mr-2" />
-                        <span className="hidden sm:inline">Créer nouvelle liste</span>
-                        <span className="sm:hidden">Créer</span>
-                      </Button>
+                     <Button
+                       onClick={handleCreateNewSession}
+                       disabled={createSessionMutation.isPending}
+                       className="flex-1 sm:flex-none bg-white text-orange-600 hover:bg-orange-50 font-semibold text-sm whitespace-nowrap"
+                     >
+                       <Plus className="w-4 h-4 mr-1 lg:mr-2" />
+                       <span className="hidden sm:inline">Créer nouvelle liste</span>
+                       <span className="sm:hidden">Créer</span>
+                     </Button>
                     )}
                   </div>
                 </div>

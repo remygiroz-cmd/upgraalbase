@@ -23,6 +23,7 @@ import EmployeeHeaderCell from '@/components/planning/EmployeeHeaderCell';
 import ExportComptaModal from '@/components/planning/ExportComptaModal';
 import ApplyTemplatesModal from '@/components/planning/ApplyTemplatesModal';
 import ClearMonthModal from '@/components/planning/ClearMonthModal';
+import DeleteCPModal from '@/components/planning/DeleteCPModal';
 import { calculateShiftDuration, checkMinimumRest } from '@/components/planning/LegalChecks';
 import { parseLocalDate, formatLocalDate } from '@/components/planning/dateUtils';
 import { isDateInCPPeriod } from '@/components/planning/paidLeaveCalculations';
@@ -42,7 +43,7 @@ export default function Planning() {
   // État centralisé pour les actions depuis le dropdown
   const [modalState, setModalState] = useState({
     isOpen: false,
-    actionType: null, // 'ADD_CP' | 'APPLY_TEMPLATE'
+    actionType: null, // 'ADD_CP' | 'APPLY_TEMPLATE' | 'DELETE_CP'
     selectedEmployee: null
   });
   const [selectedCell, setSelectedCell] = useState(null);
@@ -1058,13 +1059,13 @@ export default function Planning() {
                                        e.stopPropagation();
                                        setModalState({
                                          isOpen: true,
-                                         actionType: 'ADD_CP',
+                                         actionType: 'DELETE_CP',
                                          selectedEmployee: employee
                                        });
                                        setSelectedCPPeriod(cpPeriod);
                                      }}
-                                     className="absolute -top-1 -right-1 z-10 bg-green-600 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full shadow-md cursor-pointer hover:bg-green-700 transition-colors"
-                                     title="Cliquer pour modifier"
+                                     className="absolute -top-1 -right-1 z-10 bg-green-600 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full shadow-md cursor-pointer hover:bg-red-600 transition-colors"
+                                     title="Cliquer pour supprimer"
                                    >
                                      🟢 {cpPeriod.cp_days_manual || cpPeriod.cp_days_auto} CP
                                    </div>
@@ -1317,6 +1318,23 @@ export default function Planning() {
                   currentYear={currentYear}
                   onClose={() => {
                     setModalState({ isOpen: false, actionType: null, selectedEmployee: null });
+                  }}
+                />
+              </>
+            )}
+            {modalState.actionType === 'DELETE_CP' && selectedCPPeriod && (
+              <>
+                <DialogHeader>
+                  <DialogTitle className="text-xl font-bold text-red-600">
+                    🗑️ Supprimer Congés Payés
+                  </DialogTitle>
+                </DialogHeader>
+                <DeleteCPModal
+                  cpPeriod={selectedCPPeriod}
+                  employee={modalState.selectedEmployee}
+                  onClose={() => {
+                    setModalState({ isOpen: false, actionType: null, selectedEmployee: null });
+                    setSelectedCPPeriod(null);
                   }}
                 />
               </>

@@ -3,6 +3,7 @@ import { cn } from '@/lib/utils';
 import { Edit2, RotateCcw, AlertCircle, Clock, Calendar, Coffee, Sun, Briefcase } from 'lucide-react';
 import { calculateMonthlyCPTotal } from './paidLeaveCalculations';
 import { parseContractHours } from '@/lib/weeklyHoursCalculation';
+import { calculateDayHours } from '@/components/utils/nonShiftHoursCalculation';
 import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
@@ -306,7 +307,7 @@ export default function MonthlySummary({
         )}
 
         {/* SECTION 5: Non-shifts summary */}
-        {calculationMode !== 'disabled' && Object.keys(nonShiftsByType).length > 0 && (
+        {calculationMode !== 'disabled' && nonShiftsByType && Object.keys(nonShiftsByType).length > 0 && (
           <div className="mb-2 text-[9px] text-gray-600 space-y-0.5">
             {Object.entries(nonShiftsByType).map(([key, { count, code }]) => (
               <div key={key} className="flex items-center justify-center gap-1">

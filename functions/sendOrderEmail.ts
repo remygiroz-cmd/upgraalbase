@@ -103,10 +103,8 @@ Deno.serve(async (req) => {
     if (isAutomation) {
       // Appel automation: utiliser service role, pas besoin d'utilisateur
       console.log('[INFO] Automation call detected - using service role');
-      base44 = createClient({
-        appId: Deno.env.get('BASE44_APP_ID'),
-        serviceRoleKey: true
-      });
+      const base44Client = createClientFromRequest(req);
+      base44 = base44Client.asServiceRole;
       sentBy = 'automation';
     } else {
       // Appel frontend: vérifier l'authentification utilisateur

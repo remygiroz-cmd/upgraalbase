@@ -17,6 +17,7 @@ import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '../utils';
+import { findTodayActiveSession } from '@/components/utils/todayListManager';
 
 export default function TravailDuJour() {
   const queryClient = useQueryClient();
@@ -26,14 +27,17 @@ export default function TravailDuJour() {
   const [confirmDialog, setConfirmDialog] = useState({ open: false, title: '', description: '', onConfirm: null });
   const [hideCompleted, setHideCompleted] = useState(true);
 
-  // Récupère la session active (sans filtrage par date)
-  const { data: activeSession, isLoading } = useQuery({
+  // Récupère TOUTES les sessions actives (source de vérité unique)
+  const { data: activeSessions = [], isLoading } = useQuery({
     queryKey: ['workSessions', 'active'],
-    queryFn: async () => {
-      const sessions = await base44.entities.WorkSession.filter({ status: 'active' });
-      return sessions[0] || null;
-    }
+    queryFn: () => base44.entities.WorkSession.filter({ status: 'active' }),
+    staleTime: 0, // Toujours rafraîchir
+    refetchOnMount: true,
+    refetchOnWindowFocus: true
   });
+
+  // Utiliser la fonction centralisée pour trouver la session active
+  const activeSession = findTodayActiveSession(activeSessions);
 
   const { data: categories = [] } = useQuery({
     queryKey: ['categories'],
@@ -65,8 +69,10 @@ export default function TravailDuJour() {
 
   const updateSessionMutation = useMutation({
     mutationFn: ({ id, data }) => base44.entities.WorkSession.update(id, data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['workSessions'] });
+    onSuccess: async () => {
+      // Invalider et forcer le refetch immédiat
+      await queryClient.invalidateQueries({ queryKey: ['workSessions'] });
+      await queryClient.refetchQueries({ queryKey: ['workSessions', 'active'] });
     }
   });
 
@@ -77,8 +83,10 @@ export default function TravailDuJour() {
       completed_by: currentUser?.email,
       completed_by_name: currentUser?.full_name || currentUser?.email
     }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['workSessions'] });
+    onSuccess: async () => {
+      // Invalider et forcer le refetch immédiat
+      await queryClient.invalidateQueries({ queryKey: ['workSessions'] });
+      await queryClient.refetchQueries({ queryKey: ['workSessions', 'active'] });
       setShowCompletionModal(true);
     }
   });
@@ -186,7 +194,19 @@ export default function TravailDuJour() {
   };
 
   if (isLoading) {
-    return <LoadingSpinner />;
+    return (
+      <div>
+        <PageHeader
+          icon={ChefHat}
+          title="Travail du Jour"
+          subtitle={format(new Date(), "EEEE d MMMM yyyy", { locale: fr })}
+        />
+        <div className="flex items-center justify-center py-16">
+          <LoadingSpinner />
+          <span className="ml-3 text-gray-600">Chargement de la liste du jour...</span>
+        </div>
+      </div>
+    );
   }
 
   if (!activeSession) {
