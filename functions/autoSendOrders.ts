@@ -1,4 +1,4 @@
-import { createClient } from 'npm:@base44/sdk@0.8.6';
+import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
 
 /**
  * Automation: Envoi automatique des commandes fournisseurs
@@ -135,11 +135,9 @@ Deno.serve(async (req) => {
     const dryRun = url.searchParams.get('dryRun') === '1';
     const forceSupplierId = url.searchParams.get('forceSupplierId');
 
-    // Client service role pour l'automation
-    const base44 = createClient({
-      appId: Deno.env.get('BASE44_APP_ID'),
-      serviceRoleKey: true
-    });
+    // Pour les automations scheduled, utiliser le service role
+    const base44Client = createClientFromRequest(req);
+    const base44 = base44Client.asServiceRole;
 
     // Obtenir l'heure Paris
     const parisTime = getParisTime();

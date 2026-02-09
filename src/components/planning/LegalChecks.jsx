@@ -6,7 +6,8 @@
 import { formatLocalDate } from './dateUtils';
 
 /**
- * Calcule la durée d'un shift en heures
+ * Calcule la durée d'un shift en heures avec conversion stricte
+ * Règle: 15min = 0.25h, 30min = 0.5h, 45min = 0.75h
  */
 export const calculateShiftDuration = (shift) => {
   const [startH, startM] = shift.start_time.split(':').map(Number);
@@ -16,7 +17,10 @@ export const calculateShiftDuration = (shift) => {
   if (totalMinutes < 0) totalMinutes += 24 * 60;
 
   totalMinutes -= (shift.break_minutes || 0);
-  return Math.max(0, totalMinutes / 60);
+  
+  // Conversion stricte: arrondir au quart d'heure inférieur puis convertir
+  const roundedMinutes = Math.floor(totalMinutes / 15) * 15;
+  return Math.max(0, roundedMinutes / 60);
 };
 
 /**

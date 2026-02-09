@@ -104,19 +104,47 @@ export default function WeeklySummary({
     // Compter combien de jours travaillés dans la portion de semaine dans le mois
     const workingDaysCount = daysInMonth.filter(dayOfWeek => expectedWorkingDays.has(dayOfWeek)).length;
     
-    // Calculer base proratisée
+    // Calculer base proratisée avec arrondi au quart d'heure
     const basePerDay = contractHoursPerWeek / workDaysPerWeek;
     const prorated = basePerDay * workingDaysCount;
+    
+    // Arrondir au quart d'heure: convertir en minutes, arrondir à 15min, reconvertir
+    const proratedMinutes = Math.round((prorated * 60) / 15) * 15;
+    const proratedRounded = proratedMinutes / 60;
     
     return {
       isPartialWeek: true,
       workingDaysInPartialWeek: workingDaysCount,
-      proratedBase: prorated
+      proratedBase: proratedRounded
     };
   }, [weekStart, currentMonth, currentYear, employee, contractHoursPerWeek, workDaysPerWeek]);
 
   // Base par défaut (proratisée si semaine incomplète, sinon contrat)
   const baseDefault = isPartialWeek ? proratedBase : contractHoursPerWeek;
+
+  // ============================================
+  // SOURCE DE VÉRITÉ UNIQUE POUR L'AFFICHAGE
+  // Priorité: override > baseDefault
+  // ============================================
+  const displayedBase = useMemo(() => {
+    const value = baseOverrideFromDB !== null ? baseOverrideFromDB : baseDefault;
+    
+    console.log('═══════════════════════════════════════════════════');
+    console.log('🎨 RENDER VALUE - VALEUR RÉELLEMENT AFFICHÉE');
+    console.log('═══════════════════════════════════════════════════');
+    console.log('employeeId:', employee.id);
+    console.log('employeeName:', employee.first_name + ' ' + employee.last_name);
+    console.log('weekStartStr:', weekStartStr);
+    console.log('baseOverrideFromDB:', baseOverrideFromDB);
+    console.log('baseDefault:', baseDefault);
+    console.log('isEditingBase:', isEditingBase);
+    console.log('baseDraft:', baseDraft);
+    console.log('weeklyRecap:', weeklyRecap);
+    console.log('VALEUR FINALE AFFICHÉE:', value);
+    console.log('═══════════════════════════════════════════════════\n');
+    
+    return value;
+  }, [baseOverrideFromDB, baseDefault, employee.id, weekStartStr, isEditingBase, baseDraft, weeklyRecap, employee.first_name, employee.last_name]);
 
   // Calculer les heures travaillées (workedHours)
   const workedHours = useMemo(() => {
@@ -172,45 +200,75 @@ export default function WeeklySummary({
   // Mutation pour sauvegarder/mettre à jour le recap
   const saveMutation = useMutation({
     mutationFn: async (baseValue) => {
-      console.log('[WeeklySummary] Saving base override:', {
-        employeeId: employee.id,
-        weekStart: weekStartStr,
-        baseValue,
-        existingRecap: weeklyRecap
-      });
-
       const data = {
         employee_id: employee.id,
         week_start: weekStartStr,
         base_override_hours: baseValue
       };
 
+      console.log('═══════════════════════════════════════════════════');
+      console.log('C) MUTATION - ENVOI AU SERVEUR');
+      console.log('═══════════════════════════════════════════════════');
+      console.log('payload envoyé:');
+      console.log('  - employee_id:', data.employee_id);
+      console.log('  - week_start:', data.week_start);
+      console.log('  - base_override_hours:', data.base_override_hours);
+      console.log('action:', weeklyRecap?.id ? 'UPDATE (ID: ' + weeklyRecap.id + ')' : 'CREATE');
+      console.log('═══════════════════════════════════════════════════\n');
+
       try {
         let result;
-        if (weeklyRecap) {
-          console.log('[WeeklySummary] Updating existing recap:', weeklyRecap.id);
+        if (weeklyRecap?.id) {
           result = await base44.entities.WeeklyRecap.update(weeklyRecap.id, {
             base_override_hours: baseValue
           });
         } else {
-          console.log('[WeeklySummary] Creating new recap');
           result = await base44.entities.WeeklyRecap.create(data);
         }
-        console.log('[WeeklySummary] Save result:', result);
+        
+        console.log('═══════════════════════════════════════════════════');
+        console.log('C) MUTATION - RÉPONSE DU SERVEUR');
+        console.log('═══════════════════════════════════════════════════');
+        console.log('response.id:', result.id);
+        console.log('response.employee_id:', result.employee_id);
+        console.log('response.week_start:', result.week_start);
+        console.log('response.base_override_hours:', result.base_override_hours);
+        console.log('✅ base_override_hours présent?:', result.base_override_hours !== null && result.base_override_hours !== undefined);
+        console.log('═══════════════════════════════════════════════════\n');
+        
         return result;
       } catch (err) {
-        console.error('[WeeklySummary] Save error:', err);
+        console.error('❌ MUTATION ERROR:', err);
         throw err;
       }
     },
-    onSuccess: () => {
-      // Notifier le parent de rafraîchir les données (1 seule requête pour tous)
+    onSuccess: async (data) => {
+      console.log('[WeeklySummary] ✅ MUTATION SUCCESS - Closing edit mode');
+      
+      // D'abord fermer l'édition
+      setIsEditingBase(false);
+      setBaseDraft('');
+      
+      // Puis invalider et refetch
       queryClient.invalidateQueries({ queryKey: ['allWeeklyRecaps'] });
-      if (onRecapUpdate) onRecapUpdate();
-      toast.success('Base mise à jour');
+      if (onRecapUpdate) {
+        await onRecapUpdate();
+      }
+      
+      // Vérifier après un court délai que les props ont bien changé
+      setTimeout(() => {
+        console.log('[WeeklySummary] 🔄 POST-SUCCESS CHECK:', {
+          employeeId: employee.id,
+          weekStartStr,
+          weeklyRecap: weeklyRecap,
+          baseOverrideFromDB: weeklyRecap?.base_override_hours,
+          expectedValue: data.base_override_hours
+        });
+      }, 200);
+      
+      toast.success('Base enregistrée ✓');
     },
     onError: (error) => {
-      console.error('[WeeklySummary] Mutation error:', error);
       toast.error(`Erreur: ${error.message || 'Échec de la sauvegarde'}`);
     }
   });
@@ -243,11 +301,12 @@ export default function WeeklySummary({
   };
 
   const handleStartEdit = useCallback(() => {
-    // Initialiser baseDraft avec la valeur actuelle
-    const currentBase = baseOverrideFromDB !== null ? baseOverrideFromDB : baseDefault;
+    // Initialiser baseDraft avec la valeur RÉELLEMENT AFFICHÉE (source de vérité)
+    const currentBase = displayedBase;
+    console.log('[WeeklySummary] 🖊️ START EDIT - initializing baseDraft with:', currentBase);
     setBaseDraft(currentBase.toString());
     setIsEditingBase(true);
-  }, [baseOverrideFromDB, baseDefault]);
+  }, [displayedBase]);
 
   const handleCancelEdit = useCallback(() => {
     setIsEditingBase(false);
@@ -255,11 +314,10 @@ export default function WeeklySummary({
   }, []);
 
   const handleSaveBase = useCallback(() => {
-    const trimmed = baseDraft.trim();
+    const trimmed = baseDraft.trim().replace(',', '.'); // Support virgule française
 
     // Si vide, on supprime le override (retour à la base par défaut)
-    if (trimmed === '' || trimmed === baseDefault.toString()) {
-      console.log('[WeeklySummary] Resetting to default base');
+    if (trimmed === '') {
       if (weeklyRecap) {
         deleteMutation.mutate();
       }
@@ -275,20 +333,20 @@ export default function WeeklySummary({
       return;
     }
 
-    // Si identique à la base par défaut, supprimer l'override
-    if (Math.abs(newValue - baseDefault) < 0.01) {
-      console.log('[WeeklySummary] Value equals default base, removing override');
-      if (weeklyRecap) {
-        deleteMutation.mutate();
-      }
-    } else {
-      console.log('[WeeklySummary] Saving new override:', newValue);
-      saveMutation.mutate(newValue);
-    }
-
-    setIsEditingBase(false);
-    setBaseDraft('');
-  }, [baseDraft, baseDefault, weeklyRecap, saveMutation, deleteMutation]);
+    // Toujours sauvegarder la valeur entrée, même si elle est égale au défaut
+    // L'utilisateur peut vouloir "verrouiller" une valeur spécifique
+    console.log('═══════════════════════════════════════════════════');
+    console.log('B) CLÉ DE MATCHING (point critique)');
+    console.log('═══════════════════════════════════════════════════');
+    console.log('employeeId:', employee.id);
+    console.log('weekStartStr (DOIT être YYYY-MM-DD):', weekStartStr);
+    console.log('format correct?:', /^\d{4}-\d{2}-\d{2}$/.test(weekStartStr));
+    console.log('clé de matching attendue:', `${employee.id}_${weekStartStr}`);
+    console.log('valeur à sauvegarder:', newValue);
+    console.log('═══════════════════════════════════════════════════\n');
+    
+    saveMutation.mutate(newValue);
+  }, [baseDraft, weeklyRecap, saveMutation, deleteMutation, weekStartStr, employee.id]);
 
   const handleKeyDown = useCallback((e) => {
     if (e.key === 'Enter') {
@@ -298,16 +356,13 @@ export default function WeeklySummary({
     }
   }, [handleSaveBase, handleCancelEdit]);
 
-  // Sauvegarder aussi sur blur
+  // Retirer le blur automatique pour éviter les conflits avec le clic sur valider
   const handleBlur = useCallback(() => {
-    handleSaveBase();
-  }, [handleSaveBase]);
+    // Ne rien faire - la sauvegarde se fait uniquement via Enter ou le bouton Valider
+  }, []);
 
   const hasShifts = shiftsCount > 0;
   const hasOverride = baseOverrideFromDB !== null;
-
-  // Valeur affichée pour la base (quand pas en édition)
-  const displayedBase = baseOverrideFromDB !== null ? baseOverrideFromDB : baseDefault;
 
   return (
     <div className={cn(
@@ -340,25 +395,37 @@ export default function WeeklySummary({
         {isEditingBase ? (
           <div className="flex items-center justify-center gap-1">
             <input
-              type="number"
-              step="0.5"
-              min="0"
+              type="text"
+              inputMode="decimal"
               value={baseDraft}
               onChange={(e) => setBaseDraft(e.target.value)}
               onKeyDown={handleKeyDown}
               onBlur={handleBlur}
               className="w-14 text-center text-sm font-bold border rounded px-1 py-0.5"
+              placeholder="7.5"
               autoFocus
+              disabled={saveMutation.isPending}
             />
             <button
-              onClick={handleSaveBase}
-              className="p-0.5 hover:bg-green-100 rounded"
+              onMouseDown={(e) => {
+                e.preventDefault();
+                handleSaveBase();
+              }}
+              className="p-0.5 hover:bg-green-100 rounded disabled:opacity-50"
               title="Valider"
+              disabled={saveMutation.isPending}
             >
-              <Check className="w-3 h-3 text-green-600" />
+              {saveMutation.isPending ? (
+                <div className="w-3 h-3 border-2 border-green-600 border-t-transparent rounded-full animate-spin" />
+              ) : (
+                <Check className="w-3 h-3 text-green-600" />
+              )}
             </button>
             <button
-              onClick={handleCancelEdit}
+              onMouseDown={(e) => {
+                e.preventDefault();
+                handleCancelEdit();
+              }}
               className="p-0.5 hover:bg-red-100 rounded"
               title="Annuler"
             >
@@ -374,7 +441,7 @@ export default function WeeklySummary({
             )}
             title="Cliquer pour modifier"
           >
-            {displayedBase.toFixed(1)}h
+            {displayedBase.toFixed(2)}h
             {hasOverride && <span className="text-[8px] ml-1">*</span>}
           </button>
         )}
@@ -384,7 +451,7 @@ export default function WeeklySummary({
       <div className="mb-1">
         <div className="text-[9px] text-gray-500 uppercase font-semibold">Réalisé</div>
         <div className="text-lg font-bold text-gray-900">
-          {workedHours.toFixed(1)}h
+          {workedHours.toFixed(2)}h
         </div>
       </div>
 
@@ -392,13 +459,13 @@ export default function WeeklySummary({
       <div className="flex justify-center gap-2 text-[11px]">
         {plusHours > 0 && (
           <div className="text-green-700 font-bold bg-green-50 px-1.5 py-0.5 rounded">
-            +{plusHours.toFixed(1)}h
+            +{plusHours.toFixed(2)}h
           </div>
         )}
         {minusHours > 0 && (
           <div className="text-red-700 font-bold bg-red-50 px-1.5 py-0.5 rounded">
             {/* CORRECTION: pas de signe négatif, minusHours est déjà positif */}
-            {minusHours.toFixed(1)}h -
+            {minusHours.toFixed(2)}h -
           </div>
         )}
         {plusHours === 0 && minusHours === 0 && workedHours > 0 && (
@@ -411,7 +478,7 @@ export default function WeeklySummary({
       {/* Indicateur de surcharge ou proratisation */}
       {hasOverride && (
         <div className="mt-1 text-[8px] text-blue-600">
-          (défaut: {baseDefault.toFixed(1)}h)
+          (défaut: {baseDefault.toFixed(2)}h)
         </div>
       )}
       {isPartialWeek && !hasOverride && (

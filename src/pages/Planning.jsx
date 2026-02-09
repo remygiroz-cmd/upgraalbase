@@ -64,16 +64,28 @@ export default function Planning() {
   const currentMonth = currentDate.getMonth();
   const currentYear = currentDate.getFullYear();
 
-  // Fetch employees
+  // Fetch ALL employees (including archived)
   const { data: allEmployees = [] } = useQuery({
     queryKey: ['employees'],
-    queryFn: () => base44.entities.Employee.filter({ is_active: true })
+    queryFn: () => base44.entities.Employee.list()
   });
 
   // Fetch teams
   const { data: allTeams = [] } = useQuery({
     queryKey: ['teams'],
     queryFn: () => base44.entities.Team.filter({ is_active: true })
+  });
+
+  // Fetch shifts for current month (needed for filtering archived employees)
+  const { data: shifts = [] } = useQuery({
+    queryKey: ['shifts', currentYear, currentMonth],
+    queryFn: async () => {
+      const firstDay = formatLocalDate(new Date(currentYear, currentMonth, 1));
+      const lastDay = formatLocalDate(new Date(currentYear, currentMonth + 1, 0));
+      
+      const allShifts = await base44.entities.Shift.list();
+      return allShifts.filter(s => s.date >= firstDay && s.date <= lastDay);
+    }
   });
 
   const updateTeamMutation = useMutation({
@@ -83,9 +95,37 @@ export default function Planning() {
     }
   });
 
-  // Sort employees by team order
+  // Filter and sort employees based on archive status and month
   const sortedEmployees = React.useMemo(() => {
-    return [...allEmployees].sort((a, b) => {
+    const today = new Date();
+    const currentMonthDate = new Date(currentYear, currentMonth, 1);
+    
+    // Déterminer si le mois affiché est passé, présent ou futur
+    const isPastMonth = currentMonthDate < new Date(today.getFullYear(), today.getMonth(), 1);
+    const isCurrentMonth = currentMonthDate.getFullYear() === today.getFullYear() && 
+                           currentMonthDate.getMonth() === today.getMonth();
+    const isFutureMonth = currentMonthDate > new Date(today.getFullYear(), today.getMonth(), 1);
+    
+    // Filtrer les employés selon la règle
+    let filteredEmployees = allEmployees;
+    
+    if (isFutureMonth) {
+      // Mois futur: uniquement employés actifs
+      filteredEmployees = allEmployees.filter(emp => emp.is_active === true);
+    } else if (isCurrentMonth) {
+      // Mois en cours: employés actifs + archivés avec au moins 1 shift ce mois
+      filteredEmployees = allEmployees.filter(emp => {
+        if (emp.is_active === true) return true;
+        
+        // Employé archivé: vérifier s'il a au moins 1 shift ce mois
+        const hasShiftsThisMonth = shifts.some(s => s.employee_id === emp.id);
+        return hasShiftsThisMonth;
+      });
+    }
+    // Si mois passé (isPastMonth): afficher tous les employés (pas de filtre)
+    
+    // Trier par équipe puis par nom
+    return [...filteredEmployees].sort((a, b) => {
       const teamA = allTeams.find(t => t.id === a.team_id);
       const teamB = allTeams.find(t => t.id === b.team_id);
       
@@ -97,7 +137,7 @@ export default function Planning() {
       // Same team, sort by name
       return (a.first_name || '').localeCompare(b.first_name || '');
     });
-  }, [allEmployees, allTeams]);
+  }, [allEmployees, allTeams, currentYear, currentMonth, shifts]);
 
   // Get teams sorted by order
   const teams = React.useMemo(() => {
@@ -114,18 +154,6 @@ export default function Planning() {
     }
     return sortedEmployees;
   }, [sortedEmployees, filterType, selectedEmployee, selectedTeam]);
-
-  // Fetch shifts for current month
-  const { data: shifts = [] } = useQuery({
-    queryKey: ['shifts', currentYear, currentMonth],
-    queryFn: async () => {
-      const firstDay = formatLocalDate(new Date(currentYear, currentMonth, 1));
-      const lastDay = formatLocalDate(new Date(currentYear, currentMonth + 1, 0));
-      
-      const allShifts = await base44.entities.Shift.list();
-      return allShifts.filter(s => s.date >= firstDay && s.date <= lastDay);
-    }
-  });
 
   // Fetch non-shift events for current month
   const { data: nonShiftEvents = [] } = useQuery({
@@ -193,10 +221,38 @@ export default function Planning() {
       const firstDay = formatLocalDate(new Date(currentYear, currentMonth, 1));
       const lastDay = formatLocalDate(new Date(currentYear, currentMonth + 1, 0));
 
-      // Fetch all weekly recaps (limited to reasonable timeframe)
+      // CORRECTION: Récupérer aussi les semaines qui COMMENCENT avant le mois mais qui l'intersectent
+      // Une semaine dure 7 jours, donc on prend 7 jours avant le début du mois
+      const startRange = new Date(currentYear, currentMonth, 1);
+      startRange.setDate(startRange.getDate() - 7);
+      const startRangeStr = formatLocalDate(startRange);
+
+      // Fetch all weekly recaps
       const allRecaps = await base44.entities.WeeklyRecap.list();
-      // Filter to recaps that might be relevant to this month
-      return allRecaps.filter(r => r.week_start >= firstDay.substring(0, 7) + '-01' && r.week_start <= lastDay);
+      
+      // Filter: semaines qui commencent entre [firstDay - 7j] et [lastDay]
+      // Cela capture les semaines qui intersectent avec le mois actuel
+      const filtered = allRecaps.filter(r => {
+        // La semaine doit commencer au plus tôt 7 jours avant le mois
+        // et au plus tard le dernier jour du mois
+        return r.week_start >= startRangeStr && r.week_start <= lastDay;
+      });
+      
+      console.log('═══════════════════════════════════════════════════');
+      console.log('D) REFETCH - APRÈS MUTATION SUCCESS');
+      console.log('═══════════════════════════════════════════════════');
+      console.log('Plage de recherche: [', startRangeStr, '-', lastDay, ']');
+      console.log('Total recaps récupérés:', allRecaps.length);
+      console.log('Recaps filtrés pour ce mois:', filtered.length);
+      console.log('\nDétails des recaps avec override:');
+      filtered.forEach(r => {
+        if (r.base_override_hours !== null && r.base_override_hours !== undefined) {
+          console.log(`  - employee_id: ${r.employee_id}, week_start: ${r.week_start}, base_override_hours: ${r.base_override_hours}`);
+        }
+      });
+      console.log('═══════════════════════════════════════════════════\n');
+      
+      return filtered;
     }
   });
 
@@ -1106,6 +1162,22 @@ export default function Planning() {
                               const weekStartStr = formatLocalDate(weekStart);
                               const weeklyRecapKey = `${employee.id}_${weekStartStr}`;
                               const weeklyRecap = weeklyRecapsLookup.get(weeklyRecapKey) || null;
+                              
+                              // 🔍 E) LOOKUP UI - CE QUE LE COMPOSANT VA AFFICHER
+                              if (weeklyRecap && weeklyRecap.base_override_hours !== null) {
+                                console.log('═══════════════════════════════════════════════════');
+                                console.log('E) LOOKUP UI - VALEUR AFFICHÉE');
+                                console.log('═══════════════════════════════════════════════════');
+                                console.log('employeeId:', employee.id);
+                                console.log('employeeName:', employee.first_name + ' ' + employee.last_name);
+                                console.log('weekStartStr:', weekStartStr);
+                                console.log('clé de matching:', weeklyRecapKey);
+                                console.log('recap trouvé?:', !!weeklyRecap);
+                                console.log('recap.id:', weeklyRecap?.id);
+                                console.log('recap.base_override_hours:', weeklyRecap?.base_override_hours);
+                                console.log('DÉCISION: override présent → afficher', weeklyRecap.base_override_hours);
+                                console.log('═══════════════════════════════════════════════════\n');
+                              }
 
                               return (
                                 <div key={employee.id} className="border-r border-gray-200 min-w-[140px] w-[140px] sm:w-[180px]">
@@ -1121,6 +1193,15 @@ export default function Planning() {
                                       ? () => handleCopyEmployeeWeekFromAbove(employee.id, weekStart)
                                       : null
                                     }
+                                    onRecapUpdate={async () => {
+                                      console.log('[Planning] 🔄 onRecapUpdate called - invalidating and refetching');
+                                      await queryClient.invalidateQueries({ queryKey: ['allWeeklyRecaps'] });
+                                      await queryClient.refetchQueries({ 
+                                        queryKey: ['allWeeklyRecaps', currentYear, currentMonth],
+                                        exact: true 
+                                      });
+                                      console.log('[Planning] ✅ Refetch complete');
+                                    }}
                                     nonShiftEvents={nonShiftEvents}
                                     nonShiftTypes={nonShiftTypes}
                                   />
