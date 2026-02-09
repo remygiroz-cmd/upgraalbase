@@ -1,12 +1,10 @@
-import { createClient } from 'npm:@base44/sdk@0.8.6';
+import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
 
 Deno.serve(async (req) => {
   try {
-    // Pour les automations scheduled, utiliser directement un client service role
-    const base44 = createClient({
-      appId: Deno.env.get('BASE44_APP_ID'),
-      serviceRoleKey: true
-    });
+    // Pour les automations scheduled, utiliser le service role
+    const base44Client = createClientFromRequest(req);
+    const base44 = base44Client.asServiceRole;
 
     const now = new Date();
     
