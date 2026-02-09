@@ -168,7 +168,9 @@ Deno.serve(async (req) => {
               orderId: order.id
             });
 
-            if (emailResult.data.success) {
+            console.log(`   📬 Résultat sendOrderEmail:`, emailResult.data);
+
+            if (emailResult.data?.success) {
               // Marquer comme envoyée avec tracking d'idempotence
               await base44.entities.Order.update(order.id, {
                 status: 'envoyee',
@@ -188,24 +190,29 @@ Deno.serve(async (req) => {
 
               console.log(`   ✅ Commande ${order.id} envoyée et marquée comme 'envoyee'`);
             } else {
+              const errorMsg = emailResult.data?.error || emailResult.data?.details || 'Erreur inconnue lors de l\'envoi';
               results.push({
                 success: false,
                 supplier: supplier.name,
                 supplier_id: supplier.id,
                 order_id: order.id,
-                error: emailResult.data.error || 'Erreur inconnue lors de l\'envoi'
+                error: errorMsg,
+                full_response: emailResult.data
               });
               
-              console.error(`   ❌ Échec envoi commande ${order.id}:`, emailResult.data.error);
+              console.error(`   ❌ Échec envoi commande ${order.id}:`, errorMsg);
+              console.error(`   📋 Response complète:`, JSON.stringify(emailResult.data));
             }
           } catch (error) {
             console.error(`   ❌ Erreur commande ${order.id}:`, error.message);
+            console.error(`   📋 Stack:`, error.stack);
             results.push({
               success: false,
               supplier: supplier.name,
               supplier_id: supplier.id,
               order_id: order.id,
-              error: error.message
+              error: error.message,
+              stack: error.stack
             });
           }
         }
