@@ -9,6 +9,10 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
  */
 
 Deno.serve(async (req) => {
+  const startTime = new Date().toISOString();
+  console.log('\n\n🚀🚀🚀 START handlePaidLeaveOverride 🚀🚀🚀');
+  console.log('Timestamp:', startTime);
+  
   try {
     const base44 = createClientFromRequest(req).asServiceRole;
     const { event, data, old_data } = await req.json();
@@ -16,9 +20,10 @@ Deno.serve(async (req) => {
     console.log('═══════════════════════════════════════════════════');
     console.log('🔄 PAID LEAVE OVERRIDE AUTOMATION');
     console.log('═══════════════════════════════════════════════════');
-    console.log('Event:', event);
-    console.log('Leave Period ID:', data?.id || old_data?.id);
+    console.log('Event Type:', event);
+    console.log('CP Period ID:', data?.id || old_data?.id);
     console.log('Employee ID:', data?.employee_id || old_data?.employee_id);
+    console.log('Now ISO:', startTime);
     console.log('═══════════════════════════════════════════════════\n');
 
     if (event === 'delete') {
@@ -101,6 +106,12 @@ Deno.serve(async (req) => {
       }
 
       // CONVERSION : calculer les bornes CP effectives
+      console.log('\n📋 CHAMPS CP BRUTS:');
+      console.log('   lastWorkedDayRaw:', leavePeriod.last_work_day);
+      console.log('   returnDateRaw:', leavePeriod.first_work_day_after);
+      console.log('   start_cp (legacy):', leavePeriod.start_cp);
+      console.log('   end_cp (legacy):', leavePeriod.end_cp);
+      
       // cpStart = startOfDay(lastWorkedDate + 1 day)
       // cpEnd = startOfDay(returnDate) EXCLUSIVE
       
@@ -112,32 +123,55 @@ Deno.serve(async (req) => {
       
       const cpEnd = returnDate; // jour de reprise, EXCLUSIVE
 
-      console.log('🔍 Recherche des shifts qui overlap...');
+      console.log('\n🔍 Recherche des shifts qui overlap...');
       console.log(`   Employee ID: ${leavePeriod.employee_id}`);
       console.log(`   Dernier jour travaillé: ${leavePeriod.last_work_day}`);
       console.log(`   Jour de reprise: ${leavePeriod.first_work_day_after}`);
-      console.log(`   → CP effectif: ${cpStart.toISOString()} → ${cpEnd.toISOString()} (EXCLUSIVE)`);
+      console.log(`   computedCpStartISO: ${cpStart.toISOString()}`);
+      console.log(`   computedCpEndISO: ${cpEnd.toISOString()} (EXCLUSIVE)`);
+      console.log(`   timezoneUsed: UTC`);
 
-      // Récupérer tous les shifts de l'employé (large range pour ne rien manquer)
+      // Récupérer tous les shifts de l'employé (ÉLARGI: -7j à +7j pour debug)
+      const queryRangeStart = new Date(cpStart);
+      queryRangeStart.setUTCDate(queryRangeStart.getUTCDate() - 7);
+      
+      const queryRangeEnd = new Date(cpEnd);
+      queryRangeEnd.setUTCDate(queryRangeEnd.getUTCDate() + 7);
+
+      console.log('\n📊 REQUÊTE SHIFTS:');
+      console.log(`   shiftQueryRangeStartISO: ${queryRangeStart.toISOString()}`);
+      console.log(`   shiftQueryRangeEndISO: ${queryRangeEnd.toISOString()}`);
+      console.log(`   employeeId: ${leavePeriod.employee_id}`);
+
       const allShifts = await base44.entities.Shift.filter({
         employee_id: leavePeriod.employee_id
       });
 
-      console.log(`   Total shifts employé: ${allShifts.length}`);
+      console.log(`   countShiftsFetched: ${allShifts.length}`);
+      
+      console.log('\n📋 LISTE DES SHIFTS FETCHÉS:');
+      for (const s of allShifts) {
+        const sStart = new Date(`${s.date}T${s.start_time}:00.000Z`);
+        const sEnd = new Date(`${s.date}T${s.end_time}:00.000Z`);
+        console.log(`   - Shift ${s.id}: ${s.date} ${s.start_time}-${s.end_time} (${sStart.toISOString()} → ${sEnd.toISOString()}) kind=${s.kind || 'shift'}`);
+      }
 
       // Filtrer ceux qui overlap avec test datetime précis
+      console.log('\n🔍 TEST OVERLAP POUR CHAQUE SHIFT:');
       const overlappingShifts = [];
       
       for (const shift of allShifts) {
+        console.log(`\n   Shift ${shift.id} (${shift.date} ${shift.start_time}-${shift.end_time}):`);
+        
         // Exclure ceux déjà overridden par cette période (idempotence)
         if (shift.override?.byLeavePeriodId === leavePeriod.id) {
-          console.log(`   🔄 Shift ${shift.id} déjà overridden par cette période, skip`);
+          console.log(`      ⏭️ SKIP: déjà overridden par cette période`);
           continue;
         }
         
         // Exclure les non-shifts déjà existants
         if (shift.kind === 'nonShift') {
-          console.log(`   ⏭️ Shift ${shift.id} déjà non-shift, skip`);
+          console.log(`      ⏭️ SKIP: déjà non-shift (kind=${shift.kind})`);
           continue;
         }
 
@@ -148,16 +182,19 @@ Deno.serve(async (req) => {
         // Test overlap: shift.start < cpEnd && shift.end > cpStart
         const overlaps = shiftStart < cpEnd && shiftEnd > cpStart;
 
-        console.log(`   🔍 Shift ${shift.id} (${shift.date} ${shift.start_time}-${shift.end_time})`);
-        console.log(`      Start: ${shiftStart.toISOString()}, End: ${shiftEnd.toISOString()}`);
-        console.log(`      Overlap: ${overlaps ? '✅ OUI' : '❌ NON'}`);
+        console.log(`      shiftStart: ${shiftStart.toISOString()}`);
+        console.log(`      shiftEnd: ${shiftEnd.toISOString()}`);
+        console.log(`      cpStart: ${cpStart.toISOString()}`);
+        console.log(`      cpEnd: ${cpEnd.toISOString()}`);
+        console.log(`      Test: ${shiftStart.toISOString()} < ${cpEnd.toISOString()} && ${shiftEnd.toISOString()} > ${cpStart.toISOString()}`);
+        console.log(`      overlap=${overlaps ? '✅ TRUE' : '❌ FALSE'}`);
 
         if (overlaps) {
           overlappingShifts.push(shift);
         }
       }
 
-      console.log(`\n   📊 ${overlappingShifts.length} shift(s) à convertir en CP`);
+      console.log(`\n📊 RÉSULTAT FILTRAGE: ${overlappingShifts.length} shift(s) à convertir en CP`);
 
       let converted = 0;
       let errors = 0;
@@ -188,6 +225,9 @@ Deno.serve(async (req) => {
           };
 
           // Convertir en non-shift CP
+          console.log(`\n   🔄 UPDATING SHIFT ${shift.id} → CP`);
+          console.log(`      Payload: kind=nonShift, nonShiftType=CP, source=leaveOverride`);
+          
           await base44.entities.Shift.update(shift.id, {
             kind: 'nonShift',
             nonShiftType: 'CP',
@@ -200,7 +240,17 @@ Deno.serve(async (req) => {
             }
           });
 
-          console.log(`   ✅ Shift ${shift.id} converti en CP (${shift.date} ${shift.start_time}-${shift.end_time})`);
+          // RE-FETCH pour confirmer l'écriture
+          const updatedShift = await base44.entities.Shift.filter({ id: shift.id });
+          if (updatedShift[0]) {
+            console.log(`   ✅ Shift ${shift.id} converti en CP - CONFIRMÉ`);
+            console.log(`      kind=${updatedShift[0].kind}`);
+            console.log(`      nonShiftType=${updatedShift[0].nonShiftType}`);
+            console.log(`      override.byLeavePeriodId=${updatedShift[0].override?.byLeavePeriodId}`);
+          } else {
+            console.log(`   ⚠️ Re-fetch échoué pour shift ${shift.id}`);
+          }
+          
           converted++;
         } catch (error) {
           console.error(`   ❌ Erreur conversion shift ${shift.id}:`, error.message);
