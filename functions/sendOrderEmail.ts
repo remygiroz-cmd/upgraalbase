@@ -1,8 +1,22 @@
-import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
+import { createClientFromRequest, createClient } from 'npm:@base44/sdk@0.8.6';
 import { jsPDF } from 'npm:jspdf@2.5.2';
 
-// Rôles autorisés à envoyer des commandes
+// Rôles autorisés à envoyer des commandes (pour appels frontend)
 const ALLOWED_ROLES = ['admin', 'manager', 'gestionnaire', 'cuisinier'];
+
+// Clé secrète pour les automations (à configurer dans Base44 Secrets)
+const AUTOMATION_SECRET_KEY = Deno.env.get('AUTOMATION_SECRET_KEY');
+
+/**
+ * Vérifie si l'appel vient d'une automation authentifiée
+ */
+const isAutomationCall = (req: Request): boolean => {
+  const automationKey = req.headers.get('x-automation-key');
+  if (!automationKey || !AUTOMATION_SECRET_KEY) {
+    return false;
+  }
+  return automationKey === AUTOMATION_SECRET_KEY;
+};
 
 /**
  * Empêche l'injection d'en-têtes email (CRLF) et nettoie les caractères non désirés.
@@ -80,20 +94,38 @@ const formatQty = (quantity: number, unit?: string): string => {
 
 Deno.serve(async (req) => {
   try {
-    const base44 = createClientFromRequest(req);
-    const user = await base44.auth.me();
+    // Vérifier si c'est un appel automation (machine-to-machine)
+    const isAutomation = isAutomationCall(req);
+    let base44;
+    let user = null;
+    let sentBy = 'unknown';
 
-    // Vérification authentification
-    if (!user) {
-      return Response.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    if (isAutomation) {
+      // Appel automation: utiliser service role, pas besoin d'utilisateur
+      console.log('[INFO] Automation call detected - using service role');
+      base44 = createClient({
+        appId: Deno.env.get('BASE44_APP_ID'),
+        serviceRoleKey: true
+      });
+      sentBy = 'automation';
+    } else {
+      // Appel frontend: vérifier l'authentification utilisateur
+      base44 = createClientFromRequest(req);
+      user = await base44.auth.me();
 
-    // Vérification des permissions
-    if (!ALLOWED_ROLES.includes(user.role)) {
-      console.warn(
-        `[SECURITY] User ${user.id} attempted to send order email without permission`,
-      );
-      return Response.json({ error: 'Permissions insuffisantes' }, { status: 403 });
+      // Vérification authentification
+      if (!user) {
+        return Response.json({ error: 'You must be logged in to access this app' }, { status: 401 });
+      }
+
+      // Vérification des permissions
+      if (!ALLOWED_ROLES.includes(user.role)) {
+        console.warn(
+          `[SECURITY] User ${user.id} attempted to send order email without permission`,
+        );
+        return Response.json({ error: 'Permissions insuffisantes' }, { status: 403 });
+      }
+      sentBy = user.id;
     }
 
     const { orderId } = await req.json();
@@ -338,8 +370,8 @@ Deno.serve(async (req) => {
     currentHistory.push({
       timestamp: new Date().toISOString(),
       action: 'email_sent',
-      details: `Email envoyé`,
-      user_id: user.id,
+      details: `Email envoyé${isAutomation ? ' (automatique)' : ''}`,
+      user_id: sentBy,
     });
 
     // Envoi Resend
