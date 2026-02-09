@@ -8,9 +8,10 @@ Deno.serve(async (req) => {
 
     // Parse query params pour dry run et tests
     const url = new URL(req.url);
-    const dryRun = url.searchParams.get('dryRun') === '1';
-    const forceHour = url.searchParams.get('forceHour'); // Ex: "7" pour forcer 07:00
-    const forceSupplierId = url.searchParams.get('forceSupplierId');
+    const body = await req.json().catch(() => ({}));
+    const dryRun = url.searchParams.get('dryRun') === '1' || body.dryRun === '1' || body.dryRun === 1;
+    const forceHour = url.searchParams.get('forceHour') || body.forceHour; // Ex: "7" pour forcer 07:00
+    const forceSupplierId = url.searchParams.get('forceSupplierId') || body.forceSupplierId;
 
     const now = new Date();
     
