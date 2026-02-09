@@ -67,7 +67,14 @@ export default function SupplierFormModal({ open, onClose, onSave, isSaving, sup
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    onSave(form);
+    
+    // Normaliser closing_time pour forcer minutes à 00
+    const normalizedForm = {
+      ...form,
+      closing_time: form.closing_time ? `${form.closing_time.split(':')[0]}:00` : '02:00'
+    };
+    
+    onSave(normalizedForm);
   };
 
   const toggleDay = (day) => {
@@ -186,16 +193,23 @@ export default function SupplierFormModal({ open, onClose, onSave, isSaving, sup
               </div>
 
               <div>
-                <Label htmlFor="closing_time">Heure d'envoi (multiples de 5 min)</Label>
-                <Input
-                  id="closing_time"
-                  type="time"
-                  step="300"
-                  value={form.closing_time}
-                  onChange={(e) => setForm(prev => ({ ...prev, closing_time: e.target.value }))}
-                  className="bg-gray-50 border-gray-300 mt-1"
-                />
-                <p className="text-xs text-gray-500 mt-1">L'heure doit être un multiple de 5 minutes (ex: 19:10, 19:15)</p>
+                <Label htmlFor="closing_hour">Heure d'envoi automatique</Label>
+                <select
+                  id="closing_hour"
+                  value={form.closing_time ? form.closing_time.split(':')[0] : '02'}
+                  onChange={(e) => {
+                    const hour = e.target.value.padStart(2, '0');
+                    setForm(prev => ({ ...prev, closing_time: `${hour}:00` }));
+                  }}
+                  className="w-full h-10 px-3 rounded-md border border-gray-300 bg-gray-50 text-gray-900 mt-1 focus:outline-none focus:ring-2 focus:ring-orange-500"
+                >
+                  {Array.from({ length: 24 }, (_, i) => (
+                    <option key={i} value={String(i).padStart(2, '0')}>
+                      {String(i).padStart(2, '0')}:00
+                    </option>
+                  ))}
+                </select>
+                <p className="text-xs text-gray-500 mt-1">Les commandes seront envoyées automatiquement à cette heure chaque jour sélectionné</p>
               </div>
 
               <div>
