@@ -243,51 +243,55 @@ export default function MonthlySummary({
 
         {/* SECTION 3: Overtime / Complementary Hours */}
         {calculationMode !== 'disabled' && (
-          <div className="mb-2 pb-2 border-b border-gray-200">
+          <>
             {isPartTime ? (
-              // Part-time: Heures complémentaires
+              // Part-time: Heures complémentaires (only show if > 0)
               totalComplementaryHours > 0 && (
-                <div className="bg-green-50 rounded p-1.5">
-                  <div className="text-[10px] font-bold text-green-800 mb-0.5 flex items-center justify-center gap-1">
-                    <Clock className="w-3 h-3" />
-                    H. Complémentaires
-                  </div>
-                  <div className="text-sm font-bold text-green-700">
-                    {renderValue(totalComplementaryHours, 'totalComplementaryHours', 'h')}
-                  </div>
-                  <div className="text-[9px] text-green-600 space-y-0.5">
-                    {complementaryHours10 > 0 && (
-                      <div>+10%: {renderValue(complementaryHours10, 'complementaryHours10', 'h')}</div>
-                    )}
-                    {complementaryHours25 > 0 && (
-                      <div>+25%: {renderValue(complementaryHours25, 'complementaryHours25', 'h')}</div>
-                    )}
+                <div className="mb-2 pb-2 border-b border-gray-200">
+                  <div className="bg-green-50 rounded p-1.5">
+                    <div className="text-[10px] font-bold text-green-800 mb-0.5 flex items-center justify-center gap-1">
+                      <Clock className="w-3 h-3" />
+                      H. Complémentaires
+                    </div>
+                    <div className="text-sm font-bold text-green-700">
+                      {renderValue(totalComplementaryHours, 'totalComplementaryHours', 'h')}
+                    </div>
+                    <div className="text-[9px] text-green-600 space-y-0.5">
+                      {complementaryHours10 > 0 && (
+                        <div>+10%: {renderValue(complementaryHours10, 'complementaryHours10', 'h')}</div>
+                      )}
+                      {complementaryHours25 > 0 && (
+                        <div>+25%: {renderValue(complementaryHours25, 'complementaryHours25', 'h')}</div>
+                      )}
+                    </div>
                   </div>
                 </div>
               )
             ) : (
-              // Full-time: Heures supplémentaires
+              // Full-time: Heures supplémentaires (only show if > 0)
               totalOvertimeHours > 0 && (
-                <div className="bg-orange-50 rounded p-1.5">
-                  <div className="text-[10px] font-bold text-orange-800 mb-0.5 flex items-center justify-center gap-1">
-                    <Briefcase className="w-3 h-3" />
-                    H. Supplémentaires
-                  </div>
-                  <div className="text-sm font-bold text-orange-700">
-                    {renderValue(totalOvertimeHours, 'totalOvertimeHours', 'h')}
-                  </div>
-                  <div className="text-[9px] text-orange-600 space-y-0.5">
-                    {overtimeHours25 > 0 && (
-                      <div>+25%: {renderValue(overtimeHours25, 'overtimeHours25', 'h')}</div>
-                    )}
-                    {overtimeHours50 > 0 && (
-                      <div>+50%: {renderValue(overtimeHours50, 'overtimeHours50', 'h')}</div>
-                    )}
+                <div className="mb-2 pb-2 border-b border-gray-200">
+                  <div className="bg-orange-50 rounded p-1.5">
+                    <div className="text-[10px] font-bold text-orange-800 mb-0.5 flex items-center justify-center gap-1">
+                      <Briefcase className="w-3 h-3" />
+                      H. Supplémentaires
+                    </div>
+                    <div className="text-sm font-bold text-orange-700">
+                      {renderValue(totalOvertimeHours, 'totalOvertimeHours', 'h')}
+                    </div>
+                    <div className="text-[9px] text-orange-600 space-y-0.5">
+                      {overtimeHours25 > 0 && (
+                        <div>+25%: {renderValue(overtimeHours25, 'overtimeHours25', 'h')}</div>
+                      )}
+                      {overtimeHours50 > 0 && (
+                        <div>+50%: {renderValue(overtimeHours50, 'overtimeHours50', 'h')}</div>
+                      )}
+                    </div>
                   </div>
                 </div>
               )
             )}
-          </div>
+          </>
         )}
 
         {/* SECTION 4: Holidays worked */}
