@@ -10,7 +10,7 @@ import { toast } from 'sonner';
 import { jsPDF } from 'jspdf';
 import 'jspdf-autotable';
 import { calculateMonthlyRecap, applyManualOverrides } from '@/components/utils/monthlyRecapCalculations';
-import { usePlanningVersion } from './usePlanningVersion';
+import { getActiveMonthContext } from './monthContext';
 
 const MONTHS = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'];
 
@@ -162,16 +162,24 @@ export default function ExportComptaModal({ open, onOpenChange, monthStart, mont
   const monthName = MONTHS[monthStart.getMonth()];
   const monthKey = `${year}-${String(month).padStart(2, '0')}`; // e.g. "2026-02"
   
-  // Get active reset version for this month
-  const { resetVersion: activeResetVersion, monthKey: verifiedMonthKey, isLoading: versionLoading } = usePlanningVersion(year, month);
+  // SOURCE DE VÉRITÉ UNIQUE : récupérer le contexte actif du mois
+  const [monthContext, setMonthContext] = React.useState(null);
   
-  console.log('═════════════════════════════════════════════');
-  console.log('📊 EXPORT COMPTA - Initialisation');
-  console.log('═════════════════════════════════════════════');
-  console.log('Month:', monthName, year);
-  console.log('MonthKey:', monthKey);
-  console.log('Active reset_version:', activeResetVersion);
-  console.log('Version loading:', versionLoading);
+  React.useEffect(() => {
+    if (open) {
+      getActiveMonthContext(monthKey).then(ctx => {
+        console.log('═════════════════════════════════════════════');
+        console.log('📊 EXPORT COMPTA - Initialisation');
+        console.log('═════════════════════════════════════════════');
+        console.log('Month:', monthName, year);
+        console.log('MonthKey:', ctx.month_key);
+        console.log('Active reset_version:', ctx.reset_version);
+        setMonthContext(ctx);
+      });
+    }
+  }, [open, monthKey]);
+  
+  const activeResetVersion = monthContext?.reset_version;
 
   // Fetch settings
   const { data: settingsData = [] } = useQuery({
@@ -463,13 +471,12 @@ export default function ExportComptaModal({ open, onOpenChange, monthStart, mont
 
   const calculationMode = calculationSettings[0]?.planning_calculation_mode || 'disabled';
 
-  // Build export data by calculating recaps from shifts
+  // Build export data - TOUJOURS calculer depuis shifts/nonshifts (pas dépendre de MonthlyRecap)
   const exportData = employees
     .map(employee => {
       const team = teams.find(t => t.id === employee.team_id);
-      const recap = recaps.find(r => r.employee_id === employee.id);
-
-      // Calculate recap for this employee
+      
+      // Calculate recap for this employee (DIRECT CALCULATION - pas besoin de MonthlyRecap)
       const employeeShifts = shifts.filter(s => s.employee_id === employee.id);
       const employeeNonShifts = nonShiftEvents.filter(e => e.employee_id === employee.id);
 
@@ -478,7 +485,7 @@ export default function ExportComptaModal({ open, onOpenChange, monthStart, mont
         return null;
       }
 
-      // Calculate full recap
+      // Calculate full recap from shifts
       const monthIndex = monthStart.getMonth(); // 0-indexed
       const calculatedRecap = calculateMonthlyRecap(
         calculationMode,
@@ -491,7 +498,8 @@ export default function ExportComptaModal({ open, onOpenChange, monthStart, mont
         monthIndex
       );
 
-      // Apply manual overrides if present
+      // Check if manual overrides exist in MonthlyRecap (OPTIONAL - fallback)
+      const recap = recaps.find(r => r.employee_id === employee.id);
       if (recap) {
         const overrides = {
           workedDays: recap.manual_days_worked,
@@ -853,16 +861,24 @@ export default function ExportComptaModal({ open, onOpenChange, monthStart, mont
           )}
 
           <div>
-            <Label className="text-sm font-semibold text-gray-700">Message personnalisé (optionnel)</Label>
+            <Label className="text-sm font-semibold text-gray-700">Message personnalisé pour l'email</Label>
             <Textarea
               value={customMessage}
               onChange={(e) => setCustomMessage(e.target.value)}
-              placeholder="Ajoutez un message personnalisé qui sera inclus dans l'email..."
-              rows={3}
-              className="mt-1"
+              placeholder="Ajoutez un message libre qui sera inclus dans le corps de l'email envoyé au comptable...
+
+Exemple:
+Bonjour,
+
+Ci-joint les éléments de paie pour février 2026.
+Merci de traiter cette demande en priorité.
+
+Cordialement"
+              rows={6}
+              className="mt-1 font-mono text-sm"
             />
             <p className="text-xs text-gray-500 mt-1">
-              💡 Le document PDF contient le tableau des éléments de paie calculés depuis les récaps mensuels.
+              💡 Ce message sera affiché dans le corps de l'email + PDF en pièce jointe
             </p>
           </div>
 

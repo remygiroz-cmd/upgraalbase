@@ -186,8 +186,8 @@ export default function ApplyTemplateGlobalModal({ currentMonth, currentYear, on
       console.log('📝 CREATING SHIFTS IN DATABASE');
       console.log('═══════════════════════════════════════════════════════════');
       console.log(`Entity: Shift`);
-      console.log(`MonthKey: "${monthKey}" (type: ${typeof monthKey})`);
-      console.log(`Active resetVersion: ${resetVersion} (type: ${typeof resetVersion})`);
+      console.log(`MonthKey: "${ctx.month_key}" (type: ${typeof ctx.month_key})`);
+      console.log(`Active reset_version: ${ctx.reset_version} (type: ${typeof ctx.reset_version})`);
       console.log(`Shifts to create: ${shiftsToCreate.length}`);
       
       if (shiftsToCreate.length > 0) {
