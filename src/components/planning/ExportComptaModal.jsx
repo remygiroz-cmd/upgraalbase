@@ -314,15 +314,108 @@ export default function ExportComptaModal({ open, onOpenChange, monthStart, mont
   const { data: shifts = [] } = useQuery({
     queryKey: ['shifts', monthKey, activeResetVersion],
     queryFn: async () => {
+      console.log('\n═══════════════════════════════════════════════════════════');
+      console.log('🔍 EXPORT COMPTA - FETCHING SHIFTS');
+      console.log('═══════════════════════════════════════════════════════════');
+      console.log('Entity: Shift');
+      console.log(`Query filters: { month_key: "${monthKey}", reset_version: ${activeResetVersion} }`);
+      console.log(`month_key type: ${typeof monthKey}`);
+      console.log(`reset_version type: ${typeof activeResetVersion}`);
+      
       const monthStartStr = formatDate(monthStart);
       const monthEndStr = formatDate(monthEnd);
+      
       const allShifts = await base44.entities.Shift.filter({
         month_key: monthKey,
         reset_version: activeResetVersion
       });
       const filtered = allShifts.filter(s => s.date >= monthStartStr && s.date <= monthEndStr);
-      console.log('📅 Shifts fetched (filtered by version):', filtered.length);
-      console.log('  Active version:', activeResetVersion);
+      
+      console.log(`\n📊 RESULTS: ${filtered.length} shift(s) found`);
+      
+      if (filtered.length > 0) {
+        console.log('✓ Sample shifts (first 3):');
+        filtered.slice(0, 3).forEach((s, idx) => {
+          console.log(`  Shift ${idx + 1}:`);
+          console.log(`    - ID: ${s.id}`);
+          console.log(`    - date: ${s.date}`);
+          console.log(`    - employee_id: ${s.employee_id}`);
+          console.log(`    - month_key: "${s.month_key}"`);
+          console.log(`    - reset_version: ${s.reset_version}`);
+        });
+      } else {
+        console.log('❌ NO SHIFTS FOUND - Running fallback debug queries...\n');
+        
+        // Fallback 1: Try without reset_version filter
+        console.log('🔍 Fallback 1: Query with month_key only (no reset_version filter)');
+        const fallback1 = await base44.entities.Shift.filter({ month_key: monthKey });
+        const f1Filtered = fallback1.filter(s => s.date >= monthStartStr && s.date <= monthEndStr);
+        console.log(`  Found: ${f1Filtered.length} shift(s)`);
+        if (f1Filtered.length > 0) {
+          console.log('  Sample (first 3):');
+          f1Filtered.slice(0, 3).forEach((s, idx) => {
+            console.log(`    ${idx + 1}. date=${s.date}, month_key="${s.month_key}", reset_version=${s.reset_version}, employee=${s.employee_name}`);
+          });
+        }
+        
+        // Fallback 2: Try without month_key filter
+        console.log('\n🔍 Fallback 2: Query with reset_version only (no month_key filter)');
+        const fallback2 = await base44.entities.Shift.filter({ reset_version: activeResetVersion });
+        const f2Filtered = fallback2.filter(s => s.date >= monthStartStr && s.date <= monthEndStr);
+        console.log(`  Found: ${f2Filtered.length} shift(s)`);
+        if (f2Filtered.length > 0) {
+          console.log('  Sample (first 3):');
+          f2Filtered.slice(0, 3).forEach((s, idx) => {
+            console.log(`    ${idx + 1}. date=${s.date}, month_key="${s.month_key}", reset_version=${s.reset_version}, employee=${s.employee_name}`);
+          });
+        }
+        
+        // Fallback 3: Get any shifts in month (no version filters)
+        console.log('\n🔍 Fallback 3: Query by date range only (no version filters)');
+        const allShiftsNoFilter = await base44.entities.Shift.list();
+        const fallback3 = allShiftsNoFilter.filter(s => s.date >= monthStartStr && s.date <= monthEndStr);
+        console.log(`  Found in month: ${fallback3.length} shift(s)`);
+        if (fallback3.length > 0) {
+          console.log('  Sample (first 5):');
+          fallback3.slice(0, 5).forEach((s, idx) => {
+            console.log(`    ${idx + 1}. ID=${s.id}, date=${s.date}, month_key="${s.month_key}", reset_version=${s.reset_version}, employee=${s.employee_name}`);
+          });
+        }
+        
+        // Fallback 4: Get total shifts in database
+        console.log('\n🔍 Fallback 4: Total shifts in entire database');
+        console.log(`  Total shifts: ${allShiftsNoFilter.length}`);
+        if (allShiftsNoFilter.length > 0) {
+          console.log('  Sample (first 5):');
+          allShiftsNoFilter.slice(0, 5).forEach((s, idx) => {
+            console.log(`    ${idx + 1}. ID=${s.id}, date=${s.date}, month_key="${s.month_key}", reset_version=${s.reset_version}`);
+          });
+        }
+        
+        console.log('\n💡 DIAGNOSIS:');
+        if (f1Filtered.length > 0 && f2Filtered.length === 0) {
+          console.log('  ❌ Shifts exist for this month_key but with DIFFERENT reset_version');
+          console.log(`  Expected reset_version: ${activeResetVersion}`);
+          console.log(`  Found reset_versions: ${[...new Set(f1Filtered.map(s => s.reset_version))].join(', ')}`);
+          console.log('  → Shifts were persisted with wrong reset_version');
+        } else if (f1Filtered.length === 0 && f2Filtered.length > 0) {
+          console.log('  ❌ Shifts exist for this reset_version but with DIFFERENT month_key');
+          console.log(`  Expected month_key: "${monthKey}"`);
+          console.log(`  Found month_keys: ${[...new Set(f2Filtered.map(s => s.month_key))].join(', ')}`);
+          console.log('  → Shifts were persisted with wrong month_key');
+        } else if (fallback3.length === 0 && allShiftsNoFilter.length === 0) {
+          console.log('  ❌ NO SHIFTS EXIST IN DATABASE AT ALL');
+          console.log('  → Shifts were never persisted (ApplyTemplate bulk create failed)');
+        } else if (fallback3.length === 0) {
+          console.log('  ❌ Shifts exist in database but NOT in this month');
+          console.log(`  Expected month range: ${monthStartStr} → ${monthEndStr}`);
+        } else {
+          console.log('  ❌ Shifts exist in month but with BOTH wrong month_key AND reset_version');
+          console.log(`  Expected: month_key="${monthKey}", reset_version=${activeResetVersion}`);
+        }
+      }
+      
+      console.log('═══════════════════════════════════════════════════════════\n');
       return filtered;
     },
     enabled: open && activeResetVersion !== undefined

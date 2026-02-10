@@ -182,10 +182,40 @@ export default function ApplyTemplateGlobalModal({ currentMonth, currentYear, on
       console.log(`\n📊 Shifts to create: ${shiftsToCreate.length}`);
       console.log(`👥 Impacted employees: ${impactedEmployeeIds.size}`);
 
+      console.log('\n═══════════════════════════════════════════════════════════');
+      console.log('📝 CREATING SHIFTS IN DATABASE');
+      console.log('═══════════════════════════════════════════════════════════');
+      console.log(`Entity: Shift`);
+      console.log(`MonthKey: "${monthKey}" (type: ${typeof monthKey})`);
+      console.log(`Active resetVersion: ${resetVersion} (type: ${typeof resetVersion})`);
+      console.log(`Shifts to create: ${shiftsToCreate.length}`);
+      
       if (shiftsToCreate.length > 0) {
-        await base44.entities.Shift.bulkCreate(shiftsToCreate);
-        console.log('✓ Shifts created successfully');
+        console.log('\n📊 Sample shifts (first 3 to be created):');
+        shiftsToCreate.slice(0, 3).forEach((s, idx) => {
+          console.log(`  Shift ${idx + 1}:`);
+          console.log(`    - date: ${s.date}`);
+          console.log(`    - employee_id: ${s.employee_id}`);
+          console.log(`    - month_key: "${s.month_key}"`);
+          console.log(`    - reset_version: ${s.reset_version}`);
+          console.log(`    - position: ${s.position}`);
+          console.log(`    - times: ${s.start_time} - ${s.end_time}`);
+        });
+        
+        const createdShifts = await base44.entities.Shift.bulkCreate(shiftsToCreate);
+        console.log(`\n✓ Shifts created successfully: ${createdShifts.length}`);
+        
+        console.log('\n📊 Verification - Sample created shifts (first 3):');
+        createdShifts.slice(0, 3).forEach((s, idx) => {
+          console.log(`  Created shift ${idx + 1}:`);
+          console.log(`    - ID: ${s.id}`);
+          console.log(`    - date: ${s.date}`);
+          console.log(`    - employee_id: ${s.employee_id}`);
+          console.log(`    - month_key: "${s.month_key}"`);
+          console.log(`    - reset_version: ${s.reset_version}`);
+        });
       }
+      console.log('═══════════════════════════════════════════════════════════');
 
       // RECALCULATE AND PERSIST RECAPS FOR IMPACTED EMPLOYEES
       console.log('\n═══════════════════════════════════════════════════════════');
