@@ -61,28 +61,53 @@ export default function AddCPGlobalModal({ onClose, year, month }) {
 
       // Step 2: Get all shifts in the CP period for this employee
       console.log('Step 2: Fetching shifts in period...');
+      console.log('Filtering with:', { 
+        employee_id: employeeId, 
+        month_key: periodData.month_key, 
+        reset_version: periodData.reset_version 
+      });
+      
       const allShifts = await base44.entities.Shift.filter({
         employee_id: employeeId,
         month_key: periodData.month_key,
         reset_version: periodData.reset_version
       });
       
-      const shiftsInPeriod = allShifts.filter(shift => 
-        shift.date >= startCP && shift.date <= endCP
-      );
-      console.log(`✓ Found ${shiftsInPeriod.length} shifts to delete:`, shiftsInPeriod.map(s => s.date));
+      console.log(`Total shifts for employee in month: ${allShifts.length}`);
+      console.log('All shift dates:', allShifts.map(s => s.date));
+      console.log('CP period:', startCP, 'to', endCP);
+      
+      const shiftsInPeriod = allShifts.filter(shift => {
+        const inPeriod = shift.date >= startCP && shift.date <= endCP;
+        if (inPeriod) {
+          console.log(`  ✓ Shift ${shift.id} on ${shift.date} IS in CP period`);
+        }
+        return inPeriod;
+      });
+      
+      console.log(`✓ Found ${shiftsInPeriod.length} shifts to delete:`, shiftsInPeriod.map(s => ({ id: s.id, date: s.date })));
 
       // Step 3: Delete all shifts in period
       if (shiftsInPeriod.length > 0) {
         console.log('Step 3: Deleting shifts...');
-        await Promise.all(
-          shiftsInPeriod.map(shift => 
-            base44.entities.Shift.delete(shift.id).catch(err => {
-              console.error(`Failed to delete shift ${shift.id}:`, err);
-            })
-          )
+        const deleteResults = await Promise.allSettled(
+          shiftsInPeriod.map(shift => {
+            console.log(`  Deleting shift ${shift.id} (${shift.date})...`);
+            return base44.entities.Shift.delete(shift.id);
+          })
         );
-        console.log(`✓ Deleted ${shiftsInPeriod.length} shifts`);
+        
+        const deleted = deleteResults.filter(r => r.status === 'fulfilled').length;
+        const failed = deleteResults.filter(r => r.status === 'rejected');
+        
+        if (failed.length > 0) {
+          console.error(`❌ Failed to delete ${failed.length} shifts:`, failed.map(f => f.reason));
+          throw new Error(`Impossible de supprimer ${failed.length} shift(s). Vérifiez les permissions.`);
+        }
+        
+        console.log(`✓ Successfully deleted ${deleted} shifts`);
+      } else {
+        console.log('✓ No shifts to delete in this period');
       }
 
       // Step 4: Get CP non-shift type
