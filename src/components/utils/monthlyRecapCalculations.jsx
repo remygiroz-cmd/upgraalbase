@@ -357,11 +357,30 @@ function calculateWeeklyOvertime(result, employee, shifts, nonShiftEvents, nonSh
   // Get ALL weeks that touch the month (even partially)
   const weeks = getWeeksTouchingMonth(year, month);
 
-  console.log(`[calculateWeeklyOvertime] Employee ${employee.id}, processing ${weeks.length} weeks`);
+  console.log(`
+═══════════════════════════════════════════════════════════
+📊 WEEKLY OVERTIME CALCULATION (Weekly Mode)
+═══════════════════════════════════════════════════════════
+Employee ID: ${employee.id}
+Employee Name: ${employee.first_name} ${employee.last_name}
+Month: ${year}-${String(month + 1).padStart(2, '0')}
+Weeks to process: ${weeks.length}
+Contract hours/week: ${contractHoursWeekly}h
+═══════════════════════════════════════════════════════════
+`);
+
+  const weekDetails = [];
 
   // Calculate overtime for each week
-  weeks.forEach(({ weekKey, dates: weekDates }) => {
+  weeks.forEach(({ weekKey, dates: weekDates }, weekIndex) => {
     let weekHours = 0;
+    const weekStart = weekDates[0];
+    const weekEnd = weekDates[6];
+    
+    // Check if partial week (some days outside the month)
+    const monthStartStr = formatDate(new Date(year, month, 1));
+    const monthEndStr = formatDate(new Date(year, month + 1, 0));
+    const isPartialWeek = weekStart < monthStartStr || weekEnd > monthEndStr;
     
     // Calculate hours for ALL 7 days in the week
     weekDates.forEach(date => {
@@ -389,6 +408,8 @@ function calculateWeeklyOvertime(result, employee, shifts, nonShiftEvents, nonSh
 
     // Calculate overtime/complementary for this week
     let weekOvertime = 0;
+    let weekHS25 = 0;
+    let weekHS50 = 0;
     
     if (isPartTime) {
       // Part-time: complementary hours
@@ -410,23 +431,60 @@ function calculateWeeklyOvertime(result, employee, shifts, nonShiftEvents, nonSh
         weekOvertime = weekHours - 35;
         
         // +25% from 36h to 43h (i.e., 1h to 8h of overtime)
-        const hours25 = Math.min(weekOvertime, 8);
-        result.overtimeHours25 += hours25;
+        weekHS25 = Math.min(weekOvertime, 8);
+        result.overtimeHours25 += weekHS25;
         
         // +50% beyond 43h (i.e., beyond 8h of overtime)
         if (weekOvertime > 8) {
-          result.overtimeHours50 += weekOvertime - 8;
+          weekHS50 = weekOvertime - 8;
+          result.overtimeHours50 += weekHS50;
         }
       }
     }
 
-    console.log(`  Week ${weekKey}: ${weekHours.toFixed(2)}h worked, ${weekOvertime.toFixed(2)}h overtime`);
+    const weekDetail = {
+      index: weekIndex + 1,
+      weekKey,
+      weekStart,
+      weekEnd,
+      isPartial: isPartialWeek,
+      baseHours: 35, // For full-time
+      workedHours: weekHours,
+      hsTotal: weekOvertime,
+      hs25: weekHS25,
+      hs50: weekHS50
+    };
+    
+    weekDetails.push(weekDetail);
+
+    console.log(`Week ${weekIndex + 1} [${weekKey}] ${isPartialWeek ? '⚠️ PARTIAL' : '✓ COMPLETE'}
+  Range: ${weekStart} → ${weekEnd}
+  Worked: ${weekHours.toFixed(2)}h / Base: 35h
+  Overtime: ${weekOvertime.toFixed(2)}h (25%: ${weekHS25.toFixed(2)}h, 50%: ${weekHS50.toFixed(2)}h)`);
   });
 
   result.totalOvertimeHours = result.overtimeHours25 + result.overtimeHours50;
   result.totalComplementaryHours = result.complementaryHours10 + result.complementaryHours25;
   
-  console.log(`[calculateWeeklyOvertime] Total: ${result.totalOvertimeHours.toFixed(2)}h (25%: ${result.overtimeHours25.toFixed(2)}h, 50%: ${result.overtimeHours50.toFixed(2)}h)`);
+  console.log(`
+───────────────────────────────────────────────────────────
+📈 AGGREGATION SUMMARY
+───────────────────────────────────────────────────────────
+Total weeks processed: ${weekDetails.length}
+  Complete weeks: ${weekDetails.filter(w => !w.isPartial).length}
+  Partial weeks: ${weekDetails.filter(w => w.isPartial).length}
+
+Total worked hours: ${weekDetails.reduce((sum, w) => sum + w.workedHours, 0).toFixed(2)}h
+Total overtime: ${result.totalOvertimeHours.toFixed(2)}h
+  HS 25%: ${result.overtimeHours25.toFixed(2)}h
+  HS 50%: ${result.overtimeHours50.toFixed(2)}h
+
+✅ Expected sum check:
+  Σ(weekHS) = ${weekDetails.reduce((sum, w) => sum + w.hsTotal, 0).toFixed(2)}h
+  Monthly HS = ${result.totalOvertimeHours.toFixed(2)}h
+  ${Math.abs(weekDetails.reduce((sum, w) => sum + w.hsTotal, 0) - result.totalOvertimeHours) < 0.01 ? '✓ MATCH' : '❌ MISMATCH'}
+═══════════════════════════════════════════════════════════
+`);
 }
 
 /**
@@ -460,11 +518,30 @@ function calculateMonthlyOvertime(result, employee, shifts, nonShiftEvents, nonS
     // Get ALL weeks that touch the month (even partially)
     const weeks = getWeeksTouchingMonth(year, month);
 
-    console.log(`[calculateMonthlyOvertime] Employee ${employee.id}, processing ${weeks.length} weeks`);
+    console.log(`
+═══════════════════════════════════════════════════════════
+📊 MONTHLY OVERTIME CALCULATION (Monthly Smoothing Mode)
+═══════════════════════════════════════════════════════════
+Employee ID: ${employee.id}
+Employee Name: ${employee.first_name} ${employee.last_name}
+Month: ${year}-${String(month + 1).padStart(2, '0')}
+Weeks to process: ${weeks.length}
+Contract hours/week: ${contractHoursWeekly}h
+═══════════════════════════════════════════════════════════
+`);
+
+    const weekDetails = [];
 
     // Calculate overtime for each week, then sum
-    weeks.forEach(({ weekKey, dates: weekDates }) => {
+    weeks.forEach(({ weekKey, dates: weekDates }, weekIndex) => {
       let weekHours = 0;
+      const weekStart = weekDates[0];
+      const weekEnd = weekDates[6];
+      
+      // Check if partial week (some days outside the month)
+      const monthStartStr = formatDate(new Date(year, month, 1));
+      const monthEndStr = formatDate(new Date(year, month + 1, 0));
+      const isPartialWeek = weekStart < monthStartStr || weekEnd > monthEndStr;
       
       // Calculate hours for ALL 7 days in the week
       weekDates.forEach(date => {
@@ -492,25 +569,65 @@ function calculateMonthlyOvertime(result, employee, shifts, nonShiftEvents, nonS
 
       // Apply weekly thresholds: 35h base, +25% up to 43h, +50% beyond
       let weekOvertime = 0;
+      let weekHS25 = 0;
+      let weekHS50 = 0;
+      
       if (weekHours > 35) {
         weekOvertime = weekHours - 35;
         
         // +25% from 36h to 43h (i.e., 1h to 8h of overtime)
-        const hours25 = Math.min(weekOvertime, 8);
-        result.overtimeHours25 += hours25;
+        weekHS25 = Math.min(weekOvertime, 8);
+        result.overtimeHours25 += weekHS25;
         
         // +50% beyond 43h (i.e., beyond 8h of overtime)
         if (weekOvertime > 8) {
-          result.overtimeHours50 += weekOvertime - 8;
+          weekHS50 = weekOvertime - 8;
+          result.overtimeHours50 += weekHS50;
         }
       }
 
-      console.log(`  Week ${weekKey}: ${weekHours.toFixed(2)}h worked, ${weekOvertime.toFixed(2)}h overtime`);
+      const weekDetail = {
+        index: weekIndex + 1,
+        weekKey,
+        weekStart,
+        weekEnd,
+        isPartial: isPartialWeek,
+        baseHours: 35,
+        workedHours: weekHours,
+        hsTotal: weekOvertime,
+        hs25: weekHS25,
+        hs50: weekHS50
+      };
+      
+      weekDetails.push(weekDetail);
+
+      console.log(`Week ${weekIndex + 1} [${weekKey}] ${isPartialWeek ? '⚠️ PARTIAL' : '✓ COMPLETE'}
+  Range: ${weekStart} → ${weekEnd}
+  Worked: ${weekHours.toFixed(2)}h / Base: 35h
+  Overtime: ${weekOvertime.toFixed(2)}h (25%: ${weekHS25.toFixed(2)}h, 50%: ${weekHS50.toFixed(2)}h)`);
     });
 
     result.totalOvertimeHours = result.overtimeHours25 + result.overtimeHours50;
     
-    console.log(`[calculateMonthlyOvertime] Total: ${result.totalOvertimeHours.toFixed(2)}h (25%: ${result.overtimeHours25.toFixed(2)}h, 50%: ${result.overtimeHours50.toFixed(2)}h)`);
+    console.log(`
+───────────────────────────────────────────────────────────
+📈 AGGREGATION SUMMARY
+───────────────────────────────────────────────────────────
+Total weeks processed: ${weekDetails.length}
+  Complete weeks: ${weekDetails.filter(w => !w.isPartial).length}
+  Partial weeks: ${weekDetails.filter(w => w.isPartial).length}
+
+Total worked hours: ${weekDetails.reduce((sum, w) => sum + w.workedHours, 0).toFixed(2)}h
+Total overtime: ${result.totalOvertimeHours.toFixed(2)}h
+  HS 25%: ${result.overtimeHours25.toFixed(2)}h
+  HS 50%: ${result.overtimeHours50.toFixed(2)}h
+
+✅ Expected sum check:
+  Σ(weekHS) = ${weekDetails.reduce((sum, w) => sum + w.hsTotal, 0).toFixed(2)}h
+  Monthly HS = ${result.totalOvertimeHours.toFixed(2)}h
+  ${Math.abs(weekDetails.reduce((sum, w) => sum + w.hsTotal, 0) - result.totalOvertimeHours) < 0.01 ? '✓ MATCH' : '❌ MISMATCH'}
+═══════════════════════════════════════════════════════════
+`);
   }
 }
 
