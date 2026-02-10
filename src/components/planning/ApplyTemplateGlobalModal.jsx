@@ -8,8 +8,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Calendar, AlertTriangle, CheckCircle, Users } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
-import { usePlanningVersion, withPlanningVersion, filterByVersion } from '@/components/planning/usePlanningVersion';
 import { recomputeAndPersistRecapsForEmployees } from '@/components/planning/recapPersistence';
+import { getActiveMonthContext } from '@/components/planning/monthContext';
 
 const DAYS_MAP = {
   1: 'Lundi',
@@ -29,8 +29,15 @@ export default function ApplyTemplateGlobalModal({ currentMonth, currentYear, on
   const [preview, setPreview] = useState(null);
   const queryClient = useQueryClient();
 
-  // Get current planning version for reset system
-  const { resetVersion, monthKey } = usePlanningVersion(currentYear, currentMonth);
+  // Get month context (month_key and active reset_version)
+  const [monthContext, setMonthContext] = React.useState(null);
+  const monthKey = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}`;
+  
+  React.useEffect(() => {
+    getActiveMonthContext(monthKey).then(ctx => setMonthContext(ctx));
+  }, [monthKey]);
+  
+  const resetVersion = monthContext?.reset_version;
 
   // Fetch employees
   const { data: employees = [] } = useQuery({
@@ -63,11 +70,14 @@ export default function ApplyTemplateGlobalModal({ currentMonth, currentYear, on
 
   const applyMutation = useMutation({
     mutationFn: async () => {
+      // Ensure we have the latest context
+      const ctx = await getActiveMonthContext(monthKey);
+      
       console.log('═══════════════════════════════════════════════════════════');
       console.log('📋 APPLY TEMPLATE - START');
       console.log('═══════════════════════════════════════════════════════════');
-      console.log('MonthKey:', monthKey);
-      console.log('Active resetVersion:', resetVersion);
+      console.log('MonthKey:', ctx.month_key);
+      console.log('Active reset_version:', ctx.reset_version);
       console.log('Target mode:', targetMode);
       console.log('Application mode:', applicationMode);
       
@@ -83,9 +93,11 @@ export default function ApplyTemplateGlobalModal({ currentMonth, currentYear, on
         const monthShifts = allShifts.filter(s => 
           s.date >= startDate && 
           s.date <= endDate &&
+          s.month_key === ctx.month_key &&
+          s.reset_version === ctx.reset_version &&
           (targetMode === 'all' || s.employee_id === selectedEmployeeId)
         );
-        shiftsToDelete = filterByVersion(monthShifts, resetVersion);
+        shiftsToDelete = monthShifts;
       }
 
       // Delete existing shifts if needed
@@ -117,7 +129,7 @@ export default function ApplyTemplateGlobalModal({ currentMonth, currentYear, on
           const dayTemplates = templateShifts.filter(ts => ts.day_of_week === dayOfWeek);
 
           for (const template of dayTemplates) {
-            shiftsToCreate.push(withPlanningVersion({
+            shiftsToCreate.push({
               employee_id: employee.id,
               employee_name: `${employee.first_name} ${employee.last_name}`,
               date: dateStr,
@@ -126,8 +138,10 @@ export default function ApplyTemplateGlobalModal({ currentMonth, currentYear, on
               break_minutes: template.break_minutes || 0,
               position: template.position,
               notes: template.notes || '',
-              status: 'planned'
-            }, resetVersion, monthKey));
+              status: 'planned',
+              month_key: ctx.month_key,
+              reset_version: ctx.reset_version
+            });
           }
         }
       } else {
@@ -163,7 +177,7 @@ export default function ApplyTemplateGlobalModal({ currentMonth, currentYear, on
             const dayTemplates = empTemplateShifts.filter(ts => ts.day_of_week === dayOfWeek);
 
             for (const template of dayTemplates) {
-              shiftsToCreate.push(withPlanningVersion({
+              shiftsToCreate.push({
                 employee_id: employee.id,
                 employee_name: `${employee.first_name} ${employee.last_name}`,
                 date: dateStr,
@@ -172,8 +186,10 @@ export default function ApplyTemplateGlobalModal({ currentMonth, currentYear, on
                 break_minutes: template.break_minutes || 0,
                 position: template.position,
                 notes: template.notes || '',
-                status: 'planned'
-              }, resetVersion, monthKey));
+                status: 'planned',
+                month_key: ctx.month_key,
+                reset_version: ctx.reset_version
+              });
             }
           }
         }
@@ -225,12 +241,12 @@ export default function ApplyTemplateGlobalModal({ currentMonth, currentYear, on
       // Fetch necessary data for recap calculation
       const [allShifts, nonShiftEvents, nonShiftTypes, holidayDates, calculationSettings] = await Promise.all([
         base44.entities.Shift.filter({
-          month_key: monthKey,
-          reset_version: resetVersion
+          month_key: ctx.month_key,
+          reset_version: ctx.reset_version
         }),
         base44.entities.NonShiftEvent.filter({
-          month_key: monthKey,
-          reset_version: resetVersion
+          month_key: ctx.month_key,
+          reset_version: ctx.reset_version
         }),
         base44.entities.NonShiftType.filter({ is_active: true }),
         base44.entities.HolidayDate.filter({ is_active: true }).then(holidays => 
@@ -254,8 +270,8 @@ export default function ApplyTemplateGlobalModal({ currentMonth, currentYear, on
       const recapResults = await recomputeAndPersistRecapsForEmployees(
         Array.from(impactedEmployeeIds),
         {
-          monthKey,
-          activeResetVersion: resetVersion,
+          monthKey: ctx.month_key,
+          activeResetVersion: ctx.reset_version,
           year: currentYear,
           monthIndex: currentMonth,
           shifts: allShifts,
@@ -317,12 +333,15 @@ export default function ApplyTemplateGlobalModal({ currentMonth, currentYear, on
       const endDate = lastDay.toISOString().split('T')[0];
 
       const allShifts = await base44.entities.Shift.list();
+      const ctx = monthContext || await getActiveMonthContext(monthKey);
       const monthShifts = allShifts.filter(s => 
         s.date >= startDate && 
         s.date <= endDate &&
+        s.month_key === ctx.month_key &&
+        s.reset_version === ctx.reset_version &&
         (targetMode === 'all' || s.employee_id === selectedEmployeeId)
       );
-      const existingCount = filterByVersion(monthShifts, resetVersion).length;
+      const existingCount = monthShifts.length;
 
       let estimatedNew = 0;
 
