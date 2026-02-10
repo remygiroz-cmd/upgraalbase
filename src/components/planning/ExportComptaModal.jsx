@@ -10,6 +10,7 @@ import { toast } from 'sonner';
 import { jsPDF } from 'jspdf';
 import 'jspdf-autotable';
 import { calculateMonthlyRecap, applyManualOverrides } from '@/components/utils/monthlyRecapCalculations';
+import { usePlanningVersion } from './usePlanningVersion';
 
 const MONTHS = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'];
 
@@ -110,6 +111,11 @@ function buildExportRow(employee, calculatedRecap, nonShiftTypes, cpPeriods, tea
   if (employeeCPPeriods.length > 0) {
     const totalCPDays = calculatedRecap?.cp_days_total || 0;
     const periodDetails = employeeCPPeriods.map(p => {
+      // Use the new field names: cp_start_date and return_date
+      if (!p.cp_start_date || !p.return_date) {
+        console.error('⚠️ CP period with missing dates:', p);
+        return '(dates invalides)';
+      }
       const departDate = formatDateFR(p.cp_start_date);
       const repriseDate = formatDateFR(p.return_date);
       return `(départ le ${departDate}, reprise le ${repriseDate})`;
@@ -156,11 +162,16 @@ export default function ExportComptaModal({ open, onOpenChange, monthStart, mont
   const monthName = MONTHS[monthStart.getMonth()];
   const monthKey = `${year}-${String(month).padStart(2, '0')}`; // e.g. "2026-02"
   
+  // Get active reset version for this month
+  const { resetVersion: activeResetVersion, monthKey: verifiedMonthKey, isLoading: versionLoading } = usePlanningVersion(year, month);
+  
   console.log('═════════════════════════════════════════════');
   console.log('📊 EXPORT COMPTA - Initialisation');
   console.log('═════════════════════════════════════════════');
   console.log('Month:', monthName, year);
   console.log('MonthKey:', monthKey);
+  console.log('Active reset_version:', activeResetVersion);
+  console.log('Version loading:', versionLoading);
 
   // Fetch settings
   const { data: settingsData = [] } = useQuery({
@@ -187,19 +198,22 @@ export default function ExportComptaModal({ open, onOpenChange, monthStart, mont
   });
 
   const { data: recaps = [] } = useQuery({
-    queryKey: ['monthlyRecaps', monthKey],
+    queryKey: ['monthlyRecaps', monthKey, activeResetVersion],
     queryFn: async () => {
-      const allRecaps = await base44.entities.MonthlyRecap.filter({ month_key: monthKey });
-      console.log('📋 Monthly recaps fetched:', allRecaps.length);
-      console.log('  Sample recap IDs:', allRecaps.slice(0, 3).map(r => ({ 
+      const allRecaps = await base44.entities.MonthlyRecap.filter({ 
+        month_key: monthKey,
+        reset_version: activeResetVersion 
+      });
+      console.log('📋 Monthly recaps fetched (filtered by version):', allRecaps.length);
+      console.log('  Active version:', activeResetVersion);
+      console.log('  Sample recaps:', allRecaps.slice(0, 3).map(r => ({ 
         id: r.id, 
-        employee: r.employee_name,
-        worked: r.worked_hours,
-        shifts: r.shifts_count 
+        employee_id: r.employee_id,
+        reset_version: r.reset_version
       })));
       return allRecaps;
     },
-    enabled: open
+    enabled: open && activeResetVersion !== undefined
   });
 
   const { data: nonShiftTypes = [] } = useQuery({
@@ -211,38 +225,52 @@ export default function ExportComptaModal({ open, onOpenChange, monthStart, mont
   });
 
   const { data: cpPeriods = [] } = useQuery({
-    queryKey: ['paidLeavePeriods'],
+    queryKey: ['paidLeavePeriods', monthKey, activeResetVersion],
     queryFn: async () => {
-      return await base44.entities.PaidLeavePeriod.list();
+      const allPeriods = await base44.entities.PaidLeavePeriod.filter({
+        month_key: monthKey,
+        reset_version: activeResetVersion
+      });
+      console.log('🏖️ CP periods fetched (filtered by version):', allPeriods.length);
+      console.log('  Active version:', activeResetVersion);
+      return allPeriods;
     },
-    enabled: open
+    enabled: open && activeResetVersion !== undefined
   });
 
-  // Fetch shifts and non-shift events for calculations
+  // Fetch shifts and non-shift events for calculations - FILTERED BY ACTIVE VERSION
   const { data: shifts = [] } = useQuery({
-    queryKey: ['shifts', monthKey],
+    queryKey: ['shifts', monthKey, activeResetVersion],
     queryFn: async () => {
       const monthStartStr = formatDate(monthStart);
       const monthEndStr = formatDate(monthEnd);
-      const allShifts = await base44.entities.Shift.list();
+      const allShifts = await base44.entities.Shift.filter({
+        month_key: monthKey,
+        reset_version: activeResetVersion
+      });
       const filtered = allShifts.filter(s => s.date >= monthStartStr && s.date <= monthEndStr);
-      console.log('📅 Shifts fetched for month:', filtered.length);
+      console.log('📅 Shifts fetched (filtered by version):', filtered.length);
+      console.log('  Active version:', activeResetVersion);
       return filtered;
     },
-    enabled: open
+    enabled: open && activeResetVersion !== undefined
   });
 
   const { data: nonShiftEvents = [] } = useQuery({
-    queryKey: ['nonShiftEvents', monthKey],
+    queryKey: ['nonShiftEvents', monthKey, activeResetVersion],
     queryFn: async () => {
       const monthStartStr = formatDate(monthStart);
       const monthEndStr = formatDate(monthEnd);
-      const allEvents = await base44.entities.NonShiftEvent.list();
+      const allEvents = await base44.entities.NonShiftEvent.filter({
+        month_key: monthKey,
+        reset_version: activeResetVersion
+      });
       const filtered = allEvents.filter(e => e.date >= monthStartStr && e.date <= monthEndStr);
-      console.log('📅 Non-shift events fetched:', filtered.length);
+      console.log('📅 Non-shift events fetched (filtered by version):', filtered.length);
+      console.log('  Active version:', activeResetVersion);
       return filtered;
     },
-    enabled: open
+    enabled: open && activeResetVersion !== undefined
   });
 
   const { data: holidayDates = [] } = useQuery({
@@ -342,7 +370,13 @@ export default function ExportComptaModal({ open, onOpenChange, monthStart, mont
     .filter(Boolean);
 
   console.log('✅ Export data built:');
+  console.log('  Month:', monthName, year);
+  console.log('  MonthKey:', monthKey);
+  console.log('  Active reset_version:', activeResetVersion);
   console.log('  Total employees:', employees.length);
+  console.log('  Shifts (active version):', shifts.length);
+  console.log('  NonShiftEvents (active version):', nonShiftEvents.length);
+  console.log('  CP Periods (active version):', cpPeriods.length);
   console.log('  Export rows generated:', exportData.length);
   if (exportData.length > 0) {
     console.log('  First 3 rows:', exportData.slice(0, 3).map(r => ({
@@ -354,10 +388,8 @@ export default function ExportComptaModal({ open, onOpenChange, monthStart, mont
       supp25: r.supp25
     })));
   } else {
-    console.log('  ⚠️ NO EXPORT DATA GENERATED');
-    console.log('  Employees:', employees.length);
-    console.log('  Shifts:', shifts.length);
-    console.log('  NonShiftEvents:', nonShiftEvents.length);
+    console.log('  ℹ️ NO EXPORT DATA - This is EXPECTED after a month reset');
+    console.log('  The month has been reset and contains no shifts yet');
   }
   console.log('═════════════════════════════════════════════');
 
