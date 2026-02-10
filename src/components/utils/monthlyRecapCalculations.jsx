@@ -727,102 +727,16 @@ Monthly complementary: ${result.totalComplementaryHours.toFixed(2)}h
 ═══════════════════════════════════════════════════════════
 `);
   } else {
-    // Full-time: MUST calculate week by week with correct base for partial weeks
+    // Full-time: overtime hours
+    let totalOvertimeFromWeeks = 0;
     
-    // Calculate daily contract hours
-    const workDaysPerWeek = employee.work_days_per_week || 5;
-    const dailyContractHours = contractHoursWeekly / workDaysPerWeek;
-    
-    // Get worked days of week from contract
-    const weeklySchedule = employee.weekly_schedule || {};
-    const workedDaysOfWeek = new Set();
-    const dayMap = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
-    
-    dayMap.forEach((dayName, dayIndex) => {
-      if (weeklySchedule[dayName]?.worked) {
-        workedDaysOfWeek.add(dayIndex);
-      }
-    });
-    
-    // If no schedule defined, assume consecutive days from Monday
-    if (workedDaysOfWeek.size === 0) {
-      for (let i = 0; i < workDaysPerWeek; i++) {
-        workedDaysOfWeek.add((i + 1) % 7);
-      }
-    }
-    
-    // Get ALL weeks that touch the month
-    const weeks = getWeeksTouchingMonth(year, month);
-    const monthStartStr = formatDate(new Date(year, month, 1));
-    const monthEndStr = formatDate(new Date(year, month + 1, 0));
-
-    console.log(`
-═══════════════════════════════════════════════════════════
-📊 MONTHLY OVERTIME CALCULATION (Monthly Smoothing Mode)
-═══════════════════════════════════════════════════════════
-Employee ID: ${employee.id}
-Employee Name: ${employee.first_name} ${employee.last_name}
-Month: ${year}-${String(month + 1).padStart(2, '0')}
-Contract: ${contractHoursWeekly}h/week, ${workDaysPerWeek} days/week
-Daily rate: ${dailyContractHours.toFixed(2)}h/day
-Worked days: ${Array.from(workedDaysOfWeek).map(d => dayMap[d]).join(', ')}
-Weeks to process: ${weeks.length}
-═══════════════════════════════════════════════════════════
-`);
-
-    const weekDetails = [];
-
-    // Process each week
-    weeks.forEach(({ weekKey, dates: weekDates }, weekIndex) => {
-      // Determine which dates are visible in the month
-      const visibleDates = weekDates.filter(d => d >= monthStartStr && d <= monthEndStr);
-      const isPartialWeek = visibleDates.length < 7;
-      
-      // Count contractual days visible in the month for this week
-      let contractDaysVisible = 0;
-      visibleDates.forEach(dateStr => {
-        const date = new Date(dateStr);
-        const dayOfWeek = date.getDay();
-        if (workedDaysOfWeek.has(dayOfWeek)) {
-          contractDaysVisible++;
-        }
-      });
-      
-      // Calculate base hours for this week (based on visible contractual days)
-      const weeklyBase = contractDaysVisible * dailyContractHours;
-      
-      // Calculate worked hours (on visible days only)
-      let weekHours = 0;
-      visibleDates.forEach(date => {
-        const dayShifts = shifts.filter(s => 
-          s.employee_id === employee.id && 
-          s.date === date && 
-          s.status !== 'cancelled'
-        );
-        
-        const dayNonShifts = nonShiftEvents.filter(ns => 
-          ns.employee_id === employee.id && 
-          ns.date === date
-        );
-
-        const { hours } = calculateDayHours(
-          dayShifts, 
-          dayNonShifts, 
-          nonShiftTypes, 
-          employee, 
-          calculateShiftDuration
-        );
-
-        weekHours += hours;
-      });
-
-      // Calculate overtime
+    weekDetails.forEach(week => {
       let weekOvertime = 0;
       let weekHS25 = 0;
       let weekHS50 = 0;
       
-      if (weekHours > weeklyBase) {
-        weekOvertime = weekHours - weeklyBase;
+      if (week.workedHours > week.baseHours) {
+        weekOvertime = week.workedHours - week.baseHours;
         
         // Apply 25%/50% thresholds
         weekHS25 = Math.min(weekOvertime, 8);
@@ -833,55 +747,37 @@ Weeks to process: ${weeks.length}
           result.overtimeHours50 += weekHS50;
         }
       }
-
-      const weekDetail = {
-        index: weekIndex + 1,
-        weekKey,
-        weekStart: weekDates[0],
-        weekEnd: weekDates[6],
-        visibleDates,
-        isPartial: isPartialWeek,
-        contractDaysVisible,
-        dailyContractHours,
-        baseHours: weeklyBase,
-        workedHours: weekHours,
-        hsTotal: weekOvertime,
-        hs25: weekHS25,
-        hs50: weekHS50
-      };
       
-      weekDetails.push(weekDetail);
-
-      console.log(`Week ${weekIndex + 1} [${weekKey}] ${isPartialWeek ? '⚠️ PARTIAL' : '✓ COMPLETE'}
-  Range: ${weekDates[0]} → ${weekDates[6]}
-  Visible dates in month: ${visibleDates.length} days (${visibleDates[0]} → ${visibleDates[visibleDates.length - 1]})
-  Contract days visible: ${contractDaysVisible} × ${dailyContractHours.toFixed(2)}h = ${weeklyBase.toFixed(2)}h base
-  Worked: ${weekHours.toFixed(2)}h
-  Overtime: ${weekOvertime.toFixed(2)}h (25%: ${weekHS25.toFixed(2)}h, 50%: ${weekHS50.toFixed(2)}h)`);
+      totalOvertimeFromWeeks += weekOvertime;
+      week.hsTotal = weekOvertime;
+      week.hs25 = weekHS25;
+      week.hs50 = weekHS50;
     });
 
     result.totalOvertimeHours = result.overtimeHours25 + result.overtimeHours50;
     
     console.log(`
 ───────────────────────────────────────────────────────────
-📈 AGGREGATION SUMMARY
+📈 MONTHLY AGGREGATION (FULL-TIME LISSAGE)
 ───────────────────────────────────────────────────────────
-Total weeks processed: ${weekDetails.length}
-  Complete weeks: ${weekDetails.filter(w => !w.isPartial).length}
-  Partial weeks: ${weekDetails.filter(w => w.isPartial).length}
+Total weeks: ${weekDetails.length} (${weekDetails.filter(w => !w.isPartial).length} complete, ${weekDetails.filter(w => w.isPartial).length} partial)
 
 Per-week breakdown:
-${weekDetails.map(w => `  Week ${w.index}: Base ${w.baseHours.toFixed(2)}h, Worked ${w.workedHours.toFixed(2)}h, HS ${w.hsTotal.toFixed(2)}h`).join('\n')}
+${weekDetails.map(w => `  Week ${w.index}: ${w.contractDaysVisible} contract days × ${w.dailyContractHours.toFixed(2)}h = ${w.baseHours.toFixed(2)}h base, Worked ${w.workedHours.toFixed(2)}h, HS ${w.hsTotal.toFixed(2)}h`).join('\n')}
+
+📊 MONTHLY BASE CALCULATION:
+  OLD method (calendar proration): ${oldContractMonthlyHours.toFixed(2)}h
+  NEW method (Σ weeklyBase): ${calculatedMonthlyBase.toFixed(2)}h
+
+✅ Validation check:
+  Σ(weeklyBase) = ${weekDetails.reduce((sum, w) => sum + w.baseHours, 0).toFixed(2)}h
+  calculatedMonthlyBase = ${calculatedMonthlyBase.toFixed(2)}h
+  ${Math.abs(weekDetails.reduce((sum, w) => sum + w.baseHours, 0) - calculatedMonthlyBase) < 0.01 ? '✓ MATCH' : '❌ ERROR: monthly base mismatch'}
 
 Total worked hours: ${weekDetails.reduce((sum, w) => sum + w.workedHours, 0).toFixed(2)}h
 Total overtime: ${result.totalOvertimeHours.toFixed(2)}h
   HS 25%: ${result.overtimeHours25.toFixed(2)}h
   HS 50%: ${result.overtimeHours50.toFixed(2)}h
-
-✅ Expected sum check:
-  Σ(weekHS) = ${weekDetails.reduce((sum, w) => sum + w.hsTotal, 0).toFixed(2)}h
-  Monthly HS = ${result.totalOvertimeHours.toFixed(2)}h
-  ${Math.abs(weekDetails.reduce((sum, w) => sum + w.hsTotal, 0) - result.totalOvertimeHours) < 0.01 ? '✓ MATCH' : '❌ MISMATCH'}
 ═══════════════════════════════════════════════════════════
 `);
   }
