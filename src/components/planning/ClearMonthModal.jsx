@@ -375,6 +375,10 @@ export default function ClearMonthModal({ open, onOpenChange, monthStart, monthE
                       <span className="font-bold text-red-900">{paidLeavePeriods.length}</span>
                     </div>
                     <div className="flex justify-between items-center text-sm">
+                      <span className="text-gray-700 font-medium">Récaps hebdomadaires :</span>
+                      <span className="font-bold text-red-900">{weeklyRecaps.length}</span>
+                    </div>
+                    <div className="flex justify-between items-center text-sm">
                       <span className="text-gray-700 font-medium">Récaps mensuels :</span>
                       <span className="font-bold text-red-900">{monthlyRecaps.length}</span>
                     </div>
