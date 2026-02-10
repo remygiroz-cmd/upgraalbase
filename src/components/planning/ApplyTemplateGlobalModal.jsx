@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Calendar, AlertTriangle, CheckCircle, Users } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import { usePlanningVersion, withPlanningVersion, filterByVersion } from '@/components/planning/usePlanningVersion';
 
 const DAYS_MAP = {
   1: 'Lundi',
@@ -26,6 +27,9 @@ export default function ApplyTemplateGlobalModal({ currentMonth, currentYear, on
   const [applicationMode, setApplicationMode] = useState('add'); // 'add' | 'replace' | 'recreate'
   const [preview, setPreview] = useState(null);
   const queryClient = useQueryClient();
+
+  // Get current planning version for reset system
+  const { resetVersion, monthKey } = usePlanningVersion(currentYear, currentMonth);
 
   // Fetch employees
   const { data: employees = [] } = useQuery({
@@ -63,15 +67,16 @@ export default function ApplyTemplateGlobalModal({ currentMonth, currentYear, on
       const startDate = firstDay.toISOString().split('T')[0];
       const endDate = lastDay.toISOString().split('T')[0];
 
-      // Get existing shifts if needed
+      // Get existing shifts if needed (filtered by version)
       let shiftsToDelete = [];
       if (applicationMode === 'replace' || applicationMode === 'recreate') {
         const allShifts = await base44.entities.Shift.list();
-        shiftsToDelete = allShifts.filter(s => 
+        const monthShifts = allShifts.filter(s => 
           s.date >= startDate && 
           s.date <= endDate &&
           (targetMode === 'all' || s.employee_id === selectedEmployeeId)
         );
+        shiftsToDelete = filterByVersion(monthShifts, resetVersion);
       }
 
       // Delete existing shifts if needed
@@ -100,7 +105,7 @@ export default function ApplyTemplateGlobalModal({ currentMonth, currentYear, on
           const dayTemplates = templateShifts.filter(ts => ts.day_of_week === dayOfWeek);
 
           for (const template of dayTemplates) {
-            shiftsToCreate.push({
+            shiftsToCreate.push(withPlanningVersion({
               employee_id: employee.id,
               employee_name: `${employee.first_name} ${employee.last_name}`,
               date: dateStr,
@@ -110,7 +115,7 @@ export default function ApplyTemplateGlobalModal({ currentMonth, currentYear, on
               position: template.position,
               notes: template.notes || '',
               status: 'planned'
-            });
+            }, resetVersion, monthKey));
           }
         }
       } else {
@@ -142,7 +147,7 @@ export default function ApplyTemplateGlobalModal({ currentMonth, currentYear, on
             const dayTemplates = empTemplateShifts.filter(ts => ts.day_of_week === dayOfWeek);
 
             for (const template of dayTemplates) {
-              shiftsToCreate.push({
+              shiftsToCreate.push(withPlanningVersion({
                 employee_id: employee.id,
                 employee_name: `${employee.first_name} ${employee.last_name}`,
                 date: dateStr,
@@ -152,7 +157,7 @@ export default function ApplyTemplateGlobalModal({ currentMonth, currentYear, on
                 position: template.position,
                 notes: template.notes || '',
                 status: 'planned'
-              });
+              }, resetVersion, monthKey));
             }
           }
         }
@@ -183,11 +188,12 @@ export default function ApplyTemplateGlobalModal({ currentMonth, currentYear, on
       const endDate = lastDay.toISOString().split('T')[0];
 
       const allShifts = await base44.entities.Shift.list();
-      const existingCount = allShifts.filter(s => 
+      const monthShifts = allShifts.filter(s => 
         s.date >= startDate && 
         s.date <= endDate &&
         (targetMode === 'all' || s.employee_id === selectedEmployeeId)
-      ).length;
+      );
+      const existingCount = filterByVersion(monthShifts, resetVersion).length;
 
       let estimatedNew = 0;
 
