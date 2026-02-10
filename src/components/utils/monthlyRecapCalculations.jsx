@@ -292,13 +292,34 @@ export function calculateMonthlyRecap(
 }
 
 /**
+ * Get all 7 days of a week (Monday to Sunday) given any date in that week
+ */
+function getFullWeekDates(dateStr) {
+  const date = new Date(dateStr);
+  const day = date.getDay();
+  const diff = day === 0 ? -6 : 1 - day; // Days to Monday
+  const monday = new Date(date);
+  monday.setDate(monday.getDate() + diff);
+  
+  const weekDates = [];
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(monday);
+    d.setDate(d.getDate() + i);
+    weekDates.push(formatDate(d));
+  }
+  
+  return weekDates;
+}
+
+/**
  * Calculate overtime using weekly method
  * Each week is checked individually for 43h limit
+ * CRITICAL: Weeks that overlap the month are calculated on ALL 7 days, not just days in the month
  */
 function calculateWeeklyOvertime(result, employee, shifts, nonShiftEvents, nonShiftTypes, monthDates, contractHoursWeekly) {
   const isPartTime = employee.work_time_type === 'part_time';
   
-  // Group dates by week (Monday to Sunday)
+  // Group dates by week (Monday to Sunday) - but only track weeks that touch the month
   const weekMap = new Map();
   
   monthDates.forEach(dateStr => {
@@ -310,15 +331,16 @@ function calculateWeeklyOvertime(result, employee, shifts, nonShiftEvents, nonSh
     const weekKey = formatDate(monday);
     
     if (!weekMap.has(weekKey)) {
-      weekMap.set(weekKey, []);
+      // Get the FULL week (all 7 days), even if some are outside the month
+      weekMap.set(weekKey, getFullWeekDates(dateStr));
     }
-    weekMap.get(weekKey).push(dateStr);
   });
 
   // Calculate overtime for each week
   weekMap.forEach((weekDates) => {
     let weekHours = 0;
     
+    // Calculate hours for ALL days in the week (including days outside the month)
     weekDates.forEach(date => {
       const dayShifts = shifts.filter(s => 
         s.employee_id === employee.id && 
@@ -381,6 +403,7 @@ function calculateWeeklyOvertime(result, employee, shifts, nonShiftEvents, nonSh
  * CRITICAL: Even in monthly mode, overtime 25%/50% thresholds are calculated WEEK BY WEEK
  * This ensures legal compliance: 35h base per week, +25% from 36-43h, +50% above 43h
  * Monthly mode only differs in how the base contract hours are displayed/adjusted
+ * Weeks that overlap the month are calculated on ALL 7 days, not just days in the month
  */
 function calculateMonthlyOvertime(result, employee, shifts, nonShiftEvents, nonShiftTypes, monthDates, contractHoursWeekly) {
   const isPartTime = employee.work_time_type === 'part_time';
@@ -403,7 +426,7 @@ function calculateMonthlyOvertime(result, employee, shifts, nonShiftEvents, nonS
     // Full-time: MUST calculate week by week, then aggregate
     // Legal thresholds are per week: 35h base, +25% from 36-43h, +50% beyond 43h
     
-    // Group dates by week (Monday to Sunday)
+    // Group dates by week (Monday to Sunday) - but only track weeks that touch the month
     const weekMap = new Map();
     
     monthDates.forEach(dateStr => {
@@ -415,15 +438,16 @@ function calculateMonthlyOvertime(result, employee, shifts, nonShiftEvents, nonS
       const weekKey = formatDate(monday);
       
       if (!weekMap.has(weekKey)) {
-        weekMap.set(weekKey, []);
+        // Get the FULL week (all 7 days), even if some are outside the month
+        weekMap.set(weekKey, getFullWeekDates(dateStr));
       }
-      weekMap.get(weekKey).push(dateStr);
     });
 
     // Calculate overtime for each week, then sum
     weekMap.forEach((weekDates) => {
       let weekHours = 0;
       
+      // Calculate hours for ALL days in the week (including days outside the month)
       weekDates.forEach(date => {
         const dayShifts = shifts.filter(s => 
           s.employee_id === employee.id && 
