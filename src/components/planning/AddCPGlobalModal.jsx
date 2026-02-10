@@ -243,7 +243,7 @@ export default function AddCPGlobalModal({ onClose, year, month }) {
       
       const impactedDaysCount = result.impactedDays?.length || 0;
       toast.success(
-        `CP créés du ${cpData.startCP} au ${cpData.endCP}`,
+        `Période CP créée avec succès`,
         { 
           description: `${result.deletedShifts} shift(s) remplacé(s) par ${impactedDaysCount} jour(s) de CP` 
         }
