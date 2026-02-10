@@ -9,6 +9,7 @@ import { Calendar, AlertTriangle, CheckCircle, Users } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { usePlanningVersion, withPlanningVersion, filterByVersion } from '@/components/planning/usePlanningVersion';
+import { recomputeAndPersistRecapsForEmployees } from '@/components/planning/recapPersistence';
 
 const DAYS_MAP = {
   1: 'Lundi',
@@ -62,6 +63,14 @@ export default function ApplyTemplateGlobalModal({ currentMonth, currentYear, on
 
   const applyMutation = useMutation({
     mutationFn: async () => {
+      console.log('═══════════════════════════════════════════════════════════');
+      console.log('📋 APPLY TEMPLATE - START');
+      console.log('═══════════════════════════════════════════════════════════');
+      console.log('MonthKey:', monthKey);
+      console.log('Active resetVersion:', resetVersion);
+      console.log('Target mode:', targetMode);
+      console.log('Application mode:', applicationMode);
+      
       const firstDay = new Date(currentYear, currentMonth, 1);
       const lastDay = new Date(currentYear, currentMonth + 1, 0);
       const startDate = firstDay.toISOString().split('T')[0];
@@ -86,11 +95,14 @@ export default function ApplyTemplateGlobalModal({ currentMonth, currentYear, on
 
       // Generate new shifts
       const shiftsToCreate = [];
+      const impactedEmployeeIds = new Set();
       
       if (targetMode === 'single') {
         // Apply to one employee
         const employee = employees.find(e => e.id === selectedEmployeeId);
         if (!employee) throw new Error('Employé non trouvé');
+
+        impactedEmployeeIds.add(employee.id);
 
         for (let d = new Date(firstDay); d <= lastDay; d.setDate(d.getDate() + 1)) {
           const jsDay = d.getDay();
@@ -134,6 +146,10 @@ export default function ApplyTemplateGlobalModal({ currentMonth, currentYear, on
             ts.template_week_id === empTemplateWeek.id
           );
 
+          if (empTemplateShifts.length === 0) continue;
+
+          impactedEmployeeIds.add(employee.id);
+
           for (let d = new Date(firstDay); d <= lastDay; d.setDate(d.getDate() + 1)) {
             const jsDay = d.getDay();
             const dayOfWeek = jsDay === 0 ? 7 : jsDay;
@@ -163,16 +179,99 @@ export default function ApplyTemplateGlobalModal({ currentMonth, currentYear, on
         }
       }
 
+      console.log(`\n📊 Shifts to create: ${shiftsToCreate.length}`);
+      console.log(`👥 Impacted employees: ${impactedEmployeeIds.size}`);
+
       if (shiftsToCreate.length > 0) {
         await base44.entities.Shift.bulkCreate(shiftsToCreate);
+        console.log('✓ Shifts created successfully');
       }
 
-      return { created: shiftsToCreate.length, deleted: shiftsToDelete.length };
+      // RECALCULATE AND PERSIST RECAPS FOR IMPACTED EMPLOYEES
+      console.log('\n═══════════════════════════════════════════════════════════');
+      console.log('📈 RECALCULATING RECAPS FOR IMPACTED EMPLOYEES');
+      console.log('═══════════════════════════════════════════════════════════');
+
+      // Fetch necessary data for recap calculation
+      const [allShifts, nonShiftEvents, nonShiftTypes, holidayDates, calculationSettings] = await Promise.all([
+        base44.entities.Shift.filter({
+          month_key: monthKey,
+          reset_version: resetVersion
+        }),
+        base44.entities.NonShiftEvent.filter({
+          month_key: monthKey,
+          reset_version: resetVersion
+        }),
+        base44.entities.NonShiftType.filter({ is_active: true }),
+        base44.entities.HolidayDate.filter({ is_active: true }).then(holidays => 
+          holidays
+            .filter(h => h.date >= startDate && h.date <= endDate)
+            .map(h => h.date)
+        ),
+        base44.entities.AppSettings.filter({ setting_key: 'planning_calculation_mode' })
+      ]);
+
+      const calculationMode = calculationSettings[0]?.planning_calculation_mode || 'disabled';
+
+      console.log(`\n📊 Context for recap calculation:`);
+      console.log(`  - Shifts (all in month): ${allShifts.length}`);
+      console.log(`  - Non-shifts: ${nonShiftEvents.length}`);
+      console.log(`  - Non-shift types: ${nonShiftTypes.length}`);
+      console.log(`  - Holiday dates: ${holidayDates.length}`);
+      console.log(`  - Calculation mode: ${calculationMode}`);
+
+      // Recalculate recaps for all impacted employees
+      const recapResults = await recomputeAndPersistRecapsForEmployees(
+        Array.from(impactedEmployeeIds),
+        {
+          monthKey,
+          activeResetVersion: resetVersion,
+          year: currentYear,
+          monthIndex: currentMonth,
+          shifts: allShifts,
+          nonShiftEvents,
+          nonShiftTypes,
+          holidayDates,
+          calculationMode,
+          employees
+        }
+      );
+
+      console.log('\n═══════════════════════════════════════════════════════════');
+      console.log('✅ APPLY TEMPLATE - COMPLETE');
+      console.log('═══════════════════════════════════════════════════════════');
+      console.log(`Shifts created: ${shiftsToCreate.length}`);
+      console.log(`Shifts deleted: ${shiftsToDelete.length}`);
+      console.log(`Recaps recalculated: ${recapResults.succeeded} / ${recapResults.total}`);
+      if (recapResults.failed > 0) {
+        console.error(`Recap calculation failures: ${recapResults.failed}`);
+        console.error('Errors:', recapResults.errors);
+      }
+      console.log('═══════════════════════════════════════════════════════════\n');
+
+      return { 
+        created: shiftsToCreate.length, 
+        deleted: shiftsToDelete.length,
+        recapsRecalculated: recapResults.succeeded,
+        recapsFailed: recapResults.failed
+      };
     },
     onSuccess: (result) => {
       queryClient.invalidateQueries({ queryKey: ['shifts'] });
+      queryClient.invalidateQueries({ queryKey: ['monthlyRecaps'] });
       queryClient.refetchQueries({ queryKey: ['shifts', currentYear, currentMonth] });
-      toast.success(`${result.created} shift(s) créé(s), ${result.deleted} supprimé(s)`);
+      
+      if (result.recapsFailed > 0) {
+        toast.warning(
+          `${result.created} shift(s) créé(s), ${result.recapsRecalculated} recap(s) calculé(s)`,
+          { description: `⚠️ ${result.recapsFailed} recap(s) en échec - vérifiez les logs console` }
+        );
+      } else {
+        toast.success(
+          `${result.created} shift(s) créé(s)`,
+          { description: `✓ ${result.recapsRecalculated} recap(s) recalculé(s)` }
+        );
+      }
       onClose();
     },
     onError: (error) => {
