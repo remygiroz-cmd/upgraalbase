@@ -375,10 +375,10 @@ ${deductionDetails.length > 0 ? `  Détail: ${deductionDetails.map(d => `${d.dat
           </div>
         )}
 
-        {/* SECTION 5: Non-shifts summary (filtered by visibleRecap) */}
+        {/* SECTION 5: Non-shifts summary (filtered by visible_in_recap) */}
         {calculationMode !== 'disabled' && (() => {
-          // Filter non-shifts to only show those with visibleRecap === true
-          const visibleStatuses = nonShiftTypes.filter(t => t.visible_recap === true);
+          // Filter non-shifts to only show those with visible_in_recap === true
+          const visibleStatuses = nonShiftTypes.filter(t => t.visible_in_recap === true);
           
           // Calculate occurrences per status (unique days per employee)
           const employeeNonShifts = nonShiftEvents.filter(ns => ns.employee_id === employee.id);
