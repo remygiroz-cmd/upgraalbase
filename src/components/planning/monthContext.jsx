@@ -19,6 +19,14 @@ export async function getActiveMonthContext(monthKey) {
   console.log('═══════════════════════════════════════════════════════════');
   console.log(`Input month_key: "${monthKey}"`);
   
+  // Parse monthKey to extract year and month
+  const [yearStr, monthStr] = monthKey.split('-');
+  if (!yearStr || !monthStr) {
+    throw new Error(`Invalid monthKey format: "${monthKey}". Expected "YYYY-MM".`);
+  }
+  const year = parseInt(yearStr, 10);
+  const month = parseInt(monthStr, 10) - 1; // Convert to 0-indexed
+  
   // Chercher l'entité PlanningMonth pour ce mois
   const planningMonths = await base44.entities.PlanningMonth.filter({ month_key: monthKey });
   
@@ -28,6 +36,8 @@ export async function getActiveMonthContext(monthKey) {
     // Créer une nouvelle entrée avec reset_version = 0
     console.log('⚠️ No PlanningMonth found - Creating with reset_version=0');
     planningMonth = await base44.entities.PlanningMonth.create({
+      year,
+      month,
       month_key: monthKey,
       reset_version: 0
     });
@@ -62,11 +72,18 @@ export async function bumpMonthVersion(monthKey) {
   console.log('═══════════════════════════════════════════════════════════');
   console.log(`Month: "${monthKey}"`);
   
+  // Parse monthKey to extract year and month
+  const [yearStr, monthStr] = monthKey.split('-');
+  const year = parseInt(yearStr, 10);
+  const month = parseInt(monthStr, 10) - 1; // Convert to 0-indexed
+  
   const planningMonths = await base44.entities.PlanningMonth.filter({ month_key: monthKey });
   
   if (planningMonths.length === 0) {
     console.log('⚠️ No PlanningMonth found - Creating with reset_version=1');
     const newMonth = await base44.entities.PlanningMonth.create({
+      year,
+      month,
       month_key: monthKey,
       reset_version: 1
     });
