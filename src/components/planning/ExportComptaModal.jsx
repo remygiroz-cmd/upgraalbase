@@ -9,6 +9,7 @@ import { FileText, Send, Download, Loader2, AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { jsPDF } from 'jspdf';
 import 'jspdf-autotable';
+import { calculateMonthlyRecap, applyManualOverrides } from '@/components/utils/monthlyRecapCalculations';
 
 const MONTHS = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'];
 
@@ -217,57 +218,146 @@ export default function ExportComptaModal({ open, onOpenChange, monthStart, mont
     enabled: open
   });
 
-  // Build export data - NEED to use the calculated recaps from MonthlySummary component logic
-  // For now, we'll fetch and calculate inline to ensure data is populated
-  const exportData = recaps
-    .map(recap => {
-      const employee = employees.find(e => e.id === recap.employee_id);
-      if (!employee) {
-        console.log('⚠️ Employee not found for recap:', recap.employee_id);
+  // Fetch shifts and non-shift events for calculations
+  const { data: shifts = [] } = useQuery({
+    queryKey: ['shifts', monthKey],
+    queryFn: async () => {
+      const monthStartStr = formatDate(monthStart);
+      const monthEndStr = formatDate(monthEnd);
+      const allShifts = await base44.entities.Shift.list();
+      const filtered = allShifts.filter(s => s.date >= monthStartStr && s.date <= monthEndStr);
+      console.log('📅 Shifts fetched for month:', filtered.length);
+      return filtered;
+    },
+    enabled: open
+  });
+
+  const { data: nonShiftEvents = [] } = useQuery({
+    queryKey: ['nonShiftEvents', monthKey],
+    queryFn: async () => {
+      const monthStartStr = formatDate(monthStart);
+      const monthEndStr = formatDate(monthEnd);
+      const allEvents = await base44.entities.NonShiftEvent.list();
+      const filtered = allEvents.filter(e => e.date >= monthStartStr && e.date <= monthEndStr);
+      console.log('📅 Non-shift events fetched:', filtered.length);
+      return filtered;
+    },
+    enabled: open
+  });
+
+  const { data: holidayDates = [] } = useQuery({
+    queryKey: ['holidayDates', monthKey],
+    queryFn: async () => {
+      const allHolidays = await base44.entities.HolidayDate.filter({ is_active: true });
+      const monthStartStr = formatDate(monthStart);
+      const monthEndStr = formatDate(monthEnd);
+      const filtered = allHolidays
+        .filter(h => h.date >= monthStartStr && h.date <= monthEndStr)
+        .map(h => h.date);
+      console.log('🎉 Holiday dates:', filtered);
+      return filtered;
+    },
+    enabled: open
+  });
+
+  const { data: calculationSettings = [] } = useQuery({
+    queryKey: ['appSettings', 'planning_calculation_mode'],
+    queryFn: async () => {
+      return await base44.entities.AppSettings.filter({ setting_key: 'planning_calculation_mode' });
+    },
+    enabled: open
+  });
+
+  const calculationMode = calculationSettings[0]?.planning_calculation_mode || 'disabled';
+
+  // Build export data by calculating recaps from shifts
+  const exportData = employees
+    .map(employee => {
+      const team = teams.find(t => t.id === employee.team_id);
+      const recap = recaps.find(r => r.employee_id === employee.id);
+
+      // Calculate recap for this employee
+      const employeeShifts = shifts.filter(s => s.employee_id === employee.id);
+      const employeeNonShifts = nonShiftEvents.filter(e => e.employee_id === employee.id);
+
+      // Skip if no shifts at all
+      if (employeeShifts.length === 0 && employeeNonShifts.length === 0) {
         return null;
       }
-      
-      const team = teams.find(t => t.id === employee.team_id);
 
-      // Check if recap has any activity (check manual overrides OR calculated values)
-      // Since MonthlyRecap only stores manual overrides, we need to check if there's activity
-      // by checking if the recap exists at all (it means employee has shifts)
-      if (!recap) return null;
+      // Calculate full recap
+      const monthIndex = monthStart.getMonth(); // 0-indexed
+      const calculatedRecap = calculateMonthlyRecap(
+        calculationMode,
+        employee,
+        employeeShifts,
+        employeeNonShifts,
+        nonShiftTypes,
+        holidayDates,
+        year,
+        monthIndex
+      );
 
-      // Build calculated recap object (simplified - using stored manual values as fallback)
-      const calculatedRecap = {
-        // Use manual overrides if present, otherwise these should be calculated from shifts
-        worked_hours: recap.manual_total_hours || 0,
-        paidBaseHours: recap.manual_contract_hours || 0,
-        overtime_25: recap.manual_overtime_25 || 0,
-        overtime_50: recap.manual_overtime_50 || 0,
-        complementary_10: recap.manual_complementary_10 || 0,
-        complementary_25: recap.manual_complementary_25 || 0,
-        cp_days_total: recap.manual_cp_days || 0,
-        nonShiftsByType: recap.manual_non_shifts || {},
-        shifts_count: 0, // Would need to calculate from actual shifts
-        holiday_eligible: true, // Default
-        holiday_days_count: 0,
-        holiday_hours_worked: 0
+      // Apply manual overrides if present
+      if (recap) {
+        const overrides = {
+          workedDays: recap.manual_days_worked,
+          workedHours: recap.manual_total_hours,
+          contractMonthlyHours: recap.manual_contract_hours,
+          overtimeHours25: recap.manual_overtime_25,
+          overtimeHours50: recap.manual_overtime_50,
+          complementaryHours10: recap.manual_complementary_10,
+          complementaryHours25: recap.manual_complementary_25,
+          cpDays: recap.manual_cp_days
+        };
+        
+        const { overriddenFields, ...finalRecap } = applyManualOverrides(calculatedRecap, overrides);
+        calculatedRecap.overriddenFields = overriddenFields;
+        Object.assign(calculatedRecap, finalRecap);
+      }
+
+      // Skip if no activity (worked hours = 0)
+      if ((calculatedRecap.workedHours || 0) === 0 && (calculatedRecap.workedDays || 0) === 0) {
+        return null;
+      }
+
+      // Build export row with full calculated data
+      const fullRecap = {
+        paidBaseHours: calculatedRecap.workedHours || 0,
+        worked_hours: calculatedRecap.workedHours || 0,
+        overtime_25: calculatedRecap.overtimeHours25 || 0,
+        overtime_50: calculatedRecap.overtimeHours50 || 0,
+        complementary_10: calculatedRecap.complementaryHours10 || 0,
+        complementary_25: calculatedRecap.complementaryHours25 || 0,
+        holiday_eligible: calculatedRecap.eligibleForHolidayPay || false,
+        holiday_days_count: calculatedRecap.holidaysWorkedDays || 0,
+        holiday_hours_worked: calculatedRecap.holidaysWorkedHours || 0,
+        nonShiftsByType: calculatedRecap.nonShiftsByType || {},
+        shifts_count: employeeShifts.length,
+        cp_days_total: calculatedRecap.cpDays || 0
       };
 
-      return buildExportRow(employee, calculatedRecap, nonShiftTypes, cpPeriods, team, monthStart, monthEnd);
+      return buildExportRow(employee, fullRecap, nonShiftTypes, cpPeriods, team, monthStart, monthEnd);
     })
     .filter(Boolean);
 
   console.log('✅ Export data built:');
-  console.log('  Total recaps:', recaps.length);
+  console.log('  Total employees:', employees.length);
   console.log('  Export rows generated:', exportData.length);
   if (exportData.length > 0) {
     console.log('  First 3 rows:', exportData.slice(0, 3).map(r => ({
       name: r.employeeName,
       poste: r.posteEquipeStr,
       totalPaid: r.totalPaid,
-      payees: r.payeesHorsSup
+      payees: r.payeesHorsSup,
+      compl10: r.compl10,
+      supp25: r.supp25
     })));
   } else {
-    console.log('  ⚠️ NO EXPORT DATA - recaps found but no valid rows generated');
-    console.log('  Sample recap:', recaps[0]);
+    console.log('  ⚠️ NO EXPORT DATA GENERATED');
+    console.log('  Employees:', employees.length);
+    console.log('  Shifts:', shifts.length);
+    console.log('  NonShiftEvents:', nonShiftEvents.length);
   }
   console.log('═════════════════════════════════════════════');
 
