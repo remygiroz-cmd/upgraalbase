@@ -13,6 +13,7 @@ import { Plus, Copy, AlertTriangle, Clock, ArrowUp } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import NonShiftCard from './NonShiftCard';
 import { checkMinimumRest, checkDailyHours, calculateShiftDuration } from './LegalChecks';
+import { usePlanningVersion } from './usePlanningVersion';
 
 const STATUSES = [
   { value: 'planned', label: '📋 Planifié', color: 'blue' },
@@ -34,6 +35,13 @@ export default function ShiftFormModal({
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState('shifts');
   const [showCopyConfirm, setShowCopyConfirm] = useState(false);
+
+  // Get planning version for month_key and reset_version
+  const dateObj = selectedCell?.date ? new Date(selectedCell.date) : new Date();
+  const { resetVersion, monthKey } = usePlanningVersion(
+    dateObj.getFullYear(),
+    dateObj.getMonth()
+  );
 
   const { data: positions = [] } = useQuery({
     queryKey: ['positions'],
@@ -74,8 +82,15 @@ export default function ShiftFormModal({
     mutationFn: (data) => base44.entities.NonShiftEvent.create(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['nonShiftEvents'] });
-      toast.success('Événement enregistré');
+      queryClient.invalidateQueries({ queryKey: ['shifts'] });
+      queryClient.invalidateQueries({ queryKey: ['weeklyRecaps'] });
+      queryClient.invalidateQueries({ queryKey: ['monthlyRecaps'] });
+      toast.success('Non-shift enregistré avec succès');
       resetNonShiftForm();
+    },
+    onError: (error) => {
+      console.error('Erreur lors de la création du non-shift:', error);
+      toast.error(`Erreur: ${error.message || 'Impossible de créer le non-shift'}`);
     }
   });
 
@@ -240,7 +255,12 @@ export default function ShiftFormModal({
 
   const handleSaveNonShift = () => {
     if (!nonShiftForm.non_shift_type_id) {
-      toast.error('Veuillez sélectionner un type');
+      toast.error('Veuillez sélectionner un type d\'événement');
+      return;
+    }
+
+    if (!monthKey || resetVersion === undefined) {
+      toast.error('Erreur: informations de versioning manquantes');
       return;
     }
 
@@ -252,9 +272,12 @@ export default function ShiftFormModal({
       date: selectedCell.date,
       non_shift_type_id: nonShiftForm.non_shift_type_id,
       non_shift_type_label: selectedType?.label || '',
-      notes: nonShiftForm.notes
+      notes: nonShiftForm.notes || '',
+      month_key: monthKey,
+      reset_version: resetVersion
     };
 
+    console.log('Creating non-shift with data:', data);
     saveNonShiftMutation.mutate(data);
   };
 
@@ -303,7 +326,9 @@ export default function ShiftFormModal({
         date: selectedCell.date,
         non_shift_type_id: ns.non_shift_type_id,
         non_shift_type_label: ns.non_shift_type_label,
-        notes: ns.notes || ''
+        notes: ns.notes || '',
+        month_key: monthKey,
+        reset_version: resetVersion
       };
       saveNonShiftMutation.mutate(data);
     });
