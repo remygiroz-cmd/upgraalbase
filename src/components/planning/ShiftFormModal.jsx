@@ -222,6 +222,22 @@ export default function ShiftFormModal({
     return `${hours}h${minutes.toString().padStart(2, '0')}`;
   };
 
+  // Auto-calculate base_hours_override when times or break change
+  useEffect(() => {
+    if (formData.start_time && formData.end_time) {
+      const [startH, startM] = formData.start_time.split(':').map(Number);
+      const [endH, endM] = formData.end_time.split(':').map(Number);
+      
+      let totalMinutes = (endH * 60 + endM) - (startH * 60 + startM);
+      if (totalMinutes < 0) totalMinutes += 24 * 60;
+      totalMinutes -= (formData.break_minutes || 0);
+      
+      const decimalHours = Math.round((totalMinutes / 60) * 10) / 10;
+      
+      setFormData(prev => ({ ...prev, base_hours_override: decimalHours }));
+    }
+  }, [formData.start_time, formData.end_time, formData.break_minutes]);
+
   const handleSaveNonShift = () => {
     if (!nonShiftForm.non_shift_type_id) {
       toast.error('Veuillez sélectionner un type');
