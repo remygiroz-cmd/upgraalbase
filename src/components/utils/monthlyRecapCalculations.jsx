@@ -275,8 +275,9 @@ export function calculateMonthlyRecap(
     // Weekly calculation: check each week individually
     calculateWeeklyOvertime(result, employee, shifts, nonShiftEvents, nonShiftTypes, monthDates, contractHoursWeekly);
   } else if (mode === 'monthly') {
-    // Monthly calculation: smoothing for the entire month
-    calculateMonthlyOvertime(result, employee);
+    // Monthly calculation: STILL calculates week-by-week for legal compliance
+    // The difference is only in how base hours are displayed/adjusted
+    calculateMonthlyOvertime(result, employee, shifts, nonShiftEvents, nonShiftTypes, monthDates, contractHoursWeekly);
   }
 
   // Check holiday pay eligibility (8 months = ~240 days of employment)
@@ -377,12 +378,11 @@ function calculateWeeklyOvertime(result, employee, shifts, nonShiftEvents, nonSh
 
 /**
  * Calculate overtime using monthly smoothing method
- * CRITICAL FIX: For full-time, overtime is calculated monthly
- * Base is contractMonthlyHours, excess goes:
- * - +25% for first 8h of monthly overtime
- * - +50% for anything beyond 8h
+ * CRITICAL: Even in monthly mode, overtime 25%/50% thresholds are calculated WEEK BY WEEK
+ * This ensures legal compliance: 35h base per week, +25% from 36-43h, +50% above 43h
+ * Monthly mode only differs in how the base contract hours are displayed/adjusted
  */
-function calculateMonthlyOvertime(result, employee) {
+function calculateMonthlyOvertime(result, employee, shifts, nonShiftEvents, nonShiftTypes, monthDates, contractHoursWeekly) {
   const isPartTime = employee.work_time_type === 'part_time';
   
   if (isPartTime) {
@@ -400,23 +400,69 @@ function calculateMonthlyOvertime(result, employee) {
     
     result.totalComplementaryHours = result.complementaryHours10 + result.complementaryHours25;
   } else {
-    // Full-time: monthly overtime calculation
-    // Base reference: 151.67h/month for 35h/week
-    // Overtime starts above contractMonthlyHours
+    // Full-time: MUST calculate week by week, then aggregate
+    // Legal thresholds are per week: 35h base, +25% from 36-43h, +50% beyond 43h
     
-    const monthlyOvertime = Math.max(0, result.workedHours - result.contractMonthlyHours);
+    // Group dates by week (Monday to Sunday)
+    const weekMap = new Map();
     
-    if (monthlyOvertime > 0) {
-      // +25% for first 8h of monthly overtime
-      result.overtimeHours25 = Math.min(monthlyOvertime, 8);
+    monthDates.forEach(dateStr => {
+      const date = new Date(dateStr);
+      const day = date.getDay();
+      const diff = day === 0 ? -6 : 1 - day; // Days to Monday
+      const monday = new Date(date);
+      monday.setDate(monday.getDate() + diff);
+      const weekKey = formatDate(monday);
       
-      // +50% for anything beyond 8h
-      if (monthlyOvertime > 8) {
-        result.overtimeHours50 = monthlyOvertime - 8;
+      if (!weekMap.has(weekKey)) {
+        weekMap.set(weekKey, []);
       }
+      weekMap.get(weekKey).push(dateStr);
+    });
+
+    // Calculate overtime for each week, then sum
+    weekMap.forEach((weekDates) => {
+      let weekHours = 0;
       
-      result.totalOvertimeHours = result.overtimeHours25 + result.overtimeHours50;
-    }
+      weekDates.forEach(date => {
+        const dayShifts = shifts.filter(s => 
+          s.employee_id === employee.id && 
+          s.date === date && 
+          s.status !== 'cancelled'
+        );
+        
+        const dayNonShifts = nonShiftEvents.filter(ns => 
+          ns.employee_id === employee.id && 
+          ns.date === date
+        );
+
+        const { hours } = calculateDayHours(
+          dayShifts, 
+          dayNonShifts, 
+          nonShiftTypes, 
+          employee, 
+          calculateShiftDuration
+        );
+
+        weekHours += hours;
+      });
+
+      // Apply weekly thresholds: 35h base, +25% up to 43h, +50% beyond
+      if (weekHours > 35) {
+        const overtimeThisWeek = weekHours - 35;
+        
+        // +25% from 36h to 43h (i.e., 1h to 8h of overtime)
+        const hours25 = Math.min(overtimeThisWeek, 8);
+        result.overtimeHours25 += hours25;
+        
+        // +50% beyond 43h (i.e., beyond 8h of overtime)
+        if (overtimeThisWeek > 8) {
+          result.overtimeHours50 += overtimeThisWeek - 8;
+        }
+      }
+    });
+
+    result.totalOvertimeHours = result.overtimeHours25 + result.overtimeHours50;
   }
 }
 
