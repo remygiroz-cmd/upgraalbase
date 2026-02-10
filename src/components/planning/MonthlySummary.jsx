@@ -126,6 +126,29 @@ export default function MonthlySummary({
     overriddenFields = []
   } = recapWithOverrides;
 
+  // Calculate paid hours (contract hours - non-shifts impacting payroll)
+  const paidHours = useMemo(() => {
+    if (!contractMonthlyHours) return null;
+
+    // Calculate daily contract hours
+    const weeklyHours = parseContractHours(employee.contract_hours_weekly);
+    const workDaysPerWeek = employee.work_days_per_week || 5;
+    const dailyHours = weeklyHours / workDaysPerWeek;
+
+    if (!dailyHours) return contractMonthlyHours;
+
+    // Count non-shifts that impact payroll (excluding CP and formations)
+    const impactingNonShifts = nonShiftEvents.filter(ns => {
+      const nsType = nonShiftTypes.find(t => t.id === ns.non_shift_type_id);
+      return nsType?.impacte_paie === true;
+    });
+
+    const hoursToDeduct = impactingNonShifts.length * dailyHours;
+    const result = contractMonthlyHours - hoursToDeduct;
+
+    return Math.max(0, result); // Never go below 0
+  }, [contractMonthlyHours, employee, nonShiftEvents, nonShiftTypes]);
+
   // Use CP from calculation or fallback
   const displayCPDays = cpDays ?? autoCPDays ?? 0;
 
@@ -230,14 +253,21 @@ export default function MonthlySummary({
             Effectuées
           </div>
           {calculationMode !== 'disabled' && (
-            <div className="text-xs text-gray-500 mt-0.5">
-              Base: {renderValue(contractMonthlyHours, 'contractMonthlyHours', 'h')}
-              {adjustedContractHours !== contractMonthlyHours && adjustedContractHours !== null && (
-                <span className="text-orange-600 ml-1">
-                  (ajusté: {renderValue(adjustedContractHours, 'adjustedContractHours', 'h')})
-                </span>
+            <>
+              <div className="text-xs text-gray-500 mt-0.5">
+                Base: {renderValue(contractMonthlyHours, 'contractMonthlyHours', 'h')}
+                {adjustedContractHours !== contractMonthlyHours && adjustedContractHours !== null && (
+                  <span className="text-orange-600 ml-1">
+                    (ajusté: {renderValue(adjustedContractHours, 'adjustedContractHours', 'h')})
+                  </span>
+                )}
+              </div>
+              {paidHours !== null && paidHours !== contractMonthlyHours && (
+                <div className="text-[10px] text-gray-500 mt-1">
+                  Payées (hors sup/comp): {paidHours.toFixed(1)}h
+                </div>
               )}
-            </div>
+            </>
           )}
         </div>
 
