@@ -11,7 +11,7 @@ import { calculateCPPeriod, calculateCPDays } from './paidLeaveCalculations';
 import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { toast } from 'sonner';
-import { usePlanningVersion } from './usePlanningVersion';
+import { getActiveMonthContext } from './monthContext';
 
 // Utility: Extract month_key from ISO date string (YYYY-MM-DD)
 function getMonthKeyFromISO(dateISO) {
@@ -29,9 +29,14 @@ export default function AddCPGlobalModal({ onClose, year, month }) {
   const [notes, setNotes] = useState('');
   const [manualOverride, setManualOverride] = useState('');
   const [showDebug, setShowDebug] = useState(false);
+  const [monthContext, setMonthContext] = useState(null);
 
-  // Get planning version
-  const { resetVersion, monthKey } = usePlanningVersion(year, month);
+  const monthKey = `${year}-${String(month + 1).padStart(2, '0')}`;
+
+  // Get active month context (SOURCE DE VÉRITÉ UNIQUE)
+  React.useEffect(() => {
+    getActiveMonthContext(monthKey).then(ctx => setMonthContext(ctx));
+  }, [monthKey]);
 
   // Fetch all active employees
   const { data: employees = [] } = useQuery({
@@ -264,8 +269,8 @@ export default function AddCPGlobalModal({ onClose, year, month }) {
       return;
     }
 
-    if (!monthKey || resetVersion === undefined) {
-      toast.error('Erreur: informations de versioning manquantes');
+    if (!monthContext) {
+      toast.error('Erreur: contexte du mois non disponible. Veuillez rafraîchir.');
       return;
     }
 
@@ -292,8 +297,8 @@ export default function AddCPGlobalModal({ onClose, year, month }) {
       cp_days_auto: cpData.countedDays,
       cp_days_manual: manualOverride ? parseFloat(manualOverride) : null,
       notes: notes || '',
-      month_key: calculatedMonthKey,
-      reset_version: resetVersion
+      month_key: monthContext.month_key,
+      reset_version: monthContext.reset_version
     };
 
     console.log('Attempting to create CP period with shift replacement:', periodData);
