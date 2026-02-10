@@ -375,20 +375,48 @@ ${deductionDetails.length > 0 ? `  Détail: ${deductionDetails.map(d => `${d.dat
           </div>
         )}
 
-        {/* SECTION 5: Non-shifts summary */}
-        {calculationMode !== 'disabled' && nonShiftsByType && Object.keys(nonShiftsByType).length > 0 && (
-          <div className="mb-2 text-[9px] text-gray-600 space-y-0.5">
-            {Object.entries(nonShiftsByType).map(([key, { count, code }]) => (
-              <div key={key} className="flex items-center justify-center gap-1">
-                <span className="font-mono bg-gray-100 px-1 rounded">{code}</span>
-                <span>{count}j</span>
-              </div>
-            ))}
-          </div>
-        )}
+        {/* SECTION 5: Non-shifts summary (filtered by visibleRecap) */}
+        {calculationMode !== 'disabled' && (() => {
+          // Filter non-shifts to only show those with visibleRecap === true
+          const visibleStatuses = nonShiftTypes.filter(t => t.visible_recap === true);
+          
+          // Calculate occurrences per status (unique days per employee)
+          const employeeNonShifts = nonShiftEvents.filter(ns => ns.employee_id === employee.id);
+          const occurrencesByStatus = {};
+          
+          employeeNonShifts.forEach(ns => {
+            const statusId = ns.non_shift_type_id;
+            if (!occurrencesByStatus[statusId]) {
+              occurrencesByStatus[statusId] = new Set();
+            }
+            occurrencesByStatus[statusId].add(ns.date);
+          });
+          
+          // Build display lines for visible statuses only
+          const displayLines = visibleStatuses
+            .map(status => {
+              const uniqueDays = occurrencesByStatus[status.id]?.size || 0;
+              return {
+                code: status.code || status.label?.substring(0, 3).toUpperCase(),
+                count: uniqueDays
+              };
+            })
+            .filter(line => line.count > 0);
+          
+          return displayLines.length > 0 && (
+            <div className="mb-2 text-[9px] text-gray-600 space-y-0.5">
+              {displayLines.map((line, idx) => (
+                <div key={idx} className="flex items-center justify-center gap-1">
+                  <span className="font-mono bg-gray-100 px-1 rounded">{line.code}</span>
+                  <span>{line.count}j</span>
+                </div>
+              ))}
+            </div>
+          );
+        })()}
 
-        {/* SECTION 6: CP count */}
-        {displayCPDays > 0 && (
+        {/* SECTION 6: CP décomptés (always show if CP periods exist) */}
+        {cpPeriods.length > 0 && displayCPDays > 0 && (
           <div className="mt-2 pt-2 border-t border-gray-200">
             <div className="text-[10px] font-semibold text-green-700 flex items-center justify-center gap-1">
               <Coffee className="w-3 h-3" />
