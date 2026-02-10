@@ -106,9 +106,25 @@ export default function ClearMonthModal({ open, onOpenChange, monthStart, monthE
     refetchOnMount: 'always'
   });
 
-  const isLoadingData = shiftsLoading || eventsLoading || cpLoading || recapsLoading;
+  const { data: weeklyRecaps = [], isLoading: weeklyRecapsLoading, refetch: refetchWeeklyRecaps } = useQuery({
+    queryKey: ['clearMonth-weeklyRecaps', year, month],
+    queryFn: async () => {
+      console.log('🔍 [CLEAR MONTH] Fetching weekly recaps...');
+      const allRecaps = await base44.entities.WeeklyRecap.list();
+      const firstDay = formatDate(monthStart);
+      const lastDay = formatDate(monthEnd);
+      const filtered = allRecaps.filter(r => r.week_start_date >= firstDay && r.week_start_date <= lastDay);
+      console.log('✅ [CLEAR MONTH] Weekly recaps found:', filtered.length);
+      return filtered;
+    },
+    enabled: open,
+    staleTime: 0,
+    refetchOnMount: 'always'
+  });
 
-  const totalItems = existingShifts.length + nonShiftEvents.length + paidLeavePeriods.length + monthlyRecaps.length;
+  const isLoadingData = shiftsLoading || eventsLoading || cpLoading || recapsLoading || weeklyRecapsLoading;
+
+  const totalItems = existingShifts.length + nonShiftEvents.length + paidLeavePeriods.length + monthlyRecaps.length + weeklyRecaps.length;
 
   const handleClear = async () => {
     console.log('🔄 [RESET PLANNING] handleClear called', { totalItems });
