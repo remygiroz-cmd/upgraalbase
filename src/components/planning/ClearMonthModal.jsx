@@ -164,12 +164,27 @@ export default function ClearMonthModal({ open, onOpenChange, monthStart, monthE
       let deletedEvents = 0;
       let deletedCP = 0;
       let deletedRecaps = 0;
+      let deletedWeeklyRecaps = 0;
       const deletionErrors = [];
       let progress = 0;
-      const totalToDelete = existingShifts.length + nonShiftEvents.length + paidLeavePeriods.length + monthlyRecaps.length;
+      const totalToDelete = existingShifts.length + nonShiftEvents.length + paidLeavePeriods.length + monthlyRecaps.length + weeklyRecaps.length;
 
-      // Delete monthly recaps first
-      console.log('🔄 [RESET] Step 1/4: Deleting monthly recaps...');
+      // Delete weekly recaps first
+      console.log('🔄 [RESET] Step 1/5: Deleting weekly recaps...');
+      for (const recap of weeklyRecaps) {
+        try {
+          await base44.entities.WeeklyRecap.delete(recap.id);
+          deletedWeeklyRecaps++;
+          progress++;
+          console.log(`Progress: ${progress}/${totalToDelete}`);
+        } catch (err) {
+          deletionErrors.push(`WeeklyRecap ${recap.id}: ${err.message}`);
+          console.error('Error deleting weekly recap:', recap.id, err);
+        }
+      }
+
+      // Delete monthly recaps
+      console.log('🔄 [RESET] Step 2/5: Deleting monthly recaps...');
       for (const recap of monthlyRecaps) {
         try {
           await base44.entities.MonthlyRecap.delete(recap.id);
