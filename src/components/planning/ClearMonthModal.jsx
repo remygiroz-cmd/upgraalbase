@@ -231,7 +231,7 @@ export default function ClearMonthModal({ open, onOpenChange, monthStart, monthE
       }
 
       // Delete shifts last
-      console.log('🔄 [RESET] Step 4/4: Deleting shifts...');
+      console.log('🔄 [RESET] Step 5/5: Deleting shifts...');
       for (const shift of existingShifts) {
         try {
           await base44.entities.Shift.delete(shift.id);
