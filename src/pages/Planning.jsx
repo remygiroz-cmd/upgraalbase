@@ -481,9 +481,10 @@ export default function Planning() {
     return lookup;
   }, [nonShiftEvents]);
 
-  // Get shifts for employee and date (O(1) lookup)
+  // Get shifts for employee and date (O(1) lookup) - filter out cancelled shifts
   const getShiftsForEmployeeAndDate = React.useCallback((employeeId, dateStr) => {
-    return shiftsLookup.get(`${employeeId}_${dateStr}`) || [];
+    const allShifts = shiftsLookup.get(`${employeeId}_${dateStr}`) || [];
+    return allShifts.filter(shift => !shift.is_cancelled);
   }, [shiftsLookup]);
 
   // Get non-shift events for employee and date (O(1) lookup)
