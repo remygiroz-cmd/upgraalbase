@@ -441,29 +441,40 @@ export default function ExportComptaModal({ open, onOpenChange, monthStart, mont
     })
     .filter(Boolean);
 
-  console.log('✅ Export data built:');
-  console.log('  Month:', monthName, year);
-  console.log('  MonthKey:', monthKey);
-  console.log('  Active reset_version:', activeResetVersion);
-  console.log('  Total employees:', employees.length);
-  console.log('  Shifts (active version):', shifts.length);
-  console.log('  NonShiftEvents (active version):', nonShiftEvents.length);
-  console.log('  CP Periods (active version):', cpPeriods.length);
-  console.log('  Export rows generated:', exportData.length);
+  console.log('\n═══════════════════════════════════════════════════════════');
+  console.log('✅ EXPORT DATA FINAL RESULT');
+  console.log('═══════════════════════════════════════════════════════════');
+  console.log('Month:', monthName, year);
+  console.log('MonthKey:', monthKey);
+  console.log('Active reset_version:', activeResetVersion);
+  console.log('Total employees:', employees.length);
+  console.log('Shifts (active version):', shifts.length);
+  console.log('NonShiftEvents (active version):', nonShiftEvents.length);
+  console.log('CP Periods (active version):', cpPeriods.length);
+  console.log(`MonthlyRecaps found: ${recaps.length}`);
+  console.log(`Export rows generated: ${exportData.length}`);
   if (exportData.length > 0) {
-    console.log('  First 3 rows:', exportData.slice(0, 3).map(r => ({
-      name: r.employeeName,
-      poste: r.posteEquipeStr,
-      totalPaid: r.totalPaid,
-      payees: r.payeesHorsSup,
-      compl10: r.compl10,
-      supp25: r.supp25
-    })));
+    console.log('✓ First 3 export rows:');
+    exportData.slice(0, 3).forEach((r, idx) => {
+      console.log(`  Row ${idx + 1}:`);
+      console.log(`    - Employee: ${r.employeeName}`);
+      console.log(`    - Total paid: ${r.totalPaid.toFixed(1)}h`);
+      console.log(`    - Base hours: ${r.payeesHorsSup.toFixed(1)}h`);
+      console.log(`    - Compl 10%: ${r.compl10.toFixed(1)}h`);
+      console.log(`    - Supp 25%: ${r.supp25.toFixed(1)}h`);
+    });
   } else {
-    console.log('  ℹ️ NO EXPORT DATA - This is EXPECTED after a month reset');
-    console.log('  The month has been reset and contains no shifts yet');
+    console.log('❌ NO EXPORT DATA GENERATED');
+    if (recaps.length === 0) {
+      console.log('  ROOT CAUSE: No MonthlyRecaps found for this month+version');
+      console.log('  → Check if recaps were persisted after template application');
+      console.log('  → Review fallback debug queries above for mismatch diagnosis');
+    } else {
+      console.log(`  MonthlyRecaps exist (${recaps.length}) but no employees with activity`);
+      console.log('  → This may indicate calculation issues or zero shifts');
+    }
   }
-  console.log('═════════════════════════════════════════════');
+  console.log('═══════════════════════════════════════════════════════════\n');
 
   // Calculate totals
   const totals = exportData.reduce((acc, row) => ({
