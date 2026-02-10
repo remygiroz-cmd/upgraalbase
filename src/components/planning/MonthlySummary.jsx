@@ -132,6 +132,9 @@ export default function MonthlySummary({
     const monthlyContractHours = parseContractHours(employee.contract_hours);
     if (!monthlyContractHours) return null;
 
+    // CRITICAL: Filter non-shifts for THIS employee only
+    const employeeNonShifts = nonShiftEvents.filter(ns => ns.employee_id === employee.id);
+
     // Get day-specific hours from weekly_schedule if available
     const getDailyHoursForDate = (dateStr) => {
       const date = new Date(dateStr);
@@ -155,11 +158,11 @@ export default function MonthlySummary({
       return weeklyHours / workDaysPerWeek;
     };
 
-    // Calculate total deductions from non-shifts impacting payroll
+    // Calculate total deductions from non-shifts impacting payroll FOR THIS EMPLOYEE
     let totalDeduction = 0;
     const deductionDetails = [];
     
-    nonShiftEvents.forEach(ns => {
+    employeeNonShifts.forEach(ns => {
       const nsType = nonShiftTypes.find(t => t.id === ns.non_shift_type_id);
       if (nsType?.impacts_payroll === true) {
         const dailyHours = getDailyHoursForDate(ns.date);
@@ -175,30 +178,15 @@ export default function MonthlySummary({
     });
 
     // Debug log
-    if (deductionDetails.length > 0) {
-      console.log(`
-═══════════════════════════════════════════════════════════
-💰 HEURES PAYÉES (HORS SUP/COMP) - DEBUG
-═══════════════════════════════════════════════════════════
-Employé: ${employee.first_name} ${employee.last_name} (ID: ${employee.id})
-Mois: ${year}-${String(month + 1).padStart(2, '0')}
-Heures contractuelles/mois: ${monthlyContractHours.toFixed(2)}h
-
-Non-shifts trouvés (tous): ${nonShiftEvents.length}
-Non-shifts impactant la paie: ${deductionDetails.length}
-
-DÉTAIL DES DÉDUCTIONS:
-${deductionDetails.map(d => `  ${d.date} (${d.dayOfWeek}) - ${d.type} (${d.code}): ${d.hoursDeducted.toFixed(2)}h`).join('\n')}
-
-TOTAL DÉDUIT: ${totalDeduction.toFixed(2)}h
-HEURES PAYÉES FINALES: ${Math.max(0, monthlyContractHours - totalDeduction).toFixed(2)}h
-═══════════════════════════════════════════════════════════
-`);
-    }
+    console.log(`
+💰 Payées (hors sup/comp) - ${employee.first_name} ${employee.last_name}
+  Contract: ${monthlyContractHours.toFixed(2)}h | Non-shifts: ${employeeNonShifts.length} (${deductionDetails.length} impact paie)
+  Déductions: ${totalDeduction.toFixed(2)}h | Final: ${Math.max(0, monthlyContractHours - totalDeduction).toFixed(2)}h
+${deductionDetails.length > 0 ? `  Détail: ${deductionDetails.map(d => `${d.date} ${d.code} ${d.hoursDeducted.toFixed(2)}h`).join(', ')}` : ''}`);
 
     const result = monthlyContractHours - totalDeduction;
     return Math.max(0, result); // Never go below 0
-  }, [employee, nonShiftEvents, nonShiftTypes, year, month]);
+  }, [employee.id, employee.contract_hours, employee.contract_hours_weekly, employee.work_days_per_week, employee.weekly_schedule, nonShiftEvents, nonShiftTypes, year, month]);
 
   // Use CP from calculation or fallback
   const displayCPDays = cpDays ?? autoCPDays ?? 0;
