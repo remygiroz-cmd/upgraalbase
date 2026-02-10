@@ -21,7 +21,7 @@ function getMonthKeyFromISO(dateISO) {
   return `${parts[0]}-${parts[1]}`; // "YYYY-MM"
 }
 
-export default function AddCPGlobalModal({ onClose, currentYear, currentMonth }) {
+export default function AddCPGlobalModal({ onClose, year, month }) {
   const queryClient = useQueryClient();
   const [selectedEmployeeId, setSelectedEmployeeId] = useState('');
   const [cpStartDate, setCpStartDate] = useState('');
@@ -33,17 +33,19 @@ export default function AddCPGlobalModal({ onClose, currentYear, currentMonth })
 
   // SOURCE DE VÉRITÉ UNIQUE: Récupérer le contexte du mois actif
   // Format: YYYY-MM (e.g., "2026-02")
-  const monthKey = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}`;
+  const monthKey = year && month !== undefined ? `${year}-${String(month + 1).padStart(2, '0')}` : null;
 
-  console.log('[CP MODAL] Initializing with:', { currentYear, currentMonth, monthKey });
+  console.log('[CP MODAL] Initializing with:', { year, month, monthKey });
 
   // Get active month context (SOURCE DE VÉRITÉ UNIQUE)
   React.useEffect(() => {
-    console.log('[CP MODAL] useEffect triggered for monthKey:', monthKey);
-    getActiveMonthContext(monthKey).then(ctx => {
-      console.log('[CP MODAL] monthContext loaded:', ctx);
-      setMonthContext(ctx);
-    });
+    if (monthKey) {
+      console.log('[CP MODAL] useEffect triggered for monthKey:', monthKey);
+      getActiveMonthContext(monthKey).then(ctx => {
+        console.log('[CP MODAL] monthContext loaded:', ctx);
+        setMonthContext(ctx);
+      });
+    }
   }, [monthKey]);
 
   // Fetch all active employees
