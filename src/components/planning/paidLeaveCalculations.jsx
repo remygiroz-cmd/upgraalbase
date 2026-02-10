@@ -24,20 +24,19 @@ const JOURS_FERIES_2026 = [
 
 /**
  * Calcule les dates de début et fin de la période CP
- * @param {string} lastWorkDay - Dernier jour travaillé (YYYY-MM-DD)
- * @param {string} firstWorkDayAfter - Jour de reprise (YYYY-MM-DD)
+ * @param {string} cpStartDate - Départ en CP / Premier jour en congés (YYYY-MM-DD) - INCLUS
+ * @param {string} returnDate - Jour de reprise (YYYY-MM-DD) - EXCLU
  * @returns {Object} { startCP, endCP }
  */
-export function calculateCPPeriod(lastWorkDay, firstWorkDayAfter) {
-  const lastDate = parseLocalDate(lastWorkDay);
-  const firstDate = parseLocalDate(firstWorkDayAfter);
+export function calculateCPPeriod(cpStartDate, returnDate) {
+  const startDate = parseLocalDate(cpStartDate);
+  const returnDateParsed = parseLocalDate(returnDate);
   
-  // startCP = lendemain du dernier jour travaillé
-  const startCP = new Date(lastDate);
-  startCP.setDate(startCP.getDate() + 1);
+  // startCP = départ en CP (inclus)
+  const startCP = new Date(startDate);
   
-  // endCP = veille du jour de reprise
-  const endCP = new Date(firstDate);
+  // endCP = veille du jour de reprise (inclus)
+  const endCP = new Date(returnDateParsed);
   endCP.setDate(endCP.getDate() - 1);
   
   return {
