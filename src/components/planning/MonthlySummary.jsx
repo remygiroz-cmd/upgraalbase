@@ -253,21 +253,19 @@ export default function MonthlySummary({
             Effectuées
           </div>
           {calculationMode !== 'disabled' && (
-            <>
-              <div className="text-xs text-gray-500 mt-0.5">
-                Base: {renderValue(contractMonthlyHours, 'contractMonthlyHours', 'h')}
-                {adjustedContractHours !== contractMonthlyHours && adjustedContractHours !== null && (
-                  <span className="text-orange-600 ml-1">
-                    (ajusté: {renderValue(adjustedContractHours, 'adjustedContractHours', 'h')})
-                  </span>
-                )}
-              </div>
-              {paidHours !== null && paidHours !== contractMonthlyHours && (
-                <div className="text-[10px] text-gray-500 mt-1">
-                  Payées (hors sup/comp): {paidHours.toFixed(1)}h
-                </div>
+            <div className="text-xs text-gray-500 mt-0.5">
+              Base: {renderValue(contractMonthlyHours, 'contractMonthlyHours', 'h')}
+              {adjustedContractHours !== contractMonthlyHours && adjustedContractHours !== null && (
+                <span className="text-orange-600 ml-1">
+                  (ajusté: {renderValue(adjustedContractHours, 'adjustedContractHours', 'h')})
+                </span>
               )}
-            </>
+            </div>
+          )}
+          {paidHours !== null && (
+            <div className="text-[10px] text-gray-500 mt-1">
+              Payées (hors sup/comp): {paidHours.toFixed(1)}h
+            </div>
           )}
         </div>
 
