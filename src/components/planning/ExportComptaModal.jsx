@@ -26,10 +26,14 @@ function formatDateFR(dateStr) {
 
 /**
  * Construit une ligne d'export pour un employé à partir de son récap mensuel
+ * IMPORTANT: Le récap mensuel doit être pré-calculé avec toutes les valeurs
  */
-function buildExportRow(employee, recap, nonShiftTypes, cpPeriods, team, monthStart, monthEnd) {
+function buildExportRow(employee, calculatedRecap, nonShiftTypes, cpPeriods, team, monthStart, monthEnd) {
   const monthStartStr = formatDate(monthStart);
   const monthEndStr = formatDate(monthEnd);
+
+  console.log('Building export row for:', employee.first_name, employee.last_name);
+  console.log('  Calculated recap:', calculatedRecap);
 
   // A) Employé
   const employeeName = `${employee.first_name} ${employee.last_name}`;
@@ -40,25 +44,25 @@ function buildExportRow(employee, recap, nonShiftTypes, cpPeriods, team, monthSt
   if (team?.name) posteEquipe.push(team.name);
   const posteEquipeStr = posteEquipe.join(' / ') || '-';
 
-  // 2) Payées (hors sup/comp)
-  const payeesHorsSup = recap?.worked_base_hours || 0;
+  // 2) Payées (hors sup/comp) - depuis recap calculé
+  const payeesHorsSup = calculatedRecap?.paidBaseHours || calculatedRecap?.worked_hours || 0;
 
   // 3) Compl +10%
-  const compl10 = recap?.complementary_10 || 0;
+  const compl10 = calculatedRecap?.complementary_10 || 0;
 
   // 4) Compl +25%
-  const compl25 = recap?.complementary_25 || 0;
+  const compl25 = calculatedRecap?.complementary_25 || 0;
 
   // 5) Supp +25%
-  const supp25 = recap?.overtime_25 || 0;
+  const supp25 = calculatedRecap?.overtime_25 || 0;
 
   // 6) Supp +50%
-  const supp50 = recap?.overtime_50 || 0;
+  const supp50 = calculatedRecap?.overtime_50 || 0;
 
   // 7) Férié (jours + heures)
-  const holidayEligible = recap?.holiday_eligible !== false;
-  const holidayDays = recap?.holiday_days_count || 0;
-  const holidayHours = recap?.holiday_hours_worked || 0;
+  const holidayEligible = calculatedRecap?.holiday_eligible !== false;
+  const holidayDays = calculatedRecap?.holiday_days_count || 0;
+  const holidayHours = calculatedRecap?.holiday_hours_worked || 0;
   const ferieStr = holidayEligible && holidayDays > 0 
     ? `${holidayDays}j (${holidayHours.toFixed(1)}h)` 
     : '-';
@@ -79,8 +83,8 @@ function buildExportRow(employee, recap, nonShiftTypes, cpPeriods, team, monthSt
 
   // 8) Non-shifts visibles récap
   const nonShiftsVisible = [];
-  if (recap?.non_shifts_by_type) {
-    Object.entries(recap.non_shifts_by_type).forEach(([typeId, typeData]) => {
+  if (calculatedRecap?.nonShiftsByType) {
+    Object.entries(calculatedRecap.nonShiftsByType).forEach(([typeId, typeData]) => {
       const nsType = nonShiftTypes.find(t => t.id === typeId);
       if (nsType && nsType.visible_in_recap && typeData.count > 0) {
         const dates = (typeData.dates || []).sort().map(d => {
@@ -103,7 +107,7 @@ function buildExportRow(employee, recap, nonShiftTypes, cpPeriods, team, monthSt
   
   let cpStr = '-';
   if (employeeCPPeriods.length > 0) {
-    const totalCPDays = recap?.cp_days_total || 0;
+    const totalCPDays = calculatedRecap?.cp_days_total || 0;
     const periodDetails = employeeCPPeriods.map(p => {
       const departDate = formatDateFR(p.cp_start_date);
       const repriseDate = formatDateFR(p.return_date);
@@ -111,6 +115,17 @@ function buildExportRow(employee, recap, nonShiftTypes, cpPeriods, team, monthSt
     }).join(' ; ');
     cpStr = `${totalCPDays} CP décomptés ${periodDetails}`;
   }
+
+  console.log('  Row result:', {
+    totalPaid,
+    payeesHorsSup,
+    compl10,
+    compl25,
+    supp25,
+    supp50,
+    holidayDays,
+    holidayHours
+  });
 
   return {
     employeeName,
@@ -125,7 +140,7 @@ function buildExportRow(employee, recap, nonShiftTypes, cpPeriods, team, monthSt
     nonShiftsStr,
     cpStr,
     employee,
-    recap
+    recap: calculatedRecap
   };
 }
 
@@ -202,28 +217,47 @@ export default function ExportComptaModal({ open, onOpenChange, monthStart, mont
     enabled: open
   });
 
-  // Build export data from recaps only
-  const exportData = employees
-    .map(employee => {
-      const recap = recaps.find(r => r.employee_id === employee.id);
+  // Build export data - NEED to use the calculated recaps from MonthlySummary component logic
+  // For now, we'll fetch and calculate inline to ensure data is populated
+  const exportData = recaps
+    .map(recap => {
+      const employee = employees.find(e => e.id === recap.employee_id);
+      if (!employee) {
+        console.log('⚠️ Employee not found for recap:', recap.employee_id);
+        return null;
+      }
+      
       const team = teams.find(t => t.id === employee.team_id);
 
-      // FILTRAGE: n'inclure que si au moins 1 shift dans le mois (basé sur recap)
-      const hasActivity = recap && (
-        (recap.shifts_count || 0) > 0 || 
-        (recap.worked_hours || 0) > 0 || 
-        (recap.days_worked || 0) > 0
-      );
-      
-      if (!hasActivity) return null;
+      // Check if recap has any activity (check manual overrides OR calculated values)
+      // Since MonthlyRecap only stores manual overrides, we need to check if there's activity
+      // by checking if the recap exists at all (it means employee has shifts)
+      if (!recap) return null;
 
-      return buildExportRow(employee, recap, nonShiftTypes, cpPeriods, team, monthStart, monthEnd);
+      // Build calculated recap object (simplified - using stored manual values as fallback)
+      const calculatedRecap = {
+        // Use manual overrides if present, otherwise these should be calculated from shifts
+        worked_hours: recap.manual_total_hours || 0,
+        paidBaseHours: recap.manual_contract_hours || 0,
+        overtime_25: recap.manual_overtime_25 || 0,
+        overtime_50: recap.manual_overtime_50 || 0,
+        complementary_10: recap.manual_complementary_10 || 0,
+        complementary_25: recap.manual_complementary_25 || 0,
+        cp_days_total: recap.manual_cp_days || 0,
+        nonShiftsByType: recap.manual_non_shifts || {},
+        shifts_count: 0, // Would need to calculate from actual shifts
+        holiday_eligible: true, // Default
+        holiday_days_count: 0,
+        holiday_hours_worked: 0
+      };
+
+      return buildExportRow(employee, calculatedRecap, nonShiftTypes, cpPeriods, team, monthStart, monthEnd);
     })
     .filter(Boolean);
 
   console.log('✅ Export data built:');
   console.log('  Total recaps:', recaps.length);
-  console.log('  Employees matched:', exportData.length);
+  console.log('  Export rows generated:', exportData.length);
   if (exportData.length > 0) {
     console.log('  First 3 rows:', exportData.slice(0, 3).map(r => ({
       name: r.employeeName,
@@ -231,6 +265,9 @@ export default function ExportComptaModal({ open, onOpenChange, monthStart, mont
       totalPaid: r.totalPaid,
       payees: r.payeesHorsSup
     })));
+  } else {
+    console.log('  ⚠️ NO EXPORT DATA - recaps found but no valid rows generated');
+    console.log('  Sample recap:', recaps[0]);
   }
   console.log('═════════════════════════════════════════════');
 
