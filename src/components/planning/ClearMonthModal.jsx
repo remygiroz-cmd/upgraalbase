@@ -198,7 +198,7 @@ export default function ClearMonthModal({ open, onOpenChange, monthStart, monthE
       }
 
       // Delete paid leave periods
-      console.log('🔄 [RESET] Step 2/4: Deleting CP periods...');
+      console.log('🔄 [RESET] Step 3/5: Deleting CP periods...');
       for (const period of paidLeavePeriods) {
         try {
           console.log('🔄 [RESET] Deleting CP period:', period.id, {
