@@ -27,6 +27,7 @@ import DeleteCPModal from '@/components/planning/DeleteCPModal';
 import { calculateShiftDuration, checkMinimumRest } from '@/components/planning/LegalChecks';
 import { parseLocalDate, formatLocalDate } from '@/components/planning/dateUtils';
 import { isDateInCPPeriod } from '@/components/planning/paidLeaveCalculations';
+import { usePlanningVersion, withPlanningVersion, filterByVersion } from '@/components/planning/usePlanningVersion';
 
 const DAYS = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche'];
 const MONTHS = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'];
@@ -65,6 +66,9 @@ export default function Planning() {
   const currentMonth = currentDate.getMonth();
   const currentYear = currentDate.getFullYear();
 
+  // Get current planning version for reset system
+  const { resetVersion, monthKey } = usePlanningVersion(currentYear, currentMonth);
+
   // Fetch ALL employees (including archived)
   const { data: allEmployees = [] } = useQuery({
     queryKey: ['employees'],
@@ -77,16 +81,18 @@ export default function Planning() {
     queryFn: () => base44.entities.Team.filter({ is_active: true })
   });
 
-  // Fetch shifts for current month (needed for filtering archived employees)
+  // Fetch shifts for current month (filtered by reset_version)
   const { data: shifts = [] } = useQuery({
-    queryKey: ['shifts', currentYear, currentMonth],
+    queryKey: ['shifts', currentYear, currentMonth, resetVersion],
     queryFn: async () => {
       const firstDay = formatLocalDate(new Date(currentYear, currentMonth, 1));
       const lastDay = formatLocalDate(new Date(currentYear, currentMonth + 1, 0));
       
       const allShifts = await base44.entities.Shift.list();
-      return allShifts.filter(s => s.date >= firstDay && s.date <= lastDay);
-    }
+      const monthShifts = allShifts.filter(s => s.date >= firstDay && s.date <= lastDay);
+      return filterByVersion(monthShifts, resetVersion);
+    },
+    enabled: resetVersion !== undefined
   });
 
   const updateTeamMutation = useMutation({
@@ -156,16 +162,18 @@ export default function Planning() {
     return sortedEmployees;
   }, [sortedEmployees, filterType, selectedEmployee, selectedTeam]);
 
-  // Fetch non-shift events for current month
+  // Fetch non-shift events for current month (filtered by reset_version)
   const { data: nonShiftEvents = [] } = useQuery({
-    queryKey: ['nonShiftEvents', currentYear, currentMonth],
+    queryKey: ['nonShiftEvents', currentYear, currentMonth, resetVersion],
     queryFn: async () => {
       const firstDay = formatLocalDate(new Date(currentYear, currentMonth, 1));
       const lastDay = formatLocalDate(new Date(currentYear, currentMonth + 1, 0));
       
       const allEvents = await base44.entities.NonShiftEvent.list();
-      return allEvents.filter(e => e.date >= firstDay && e.date <= lastDay);
-    }
+      const monthEvents = allEvents.filter(e => e.date >= firstDay && e.date <= lastDay);
+      return filterByVersion(monthEvents, resetVersion);
+    },
+    enabled: resetVersion !== undefined
   });
 
   // Fetch non-shift types
@@ -186,17 +194,18 @@ export default function Planning() {
     }
   });
 
-  // Fetch CP periods for current month
+  // Fetch CP periods for current month (filtered by reset_version)
   const { data: paidLeavePeriods = [] } = useQuery({
-    queryKey: ['paidLeavePeriods', currentYear, currentMonth],
+    queryKey: ['paidLeavePeriods', currentYear, currentMonth, resetVersion],
     queryFn: async () => {
       const firstDay = formatLocalDate(new Date(currentYear, currentMonth, 1));
       const lastDay = formatLocalDate(new Date(currentYear, currentMonth + 1, 0));
       
       const allPeriods = await base44.entities.PaidLeavePeriod.list();
-      // Filter periods that intersect with current month
-      return allPeriods.filter(p => p.end_cp >= firstDay && p.start_cp <= lastDay);
-    }
+      const monthPeriods = allPeriods.filter(p => p.end_cp >= firstDay && p.start_cp <= lastDay);
+      return filterByVersion(monthPeriods, resetVersion);
+    },
+    enabled: resetVersion !== undefined
   });
 
   // Fetch holiday dates for current month
@@ -216,45 +225,20 @@ export default function Planning() {
   // Instead of N queries (one per employee per week)
   // =====================================================
   const { data: allWeeklyRecaps = [] } = useQuery({
-    queryKey: ['allWeeklyRecaps', currentYear, currentMonth],
+    queryKey: ['allWeeklyRecaps', currentYear, currentMonth, resetVersion],
     queryFn: async () => {
-      // Get all weeks that intersect with current month
       const firstDay = formatLocalDate(new Date(currentYear, currentMonth, 1));
       const lastDay = formatLocalDate(new Date(currentYear, currentMonth + 1, 0));
 
-      // CORRECTION: Récupérer aussi les semaines qui COMMENCENT avant le mois mais qui l'intersectent
-      // Une semaine dure 7 jours, donc on prend 7 jours avant le début du mois
       const startRange = new Date(currentYear, currentMonth, 1);
       startRange.setDate(startRange.getDate() - 7);
       const startRangeStr = formatLocalDate(startRange);
 
-      // Fetch all weekly recaps
       const allRecaps = await base44.entities.WeeklyRecap.list();
-      
-      // Filter: semaines qui commencent entre [firstDay - 7j] et [lastDay]
-      // Cela capture les semaines qui intersectent avec le mois actuel
-      const filtered = allRecaps.filter(r => {
-        // La semaine doit commencer au plus tôt 7 jours avant le mois
-        // et au plus tard le dernier jour du mois
-        return r.week_start >= startRangeStr && r.week_start <= lastDay;
-      });
-      
-      console.log('═══════════════════════════════════════════════════');
-      console.log('D) REFETCH - APRÈS MUTATION SUCCESS');
-      console.log('═══════════════════════════════════════════════════');
-      console.log('Plage de recherche: [', startRangeStr, '-', lastDay, ']');
-      console.log('Total recaps récupérés:', allRecaps.length);
-      console.log('Recaps filtrés pour ce mois:', filtered.length);
-      console.log('\nDétails des recaps avec override:');
-      filtered.forEach(r => {
-        if (r.base_override_hours !== null && r.base_override_hours !== undefined) {
-          console.log(`  - employee_id: ${r.employee_id}, week_start: ${r.week_start}, base_override_hours: ${r.base_override_hours}`);
-        }
-      });
-      console.log('═══════════════════════════════════════════════════\n');
-      
-      return filtered;
-    }
+      const monthRecaps = allRecaps.filter(r => r.week_start >= startRangeStr && r.week_start <= lastDay);
+      return filterByVersion(monthRecaps, resetVersion);
+    },
+    enabled: resetVersion !== undefined
   });
 
   // =====================================================
@@ -262,13 +246,15 @@ export default function Planning() {
   // Instead of N queries (one per employee)
   // =====================================================
   const { data: allMonthlyRecaps = [] } = useQuery({
-    queryKey: ['allMonthlyRecaps', currentYear, currentMonth],
+    queryKey: ['allMonthlyRecaps', currentYear, currentMonth, resetVersion],
     queryFn: async () => {
-      return await base44.entities.MonthlyRecap.filter({
+      const allRecaps = await base44.entities.MonthlyRecap.filter({
         year: currentYear,
-        month: currentMonth + 1 // month is 0-indexed in JS but 1-indexed in DB
+        month: currentMonth + 1
       });
-    }
+      return filterByVersion(allRecaps, resetVersion);
+    },
+    enabled: resetVersion !== undefined
   });
 
   // Create lookup maps for quick access (O(1) instead of O(n))
@@ -306,7 +292,7 @@ export default function Planning() {
       if (id) {
         return base44.entities.Shift.update(id, data);
       } else {
-        return base44.entities.Shift.create(data);
+        return base44.entities.Shift.create(withPlanningVersion(data, resetVersion, monthKey));
       }
     },
     onSuccess: () => {
@@ -330,7 +316,7 @@ export default function Planning() {
   });
 
   const saveNonShiftMutation = useMutation({
-    mutationFn: (data) => base44.entities.NonShiftEvent.create(data),
+    mutationFn: (data) => base44.entities.NonShiftEvent.create(withPlanningVersion(data, resetVersion, monthKey)),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['nonShiftEvents'] });
     }
@@ -693,7 +679,7 @@ export default function Planning() {
           if (existsOnDay) return null;
         }
 
-        return base44.entities.Shift.create({
+        return base44.entities.Shift.create(withPlanningVersion({
           employee_id: shift.employee_id,
           employee_name: shift.employee_name,
           date: targetDateStr,
@@ -703,7 +689,7 @@ export default function Planning() {
           position: shift.position,
           status: 'planned',
           notes: shift.notes
-        });
+        }, resetVersion, monthKey));
       }).filter(Boolean);
 
       // Copy non-shifts
@@ -721,14 +707,14 @@ export default function Planning() {
           if (existsOnDay) return null;
         }
 
-        return base44.entities.NonShiftEvent.create({
+        return base44.entities.NonShiftEvent.create(withPlanningVersion({
           employee_id: ns.employee_id,
           employee_name: ns.employee_name,
           date: targetDateStr,
           non_shift_type_id: ns.non_shift_type_id,
           non_shift_type_label: ns.non_shift_type_label,
           notes: ns.notes
-        });
+        }, resetVersion, monthKey));
       }).filter(Boolean);
 
       await Promise.all([...shiftPromises, ...nonShiftPromises]);
