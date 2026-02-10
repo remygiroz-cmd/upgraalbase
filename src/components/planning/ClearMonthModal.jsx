@@ -279,6 +279,7 @@ export default function ClearMonthModal({ open, onOpenChange, monthStart, monthE
       const verifyEvents = await base44.entities.NonShiftEvent.list();
       const verifyCP = await base44.entities.PaidLeavePeriod.list();
       const verifyRecaps = await base44.entities.MonthlyRecap.filter({ year, month });
+      const verifyWeeklyRecaps = await base44.entities.WeeklyRecap.list();
 
       const firstDay = formatDate(monthStart);
       const lastDay = formatDate(monthEnd);
@@ -290,14 +291,16 @@ export default function ClearMonthModal({ open, onOpenChange, monthStart, monthE
         return p.start_cp <= lastDay && p.end_cp >= firstDay;
       }).length;
       const remainingRecaps = verifyRecaps.length;
+      const remainingWeeklyRecaps = verifyWeeklyRecaps.filter(r => r.week_start_date >= firstDay && r.week_start_date <= lastDay).length;
 
-      const remainingTotal = remainingShifts + remainingEvents + remainingCP + remainingRecaps;
+      const remainingTotal = remainingShifts + remainingEvents + remainingCP + remainingRecaps + remainingWeeklyRecaps;
 
       console.log('🔍 [RESET] Vérification:', {
         remainingShifts,
         remainingEvents,
         remainingCP,
         remainingRecaps,
+        remainingWeeklyRecaps,
         remainingTotal
       });
 
@@ -306,7 +309,7 @@ export default function ClearMonthModal({ open, onOpenChange, monthStart, monthE
       }
 
       setClearing(false);
-      toast.success(`✓ Planning réinitialisé avec succès: ${deletedShifts} shifts, ${deletedEvents} absences/repos, ${deletedCP} CP, ${deletedRecaps} récaps supprimés`, {
+      toast.success(`✓ Planning réinitialisé: ${deletedShifts} shifts, ${deletedEvents} absences, ${deletedCP} CP, ${deletedWeeklyRecaps} récaps hebdo, ${deletedRecaps} récaps mensuels supprimés`, {
         duration: 5000
       });
       onSuccess?.();
