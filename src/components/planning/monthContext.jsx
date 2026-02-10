@@ -27,6 +27,11 @@ export async function getActiveMonthContext(monthKey) {
   const year = parseInt(yearStr, 10);
   const month = parseInt(monthStr, 10) - 1; // Convert to 0-indexed
   
+  // Validate parsed values
+  if (isNaN(year) || isNaN(month)) {
+    throw new Error(`Failed to parse monthKey: "${monthKey}". Got year=${year}, month=${month}`);
+  }
+  
   // Chercher l'entité PlanningMonth pour ce mois
   const planningMonths = await base44.entities.PlanningMonth.filter({ month_key: monthKey });
   
@@ -76,6 +81,11 @@ export async function bumpMonthVersion(monthKey) {
   const [yearStr, monthStr] = monthKey.split('-');
   const year = parseInt(yearStr, 10);
   const month = parseInt(monthStr, 10) - 1; // Convert to 0-indexed
+  
+  // Validate parsed values
+  if (isNaN(year) || isNaN(month)) {
+    throw new Error(`Failed to parse monthKey: "${monthKey}". Got year=${year}, month=${month}`);
+  }
   
   const planningMonths = await base44.entities.PlanningMonth.filter({ month_key: monthKey });
   
