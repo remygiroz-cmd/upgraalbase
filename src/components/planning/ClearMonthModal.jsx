@@ -217,7 +217,7 @@ export default function ClearMonthModal({ open, onOpenChange, monthStart, monthE
       }
 
       // Delete non-shift events
-      console.log('🔄 [RESET] Step 3/4: Deleting non-shift events...');
+      console.log('🔄 [RESET] Step 4/5: Deleting non-shift events...');
       for (const event of nonShiftEvents) {
         try {
           await base44.entities.NonShiftEvent.delete(event.id);
