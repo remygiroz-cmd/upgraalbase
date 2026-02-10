@@ -135,7 +135,8 @@ export default function ClearMonthModal({ open, onOpenChange, monthStart, monthE
       refetchShifts(),
       refetchEvents(),
       refetchCP(),
-      refetchRecaps()
+      refetchRecaps(),
+      refetchWeeklyRecaps()
     ]);
 
     // Wait a bit for state updates
