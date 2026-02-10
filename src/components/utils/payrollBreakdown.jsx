@@ -148,7 +148,7 @@ export function computePayrollBreakdown(
     cpDays: cpDaysCount,
     cpHours: cpHoursCount,
     nonShiftsVisible: nonShiftsVisible,
-    totalPaid: basePaidHours + supp25Hours + supp50Hours + compl10Hours + compl25Hours + cpHours + holidayHours
+    totalPaid: basePaidHours + supp25Hours + supp50Hours + compl10Hours + compl25Hours + cpHoursCount + holidayHours
   };
 
   console.log(`   → FINAL: Base=${summary.basePaidHours.toFixed(1)}h, S25=${summary.supp25Hours.toFixed(1)}h, S50=${summary.supp50Hours.toFixed(1)}h, C10=${summary.compl10Hours.toFixed(1)}h, C25=${summary.compl25Hours.toFixed(1)}h, Holiday=${summary.holidayHours.toFixed(1)}h, CP=${summary.cpHours.toFixed(1)}h`);
