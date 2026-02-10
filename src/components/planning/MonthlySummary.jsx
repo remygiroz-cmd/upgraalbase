@@ -295,18 +295,16 @@ export default function MonthlySummary({
         )}
 
         {/* SECTION 4: Holidays worked */}
-        {calculationMode !== 'disabled' && holidaysWorkedDays > 0 && (
+        {calculationMode !== 'disabled' && holidaysWorkedDays > 0 && eligibleForHolidayPay && (
           <div className="mb-2 text-[10px]">
             <div className="flex items-center justify-center gap-1 text-red-700 font-medium">
               <Sun className="w-3 h-3" />
               Jours fériés: {renderValue(holidaysWorkedDays, 'holidaysWorkedDays', '', 0)}j
               ({renderValue(holidaysWorkedHours, 'holidaysWorkedHours', 'h')})
             </div>
-            {eligibleForHolidayPay && (
-              <div className="text-[9px] text-red-600">
-                Éligible majoration férié
-              </div>
-            )}
+            <div className="text-[9px] text-red-600">
+              Éligible majoration férié
+            </div>
           </div>
         )}
 
