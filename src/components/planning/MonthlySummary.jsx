@@ -2,7 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { cn } from '@/lib/utils';
 import { Edit2, RotateCcw, AlertCircle, Clock, Calendar, Coffee, Sun, Briefcase } from 'lucide-react';
 import { calculateMonthlyCPTotal } from './paidLeaveCalculations';
-import { parseContractHours } from '@/lib/weeklyHoursCalculation';
+import { parseContractHours } from '@/components/utils/weeklyHoursCalculation';
 import { calculateDayHours } from '@/components/utils/nonShiftHoursCalculation';
 import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
@@ -18,7 +18,7 @@ import {
   applyManualOverrides,
   calculateShiftDuration as calcShiftDuration,
   parseHoursString
-} from '@/lib/monthlyRecapCalculations';
+} from '@/components/utils/monthlyRecapCalculations';
 
 /**
  * Récap mensuel avec support 3 modes de calcul

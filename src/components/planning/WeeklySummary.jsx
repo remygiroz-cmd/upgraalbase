@@ -8,7 +8,7 @@ import {
   calculateShiftDuration,
   parseContractHours,
   formatLocalDate
-} from '@/lib/weeklyHoursCalculation';
+} from '@/components/utils/weeklyHoursCalculation';
 import { calculateDayHours } from '@/components/utils/nonShiftHoursCalculation';
 
 /**
