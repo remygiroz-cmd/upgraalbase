@@ -24,8 +24,8 @@ function getMonthKeyFromISO(dateISO) {
 export default function AddCPGlobalModal({ onClose, year, month }) {
   const queryClient = useQueryClient();
   const [selectedEmployeeId, setSelectedEmployeeId] = useState('');
-  const [lastWorkDay, setLastWorkDay] = useState('');
-  const [firstWorkDayAfter, setFirstWorkDayAfter] = useState('');
+  const [cpStartDate, setCpStartDate] = useState('');
+  const [returnDate, setReturnDate] = useState('');
   const [notes, setNotes] = useState('');
   const [manualOverride, setManualOverride] = useState('');
   const [showDebug, setShowDebug] = useState(false);
@@ -249,11 +249,11 @@ export default function AddCPGlobalModal({ onClose, year, month }) {
     }
   });
 
-  const isValid = selectedEmployeeId && lastWorkDay && firstWorkDayAfter && lastWorkDay < firstWorkDayAfter;
+  const isValid = selectedEmployeeId && cpStartDate && returnDate && cpStartDate < returnDate;
   
   let cpData = null;
   if (isValid) {
-    const period = calculateCPPeriod(lastWorkDay, firstWorkDayAfter);
+    const period = calculateCPPeriod(cpStartDate, returnDate);
     const days = calculateCPDays(period.startCP, period.endCP, showDebug);
     cpData = { ...period, ...days };
   }
@@ -285,8 +285,8 @@ export default function AddCPGlobalModal({ onClose, year, month }) {
     const periodData = {
       employee_id: selectedEmployee.id,
       employee_name: `${selectedEmployee.first_name} ${selectedEmployee.last_name}`,
-      last_work_day: lastWorkDay,
-      first_work_day_after: firstWorkDayAfter,
+      cp_start_date: cpStartDate,
+      return_date: returnDate,
       start_cp: cpData.startCP,
       end_cp: cpData.endCP,
       cp_days_auto: cpData.countedDays,
@@ -342,43 +342,43 @@ export default function AddCPGlobalModal({ onClose, year, month }) {
       <Alert className="bg-blue-50 border-blue-200">
         <div className="text-sm text-blue-900">
           <p className="font-semibold mb-1">📋 Principe :</p>
-          <p>Définissez le <strong>dernier jour travaillé</strong> et le <strong>jour de reprise</strong>.</p>
+          <p>Définissez le <strong>départ en CP</strong> (premier jour en congés) et le <strong>jour de reprise</strong>.</p>
           <p className="mt-1 text-xs text-blue-700">
-            La période CP sera automatiquement calculée (lendemain dernier jour → veille reprise).
+            La période CP est calculée du départ en CP (inclus) à la veille du jour de reprise (inclus).
           </p>
         </div>
       </Alert>
 
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <Label className="text-sm font-semibold text-gray-900">Dernier jour travaillé *</Label>
+          <Label className="text-sm font-semibold text-gray-900">Départ en CP *</Label>
           <Input
             type="date"
-            value={lastWorkDay}
-            onChange={(e) => setLastWorkDay(e.target.value)}
+            value={cpStartDate}
+            onChange={(e) => setCpStartDate(e.target.value)}
             className="mt-1"
             disabled={!selectedEmployeeId}
           />
-          <p className="text-xs text-gray-500 mt-1">Jour avec shift avant CP</p>
+          <p className="text-xs text-gray-500 mt-1">Premier jour en congés (inclus)</p>
         </div>
         <div>
           <Label className="text-sm font-semibold text-gray-900">Jour de reprise *</Label>
           <Input
             type="date"
-            value={firstWorkDayAfter}
-            onChange={(e) => setFirstWorkDayAfter(e.target.value)}
+            value={returnDate}
+            onChange={(e) => setReturnDate(e.target.value)}
             className="mt-1"
             disabled={!selectedEmployeeId}
           />
-          <p className="text-xs text-gray-500 mt-1">Jour avec shift après CP</p>
+          <p className="text-xs text-gray-500 mt-1">Premier jour travaillé après CP</p>
         </div>
       </div>
 
-      {lastWorkDay && firstWorkDayAfter && lastWorkDay >= firstWorkDayAfter && (
+      {cpStartDate && returnDate && cpStartDate >= returnDate && (
         <Alert className="bg-red-50 border-red-300">
           <AlertTriangle className="w-4 h-4 text-red-600" />
           <p className="text-sm text-red-900 ml-2">
-            Le jour de reprise doit être postérieur au dernier jour travaillé.
+            Le jour de reprise doit être postérieur au départ en CP.
           </p>
         </Alert>
       )}
