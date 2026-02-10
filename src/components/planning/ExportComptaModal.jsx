@@ -138,6 +138,13 @@ export default function ExportComptaModal({ open, onOpenChange, monthStart, mont
   const year = monthStart.getFullYear();
   const month = monthStart.getMonth() + 1;
   const monthName = MONTHS[monthStart.getMonth()];
+  const monthKey = `${year}-${String(month).padStart(2, '0')}`; // e.g. "2026-02"
+  
+  console.log('═════════════════════════════════════════════');
+  console.log('📊 EXPORT COMPTA - Initialisation');
+  console.log('═════════════════════════════════════════════');
+  console.log('Month:', monthName, year);
+  console.log('MonthKey:', monthKey);
 
   // Fetch settings
   const { data: settingsData = [] } = useQuery({
@@ -164,9 +171,17 @@ export default function ExportComptaModal({ open, onOpenChange, monthStart, mont
   });
 
   const { data: recaps = [] } = useQuery({
-    queryKey: ['monthlyRecaps', year, month],
+    queryKey: ['monthlyRecaps', monthKey],
     queryFn: async () => {
-      return await base44.entities.MonthlyRecap.filter({ year, month });
+      const allRecaps = await base44.entities.MonthlyRecap.filter({ month_key: monthKey });
+      console.log('📋 Monthly recaps fetched:', allRecaps.length);
+      console.log('  Sample recap IDs:', allRecaps.slice(0, 3).map(r => ({ 
+        id: r.id, 
+        employee: r.employee_name,
+        worked: r.worked_hours,
+        shifts: r.shifts_count 
+      })));
+      return allRecaps;
     },
     enabled: open
   });
@@ -193,13 +208,31 @@ export default function ExportComptaModal({ open, onOpenChange, monthStart, mont
       const recap = recaps.find(r => r.employee_id === employee.id);
       const team = teams.find(t => t.id === employee.team_id);
 
-      // FILTRAGE: n'inclure que si au moins 1 shift dans le mois
-      const hasShifts = recap && (recap.shifts_count > 0 || (recap.worked_hours || 0) > 0);
-      if (!hasShifts) return null;
+      // FILTRAGE: n'inclure que si au moins 1 shift dans le mois (basé sur recap)
+      const hasActivity = recap && (
+        (recap.shifts_count || 0) > 0 || 
+        (recap.worked_hours || 0) > 0 || 
+        (recap.days_worked || 0) > 0
+      );
+      
+      if (!hasActivity) return null;
 
       return buildExportRow(employee, recap, nonShiftTypes, cpPeriods, team, monthStart, monthEnd);
     })
     .filter(Boolean);
+
+  console.log('✅ Export data built:');
+  console.log('  Total recaps:', recaps.length);
+  console.log('  Employees matched:', exportData.length);
+  if (exportData.length > 0) {
+    console.log('  First 3 rows:', exportData.slice(0, 3).map(r => ({
+      name: r.employeeName,
+      poste: r.posteEquipeStr,
+      totalPaid: r.totalPaid,
+      payees: r.payeesHorsSup
+    })));
+  }
+  console.log('═════════════════════════════════════════════');
 
   // Calculate totals
   const totals = exportData.reduce((acc, row) => ({
