@@ -246,13 +246,14 @@ export default function ClearMonthModal({ open, onOpenChange, monthStart, monthE
         }
       }
 
-      const totalDeleted = deletedShifts + deletedEvents + deletedCP + deletedRecaps;
+      const totalDeleted = deletedShifts + deletedEvents + deletedCP + deletedRecaps + deletedWeeklyRecaps;
 
       console.log('✅ [RESET PLANNING] Réinitialisation terminée', {
         deletedShifts,
         deletedEvents,
         deletedCP,
         deletedRecaps,
+        deletedWeeklyRecaps,
         totalDeleted,
         errors: deletionErrors.length
       });
