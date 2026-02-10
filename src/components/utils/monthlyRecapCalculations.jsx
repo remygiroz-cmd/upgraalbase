@@ -347,8 +347,11 @@ function getFullWeekDates(dateStr) {
 }
 
 /**
- * Calculate overtime using weekly method
- * CRITICAL: Base hours calculated based on contractual days visible in the month for PARTIAL weeks
+ * Calculate overtime using weekly method (CLASSIQUE)
+ * CRITICAL: 
+ * - Base hours calculated based on contractual days visible in the month for PARTIAL weeks
+ * - For part-time: complementary hours calculated per week, then aggregated monthly
+ * - Split 10%/25% calculated at MONTHLY level (not per week)
  */
 function calculateWeeklyOvertime(result, employee, shifts, nonShiftEvents, nonShiftTypes, year, month, contractHoursWeekly) {
   const isPartTime = employee.work_time_type === 'part_time';
@@ -382,10 +385,11 @@ function calculateWeeklyOvertime(result, employee, shifts, nonShiftEvents, nonSh
 
   console.log(`
 ═══════════════════════════════════════════════════════════
-📊 WEEKLY OVERTIME CALCULATION (Weekly Mode)
+📊 WEEKLY OVERTIME CALCULATION (MODE CLASSIQUE)
 ═══════════════════════════════════════════════════════════
 Employee ID: ${employee.id}
 Employee Name: ${employee.first_name} ${employee.last_name}
+Work type: ${isPartTime ? 'PART-TIME' : 'FULL-TIME'}
 Month: ${year}-${String(month + 1).padStart(2, '0')}
 Contract: ${contractHoursWeekly}h/week, ${workDaysPerWeek} days/week
 Daily rate: ${dailyContractHours.toFixed(2)}h/day
@@ -395,6 +399,7 @@ Weeks to process: ${weeks.length}
 `);
 
   const weekDetails = [];
+  let totalComplementaryBeforeSplit = 0; // For part-time monthly aggregation
 
   // Process each week
   weeks.forEach(({ weekKey, dates: weekDates }, weekIndex) => {
@@ -442,23 +447,15 @@ Weeks to process: ${weeks.length}
 
     // Calculate overtime/complementary
     let weekOvertime = 0;
+    let weekComplementary = 0;
     let weekHS25 = 0;
     let weekHS50 = 0;
     
     if (isPartTime) {
-      // Part-time: complementary hours
-      const excess = Math.max(0, weekHours - weeklyBase);
-      const maxComplementary = weeklyBase / 3;
-      const actualComplementary = Math.min(excess, maxComplementary);
-      
-      const limit10 = weeklyBase * 0.10;
-      result.complementaryHours10 += Math.min(actualComplementary, limit10);
-      
-      if (actualComplementary > limit10) {
-        result.complementaryHours25 += actualComplementary - limit10;
-      }
-      
-      weekOvertime = actualComplementary;
+      // Part-time: calculate complementary hours WITHOUT split (split will be done monthly)
+      weekComplementary = Math.max(0, weekHours - weeklyBase);
+      totalComplementaryBeforeSplit += weekComplementary;
+      weekOvertime = weekComplementary;
     } else {
       // Full-time: overtime hours
       if (weekHours > weeklyBase) {
@@ -486,6 +483,7 @@ Weeks to process: ${weeks.length}
       dailyContractHours,
       baseHours: weeklyBase,
       workedHours: weekHours,
+      complementary: weekComplementary,
       hsTotal: weekOvertime,
       hs25: weekHS25,
       hs50: weekHS50
@@ -495,22 +493,57 @@ Weeks to process: ${weeks.length}
 
     console.log(`Week ${weekIndex + 1} [${weekKey}] ${isPartialWeek ? '⚠️ PARTIAL' : '✓ COMPLETE'}
   Range: ${weekDates[0]} → ${weekDates[6]}
-  Visible dates in month: ${visibleDates.length} days (${visibleDates[0]} → ${visibleDates[visibleDates.length - 1]})
+  Visible dates: ${visibleDates.length} days (${visibleDates[0]} → ${visibleDates[visibleDates.length - 1]})
   Contract days visible: ${contractDaysVisible} × ${dailyContractHours.toFixed(2)}h = ${weeklyBase.toFixed(2)}h base
   Worked: ${weekHours.toFixed(2)}h
-  Overtime: ${weekOvertime.toFixed(2)}h (25%: ${weekHS25.toFixed(2)}h, 50%: ${weekHS50.toFixed(2)}h)`);
+  ${isPartTime ? `Complementary: ${weekComplementary.toFixed(2)}h` : `Overtime: ${weekOvertime.toFixed(2)}h (25%: ${weekHS25.toFixed(2)}h, 50%: ${weekHS50.toFixed(2)}h)`}`);
   });
 
-  result.totalOvertimeHours = result.overtimeHours25 + result.overtimeHours50;
-  result.totalComplementaryHours = result.complementaryHours10 + result.complementaryHours25;
+  // For part-time: apply monthly split
+  if (isPartTime) {
+    const referenceContractHoursForPeriod = weekDetails.reduce((sum, w) => sum + w.baseHours, 0);
+    const threshold10 = referenceContractHoursForPeriod * 0.10;
+    
+    result.complementaryHours10 = Math.min(totalComplementaryBeforeSplit, threshold10);
+    result.complementaryHours25 = Math.max(0, totalComplementaryBeforeSplit - threshold10);
+    result.totalComplementaryHours = totalComplementaryBeforeSplit;
+
+    console.log(`
+───────────────────────────────────────────────────────────
+📈 MONTHLY AGGREGATION (PART-TIME)
+───────────────────────────────────────────────────────────
+Total weeks: ${weekDetails.length} (${weekDetails.filter(w => !w.isPartial).length} complete, ${weekDetails.filter(w => w.isPartial).length} partial)
+
+Per-week complementary hours:
+${weekDetails.map(w => `  Week ${w.index}: Base ${w.baseHours.toFixed(2)}h, Worked ${w.workedHours.toFixed(2)}h, HC ${w.complementary.toFixed(2)}h`).join('\n')}
+
+📊 MONTHLY SPLIT CALCULATION:
+  referenceContractHoursForPeriod (Σ weeklyBase) = ${referenceContractHoursForPeriod.toFixed(2)}h
+  threshold10 (10% of reference) = ${threshold10.toFixed(2)}h
   
-  console.log(`
+  monthlyComplementaryTotal (Σ weeklyComplementary) = ${totalComplementaryBeforeSplit.toFixed(2)}h
+  HC +10%: ${result.complementaryHours10.toFixed(2)}h
+  HC +25%: ${result.complementaryHours25.toFixed(2)}h
+
+✅ Validation checks:
+  Σ(weeklyComplementary) = ${weekDetails.reduce((sum, w) => sum + w.complementary, 0).toFixed(2)}h
+  monthlyComplementaryTotal = ${totalComplementaryBeforeSplit.toFixed(2)}h
+  ${Math.abs(weekDetails.reduce((sum, w) => sum + w.complementary, 0) - totalComplementaryBeforeSplit) < 0.01 ? '✓ MATCH' : '❌ MISMATCH'}
+  
+  HC10 + HC25 = ${(result.complementaryHours10 + result.complementaryHours25).toFixed(2)}h
+  monthlyComplementaryTotal = ${totalComplementaryBeforeSplit.toFixed(2)}h
+  ${Math.abs((result.complementaryHours10 + result.complementaryHours25) - totalComplementaryBeforeSplit) < 0.01 ? '✓ MATCH' : '❌ MISMATCH'}
+═══════════════════════════════════════════════════════════
+`);
+  } else {
+    // Full-time: overtime
+    result.totalOvertimeHours = result.overtimeHours25 + result.overtimeHours50;
+    
+    console.log(`
 ───────────────────────────────────────────────────────────
-📈 AGGREGATION SUMMARY
+📈 MONTHLY AGGREGATION (FULL-TIME)
 ───────────────────────────────────────────────────────────
-Total weeks processed: ${weekDetails.length}
-  Complete weeks: ${weekDetails.filter(w => !w.isPartial).length}
-  Partial weeks: ${weekDetails.filter(w => w.isPartial).length}
+Total weeks: ${weekDetails.length} (${weekDetails.filter(w => !w.isPartial).length} complete, ${weekDetails.filter(w => w.isPartial).length} partial)
 
 Per-week breakdown:
 ${weekDetails.map(w => `  Week ${w.index}: Base ${w.baseHours.toFixed(2)}h, Worked ${w.workedHours.toFixed(2)}h, HS ${w.hsTotal.toFixed(2)}h`).join('\n')}
@@ -520,12 +553,13 @@ Total overtime: ${result.totalOvertimeHours.toFixed(2)}h
   HS 25%: ${result.overtimeHours25.toFixed(2)}h
   HS 50%: ${result.overtimeHours50.toFixed(2)}h
 
-✅ Expected sum check:
+✅ Validation check:
   Σ(weekHS) = ${weekDetails.reduce((sum, w) => sum + w.hsTotal, 0).toFixed(2)}h
   Monthly HS = ${result.totalOvertimeHours.toFixed(2)}h
   ${Math.abs(weekDetails.reduce((sum, w) => sum + w.hsTotal, 0) - result.totalOvertimeHours) < 0.01 ? '✓ MATCH' : '❌ MISMATCH'}
 ═══════════════════════════════════════════════════════════
 `);
+  }
 }
 
 /**
