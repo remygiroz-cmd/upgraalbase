@@ -245,8 +245,8 @@ export default function MonthlySummary({
         {calculationMode !== 'disabled' && (
           <>
             {isPartTime ? (
-              // Part-time: Heures complémentaires (only show if > 0)
-              totalComplementaryHours > 0 && (
+              // Part-time: Heures complémentaires (only show if >= 0.05)
+              totalComplementaryHours >= 0.05 && (
                 <div className="mb-2 pb-2 border-b border-gray-200">
                   <div className="bg-green-50 rounded p-1.5">
                     <div className="text-[10px] font-bold text-green-800 mb-0.5 flex items-center justify-center gap-1">
@@ -268,8 +268,8 @@ export default function MonthlySummary({
                 </div>
               )
             ) : (
-              // Full-time: Heures supplémentaires (only show if > 0)
-              totalOvertimeHours > 0 && (
+              // Full-time: Heures supplémentaires (only show if >= 0.05)
+              totalOvertimeHours >= 0.05 && (
                 <div className="mb-2 pb-2 border-b border-gray-200">
                   <div className="bg-orange-50 rounded p-1.5">
                     <div className="text-[10px] font-bold text-orange-800 mb-0.5 flex items-center justify-center gap-1">
