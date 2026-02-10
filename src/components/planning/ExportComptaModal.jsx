@@ -11,6 +11,7 @@ import { jsPDF } from 'jspdf';
 import 'jspdf-autotable';
 import { calculateMonthlyRecap, applyManualOverrides } from '@/components/utils/monthlyRecapCalculations';
 import { getActiveMonthContext } from './monthContext';
+import { computePayrollBreakdown } from '@/components/utils/payrollBreakdown';
 
 const MONTHS = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'];
 
@@ -307,12 +308,29 @@ export default function ExportComptaModal({ open, onOpenChange, monthStart, mont
   const { data: cpPeriods = [] } = useQuery({
     queryKey: ['paidLeavePeriods', monthKey, activeResetVersion],
     queryFn: async () => {
+      console.log('\n═══════════════════════════════════════════════════════════');
+      console.log('🏖️ EXPORT COMPTA - FETCHING CP PERIODS');
+      console.log('═══════════════════════════════════════════════════════════');
+      console.log(`Query filters: { month_key: "${monthKey}", reset_version: ${activeResetVersion} }`);
+
       const allPeriods = await base44.entities.PaidLeavePeriod.filter({
         month_key: monthKey,
         reset_version: activeResetVersion
       });
-      console.log('🏖️ CP periods fetched (filtered by version):', allPeriods.length);
-      console.log('  Active version:', activeResetVersion);
+
+      console.log(`\n📊 RESULTS: ${allPeriods.length} CP period(s) found`);
+      if (allPeriods.length > 0) {
+        console.log('✓ Sample CP periods (first 3):');
+        allPeriods.slice(0, 3).forEach((cp, idx) => {
+          console.log(`  CP ${idx + 1}:`);
+          console.log(`    - ID: ${cp.id}`);
+          console.log(`    - employee: ${cp.employee_name}`);
+          console.log(`    - period: ${cp.start_cp} → ${cp.end_cp}`);
+          console.log(`    - days: ${cp.cp_days_auto || 0} (auto) + ${cp.cp_days_manual || 0} (manual)`);
+        });
+      }
+      console.log('═══════════════════════════════════════════════════════════\n');
+
       return allPeriods;
     },
     enabled: open && activeResetVersion !== undefined
@@ -432,6 +450,12 @@ export default function ExportComptaModal({ open, onOpenChange, monthStart, mont
   const { data: nonShiftEvents = [] } = useQuery({
     queryKey: ['nonShiftEvents', monthKey, activeResetVersion],
     queryFn: async () => {
+      console.log('\n═══════════════════════════════════════════════════════════');
+      console.log('📅 EXPORT COMPTA - FETCHING NON-SHIFT EVENTS');
+      console.log('═══════════════════════════════════════════════════════════');
+      console.log('Entity: NonShiftEvent');
+      console.log(`Query filters: { month_key: "${monthKey}", reset_version: ${activeResetVersion} }`);
+
       const monthStartStr = formatDate(monthStart);
       const monthEndStr = formatDate(monthEnd);
       const allEvents = await base44.entities.NonShiftEvent.filter({
@@ -439,8 +463,22 @@ export default function ExportComptaModal({ open, onOpenChange, monthStart, mont
         reset_version: activeResetVersion
       });
       const filtered = allEvents.filter(e => e.date >= monthStartStr && e.date <= monthEndStr);
-      console.log('📅 Non-shift events fetched (filtered by version):', filtered.length);
-      console.log('  Active version:', activeResetVersion);
+
+      console.log(`\n📊 RESULTS: ${filtered.length} non-shift event(s) found`);
+      if (filtered.length > 0) {
+        console.log('✓ Sample non-shifts (first 3):');
+        filtered.slice(0, 3).forEach((ns, idx) => {
+          console.log(`  NonShift ${idx + 1}:`);
+          console.log(`    - ID: ${ns.id}`);
+          console.log(`    - date: ${ns.date}`);
+          console.log(`    - employee_id: ${ns.employee_id}`);
+          console.log(`    - type: ${ns.non_shift_type_label}`);
+          console.log(`    - month_key: "${ns.month_key}"`);
+          console.log(`    - reset_version: ${ns.reset_version}`);
+        });
+      }
+      console.log('═══════════════════════════════════════════════════════════\n');
+
       return filtered;
     },
     enabled: open && activeResetVersion !== undefined
@@ -471,12 +509,11 @@ export default function ExportComptaModal({ open, onOpenChange, monthStart, mont
 
   const calculationMode = calculationSettings[0]?.planning_calculation_mode || 'disabled';
 
-  // Build export data - TOUJOURS calculer depuis shifts/nonshifts (pas dépendre de MonthlyRecap)
+  // Build export data using computePayrollBreakdown for accurate calculations
   const exportData = employees
     .map(employee => {
       const team = teams.find(t => t.id === employee.team_id);
       
-      // Calculate recap for this employee (DIRECT CALCULATION - pas besoin de MonthlyRecap)
       const employeeShifts = shifts.filter(s => s.employee_id === employee.id);
       const employeeNonShifts = nonShiftEvents.filter(e => e.employee_id === employee.id);
 
@@ -485,57 +522,36 @@ export default function ExportComptaModal({ open, onOpenChange, monthStart, mont
         return null;
       }
 
-      // Calculate full recap from shifts
-      const monthIndex = monthStart.getMonth(); // 0-indexed
-      const calculatedRecap = calculateMonthlyRecap(
-        calculationMode,
+      // Compute payroll breakdown (corrected calculation)
+      const payrollBreakdown = computePayrollBreakdown(
         employee,
-        employeeShifts,
-        employeeNonShifts,
+        monthContext,
+        shifts,
+        nonShiftEvents,
         nonShiftTypes,
-        holidayDates,
-        year,
-        monthIndex
+        cpPeriods,
+        holidayDates
       );
 
-      // Check if manual overrides exist in MonthlyRecap (OPTIONAL - fallback)
-      const recap = recaps.find(r => r.employee_id === employee.id);
-      if (recap) {
-        const overrides = {
-          workedDays: recap.manual_days_worked,
-          workedHours: recap.manual_total_hours,
-          contractMonthlyHours: recap.manual_contract_hours,
-          overtimeHours25: recap.manual_overtime_25,
-          overtimeHours50: recap.manual_overtime_50,
-          complementaryHours10: recap.manual_complementary_10,
-          complementaryHours25: recap.manual_complementary_25,
-          cpDays: recap.manual_cp_days
-        };
-        
-        const { overriddenFields, ...finalRecap } = applyManualOverrides(calculatedRecap, overrides);
-        calculatedRecap.overriddenFields = overriddenFields;
-        Object.assign(calculatedRecap, finalRecap);
-      }
-
       // Skip if no activity (worked hours = 0)
-      if ((calculatedRecap.workedHours || 0) === 0 && (calculatedRecap.workedDays || 0) === 0) {
+      if (payrollBreakdown.basePaidHours === 0 && payrollBreakdown.totalPaid === 0) {
         return null;
       }
 
-      // Build export row with full calculated data
+      // Build export row with payroll breakdown
       const fullRecap = {
-        paidBaseHours: calculatedRecap.workedHours || 0,
-        worked_hours: calculatedRecap.workedHours || 0,
-        overtime_25: calculatedRecap.overtimeHours25 || 0,
-        overtime_50: calculatedRecap.overtimeHours50 || 0,
-        complementary_10: calculatedRecap.complementaryHours10 || 0,
-        complementary_25: calculatedRecap.complementaryHours25 || 0,
-        holiday_eligible: calculatedRecap.eligibleForHolidayPay || false,
-        holiday_days_count: calculatedRecap.holidaysWorkedDays || 0,
-        holiday_hours_worked: calculatedRecap.holidaysWorkedHours || 0,
-        nonShiftsByType: calculatedRecap.nonShiftsByType || {},
+        paidBaseHours: payrollBreakdown.basePaidHours,
+        worked_hours: payrollBreakdown.basePaidHours,
+        overtime_25: payrollBreakdown.supp25Hours,
+        overtime_50: payrollBreakdown.supp50Hours,
+        complementary_10: payrollBreakdown.compl10Hours,
+        complementary_25: payrollBreakdown.compl25Hours,
+        holiday_eligible: payrollBreakdown.holidayHours > 0,
+        holiday_days_count: 0,
+        holiday_hours_worked: payrollBreakdown.holidayHours,
+        nonShiftsByType: payrollBreakdown.nonShiftsVisible,
         shifts_count: employeeShifts.length,
-        cp_days_total: calculatedRecap.cpDays || 0
+        cp_days_total: payrollBreakdown.cpDays
       };
 
       return buildExportRow(employee, fullRecap, nonShiftTypes, cpPeriods, team, monthStart, monthEnd);
