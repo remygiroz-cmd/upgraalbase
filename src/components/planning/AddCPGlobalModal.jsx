@@ -265,14 +265,9 @@ export default function AddCPGlobalModal({ onClose, year, month }) {
     cpData = { ...period, ...days };
   }
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!isValid) {
       toast.error('Veuillez remplir tous les champs requis');
-      return;
-    }
-
-    if (!monthContext) {
-      toast.error('Erreur: contexte du mois non disponible. Veuillez rafraîchir.');
       return;
     }
 
@@ -281,14 +276,25 @@ export default function AddCPGlobalModal({ onClose, year, month }) {
       return;
     }
 
-    // Calculate month_key from start_cp (robust, never undefined-NaN)
-    const calculatedMonthKey = getMonthKeyFromISO(cpData.startCP);
-    
-    if (!calculatedMonthKey) {
-      toast.error('Erreur: impossible de calculer le month_key depuis la date de début CP');
-      return;
+    // Wait for monthContext to be available
+    if (!monthContext) {
+      console.log('monthContext not yet loaded, fetching...');
+      try {
+        const ctx = await getActiveMonthContext(monthKey);
+        setMonthContext(ctx);
+        // Continue with the saved mutation after context is ready
+        setTimeout(() => handleSaveContinue(ctx), 100);
+        return;
+      } catch (error) {
+        toast.error('Erreur: impossible de charger le contexte du mois');
+        return;
+      }
     }
 
+    handleSaveContinue(monthContext);
+  };
+
+  const handleSaveContinue = (ctx) => {
     const periodData = {
       employee_id: selectedEmployee.id,
       employee_name: `${selectedEmployee.first_name} ${selectedEmployee.last_name}`,
@@ -299,8 +305,8 @@ export default function AddCPGlobalModal({ onClose, year, month }) {
       cp_days_auto: cpData.countedDays,
       cp_days_manual: manualOverride ? parseFloat(manualOverride) : null,
       notes: notes || '',
-      month_key: monthContext.month_key,
-      reset_version: monthContext.reset_version
+      month_key: ctx.month_key,
+      reset_version: ctx.reset_version
     };
 
     console.log('Attempting to create CP period with shift replacement:', periodData);
