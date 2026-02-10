@@ -120,27 +120,34 @@ export default function AddCPGlobalModal({ onClose, year, month }) {
         };
       }
 
-      // Step 4: Delete all shifts on impacted days
-      console.log(`\n🗑️ Step 4: Deleting ${shiftsInPeriod.length} shifts on impacted days...`);
-      const deleteResults = await Promise.allSettled(
+      // Step 4: Soft-cancel all shifts on impacted days (for rollback capability)
+      console.log(`\n🔄 Step 4: Soft-cancelling ${shiftsInPeriod.length} shifts on impacted days...`);
+      console.log('  Using soft-cancel (is_cancelled=true) instead of hard-delete for rollback support');
+      
+      const cancelResults = await Promise.allSettled(
         shiftsInPeriod.map(shift => {
-          console.log(`  → Deleting shift ID ${shift.id} (date: ${shift.date}, position: ${shift.position})...`);
-          return base44.entities.Shift.delete(shift.id);
+          console.log(`  → Soft-cancelling shift ID ${shift.id} (date: ${shift.date}, position: ${shift.position})...`);
+          return base44.entities.Shift.update(shift.id, {
+            is_cancelled: true,
+            cancel_reason: 'CP',
+            cp_period_id: cpPeriod.id,
+            cancelled_at: new Date().toISOString()
+          });
         })
       );
       
-      const deleted = deleteResults.filter(r => r.status === 'fulfilled').length;
-      const failed = deleteResults.filter(r => r.status === 'rejected');
+      const cancelled = cancelResults.filter(r => r.status === 'fulfilled').length;
+      const failed = cancelResults.filter(r => r.status === 'rejected');
       
       if (failed.length > 0) {
-        console.error(`\n❌ DELETION FAILURES: ${failed.length} shifts could not be deleted`);
+        console.error(`\n❌ SOFT-CANCEL FAILURES: ${failed.length} shifts could not be cancelled`);
         failed.forEach((f, idx) => {
           console.error(`  Failure ${idx + 1}:`, f.reason);
         });
-        throw new Error(`Impossible de supprimer ${failed.length} shift(s). Vérifiez les permissions ou les règles de sécurité.`);
+        throw new Error(`Impossible d'annuler ${failed.length} shift(s). Vérifiez les permissions.`);
       }
       
-      console.log(`✓ Successfully deleted ${deleted} shifts (${deleted === shiftsInPeriod.length ? 'ALL' : 'PARTIAL'})`);
+      console.log(`✓ Successfully soft-cancelled ${cancelled} shifts (${cancelled === shiftsInPeriod.length ? 'ALL' : 'PARTIAL'})`);
 
       // Step 5: Verify CP non-shift type exists
       console.log('\n📋 Step 5: Verifying CP non-shift type...');
@@ -215,7 +222,7 @@ export default function AddCPGlobalModal({ onClose, year, month }) {
       console.log(`👤 Employé: ${periodData.employee_name} (ID: ${employeeId})`);
       console.log(`🗓️ Jours impactés (avec shifts): ${impactedDays.length}`);
       console.log(`   Liste: ${impactedDays.join(', ')}`);
-      console.log(`🗑️ Shifts supprimés: ${deleted} / ${shiftsInPeriod.length}`);
+      console.log(`🔄 Shifts annulés (soft-cancel): ${cancelled} / ${shiftsInPeriod.length}`);
       console.log(`➕ Non-shifts CP créés: ${createdCount}`);
       console.log(`📋 Non-shifts CP existants (avant): ${existingCPDates.size}`);
       console.log(`📋 Non-shifts CP totaux (après): ${existingCPDates.size + createdCount}`);
@@ -223,7 +230,7 @@ export default function AddCPGlobalModal({ onClose, year, month }) {
 
       return { 
         cpPeriod, 
-        deletedShifts: deleted,
+        cancelledShifts: cancelled,
         createdNonShifts: createdCount,
         impactedDays 
       };
@@ -238,7 +245,7 @@ export default function AddCPGlobalModal({ onClose, year, month }) {
       toast.success(
         `CP créés du ${cpData.startCP} au ${cpData.endCP}`,
         { 
-          description: `${result.deletedShifts} shift(s) remplacé(s) par ${impactedDaysCount} jour(s) de CP` 
+          description: `${result.cancelledShifts} shift(s) remplacé(s) par ${impactedDaysCount} jour(s) de CP` 
         }
       );
       onClose();
