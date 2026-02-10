@@ -51,17 +51,20 @@ export default function AddCPGlobalModal({ onClose, year, month }) {
       console.log('═══════════════════════════════════════════════════════════');
       console.log('🏖️ CRÉATION PÉRIODE CP - DÉBUT');
       console.log('═══════════════════════════════════════════════════════════');
-      console.log('Employé:', employeeId);
-      console.log('Période:', startCP, '->', endCP);
+      console.log('Employé ID:', employeeId);
+      console.log('Employé nom:', periodData.employee_name);
+      console.log('Période CP:', startCP, '->', endCP);
+      console.log('Month key:', periodData.month_key);
+      console.log('Reset version:', periodData.reset_version);
 
       // Step 1: Create CP period
-      console.log('Step 1: Creating PaidLeavePeriod...');
+      console.log('\n📝 Step 1: Creating PaidLeavePeriod record...');
       const cpPeriod = await base44.entities.PaidLeavePeriod.create(periodData);
-      console.log('✓ PaidLeavePeriod created:', cpPeriod.id);
+      console.log('✓ PaidLeavePeriod created with ID:', cpPeriod.id);
 
-      // Step 2: Get all shifts in the CP period for this employee
-      console.log('Step 2: Fetching shifts in period...');
-      console.log('Filtering with:', { 
+      // Step 2: APPLY CP - Fetch shifts in period
+      console.log('\n🔍 Step 2: APPLYING CP - Fetching shifts for employee in period...');
+      console.log('Query filters:', { 
         employee_id: employeeId, 
         month_key: periodData.month_key, 
         reset_version: periodData.reset_version 
@@ -73,26 +76,35 @@ export default function AddCPGlobalModal({ onClose, year, month }) {
         reset_version: periodData.reset_version
       });
       
-      console.log(`Total shifts for employee in month: ${allShifts.length}`);
-      console.log('All shift dates:', allShifts.map(s => s.date));
-      console.log('CP period:', startCP, 'to', endCP);
+      console.log(`\n📊 SHIFTS ANALYSIS:`);
+      console.log(`  Total shifts for employee in month: ${allShifts.length}`);
+      console.log(`  All shift dates:`, allShifts.map(s => `${s.date} (ID: ${s.id})`));
+      console.log(`  CP period range: ${startCP} → ${endCP}`);
       
       const shiftsInPeriod = allShifts.filter(shift => {
         const inPeriod = shift.date >= startCP && shift.date <= endCP;
-        if (inPeriod) {
-          console.log(`  ✓ Shift ${shift.id} on ${shift.date} IS in CP period`);
-        }
+        console.log(`  - Shift ${shift.id} on ${shift.date}: ${inPeriod ? '✓ IN PERIOD' : '✗ outside'}`);
         return inPeriod;
       });
       
-      console.log(`✓ Found ${shiftsInPeriod.length} shifts to delete:`, shiftsInPeriod.map(s => ({ id: s.id, date: s.date })));
+      console.log(`\n✓ Shifts to process: ${shiftsInPeriod.length}`);
+      if (shiftsInPeriod.length > 0) {
+        console.log('  Details:', shiftsInPeriod.map(s => ({ id: s.id, date: s.date, position: s.position })));
+      } else {
+        console.log('  ⚠️ NO SHIFTS FOUND IN CP PERIOD - This may be expected if employee has no work scheduled');
+      }
 
       // Step 3: Extract impacted days (days with actual shifts)
+      console.log('\n🗓️ Step 3: Extracting impacted days...');
       const impactedDays = [...new Set(shiftsInPeriod.map(shift => shift.date))].sort();
-      console.log(`Step 3: Impacted days (with shifts): ${impactedDays.length} days`, impactedDays);
+      console.log(`  Impacted days (with shifts): ${impactedDays.length} days`);
+      console.log(`  Days list: ${impactedDays.join(', ') || 'NONE'}`);
 
       if (impactedDays.length === 0) {
-        console.log('⚠️ No shifts found in CP period - no days to process');
+        console.log('\n⚠️ RESULT: No shifts found in CP period');
+        console.log('   → No days to process');
+        console.log('   → No CP non-shifts will be created (expected behavior per business rule)');
+        console.log('═══════════════════════════════════════════════════════════\n');
         return { 
           cpPeriod, 
           deletedShifts: 0,
@@ -102,10 +114,10 @@ export default function AddCPGlobalModal({ onClose, year, month }) {
       }
 
       // Step 4: Delete all shifts on impacted days
-      console.log('Step 4: Deleting shifts on impacted days...');
+      console.log(`\n🗑️ Step 4: Deleting ${shiftsInPeriod.length} shifts on impacted days...`);
       const deleteResults = await Promise.allSettled(
         shiftsInPeriod.map(shift => {
-          console.log(`  Deleting shift ${shift.id} (${shift.date})...`);
+          console.log(`  → Deleting shift ID ${shift.id} (date: ${shift.date}, position: ${shift.position})...`);
           return base44.entities.Shift.delete(shift.id);
         })
       );
@@ -114,19 +126,26 @@ export default function AddCPGlobalModal({ onClose, year, month }) {
       const failed = deleteResults.filter(r => r.status === 'rejected');
       
       if (failed.length > 0) {
-        console.error(`❌ Failed to delete ${failed.length} shifts:`, failed.map(f => f.reason));
-        throw new Error(`Impossible de supprimer ${failed.length} shift(s). Vérifiez les permissions.`);
+        console.error(`\n❌ DELETION FAILURES: ${failed.length} shifts could not be deleted`);
+        failed.forEach((f, idx) => {
+          console.error(`  Failure ${idx + 1}:`, f.reason);
+        });
+        throw new Error(`Impossible de supprimer ${failed.length} shift(s). Vérifiez les permissions ou les règles de sécurité.`);
       }
       
-      console.log(`✓ Successfully deleted ${deleted} shifts`);
+      console.log(`✓ Successfully deleted ${deleted} shifts (${deleted === shiftsInPeriod.length ? 'ALL' : 'PARTIAL'})`);
 
-      // Step 5: Get CP non-shift type
+      // Step 5: Verify CP non-shift type exists
+      console.log('\n📋 Step 5: Verifying CP non-shift type...');
       if (!cpNonShiftType) {
+        console.error('❌ CP non-shift type NOT FOUND');
+        console.error('   Expected: type with key="conges_payes" OR code="CP"');
         throw new Error('Type de non-shift CP non trouvé. Veuillez configurer un type avec key="conges_payes" ou code="CP".');
       }
-      console.log('Step 5: Using CP non-shift type:', cpNonShiftType.label, '(', cpNonShiftType.code, ')');
+      console.log(`✓ CP non-shift type found: "${cpNonShiftType.label}" (code: ${cpNonShiftType.code}, ID: ${cpNonShiftType.id})`);
 
       // Step 6: Check existing CP non-shifts (for idempotence)
+      console.log('\n🔎 Step 6: Checking existing CP non-shifts (idempotence check)...');
       const existingNonShifts = await base44.entities.NonShiftEvent.filter({
         employee_id: employeeId,
         non_shift_type_id: cpNonShiftType.id,
@@ -134,16 +153,24 @@ export default function AddCPGlobalModal({ onClose, year, month }) {
         reset_version: periodData.reset_version
       });
       const existingCPDates = new Set(existingNonShifts.map(ns => ns.date));
-      console.log('Step 6: Existing CP non-shifts:', Array.from(existingCPDates));
+      console.log(`  Found ${existingCPDates.size} existing CP non-shifts`);
+      if (existingCPDates.size > 0) {
+        console.log(`  Existing CP dates: ${Array.from(existingCPDates).join(', ')}`);
+      }
 
       // Step 7: Create CP non-shifts ONLY on impacted days (where shifts existed)
-      console.log('Step 7: Creating CP non-shifts on impacted days...');
+      console.log(`\n➕ Step 7: Creating CP non-shifts on impacted days...`);
       const nonShiftsToCreate = impactedDays.filter(date => !existingCPDates.has(date));
+      console.log(`  Days needing CP creation: ${nonShiftsToCreate.length} / ${impactedDays.length}`);
+      console.log(`  Days to create: ${nonShiftsToCreate.join(', ') || 'NONE (already exist)'}`);
+      
+      let createdCount = 0;
       
       if (nonShiftsToCreate.length > 0) {
+        console.log(`  Creating ${nonShiftsToCreate.length} CP non-shifts...`);
         const createResults = await Promise.allSettled(
-          nonShiftsToCreate.map(date =>
-            base44.entities.NonShiftEvent.create({
+          nonShiftsToCreate.map(date => {
+            const cpData = {
               employee_id: employeeId,
               employee_name: periodData.employee_name,
               date: date,
@@ -152,36 +179,45 @@ export default function AddCPGlobalModal({ onClose, year, month }) {
               notes: `CP (période du ${startCP} au ${endCP})`,
               month_key: periodData.month_key,
               reset_version: periodData.reset_version
-            })
-          )
+            };
+            console.log(`  → Creating CP for ${date}...`, cpData);
+            return base44.entities.NonShiftEvent.create(cpData);
+          })
         );
         
-        const created = createResults.filter(r => r.status === 'fulfilled').length;
+        createdCount = createResults.filter(r => r.status === 'fulfilled').length;
         const createFailed = createResults.filter(r => r.status === 'rejected');
         
         if (createFailed.length > 0) {
-          console.error(`❌ Failed to create ${createFailed.length} CP non-shifts:`, createFailed.map(f => f.reason));
-          throw new Error(`Impossible de créer ${createFailed.length} non-shift(s) CP. Vérifiez les permissions.`);
+          console.error(`\n❌ CP CREATION FAILURES: ${createFailed.length} non-shifts could not be created`);
+          createFailed.forEach((f, idx) => {
+            console.error(`  Failure ${idx + 1}:`, f.reason);
+          });
+          throw new Error(`Impossible de créer ${createFailed.length} non-shift(s) CP. Vérifiez les permissions ou les champs requis.`);
         }
         
-        console.log(`✓ Created ${created} CP non-shifts`);
+        console.log(`✓ Successfully created ${createdCount} CP non-shifts`);
       } else {
-        console.log('✓ All CP non-shifts already exist (idempotent)');
+        console.log('✓ All CP non-shifts already exist (idempotent behavior)');
       }
 
+      console.log('\n═══════════════════════════════════════════════════════════');
+      console.log('✅ CRÉATION PÉRIODE CP - TERMINÉ AVEC SUCCÈS');
       console.log('═══════════════════════════════════════════════════════════');
-      console.log('✅ CRÉATION PÉRIODE CP - TERMINÉ');
-      console.log(`Période: ${startCP} → ${endCP}`);
-      console.log(`Jours impactés (avec shifts): ${impactedDays.length} - ${impactedDays.join(', ')}`);
-      console.log(`Shifts supprimés: ${deleted}`);
-      console.log(`Non-shifts CP créés: ${nonShiftsToCreate.length}`);
-      console.log(`Non-shifts CP existants: ${existingCPDates.size}`);
-      console.log('═══════════════════════════════════════════════════════════');
+      console.log(`📅 Période CP: ${startCP} → ${endCP}`);
+      console.log(`👤 Employé: ${periodData.employee_name} (ID: ${employeeId})`);
+      console.log(`🗓️ Jours impactés (avec shifts): ${impactedDays.length}`);
+      console.log(`   Liste: ${impactedDays.join(', ')}`);
+      console.log(`🗑️ Shifts supprimés: ${deleted} / ${shiftsInPeriod.length}`);
+      console.log(`➕ Non-shifts CP créés: ${createdCount}`);
+      console.log(`📋 Non-shifts CP existants (avant): ${existingCPDates.size}`);
+      console.log(`📋 Non-shifts CP totaux (après): ${existingCPDates.size + createdCount}`);
+      console.log('═══════════════════════════════════════════════════════════\n');
 
       return { 
         cpPeriod, 
         deletedShifts: deleted,
-        createdNonShifts: nonShiftsToCreate.length,
+        createdNonShifts: createdCount,
         impactedDays 
       };
     },
