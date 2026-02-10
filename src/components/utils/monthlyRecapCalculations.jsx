@@ -348,14 +348,37 @@ function getFullWeekDates(dateStr) {
 
 /**
  * Calculate overtime using weekly method
- * Each week is checked individually for 43h limit
- * CRITICAL: Weeks that overlap the month are calculated on ALL 7 days, not just days in the month
+ * CRITICAL: Base hours calculated based on contractual days visible in the month for PARTIAL weeks
  */
 function calculateWeeklyOvertime(result, employee, shifts, nonShiftEvents, nonShiftTypes, year, month, contractHoursWeekly) {
   const isPartTime = employee.work_time_type === 'part_time';
   
-  // Get ALL weeks that touch the month (even partially)
+  // Calculate daily contract hours
+  const workDaysPerWeek = employee.work_days_per_week || 5;
+  const dailyContractHours = contractHoursWeekly / workDaysPerWeek;
+  
+  // Get worked days of week from contract
+  const weeklySchedule = employee.weekly_schedule || {};
+  const workedDaysOfWeek = new Set();
+  const dayMap = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+  
+  dayMap.forEach((dayName, dayIndex) => {
+    if (weeklySchedule[dayName]?.worked) {
+      workedDaysOfWeek.add(dayIndex);
+    }
+  });
+  
+  // If no schedule defined, assume consecutive days from Monday
+  if (workedDaysOfWeek.size === 0) {
+    for (let i = 0; i < workDaysPerWeek; i++) {
+      workedDaysOfWeek.add((i + 1) % 7); // 1=Monday, 2=Tuesday, etc.
+    }
+  }
+  
+  // Get ALL weeks that touch the month
   const weeks = getWeeksTouchingMonth(year, month);
+  const monthStartStr = formatDate(new Date(year, month, 1));
+  const monthEndStr = formatDate(new Date(year, month + 1, 0));
 
   console.log(`
 ═══════════════════════════════════════════════════════════
@@ -364,26 +387,37 @@ function calculateWeeklyOvertime(result, employee, shifts, nonShiftEvents, nonSh
 Employee ID: ${employee.id}
 Employee Name: ${employee.first_name} ${employee.last_name}
 Month: ${year}-${String(month + 1).padStart(2, '0')}
+Contract: ${contractHoursWeekly}h/week, ${workDaysPerWeek} days/week
+Daily rate: ${dailyContractHours.toFixed(2)}h/day
+Worked days: ${Array.from(workedDaysOfWeek).map(d => dayMap[d]).join(', ')}
 Weeks to process: ${weeks.length}
-Contract hours/week: ${contractHoursWeekly}h
 ═══════════════════════════════════════════════════════════
 `);
 
   const weekDetails = [];
 
-  // Calculate overtime for each week
+  // Process each week
   weeks.forEach(({ weekKey, dates: weekDates }, weekIndex) => {
+    // Determine which dates are visible in the month
+    const visibleDates = weekDates.filter(d => d >= monthStartStr && d <= monthEndStr);
+    const isPartialWeek = visibleDates.length < 7;
+    
+    // Count contractual days visible in the month for this week
+    let contractDaysVisible = 0;
+    visibleDates.forEach(dateStr => {
+      const date = new Date(dateStr);
+      const dayOfWeek = date.getDay();
+      if (workedDaysOfWeek.has(dayOfWeek)) {
+        contractDaysVisible++;
+      }
+    });
+    
+    // Calculate base hours for this week (based on visible contractual days)
+    const weeklyBase = contractDaysVisible * dailyContractHours;
+    
+    // Calculate worked hours (on visible days only)
     let weekHours = 0;
-    const weekStart = weekDates[0];
-    const weekEnd = weekDates[6];
-    
-    // Check if partial week (some days outside the month)
-    const monthStartStr = formatDate(new Date(year, month, 1));
-    const monthEndStr = formatDate(new Date(year, month + 1, 0));
-    const isPartialWeek = weekStart < monthStartStr || weekEnd > monthEndStr;
-    
-    // Calculate hours for ALL 7 days in the week
-    weekDates.forEach(date => {
+    visibleDates.forEach(date => {
       const dayShifts = shifts.filter(s => 
         s.employee_id === employee.id && 
         s.date === date && 
@@ -406,18 +440,18 @@ Contract hours/week: ${contractHoursWeekly}h
       weekHours += hours;
     });
 
-    // Calculate overtime/complementary for this week
+    // Calculate overtime/complementary
     let weekOvertime = 0;
     let weekHS25 = 0;
     let weekHS50 = 0;
     
     if (isPartTime) {
       // Part-time: complementary hours
-      const excess = Math.max(0, weekHours - contractHoursWeekly);
-      const maxComplementary = contractHoursWeekly / 3;
+      const excess = Math.max(0, weekHours - weeklyBase);
+      const maxComplementary = weeklyBase / 3;
       const actualComplementary = Math.min(excess, maxComplementary);
       
-      const limit10 = contractHoursWeekly * 0.10;
+      const limit10 = weeklyBase * 0.10;
       result.complementaryHours10 += Math.min(actualComplementary, limit10);
       
       if (actualComplementary > limit10) {
@@ -426,15 +460,14 @@ Contract hours/week: ${contractHoursWeekly}h
       
       weekOvertime = actualComplementary;
     } else {
-      // Full-time: overtime hours (35h base)
-      if (weekHours > 35) {
-        weekOvertime = weekHours - 35;
+      // Full-time: overtime hours
+      if (weekHours > weeklyBase) {
+        weekOvertime = weekHours - weeklyBase;
         
-        // +25% from 36h to 43h (i.e., 1h to 8h of overtime)
+        // Apply 25%/50% thresholds
         weekHS25 = Math.min(weekOvertime, 8);
         result.overtimeHours25 += weekHS25;
         
-        // +50% beyond 43h (i.e., beyond 8h of overtime)
         if (weekOvertime > 8) {
           weekHS50 = weekOvertime - 8;
           result.overtimeHours50 += weekHS50;
@@ -445,10 +478,13 @@ Contract hours/week: ${contractHoursWeekly}h
     const weekDetail = {
       index: weekIndex + 1,
       weekKey,
-      weekStart,
-      weekEnd,
+      weekStart: weekDates[0],
+      weekEnd: weekDates[6],
+      visibleDates,
       isPartial: isPartialWeek,
-      baseHours: 35, // For full-time
+      contractDaysVisible,
+      dailyContractHours,
+      baseHours: weeklyBase,
       workedHours: weekHours,
       hsTotal: weekOvertime,
       hs25: weekHS25,
@@ -458,8 +494,10 @@ Contract hours/week: ${contractHoursWeekly}h
     weekDetails.push(weekDetail);
 
     console.log(`Week ${weekIndex + 1} [${weekKey}] ${isPartialWeek ? '⚠️ PARTIAL' : '✓ COMPLETE'}
-  Range: ${weekStart} → ${weekEnd}
-  Worked: ${weekHours.toFixed(2)}h / Base: 35h
+  Range: ${weekDates[0]} → ${weekDates[6]}
+  Visible dates in month: ${visibleDates.length} days (${visibleDates[0]} → ${visibleDates[visibleDates.length - 1]})
+  Contract days visible: ${contractDaysVisible} × ${dailyContractHours.toFixed(2)}h = ${weeklyBase.toFixed(2)}h base
+  Worked: ${weekHours.toFixed(2)}h
   Overtime: ${weekOvertime.toFixed(2)}h (25%: ${weekHS25.toFixed(2)}h, 50%: ${weekHS50.toFixed(2)}h)`);
   });
 
@@ -473,6 +511,9 @@ Contract hours/week: ${contractHoursWeekly}h
 Total weeks processed: ${weekDetails.length}
   Complete weeks: ${weekDetails.filter(w => !w.isPartial).length}
   Partial weeks: ${weekDetails.filter(w => w.isPartial).length}
+
+Per-week breakdown:
+${weekDetails.map(w => `  Week ${w.index}: Base ${w.baseHours.toFixed(2)}h, Worked ${w.workedHours.toFixed(2)}h, HS ${w.hsTotal.toFixed(2)}h`).join('\n')}
 
 Total worked hours: ${weekDetails.reduce((sum, w) => sum + w.workedHours, 0).toFixed(2)}h
 Total overtime: ${result.totalOvertimeHours.toFixed(2)}h
@@ -489,10 +530,7 @@ Total overtime: ${result.totalOvertimeHours.toFixed(2)}h
 
 /**
  * Calculate overtime using monthly smoothing method
- * CRITICAL: Even in monthly mode, overtime 25%/50% thresholds are calculated WEEK BY WEEK
- * This ensures legal compliance: 35h base per week, +25% from 36-43h, +50% above 43h
- * Monthly mode only differs in how the base contract hours are displayed/adjusted
- * Weeks that overlap the month are calculated on ALL 7 days, not just days in the month
+ * CRITICAL: Base hours calculated based on contractual days visible in the month for PARTIAL weeks
  */
 function calculateMonthlyOvertime(result, employee, shifts, nonShiftEvents, nonShiftTypes, year, month, contractHoursWeekly) {
   const isPartTime = employee.work_time_type === 'part_time';
@@ -512,11 +550,34 @@ function calculateMonthlyOvertime(result, employee, shifts, nonShiftEvents, nonS
     
     result.totalComplementaryHours = result.complementaryHours10 + result.complementaryHours25;
   } else {
-    // Full-time: MUST calculate week by week, then aggregate
-    // Legal thresholds are per week: 35h base, +25% from 36-43h, +50% beyond 43h
+    // Full-time: MUST calculate week by week with correct base for partial weeks
     
-    // Get ALL weeks that touch the month (even partially)
+    // Calculate daily contract hours
+    const workDaysPerWeek = employee.work_days_per_week || 5;
+    const dailyContractHours = contractHoursWeekly / workDaysPerWeek;
+    
+    // Get worked days of week from contract
+    const weeklySchedule = employee.weekly_schedule || {};
+    const workedDaysOfWeek = new Set();
+    const dayMap = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+    
+    dayMap.forEach((dayName, dayIndex) => {
+      if (weeklySchedule[dayName]?.worked) {
+        workedDaysOfWeek.add(dayIndex);
+      }
+    });
+    
+    // If no schedule defined, assume consecutive days from Monday
+    if (workedDaysOfWeek.size === 0) {
+      for (let i = 0; i < workDaysPerWeek; i++) {
+        workedDaysOfWeek.add((i + 1) % 7);
+      }
+    }
+    
+    // Get ALL weeks that touch the month
     const weeks = getWeeksTouchingMonth(year, month);
+    const monthStartStr = formatDate(new Date(year, month, 1));
+    const monthEndStr = formatDate(new Date(year, month + 1, 0));
 
     console.log(`
 ═══════════════════════════════════════════════════════════
@@ -525,26 +586,37 @@ function calculateMonthlyOvertime(result, employee, shifts, nonShiftEvents, nonS
 Employee ID: ${employee.id}
 Employee Name: ${employee.first_name} ${employee.last_name}
 Month: ${year}-${String(month + 1).padStart(2, '0')}
+Contract: ${contractHoursWeekly}h/week, ${workDaysPerWeek} days/week
+Daily rate: ${dailyContractHours.toFixed(2)}h/day
+Worked days: ${Array.from(workedDaysOfWeek).map(d => dayMap[d]).join(', ')}
 Weeks to process: ${weeks.length}
-Contract hours/week: ${contractHoursWeekly}h
 ═══════════════════════════════════════════════════════════
 `);
 
     const weekDetails = [];
 
-    // Calculate overtime for each week, then sum
+    // Process each week
     weeks.forEach(({ weekKey, dates: weekDates }, weekIndex) => {
+      // Determine which dates are visible in the month
+      const visibleDates = weekDates.filter(d => d >= monthStartStr && d <= monthEndStr);
+      const isPartialWeek = visibleDates.length < 7;
+      
+      // Count contractual days visible in the month for this week
+      let contractDaysVisible = 0;
+      visibleDates.forEach(dateStr => {
+        const date = new Date(dateStr);
+        const dayOfWeek = date.getDay();
+        if (workedDaysOfWeek.has(dayOfWeek)) {
+          contractDaysVisible++;
+        }
+      });
+      
+      // Calculate base hours for this week (based on visible contractual days)
+      const weeklyBase = contractDaysVisible * dailyContractHours;
+      
+      // Calculate worked hours (on visible days only)
       let weekHours = 0;
-      const weekStart = weekDates[0];
-      const weekEnd = weekDates[6];
-      
-      // Check if partial week (some days outside the month)
-      const monthStartStr = formatDate(new Date(year, month, 1));
-      const monthEndStr = formatDate(new Date(year, month + 1, 0));
-      const isPartialWeek = weekStart < monthStartStr || weekEnd > monthEndStr;
-      
-      // Calculate hours for ALL 7 days in the week
-      weekDates.forEach(date => {
+      visibleDates.forEach(date => {
         const dayShifts = shifts.filter(s => 
           s.employee_id === employee.id && 
           s.date === date && 
@@ -567,19 +639,18 @@ Contract hours/week: ${contractHoursWeekly}h
         weekHours += hours;
       });
 
-      // Apply weekly thresholds: 35h base, +25% up to 43h, +50% beyond
+      // Calculate overtime
       let weekOvertime = 0;
       let weekHS25 = 0;
       let weekHS50 = 0;
       
-      if (weekHours > 35) {
-        weekOvertime = weekHours - 35;
+      if (weekHours > weeklyBase) {
+        weekOvertime = weekHours - weeklyBase;
         
-        // +25% from 36h to 43h (i.e., 1h to 8h of overtime)
+        // Apply 25%/50% thresholds
         weekHS25 = Math.min(weekOvertime, 8);
         result.overtimeHours25 += weekHS25;
         
-        // +50% beyond 43h (i.e., beyond 8h of overtime)
         if (weekOvertime > 8) {
           weekHS50 = weekOvertime - 8;
           result.overtimeHours50 += weekHS50;
@@ -589,10 +660,13 @@ Contract hours/week: ${contractHoursWeekly}h
       const weekDetail = {
         index: weekIndex + 1,
         weekKey,
-        weekStart,
-        weekEnd,
+        weekStart: weekDates[0],
+        weekEnd: weekDates[6],
+        visibleDates,
         isPartial: isPartialWeek,
-        baseHours: 35,
+        contractDaysVisible,
+        dailyContractHours,
+        baseHours: weeklyBase,
         workedHours: weekHours,
         hsTotal: weekOvertime,
         hs25: weekHS25,
@@ -602,8 +676,10 @@ Contract hours/week: ${contractHoursWeekly}h
       weekDetails.push(weekDetail);
 
       console.log(`Week ${weekIndex + 1} [${weekKey}] ${isPartialWeek ? '⚠️ PARTIAL' : '✓ COMPLETE'}
-  Range: ${weekStart} → ${weekEnd}
-  Worked: ${weekHours.toFixed(2)}h / Base: 35h
+  Range: ${weekDates[0]} → ${weekDates[6]}
+  Visible dates in month: ${visibleDates.length} days (${visibleDates[0]} → ${visibleDates[visibleDates.length - 1]})
+  Contract days visible: ${contractDaysVisible} × ${dailyContractHours.toFixed(2)}h = ${weeklyBase.toFixed(2)}h base
+  Worked: ${weekHours.toFixed(2)}h
   Overtime: ${weekOvertime.toFixed(2)}h (25%: ${weekHS25.toFixed(2)}h, 50%: ${weekHS50.toFixed(2)}h)`);
     });
 
@@ -616,6 +692,9 @@ Contract hours/week: ${contractHoursWeekly}h
 Total weeks processed: ${weekDetails.length}
   Complete weeks: ${weekDetails.filter(w => !w.isPartial).length}
   Partial weeks: ${weekDetails.filter(w => w.isPartial).length}
+
+Per-week breakdown:
+${weekDetails.map(w => `  Week ${w.index}: Base ${w.baseHours.toFixed(2)}h, Worked ${w.workedHours.toFixed(2)}h, HS ${w.hsTotal.toFixed(2)}h`).join('\n')}
 
 Total worked hours: ${weekDetails.reduce((sum, w) => sum + w.workedHours, 0).toFixed(2)}h
 Total overtime: ${result.totalOvertimeHours.toFixed(2)}h
