@@ -266,31 +266,65 @@ export default function AddCPGlobalModal({ onClose, year, month }) {
   }
 
   const handleSave = async () => {
-    if (!isValid) {
-      toast.error('Veuillez remplir tous les champs requis');
+    console.log('[CP] ============ BUTTON CLICKED ============');
+    console.log('[CP] Validation state:', {
+      selectedEmployeeId,
+      cpStartDate,
+      returnDate,
+      isValid,
+      saveMutation_isPending: saveMutation.isPending,
+      monthKey,
+      monthContext: !!monthContext
+    });
+
+    if (!selectedEmployeeId) {
+      console.warn('[CP] BLOCKED: No employee selected');
+      toast.error('Veuillez sélectionner un employé');
+      return;
+    }
+
+    if (!cpStartDate || !returnDate) {
+      console.warn('[CP] BLOCKED: Missing dates', { cpStartDate, returnDate });
+      toast.error('Veuillez remplir les deux dates');
+      return;
+    }
+
+    if (cpStartDate >= returnDate) {
+      console.warn('[CP] BLOCKED: Invalid date range', { cpStartDate, returnDate });
+      toast.error('Le jour de reprise doit être après le départ en CP');
       return;
     }
 
     if (!cpNonShiftType) {
+      console.error('[CP] BLOCKED: CP non-shift type not found');
       toast.error('Type de non-shift CP non trouvé. Veuillez configurer les types de non-shifts.');
+      return;
+    }
+
+    if (!monthKey) {
+      console.error('[CP] BLOCKED: monthKey is null');
+      toast.error('Erreur: mois non identifié');
       return;
     }
 
     // Wait for monthContext to be available
     if (!monthContext) {
-      console.log('monthContext not yet loaded, fetching...');
+      console.log('[CP] monthContext not loaded, fetching...');
       try {
         const ctx = await getActiveMonthContext(monthKey);
+        console.log('[CP] monthContext fetched:', ctx);
         setMonthContext(ctx);
         // Continue with the saved mutation after context is ready
         setTimeout(() => handleSaveContinue(ctx), 100);
         return;
       } catch (error) {
+        console.error('[CP] Failed to fetch monthContext:', error);
         toast.error('Erreur: impossible de charger le contexte du mois');
         return;
       }
     }
 
+    console.log('[CP] monthContext available, proceeding...');
     handleSaveContinue(monthContext);
   };
 
