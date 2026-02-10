@@ -100,6 +100,41 @@ function getDatesInMonth(year, month) {
 }
 
 /**
+ * Get all weeks that touch a given month (even partially)
+ * Returns an array of week objects with: { weekKey, dates }
+ * Each week includes ALL 7 days (Monday to Sunday), even if some are outside the month
+ */
+function getWeeksTouchingMonth(year, month) {
+  const monthStart = new Date(year, month, 1);
+  const monthEnd = new Date(year, month + 1, 0);
+  
+  const weeks = [];
+  const seenWeeks = new Set();
+  
+  // Iterate through all dates in the month
+  const daysInMonth = monthEnd.getDate();
+  for (let day = 1; day <= daysInMonth; day++) {
+    const date = new Date(year, month, day);
+    const dayOfWeek = date.getDay();
+    const diff = dayOfWeek === 0 ? -6 : 1 - dayOfWeek; // Days to Monday
+    const monday = new Date(date);
+    monday.setDate(monday.getDate() + diff);
+    const weekKey = formatDate(monday);
+    
+    // If we haven't seen this week yet, add it
+    if (!seenWeeks.has(weekKey)) {
+      seenWeeks.add(weekKey);
+      weeks.push({
+        weekKey,
+        dates: getFullWeekDates(formatDate(date))
+      });
+    }
+  }
+  
+  return weeks;
+}
+
+/**
  * Calculate monthly recap
  * 
  * @param {string} mode - 'disabled', 'weekly', or 'monthly'
@@ -273,11 +308,11 @@ export function calculateMonthlyRecap(
   // Calculate overtime/complementary based on mode
   if (mode === 'weekly') {
     // Weekly calculation: check each week individually
-    calculateWeeklyOvertime(result, employee, shifts, nonShiftEvents, nonShiftTypes, monthDates, contractHoursWeekly);
+    calculateWeeklyOvertime(result, employee, shifts, nonShiftEvents, nonShiftTypes, year, month, contractHoursWeekly);
   } else if (mode === 'monthly') {
     // Monthly calculation: STILL calculates week-by-week for legal compliance
     // The difference is only in how base hours are displayed/adjusted
-    calculateMonthlyOvertime(result, employee, shifts, nonShiftEvents, nonShiftTypes, monthDates, contractHoursWeekly);
+    calculateMonthlyOvertime(result, employee, shifts, nonShiftEvents, nonShiftTypes, year, month, contractHoursWeekly);
   }
 
   // Check holiday pay eligibility (8 months = ~240 days of employment)
@@ -316,31 +351,19 @@ function getFullWeekDates(dateStr) {
  * Each week is checked individually for 43h limit
  * CRITICAL: Weeks that overlap the month are calculated on ALL 7 days, not just days in the month
  */
-function calculateWeeklyOvertime(result, employee, shifts, nonShiftEvents, nonShiftTypes, monthDates, contractHoursWeekly) {
+function calculateWeeklyOvertime(result, employee, shifts, nonShiftEvents, nonShiftTypes, year, month, contractHoursWeekly) {
   const isPartTime = employee.work_time_type === 'part_time';
   
-  // Group dates by week (Monday to Sunday) - but only track weeks that touch the month
-  const weekMap = new Map();
-  
-  monthDates.forEach(dateStr => {
-    const date = new Date(dateStr);
-    const day = date.getDay();
-    const diff = day === 0 ? -6 : 1 - day; // Days to Monday
-    const monday = new Date(date);
-    monday.setDate(monday.getDate() + diff);
-    const weekKey = formatDate(monday);
-    
-    if (!weekMap.has(weekKey)) {
-      // Get the FULL week (all 7 days), even if some are outside the month
-      weekMap.set(weekKey, getFullWeekDates(dateStr));
-    }
-  });
+  // Get ALL weeks that touch the month (even partially)
+  const weeks = getWeeksTouchingMonth(year, month);
+
+  console.log(`[calculateWeeklyOvertime] Employee ${employee.id}, processing ${weeks.length} weeks`);
 
   // Calculate overtime for each week
-  weekMap.forEach((weekDates) => {
+  weeks.forEach(({ weekKey, dates: weekDates }) => {
     let weekHours = 0;
     
-    // Calculate hours for ALL days in the week (including days outside the month)
+    // Calculate hours for ALL 7 days in the week
     weekDates.forEach(date => {
       const dayShifts = shifts.filter(s => 
         s.employee_id === employee.id && 
@@ -365,10 +388,12 @@ function calculateWeeklyOvertime(result, employee, shifts, nonShiftEvents, nonSh
     });
 
     // Calculate overtime/complementary for this week
+    let weekOvertime = 0;
+    
     if (isPartTime) {
       // Part-time: complementary hours
       const excess = Math.max(0, weekHours - contractHoursWeekly);
-      const maxComplementary = contractHoursWeekly / 3; // Max 1/3 of contract
+      const maxComplementary = contractHoursWeekly / 3;
       const actualComplementary = Math.min(excess, maxComplementary);
       
       const limit10 = contractHoursWeekly * 0.10;
@@ -377,25 +402,31 @@ function calculateWeeklyOvertime(result, employee, shifts, nonShiftEvents, nonSh
       if (actualComplementary > limit10) {
         result.complementaryHours25 += actualComplementary - limit10;
       }
+      
+      weekOvertime = actualComplementary;
     } else {
-      // Full-time: overtime hours
+      // Full-time: overtime hours (35h base)
       if (weekHours > 35) {
-        const overtimeThisWeek = weekHours - 35;
+        weekOvertime = weekHours - 35;
         
         // +25% from 36h to 43h (i.e., 1h to 8h of overtime)
-        const hours25 = Math.min(overtimeThisWeek, 8);
+        const hours25 = Math.min(weekOvertime, 8);
         result.overtimeHours25 += hours25;
         
         // +50% beyond 43h (i.e., beyond 8h of overtime)
-        if (overtimeThisWeek > 8) {
-          result.overtimeHours50 += overtimeThisWeek - 8;
+        if (weekOvertime > 8) {
+          result.overtimeHours50 += weekOvertime - 8;
         }
       }
     }
+
+    console.log(`  Week ${weekKey}: ${weekHours.toFixed(2)}h worked, ${weekOvertime.toFixed(2)}h overtime`);
   });
 
   result.totalOvertimeHours = result.overtimeHours25 + result.overtimeHours50;
   result.totalComplementaryHours = result.complementaryHours10 + result.complementaryHours25;
+  
+  console.log(`[calculateWeeklyOvertime] Total: ${result.totalOvertimeHours.toFixed(2)}h (25%: ${result.overtimeHours25.toFixed(2)}h, 50%: ${result.overtimeHours50.toFixed(2)}h)`);
 }
 
 /**
@@ -405,7 +436,7 @@ function calculateWeeklyOvertime(result, employee, shifts, nonShiftEvents, nonSh
  * Monthly mode only differs in how the base contract hours are displayed/adjusted
  * Weeks that overlap the month are calculated on ALL 7 days, not just days in the month
  */
-function calculateMonthlyOvertime(result, employee, shifts, nonShiftEvents, nonShiftTypes, monthDates, contractHoursWeekly) {
+function calculateMonthlyOvertime(result, employee, shifts, nonShiftEvents, nonShiftTypes, year, month, contractHoursWeekly) {
   const isPartTime = employee.work_time_type === 'part_time';
   
   if (isPartTime) {
@@ -426,28 +457,16 @@ function calculateMonthlyOvertime(result, employee, shifts, nonShiftEvents, nonS
     // Full-time: MUST calculate week by week, then aggregate
     // Legal thresholds are per week: 35h base, +25% from 36-43h, +50% beyond 43h
     
-    // Group dates by week (Monday to Sunday) - but only track weeks that touch the month
-    const weekMap = new Map();
-    
-    monthDates.forEach(dateStr => {
-      const date = new Date(dateStr);
-      const day = date.getDay();
-      const diff = day === 0 ? -6 : 1 - day; // Days to Monday
-      const monday = new Date(date);
-      monday.setDate(monday.getDate() + diff);
-      const weekKey = formatDate(monday);
-      
-      if (!weekMap.has(weekKey)) {
-        // Get the FULL week (all 7 days), even if some are outside the month
-        weekMap.set(weekKey, getFullWeekDates(dateStr));
-      }
-    });
+    // Get ALL weeks that touch the month (even partially)
+    const weeks = getWeeksTouchingMonth(year, month);
+
+    console.log(`[calculateMonthlyOvertime] Employee ${employee.id}, processing ${weeks.length} weeks`);
 
     // Calculate overtime for each week, then sum
-    weekMap.forEach((weekDates) => {
+    weeks.forEach(({ weekKey, dates: weekDates }) => {
       let weekHours = 0;
       
-      // Calculate hours for ALL days in the week (including days outside the month)
+      // Calculate hours for ALL 7 days in the week
       weekDates.forEach(date => {
         const dayShifts = shifts.filter(s => 
           s.employee_id === employee.id && 
@@ -472,21 +491,26 @@ function calculateMonthlyOvertime(result, employee, shifts, nonShiftEvents, nonS
       });
 
       // Apply weekly thresholds: 35h base, +25% up to 43h, +50% beyond
+      let weekOvertime = 0;
       if (weekHours > 35) {
-        const overtimeThisWeek = weekHours - 35;
+        weekOvertime = weekHours - 35;
         
         // +25% from 36h to 43h (i.e., 1h to 8h of overtime)
-        const hours25 = Math.min(overtimeThisWeek, 8);
+        const hours25 = Math.min(weekOvertime, 8);
         result.overtimeHours25 += hours25;
         
         // +50% beyond 43h (i.e., beyond 8h of overtime)
-        if (overtimeThisWeek > 8) {
-          result.overtimeHours50 += overtimeThisWeek - 8;
+        if (weekOvertime > 8) {
+          result.overtimeHours50 += weekOvertime - 8;
         }
       }
+
+      console.log(`  Week ${weekKey}: ${weekHours.toFixed(2)}h worked, ${weekOvertime.toFixed(2)}h overtime`);
     });
 
     result.totalOvertimeHours = result.overtimeHours25 + result.overtimeHours50;
+    
+    console.log(`[calculateMonthlyOvertime] Total: ${result.totalOvertimeHours.toFixed(2)}h (25%: ${result.overtimeHours25.toFixed(2)}h, 50%: ${result.overtimeHours50.toFixed(2)}h)`);
   }
 }
 
