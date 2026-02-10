@@ -31,11 +31,13 @@ export default function AddCPGlobalModal({ onClose, year, month }) {
   const [showDebug, setShowDebug] = useState(false);
   const [monthContext, setMonthContext] = useState(null);
 
-  const monthKey = `${year}-${String(month + 1).padStart(2, '0')}`;
+  const monthKey = year && month !== undefined ? `${year}-${String(month + 1).padStart(2, '0')}` : null;
 
   // Get active month context (SOURCE DE VÉRITÉ UNIQUE)
   React.useEffect(() => {
-    getActiveMonthContext(monthKey).then(ctx => setMonthContext(ctx));
+    if (monthKey) {
+      getActiveMonthContext(monthKey).then(ctx => setMonthContext(ctx));
+    }
   }, [monthKey]);
 
   // Fetch all active employees
