@@ -10,112 +10,13 @@ export default function DeleteCPModal({ cpPeriod, employee, onClose }) {
   const queryClient = useQueryClient();
 
   const deleteCPMutation = useMutation({
-    mutationFn: async () => {
-      console.log('═══════════════════════════════════════════════════════════');
-      console.log('🗑️ SUPPRESSION PÉRIODE CP AVEC ROLLBACK - DÉBUT');
-      console.log('═══════════════════════════════════════════════════════════');
-      console.log('CP Period ID:', cpPeriod.id);
-      console.log('Employé ID:', cpPeriod.employee_id);
-      console.log('Période:', cpPeriod.start_cp, '→', cpPeriod.end_cp);
-
-      // Step 1: Delete CP non-shifts created by this period
-      console.log('\n🔍 Step 1: Finding CP non-shifts to delete...');
-      const cpNonShifts = await base44.entities.NonShiftEvent.filter({
-        employee_id: cpPeriod.employee_id,
-        month_key: cpPeriod.month_key,
-        reset_version: cpPeriod.reset_version
-      });
-      
-      // Filter non-shifts in CP date range
-      const cpNonShiftsInPeriod = cpNonShifts.filter(ns => 
-        ns.date >= cpPeriod.start_cp && ns.date <= cpPeriod.end_cp
-      );
-      console.log(`Found ${cpNonShiftsInPeriod.length} CP non-shifts to delete`);
-
-      if (cpNonShiftsInPeriod.length > 0) {
-        console.log('Deleting CP non-shifts...', cpNonShiftsInPeriod.map(ns => ns.date));
-        const deleteNSResults = await Promise.allSettled(
-          cpNonShiftsInPeriod.map(ns => base44.entities.NonShiftEvent.delete(ns.id))
-        );
-        
-        const deletedNS = deleteNSResults.filter(r => r.status === 'fulfilled').length;
-        const failedNS = deleteNSResults.filter(r => r.status === 'rejected');
-        
-        if (failedNS.length > 0) {
-          console.error(`❌ Failed to delete ${failedNS.length} non-shifts:`, failedNS.map(f => f.reason));
-        }
-        console.log(`✓ Deleted ${deletedNS} CP non-shifts`);
-      }
-
-      // Step 2: Restore cancelled shifts
-      console.log('\n🔄 Step 2: Restoring cancelled shifts...');
-      const allShifts = await base44.entities.Shift.filter({
-        employee_id: cpPeriod.employee_id,
-        reset_version: cpPeriod.reset_version
-      });
-      
-      const shiftsToRestore = allShifts.filter(shift => 
-        shift.cp_period_id === cpPeriod.id && shift.is_cancelled === true
-      );
-      
-      console.log(`Found ${shiftsToRestore.length} shifts to restore`);
-      console.log('Shift IDs to restore:', shiftsToRestore.map(s => ({ id: s.id, date: s.date })));
-
-      let restoredCount = 0;
-      if (shiftsToRestore.length > 0) {
-        const restoreResults = await Promise.allSettled(
-          shiftsToRestore.map(shift => {
-            console.log(`  → Restoring shift ID ${shift.id} (${shift.date})...`);
-            return base44.entities.Shift.update(shift.id, {
-              is_cancelled: false,
-              cancel_reason: null,
-              cp_period_id: null,
-              cancelled_at: null
-            });
-          })
-        );
-        
-        restoredCount = restoreResults.filter(r => r.status === 'fulfilled').length;
-        const failedRestore = restoreResults.filter(r => r.status === 'rejected');
-        
-        if (failedRestore.length > 0) {
-          console.error(`❌ Failed to restore ${failedRestore.length} shifts:`, failedRestore.map(f => f.reason));
-        }
-        console.log(`✓ Restored ${restoredCount} shifts`);
-      }
-
-      // Step 3: Delete the CP period
-      console.log('\n🗑️ Step 3: Deleting CP period record...');
-      await base44.entities.PaidLeavePeriod.delete(cpPeriod.id);
-      console.log('✓ CP period deleted');
-
-      console.log('\n═══════════════════════════════════════════════════════════');
-      console.log('✅ SUPPRESSION CP AVEC ROLLBACK - TERMINÉ');
-      console.log('═══════════════════════════════════════════════════════════');
-      console.log(`📋 Non-shifts CP supprimés: ${cpNonShiftsInPeriod.length}`);
-      console.log(`🔄 Shifts restaurés: ${restoredCount}`);
-      console.log('═══════════════════════════════════════════════════════════\n');
-
-      return {
-        deletedNonShifts: cpNonShiftsInPeriod.length,
-        restoredShifts: restoredCount
-      };
-    },
-    onSuccess: (result) => {
+    mutationFn: () => base44.entities.PaidLeavePeriod.delete(cpPeriod.id),
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['paidLeavePeriods'] });
-      queryClient.invalidateQueries({ queryKey: ['shifts'] });
-      queryClient.invalidateQueries({ queryKey: ['nonShiftEvents'] });
-      
-      toast.success(
-        'Période CP supprimée',
-        { 
-          description: `${result.restoredShifts} shift(s) restauré(s), ${result.deletedNonShifts} CP retiré(s)` 
-        }
-      );
+      toast.success('Période de congés payés supprimée');
       onClose();
     },
     onError: (error) => {
-      console.error('Error during CP deletion with rollback:', error);
       toast.error('Erreur : ' + error.message);
     }
   });
@@ -137,7 +38,7 @@ export default function DeleteCPModal({ cpPeriod, employee, onClose }) {
             Supprimer cette période de congés payés ?
           </p>
           <p className="text-xs text-red-700 mt-1">
-            Les CP seront supprimés et les shifts remplacés seront restaurés automatiquement.
+            Cette action est irréversible.
           </p>
         </div>
       </div>
