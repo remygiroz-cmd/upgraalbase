@@ -329,6 +329,29 @@ export default function AddCPGlobalModal({ onClose, year, month }) {
   };
 
   const handleSaveContinue = (ctx) => {
+    console.log('[CP] ============ handleSaveContinue CALLED ============');
+    console.log('[CP] Context:', ctx);
+    console.log('[CP] cpData:', cpData);
+    console.log('[CP] selectedEmployee:', selectedEmployee);
+
+    if (!ctx) {
+      console.error('[CP] BLOCKED: ctx is null');
+      toast.error('Erreur: contexte du mois indisponible');
+      return;
+    }
+
+    if (!cpData) {
+      console.error('[CP] BLOCKED: cpData is null');
+      toast.error('Erreur: dates CP non calculées');
+      return;
+    }
+
+    if (!selectedEmployee) {
+      console.error('[CP] BLOCKED: selectedEmployee is null');
+      toast.error('Erreur: employé non sélectionné');
+      return;
+    }
+
     const periodData = {
       employee_id: selectedEmployee.id,
       employee_name: `${selectedEmployee.first_name} ${selectedEmployee.last_name}`,
@@ -343,7 +366,8 @@ export default function AddCPGlobalModal({ onClose, year, month }) {
       reset_version: ctx.reset_version
     };
 
-    console.log('Attempting to create CP period with shift replacement:', periodData);
+    console.log('[CP] periodData ready for mutation:', periodData);
+    console.log('[CP] Calling saveMutation.mutate()...');
     
     saveMutation.mutate({
       periodData,
