@@ -11,8 +11,9 @@ import { calculateCPPeriod, calculateCPDays } from './paidLeaveCalculations';
 import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { toast } from 'sonner';
+import { usePlanningVersion } from './usePlanningVersion';
 
-export default function AddCPGlobalModal({ onClose }) {
+export default function AddCPGlobalModal({ onClose, year, month }) {
   const queryClient = useQueryClient();
   const [selectedEmployeeId, setSelectedEmployeeId] = useState('');
   const [lastWorkDay, setLastWorkDay] = useState('');
@@ -20,6 +21,9 @@ export default function AddCPGlobalModal({ onClose }) {
   const [notes, setNotes] = useState('');
   const [manualOverride, setManualOverride] = useState('');
   const [showDebug, setShowDebug] = useState(false);
+
+  // Get planning version
+  const { resetVersion, monthKey } = usePlanningVersion(year, month);
 
   // Fetch all active employees
   const { data: employees = [] } = useQuery({
@@ -37,13 +41,21 @@ export default function AddCPGlobalModal({ onClose }) {
 
   const saveMutation = useMutation({
     mutationFn: async (data) => {
+      console.log('Creating PaidLeavePeriod with data:', data);
       return await base44.entities.PaidLeavePeriod.create(data);
     },
-    onSuccess: () => {
+    onSuccess: (result) => {
+      console.log('PaidLeavePeriod created successfully:', result);
       queryClient.invalidateQueries({ queryKey: ['paidLeavePeriods'] });
+      queryClient.invalidateQueries({ queryKey: ['shifts'] });
+      queryClient.invalidateQueries({ queryKey: ['nonShiftEvents'] });
       queryClient.refetchQueries({ queryKey: ['paidLeavePeriods'] });
-      toast.success('Période CP créée');
+      toast.success(`CP créés du ${cpData.startCP} au ${cpData.endCP}`);
       onClose();
+    },
+    onError: (error) => {
+      console.error('Error creating PaidLeavePeriod:', error);
+      toast.error(`Erreur: ${error.message || 'Impossible de créer la période CP'}`);
     }
   });
 
@@ -62,6 +74,11 @@ export default function AddCPGlobalModal({ onClose }) {
       return;
     }
 
+    if (!monthKey || resetVersion === undefined) {
+      toast.error('Erreur: informations de versioning manquantes');
+      return;
+    }
+
     const data = {
       employee_id: selectedEmployee.id,
       employee_name: `${selectedEmployee.first_name} ${selectedEmployee.last_name}`,
@@ -71,9 +88,12 @@ export default function AddCPGlobalModal({ onClose }) {
       end_cp: cpData.endCP,
       cp_days_auto: cpData.countedDays,
       cp_days_manual: manualOverride ? parseFloat(manualOverride) : null,
-      notes
+      notes: notes || '',
+      month_key: monthKey,
+      reset_version: resetVersion
     };
 
+    console.log('Attempting to create CP period:', data);
     saveMutation.mutate(data);
   };
 
