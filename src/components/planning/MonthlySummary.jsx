@@ -128,26 +128,46 @@ export default function MonthlySummary({
 
   // Calculate paid hours (contract hours - non-shifts impacting payroll)
   const paidHours = useMemo(() => {
-    if (!contractMonthlyHours) return null;
+    // Use monthly contract hours from employee record
+    const monthlyContractHours = parseContractHours(employee.contract_hours);
+    if (!monthlyContractHours) return null;
 
-    // Calculate daily contract hours
-    const weeklyHours = parseContractHours(employee.contract_hours_weekly);
-    const workDaysPerWeek = employee.work_days_per_week || 5;
-    const dailyHours = weeklyHours / workDaysPerWeek;
+    // Get day-specific hours from weekly_schedule if available
+    const getDailyHoursForDate = (dateStr) => {
+      const date = new Date(dateStr);
+      const dayIndex = date.getDay(); // 0=Sunday, 1=Monday, etc.
+      const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+      const dayName = dayNames[dayIndex];
 
-    if (!dailyHours) return contractMonthlyHours;
+      // Priority 1: Check weekly_schedule for specific day
+      if (employee.weekly_schedule?.[dayName]) {
+        const dayConfig = employee.weekly_schedule[dayName];
+        if (dayConfig.worked) {
+          return dayConfig.hours || 0;
+        } else {
+          return 0; // Not a working day
+        }
+      }
 
-    // Count non-shifts that impact payroll (excluding CP and formations)
-    const impactingNonShifts = nonShiftEvents.filter(ns => {
+      // Priority 2: Fallback to average daily hours
+      const weeklyHours = parseContractHours(employee.contract_hours_weekly);
+      const workDaysPerWeek = employee.work_days_per_week || 5;
+      return weeklyHours / workDaysPerWeek;
+    };
+
+    // Calculate total deductions from non-shifts impacting payroll
+    let totalDeduction = 0;
+    nonShiftEvents.forEach(ns => {
       const nsType = nonShiftTypes.find(t => t.id === ns.non_shift_type_id);
-      return nsType?.impacte_paie === true;
+      if (nsType?.impacte_paie === true) {
+        const dailyHours = getDailyHoursForDate(ns.date);
+        totalDeduction += dailyHours;
+      }
     });
 
-    const hoursToDeduct = impactingNonShifts.length * dailyHours;
-    const result = contractMonthlyHours - hoursToDeduct;
-
+    const result = monthlyContractHours - totalDeduction;
     return Math.max(0, result); // Never go below 0
-  }, [contractMonthlyHours, employee, nonShiftEvents, nonShiftTypes]);
+  }, [employee, nonShiftEvents, nonShiftTypes]);
 
   // Use CP from calculation or fallback
   const displayCPDays = cpDays ?? autoCPDays ?? 0;
