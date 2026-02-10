@@ -13,6 +13,14 @@ import { base44 } from '@/api/base44Client';
 import { toast } from 'sonner';
 import { usePlanningVersion } from './usePlanningVersion';
 
+// Utility: Extract month_key from ISO date string (YYYY-MM-DD)
+function getMonthKeyFromISO(dateISO) {
+  if (!dateISO || typeof dateISO !== 'string') return null;
+  const parts = dateISO.split('-');
+  if (parts.length < 2) return null;
+  return `${parts[0]}-${parts[1]}`; // "YYYY-MM"
+}
+
 export default function AddCPGlobalModal({ onClose, year, month }) {
   const queryClient = useQueryClient();
   const [selectedEmployeeId, setSelectedEmployeeId] = useState('');
@@ -62,17 +70,16 @@ export default function AddCPGlobalModal({ onClose, year, month }) {
       const cpPeriod = await base44.entities.PaidLeavePeriod.create(periodData);
       console.log('✓ PaidLeavePeriod created with ID:', cpPeriod.id);
 
-      // Step 2: APPLY CP - Fetch shifts in period
-      console.log('\n🔍 Step 2: APPLYING CP - Fetching shifts for employee in period...');
+      // Step 2: APPLY CP - Fetch shifts in period (robust: by employee + reset_version only)
+      console.log('\n🔍 Step 2: APPLYING CP - Fetching ALL shifts for employee...');
       console.log('Query filters:', { 
         employee_id: employeeId, 
-        month_key: periodData.month_key, 
         reset_version: periodData.reset_version 
       });
+      console.log('Will filter by date range:', startCP, '→', endCP);
       
       const allShifts = await base44.entities.Shift.filter({
         employee_id: employeeId,
-        month_key: periodData.month_key,
         reset_version: periodData.reset_version
       });
       
@@ -267,6 +274,14 @@ export default function AddCPGlobalModal({ onClose, year, month }) {
       return;
     }
 
+    // Calculate month_key from start_cp (robust, never undefined-NaN)
+    const calculatedMonthKey = getMonthKeyFromISO(cpData.startCP);
+    
+    if (!calculatedMonthKey) {
+      toast.error('Erreur: impossible de calculer le month_key depuis la date de début CP');
+      return;
+    }
+
     const periodData = {
       employee_id: selectedEmployee.id,
       employee_name: `${selectedEmployee.first_name} ${selectedEmployee.last_name}`,
@@ -277,7 +292,7 @@ export default function AddCPGlobalModal({ onClose, year, month }) {
       cp_days_auto: cpData.countedDays,
       cp_days_manual: manualOverride ? parseFloat(manualOverride) : null,
       notes: notes || '',
-      month_key: monthKey,
+      month_key: calculatedMonthKey,
       reset_version: resetVersion
     };
 
