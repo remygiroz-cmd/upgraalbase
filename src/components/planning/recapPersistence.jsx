@@ -89,6 +89,16 @@ export async function recomputeAndPersistRecapForEmployee({
     console.log(`  ✓ Recap created (ID: ${savedRecap.id})`);
   }
 
+  // CRITICAL DEBUG LOG - Verify persisted data
+  console.log('  📋 RECAP PERSISTED:');
+  console.log(`     Entity: MonthlyRecap`);
+  console.log(`     ID: ${savedRecap.id}`);
+  console.log(`     employee_id: ${savedRecap.employee_id}`);
+  console.log(`     month_key: "${savedRecap.month_key}" (type: ${typeof savedRecap.month_key})`);
+  console.log(`     reset_version: ${savedRecap.reset_version} (type: ${typeof savedRecap.reset_version})`);
+  console.log(`     worked_hours: ${savedRecap.worked_hours}`);
+  console.log(`     shifts_count: ${savedRecap.shifts_count}`);
+
   return savedRecap;
 }
 
@@ -158,12 +168,33 @@ export async function recomputeAndPersistRecapsForEmployees(employeeIds, context
       console.error(`  Failure ${idx + 1}:`, f.reason);
     });
   }
+  
+  // CRITICAL DEBUG LOG - Show sample persisted recaps
+  const succeededRecaps = results
+    .filter(r => r.status === 'fulfilled')
+    .map(r => r.value)
+    .slice(0, 3);
+  
+  if (succeededRecaps.length > 0) {
+    console.log('\n📊 SAMPLE PERSISTED RECAPS (first 3):');
+    succeededRecaps.forEach((recap, idx) => {
+      console.log(`  Recap ${idx + 1}:`);
+      console.log(`    - ID: ${recap.id}`);
+      console.log(`    - employee_id: ${recap.employee_id}`);
+      console.log(`    - month_key: "${recap.month_key}"`);
+      console.log(`    - reset_version: ${recap.reset_version}`);
+      console.log(`    - worked_hours: ${recap.worked_hours}`);
+      console.log(`    - shifts_count: ${recap.shifts_count}`);
+    });
+  }
+  
   console.log('═══════════════════════════════════════════════════════════');
 
   return {
     total: employeeIds.length,
     succeeded,
     failed: failed.length,
-    errors: failed.map(f => f.reason?.message || String(f.reason))
+    errors: failed.map(f => f.reason?.message || String(f.reason)),
+    persistedRecaps: succeededRecaps
   };
 }

@@ -200,17 +200,89 @@ export default function ExportComptaModal({ open, onOpenChange, monthStart, mont
   const { data: recaps = [] } = useQuery({
     queryKey: ['monthlyRecaps', monthKey, activeResetVersion],
     queryFn: async () => {
+      console.log('\n═══════════════════════════════════════════════════════════');
+      console.log('🔍 EXPORT COMPTA - FETCHING MONTHLY RECAPS');
+      console.log('═══════════════════════════════════════════════════════════');
+      console.log('Entity: MonthlyRecap');
+      console.log(`Query filters: { month_key: "${monthKey}", reset_version: ${activeResetVersion} }`);
+      console.log(`month_key type: ${typeof monthKey}`);
+      console.log(`reset_version type: ${typeof activeResetVersion}`);
+      
       const allRecaps = await base44.entities.MonthlyRecap.filter({ 
         month_key: monthKey,
         reset_version: activeResetVersion 
       });
-      console.log('📋 Monthly recaps fetched (filtered by version):', allRecaps.length);
-      console.log('  Active version:', activeResetVersion);
-      console.log('  Sample recaps:', allRecaps.slice(0, 3).map(r => ({ 
-        id: r.id, 
-        employee_id: r.employee_id,
-        reset_version: r.reset_version
-      })));
+      
+      console.log(`\n📊 RESULTS: ${allRecaps.length} recap(s) found`);
+      
+      if (allRecaps.length > 0) {
+        console.log('✓ Sample recaps (first 3):');
+        allRecaps.slice(0, 3).forEach((r, idx) => {
+          console.log(`  Recap ${idx + 1}:`);
+          console.log(`    - ID: ${r.id}`);
+          console.log(`    - employee_id: ${r.employee_id}`);
+          console.log(`    - month_key: "${r.month_key}"`);
+          console.log(`    - reset_version: ${r.reset_version}`);
+          console.log(`    - worked_hours: ${r.worked_hours}`);
+          console.log(`    - shifts_count: ${r.shifts_count}`);
+        });
+      } else {
+        console.log('❌ NO RECAPS FOUND - Running fallback debug queries...\n');
+        
+        // Fallback 1: Try without reset_version filter
+        console.log('🔍 Fallback 1: Query with month_key only (no reset_version filter)');
+        const fallback1 = await base44.entities.MonthlyRecap.filter({ month_key: monthKey });
+        console.log(`  Found: ${fallback1.length} recap(s)`);
+        if (fallback1.length > 0) {
+          console.log('  Sample (first 3):');
+          fallback1.slice(0, 3).forEach((r, idx) => {
+            console.log(`    ${idx + 1}. month_key="${r.month_key}", reset_version=${r.reset_version}, employee=${r.employee_name}`);
+          });
+        }
+        
+        // Fallback 2: Try without month_key filter
+        console.log('\n🔍 Fallback 2: Query with reset_version only (no month_key filter)');
+        const fallback2 = await base44.entities.MonthlyRecap.filter({ reset_version: activeResetVersion });
+        console.log(`  Found: ${fallback2.length} recap(s)`);
+        if (fallback2.length > 0) {
+          console.log('  Sample (first 3):');
+          fallback2.slice(0, 3).forEach((r, idx) => {
+            console.log(`    ${idx + 1}. month_key="${r.month_key}", reset_version=${r.reset_version}, employee=${r.employee_name}`);
+          });
+        }
+        
+        // Fallback 3: Get any recaps (no filters)
+        console.log('\n🔍 Fallback 3: Query with NO filters (first 5 recaps in database)');
+        const fallback3 = await base44.entities.MonthlyRecap.list();
+        console.log(`  Total in database: ${fallback3.length} recap(s)`);
+        if (fallback3.length > 0) {
+          console.log('  Sample (first 5):');
+          fallback3.slice(0, 5).forEach((r, idx) => {
+            console.log(`    ${idx + 1}. ID=${r.id}, month_key="${r.month_key}", reset_version=${r.reset_version}, employee=${r.employee_name}`);
+          });
+        }
+        
+        console.log('\n💡 DIAGNOSIS:');
+        if (fallback1.length > 0 && fallback2.length === 0) {
+          console.log('  ❌ Recaps exist for this month_key but with DIFFERENT reset_version');
+          console.log(`  Expected reset_version: ${activeResetVersion}`);
+          console.log(`  Found reset_versions: ${[...new Set(fallback1.map(r => r.reset_version))].join(', ')}`);
+          console.log('  → Recaps were persisted with wrong reset_version');
+        } else if (fallback1.length === 0 && fallback2.length > 0) {
+          console.log('  ❌ Recaps exist for this reset_version but with DIFFERENT month_key');
+          console.log(`  Expected month_key: "${monthKey}"`);
+          console.log(`  Found month_keys: ${[...new Set(fallback2.map(r => r.month_key))].join(', ')}`);
+          console.log('  → Recaps were persisted with wrong month_key');
+        } else if (fallback3.length === 0) {
+          console.log('  ❌ NO RECAPS EXIST IN DATABASE AT ALL');
+          console.log('  → Recaps were never persisted (ApplyTemplate did not write them)');
+        } else {
+          console.log('  ❌ Recaps exist but with BOTH wrong month_key AND reset_version');
+          console.log(`  Expected: month_key="${monthKey}", reset_version=${activeResetVersion}`);
+        }
+      }
+      
+      console.log('═══════════════════════════════════════════════════════════\n');
       return allRecaps;
     },
     enabled: open && activeResetVersion !== undefined
