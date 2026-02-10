@@ -1285,6 +1285,8 @@ export default function Planning() {
                   </DialogTitle>
                 </DialogHeader>
                 <AddCPGlobalModal
+                  year={currentYear}
+                  month={currentMonth}
                   onClose={() => {
                     setModalState({ isOpen: false, actionType: null, selectedEmployee: null });
                     setSelectedCPPeriod(null);
