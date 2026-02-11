@@ -197,14 +197,27 @@ export function calculateMonthlyRecap(
 
       if (dayShifts.length > 0) {
         result.workedDays++;
-        dayShifts.forEach(s => {
-          result.workedHours += calculateShiftDuration(s);
-        });
+        const dayHours = dayShifts.reduce((sum, s) => sum + calculateShiftDuration(s), 0);
+        result.workedHours += dayHours;
+        
+        // Track holiday worked days - ONLY if employee has SHIFTS on this specific holiday date
+        const isHolidayDate = holidayDates.includes(date);
+        if (isHolidayDate) {
+          result.holidaysWorkedDays++;
+          result.holidaysWorkedHours += dayHours;
+          console.log(`[HOLIDAY DISABLED] ${employee.first_name} ${employee.last_name} worked on holiday ${date}: ${dayHours}h`);
+        }
       } else if (dayNonShifts.length > 0) {
         const { hours } = calculateDayHours([], dayNonShifts, nonShiftTypes, employee, calculateShiftDuration);
         result.workedHours += hours;
       }
     });
+    
+    // Set eligibility based on actual holiday work
+    result.eligibleForHolidayPay = result.holidaysWorkedDays > 0;
+    result.ferieEligible = result.holidaysWorkedDays > 0;
+    result.ferieDays = result.holidaysWorkedDays;
+    result.ferieHours = result.holidaysWorkedHours;
 
     return result;
   }
@@ -251,6 +264,10 @@ export function calculateMonthlyRecap(
   // Calculate worked hours and days
   const dayDataMap = new Map();
   
+  // CRITICAL: Reset holiday counters
+  result.holidaysWorkedDays = 0;
+  result.holidaysWorkedHours = 0;
+  
   monthDates.forEach(date => {
     const dayShifts = shifts.filter(s => 
       s.employee_id === employee.id && 
@@ -283,10 +300,12 @@ export function calculateMonthlyRecap(
       });
     }
 
-    // Track holiday worked days
-    if (dayShifts.length > 0 && holidayDates.includes(date)) {
+    // Track holiday worked days - ONLY if employee has SHIFTS on this specific holiday date
+    const isHolidayDate = holidayDates.includes(date);
+    if (dayShifts.length > 0 && isHolidayDate) {
       result.holidaysWorkedDays++;
       result.holidaysWorkedHours += hours;
+      console.log(`[HOLIDAY] ${employee.first_name} ${employee.last_name} worked on holiday ${date}: ${hours}h`);
     }
 
     // Count non-shifts by type
