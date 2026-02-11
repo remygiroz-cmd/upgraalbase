@@ -1450,15 +1450,14 @@ export default function Planning() {
                         );
                       })}
                     </div>
-                            </div>
-                            </>
-                            )}
-                            </div>
-                            </div>
-                            </div>
-          </div>
-        </PinchZoomContainer>
-      </div>
+                    </div>
+                    </>
+                    )}
+                    </div>
+                    </div>
+                    </div>
+                    </PinchZoomContainer>
+                    </div>
 
       {/* Shift Modal */}
       <ShiftFormModal
