@@ -21,6 +21,8 @@ export function useHiddenItems(userId) {
   useEffect(() => {
     try {
       localStorage.setItem(storageKey, JSON.stringify(Array.from(hiddenItems)));
+      // Dispatch custom event for same-tab listeners
+      window.dispatchEvent(new Event('hidden-items-changed'));
     } catch (error) {
       console.error('Error saving hidden items:', error);
     }
