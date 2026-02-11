@@ -1021,11 +1021,22 @@ export default function Planning() {
                             const employeeNonShifts = getNonShiftsForEmployeeAndDate(employee.id, dateStr);
                             const totalEvents = employeeShifts.length + employeeNonShifts.length;
                             
-                            // Check if date is in CP period
+                            // Check if date is in CP period AND if it's the display date for the badge
                             const employeeCPPeriods = paidLeavePeriods.filter(p => p.employee_id === employee.id);
                             const cpPeriod = isDateInCPPeriod(dateStr, employeeCPPeriods);
                             const isCPDay = !!cpPeriod;
-                            const isLastCPDay = cpPeriod && dateStr === cpPeriod.end_cp;
+                            
+                            // Badge display logic: show on last day of period intersection with current month
+                            let isDisplayDateForCPBadge = false;
+                            if (cpPeriod) {
+                              const monthStart = formatLocalDate(new Date(currentYear, currentMonth, 1));
+                              const monthEnd = formatLocalDate(new Date(currentYear, currentMonth + 1, 0));
+                              const periodEnd = cpPeriod.end_cp;
+                              
+                              // Last day of intersection = min(periodEnd, monthEnd)
+                              const displayDate = periodEnd <= monthEnd ? periodEnd : monthEnd;
+                              isDisplayDateForCPBadge = dateStr === displayDate;
+                            }
 
                             return (
                               <div
@@ -1038,8 +1049,8 @@ export default function Planning() {
                                 )}
                               >
                                 <div className="space-y-1.5 w-full flex flex-col relative" style={{ minHeight: `${Math.max(60, maxEventsInRow * 52)}px` }}>
-                                  {/* CP Badge */}
-                                  {isLastCPDay && cpPeriod && (
+                                  {/* CP Badge - displayed on last day of intersection with current month */}
+                                  {isDisplayDateForCPBadge && cpPeriod && (
                                    <div 
                                      onClick={(e) => {
                                        e.stopPropagation();
