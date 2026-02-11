@@ -10,15 +10,31 @@ import { toast } from 'sonner';
 export default function ClearMonthModal({ isOpen, onClose, year, month }) {
   const [confirmed, setConfirmed] = useState(false);
   const [resetting, setResetting] = useState(false);
+  const [resetStats, setResetStats] = useState(null);
   const queryClient = useQueryClient();
 
   const monthKey = `${year}-${String(month + 1).padStart(2, '0')}`;
 
   const resetMutation = useMutation({
     mutationFn: async () => {
-      console.log(`🧨 [RESET FRONTEND] Lancement reset ${monthKey} via backend function`);
+      console.log(`🧨 [RESET UI] Soft reset immédiat ${monthKey}`);
       
-      // Appeler la fonction backend qui fait le travail lourd
+      // PHASE A: Invalider immédiatement le cache pour masquer les données
+      queryClient.setQueryData(['planningMonth', year, month], (old) => ({
+        ...old,
+        reset_in_progress: true,
+        reset_version: (old?.reset_version || 0) + 1
+      }));
+      
+      // Masquer visuellement toutes les données
+      queryClient.invalidateQueries({ queryKey: ['shifts'] });
+      queryClient.invalidateQueries({ queryKey: ['nonShiftEvents'] });
+      queryClient.invalidateQueries({ queryKey: ['paidLeavePeriods'] });
+      queryClient.invalidateQueries({ queryKey: ['exportOverrides'] });
+      
+      console.log(`  ✓ UI masquée instantanément`);
+      
+      // PHASE B: Lancer la purge backend
       const response = await base44.functions.invoke('resetMonth', {
         year,
         month,
@@ -29,15 +45,17 @@ export default function ClearMonthModal({ isOpen, onClose, year, month }) {
         throw new Error(response.data.error || 'Erreur lors du reset');
       }
 
-      console.log(`✅ [RESET FRONTEND] Terminé:`, response.data.stats);
+      console.log(`✅ [RESET UI] Backend terminé:`, response.data.stats);
       return response.data;
     },
     onSuccess: (data) => {
       const { stats, totalDeleted } = data;
       
-      console.log(`✅ [RESET FRONTEND] ${monthKey} réinitialisé en ${stats.duration}ms`);
+      console.log(`✅ [RESET COMPLET] ${monthKey} en ${stats.duration}ms - ${totalDeleted} éléments`);
       
-      // Invalidate all planning queries
+      setResetStats(stats);
+      
+      // PHASE C: Invalider TOUT le cache pour refetch propre
       queryClient.invalidateQueries({ queryKey: ['shifts'] });
       queryClient.invalidateQueries({ queryKey: ['nonShiftEvents'] });
       queryClient.invalidateQueries({ queryKey: ['paidLeavePeriods'] });
@@ -45,32 +63,28 @@ export default function ClearMonthModal({ isOpen, onClose, year, month }) {
       queryClient.invalidateQueries({ queryKey: ['allMonthlyRecaps'] });
       queryClient.invalidateQueries({ queryKey: ['exportOverrides'] });
       queryClient.invalidateQueries({ queryKey: ['planningMonth'] });
+      
+      // Clear aussi les queries spécifiques au mois
+      queryClient.removeQueries({ queryKey: ['shifts', monthKey] });
+      queryClient.removeQueries({ queryKey: ['nonShiftEvents', monthKey] });
+      queryClient.removeQueries({ queryKey: ['exportOverrides', monthKey] });
 
       setResetting(false);
       
-      // Toast avec détails
-      toast.success(
-        <div className="text-sm">
-          <div className="font-bold mb-1">✓ Mois {monthKey} réinitialisé</div>
-          <div className="text-xs space-y-0.5 text-gray-600">
-            <div>• {stats.deleted.shifts} shifts supprimés</div>
-            <div>• {stats.deleted.nonShifts} absences supprimées</div>
-            <div>• {stats.deleted.cpPeriods} périodes CP supprimées</div>
-            <div>• {stats.deleted.monthlyRecaps} récaps mensuels supprimés</div>
-            <div>• {stats.deleted.exportOverrides} overrides export supprimés</div>
-            <div className="text-blue-600 font-medium pt-1">
-              Total: {totalDeleted} éléments en {stats.duration}ms
-            </div>
-          </div>
-        </div>,
-        { duration: 6000 }
-      );
-      onClose();
+      // Toast succinct
+      toast.success(`✓ Reset ${monthKey} terminé en ${(stats.duration / 1000).toFixed(1)}s`, {
+        duration: 3000
+      });
     },
     onError: (error) => {
-      console.error('❌ [HARD RESET] Erreur:', error);
+      console.error('❌ [RESET] Erreur:', error);
       setResetting(false);
-      toast.error(`Erreur lors de la réinitialisation: ${error.message}`);
+      setResetStats(null);
+      
+      // Unlock UI
+      queryClient.invalidateQueries({ queryKey: ['planningMonth'] });
+      
+      toast.error(`Erreur: ${error.message}`);
     }
   });
 
@@ -81,11 +95,18 @@ export default function ClearMonthModal({ isOpen, onClose, year, month }) {
     }
 
     setResetting(true);
+    setResetStats(null);
     resetMutation.mutate();
   };
 
+  const handleClose = () => {
+    setConfirmed(false);
+    setResetStats(null);
+    onClose();
+  };
+
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
+    <Dialog open={isOpen} onOpenChange={handleClose}>
       <DialogContent className="max-w-2xl">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-red-600">
@@ -95,6 +116,32 @@ export default function ClearMonthModal({ isOpen, onClose, year, month }) {
         </DialogHeader>
 
         <div className="space-y-4">
+          {/* Résumé du reset si disponible */}
+          {resetStats && (
+            <div className="bg-green-50 border-2 border-green-300 rounded-lg p-4">
+              <div className="flex items-start gap-3">
+                <div className="text-green-600 text-2xl">✓</div>
+                <div className="flex-1">
+                  <h3 className="font-bold text-green-900 text-base mb-2">
+                    Reset terminé en {(resetStats.duration / 1000).toFixed(1)}s
+                  </h3>
+                  <div className="grid grid-cols-2 gap-2 text-sm text-green-800">
+                    <div>• Shifts: {resetStats.deleted.shifts}</div>
+                    <div>• Absences: {resetStats.deleted.nonShifts}</div>
+                    <div>• CP: {resetStats.deleted.cpPeriods}</div>
+                    <div>• Récaps hebdo: {resetStats.deleted.weeklyRecaps}</div>
+                    <div>• Récaps mensuels: {resetStats.deleted.monthlyRecaps}</div>
+                    <div>• Overrides export: {resetStats.deleted.exportOverrides}</div>
+                  </div>
+                  {Object.values(resetStats.verified).some(v => v > 0) && (
+                    <div className="mt-2 text-xs text-orange-700">
+                      ⚠️ Retry effectué sur {Object.values(resetStats.verified).reduce((a,b) => a+b, 0)} éléments
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
           {/* Warning Banner */}
           <div className="bg-red-50 border-2 border-red-300 rounded-lg p-4">
             <div className="flex items-start gap-3">
@@ -146,28 +193,30 @@ export default function ClearMonthModal({ isOpen, onClose, year, month }) {
         <DialogFooter>
           <Button
             variant="outline"
-            onClick={onClose}
+            onClick={handleClose}
             disabled={resetting}
           >
-            Annuler
+            {resetStats ? 'Fermer' : 'Annuler'}
           </Button>
-          <Button
-            variant="destructive"
-            onClick={handleReset}
-            disabled={!confirmed || resetting}
-          >
-            {resetting ? (
-              <>
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                Réinitialisation...
-              </>
-            ) : (
-              <>
-                <Trash2 className="w-4 h-4 mr-2" />
-                Supprimer et réinitialiser
-              </>
-            )}
-          </Button>
+          {!resetStats && (
+            <Button
+              variant="destructive"
+              onClick={handleReset}
+              disabled={!confirmed || resetting}
+            >
+              {resetting ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Reset en cours...
+                </>
+              ) : (
+                <>
+                  <Trash2 className="w-4 h-4 mr-2" />
+                  Supprimer et réinitialiser
+                </>
+              )}
+            </Button>
+          )}
         </DialogFooter>
       </DialogContent>
     </Dialog>

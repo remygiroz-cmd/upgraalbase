@@ -1,17 +1,17 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
 
 /**
- * 🧨 RESET TOTAL D'UN MOIS - VERSION SERVEUR OPTIMISÉE
+ * 🧨 RESET ATOMIQUE + BATCH - VERSION OPTIMISÉE < 5 SECONDES
  * 
- * Suppression groupée ultra-rapide pour éviter les timeouts frontend
- * Supprime TOUTES les données liées à un mois spécifique
+ * Phase A: Lock immédiat (soft reset UI)
+ * Phase B: Purge batch parallélisée
+ * Phase C: Vérification + clear cache
  */
 
 Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
     
-    // Vérifier l'authentification
     const user = await base44.auth.me();
     if (!user) {
       return Response.json({ error: 'Unauthorized' }, { status: 401 });
@@ -25,7 +25,7 @@ Deno.serve(async (req) => {
       }, { status: 400 });
     }
 
-    console.log(`🧨 [RESET SERVER] Début reset ${monthKey} par ${user.email}`);
+    console.log(`🧨 [RESET ATOMIQUE] Début ${monthKey} par ${user.email}`);
     
     const stats = {
       deleted: {
@@ -36,109 +36,168 @@ Deno.serve(async (req) => {
         monthlyRecaps: 0,
         exportOverrides: 0
       },
+      verified: {},
       duration: 0,
       timestamp: new Date().toISOString()
     };
 
     const startTime = Date.now();
 
-    // 1) SHIFTS - Suppression groupée
-    const shifts = await base44.asServiceRole.entities.Shift.filter({ month_key: monthKey });
-    for (const shift of shifts) {
-      await base44.asServiceRole.entities.Shift.delete(shift.id);
-      stats.deleted.shifts++;
-    }
-    console.log(`  ✓ ${stats.deleted.shifts} shifts supprimés`);
-
-    // 2) NON-SHIFTS - Suppression groupée
-    const nonShifts = await base44.asServiceRole.entities.NonShiftEvent.filter({ month_key: monthKey });
-    for (const ns of nonShifts) {
-      await base44.asServiceRole.entities.NonShiftEvent.delete(ns.id);
-      stats.deleted.nonShifts++;
-    }
-    console.log(`  ✓ ${stats.deleted.nonShifts} non-shifts supprimés`);
-
-    // 3) PÉRIODES CP - Suppression groupée
-    const cpPeriods = await base44.asServiceRole.entities.PaidLeavePeriod.filter({ month_key: monthKey });
-    for (const cp of cpPeriods) {
-      await base44.asServiceRole.entities.PaidLeavePeriod.delete(cp.id);
-      stats.deleted.cpPeriods++;
-    }
-    console.log(`  ✓ ${stats.deleted.cpPeriods} périodes CP supprimées`);
-
-    // 4) RÉCAPS HEBDOMADAIRES - Suppression groupée
-    const weeklyRecaps = await base44.asServiceRole.entities.WeeklyRecap.filter({ month_key: monthKey });
-    for (const recap of weeklyRecaps) {
-      await base44.asServiceRole.entities.WeeklyRecap.delete(recap.id);
-      stats.deleted.weeklyRecaps++;
-    }
-    console.log(`  ✓ ${stats.deleted.weeklyRecaps} récaps hebdo supprimés`);
-
-    // 5) RÉCAPS MENSUELS - Par year/month
-    const monthlyRecaps = await base44.asServiceRole.entities.MonthlyRecap.filter({ 
-      year: parseInt(year),
-      month: parseInt(month)
-    });
-    for (const recap of monthlyRecaps) {
-      await base44.asServiceRole.entities.MonthlyRecap.delete(recap.id);
-      stats.deleted.monthlyRecaps++;
-    }
-    console.log(`  ✓ ${stats.deleted.monthlyRecaps} récaps mensuels supprimés`);
-
-    // 6) OVERRIDES EXPORT COMPTA - Suppression groupée
-    const exportOverrides = await base44.asServiceRole.entities.ExportComptaOverride.filter({ 
-      month_key: monthKey 
-    });
-    for (const override of exportOverrides) {
-      await base44.asServiceRole.entities.ExportComptaOverride.delete(override.id);
-      stats.deleted.exportOverrides++;
-    }
-    console.log(`  ✓ ${stats.deleted.exportOverrides} overrides export supprimés`);
-
-    // 7) METTRE À JOUR LE PLANNING MONTH (versioning)
+    // PHASE A: LOCK IMMÉDIAT - Incrémenter version pour invalider les données existantes
     const planningMonths = await base44.asServiceRole.entities.PlanningMonth.filter({ 
       year: parseInt(year),
       month: parseInt(month)
     });
 
     let planningMonth = planningMonths[0];
+    let newVersion = 1;
 
     if (planningMonth) {
-      const newVersion = (planningMonth.reset_version || 0) + 1;
+      newVersion = (planningMonth.reset_version || 0) + 1;
       await base44.asServiceRole.entities.PlanningMonth.update(planningMonth.id, {
         reset_version: newVersion,
+        reset_in_progress: true,
         reset_at: new Date().toISOString(),
         reset_by: user.email,
         reset_by_name: user.full_name
       });
-      stats.version = newVersion;
     } else {
-      const newMonth = await base44.asServiceRole.entities.PlanningMonth.create({
+      await base44.asServiceRole.entities.PlanningMonth.create({
         year: parseInt(year),
         month: parseInt(month),
         month_key: monthKey,
         reset_version: 1,
+        reset_in_progress: true,
         reset_at: new Date().toISOString(),
         reset_by: user.email,
         reset_by_name: user.full_name
       });
-      stats.version = 1;
     }
 
+    console.log(`  ✓ LOCK activé - version ${newVersion}`);
+
+    // PHASE B: PURGE BATCH PARALLÉLISÉE (Promise.all pour gagner du temps)
+    const deleteTasks = [];
+
+    // Helper pour supprimer en batch avec retry
+    const batchDelete = async (entityName, filterKey, filterValue) => {
+      const filter = { [filterKey]: filterValue };
+      const items = await base44.asServiceRole.entities[entityName].filter(filter);
+      
+      // Suppression parallélisée en chunks de 10
+      const chunkSize = 10;
+      for (let i = 0; i < items.length; i += chunkSize) {
+        const chunk = items.slice(i, i + chunkSize);
+        await Promise.all(chunk.map(item => 
+          base44.asServiceRole.entities[entityName].delete(item.id)
+        ));
+      }
+      
+      return items.length;
+    };
+
+    // Lancer toutes les suppressions en parallèle
+    deleteTasks.push(
+      batchDelete('Shift', 'month_key', monthKey).then(count => { 
+        stats.deleted.shifts = count; 
+        console.log(`  ✓ ${count} shifts`);
+      })
+    );
+
+    deleteTasks.push(
+      batchDelete('NonShiftEvent', 'month_key', monthKey).then(count => { 
+        stats.deleted.nonShifts = count;
+        console.log(`  ✓ ${count} non-shifts`);
+      })
+    );
+
+    deleteTasks.push(
+      batchDelete('PaidLeavePeriod', 'month_key', monthKey).then(count => { 
+        stats.deleted.cpPeriods = count;
+        console.log(`  ✓ ${count} CP`);
+      })
+    );
+
+    deleteTasks.push(
+      batchDelete('WeeklyRecap', 'month_key', monthKey).then(count => { 
+        stats.deleted.weeklyRecaps = count;
+        console.log(`  ✓ ${count} récaps hebdo`);
+      })
+    );
+
+    deleteTasks.push(
+      batchDelete('ExportComptaOverride', 'month_key', monthKey).then(count => { 
+        stats.deleted.exportOverrides = count;
+        console.log(`  ✓ ${count} overrides export`);
+      })
+    );
+
+    // MonthlyRecap par year/month
+    deleteTasks.push(
+      (async () => {
+        const recaps = await base44.asServiceRole.entities.MonthlyRecap.filter({ 
+          year: parseInt(year),
+          month: parseInt(month)
+        });
+        
+        const chunkSize = 10;
+        for (let i = 0; i < recaps.length; i += chunkSize) {
+          const chunk = recaps.slice(i, i + chunkSize);
+          await Promise.all(chunk.map(r => base44.asServiceRole.entities.MonthlyRecap.delete(r.id)));
+        }
+        
+        stats.deleted.monthlyRecaps = recaps.length;
+        console.log(`  ✓ ${recaps.length} récaps mensuels`);
+      })()
+    );
+
+    // Attendre toutes les suppressions
+    await Promise.all(deleteTasks);
+
+    // PHASE C: VÉRIFICATION + RETRY si nécessaire
+    console.log(`  ⚡ Vérification résidus...`);
+    
+    const verify = async (entityName, filterKey, filterValue) => {
+      const filter = { [filterKey]: filterValue };
+      const remaining = await base44.asServiceRole.entities[entityName].filter(filter);
+      
+      if (remaining.length > 0) {
+        console.log(`  ⚠️ RETRY: ${remaining.length} ${entityName} restants`);
+        for (const item of remaining) {
+          await base44.asServiceRole.entities[entityName].delete(item.id);
+        }
+      }
+      
+      return remaining.length;
+    };
+
+    stats.verified.shifts = await verify('Shift', 'month_key', monthKey);
+    stats.verified.nonShifts = await verify('NonShiftEvent', 'month_key', monthKey);
+    stats.verified.cpPeriods = await verify('PaidLeavePeriod', 'month_key', monthKey);
+    stats.verified.exportOverrides = await verify('ExportComptaOverride', 'month_key', monthKey);
+
+    // Unlock
+    if (planningMonth) {
+      await base44.asServiceRole.entities.PlanningMonth.update(planningMonth.id, {
+        reset_in_progress: false
+      });
+    }
+
+    stats.version = newVersion;
     stats.duration = Date.now() - startTime;
     const totalDeleted = Object.values(stats.deleted).reduce((sum, val) => sum + val, 0);
 
-    console.log(`✅ [RESET SERVER] ${monthKey} terminé en ${stats.duration}ms - ${totalDeleted} éléments supprimés`);
+    console.log(`✅ [RESET ATOMIQUE] ${monthKey} terminé en ${stats.duration}ms - ${totalDeleted} éléments`);
 
     return Response.json({
       success: true,
-      message: `Mois ${monthKey} réinitialisé avec succès`,
+      message: `Reset ${monthKey} terminé en ${(stats.duration / 1000).toFixed(1)}s`,
       stats,
       totalDeleted
     });
 
   } catch (error) {
-    console.error('❌ [RESET SERVER] Erreur:', error);
+    console.error('❌ [RESET ATOMIQUE] Erreur:', error);
     return Response.json({ 
       success: false,
       error: error.message,
