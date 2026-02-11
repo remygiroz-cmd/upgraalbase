@@ -550,6 +550,7 @@ export default function ExportComptaModal({ open, onOpenChange, monthStart, mont
 
   // Calculate totals
   const totals = exportData.reduce((acc, row) => ({
+    nbJoursTravailles: acc.nbJoursTravailles + (row.nbJoursTravailles || 0),
     totalPaid: acc.totalPaid + row.totalPaid,
     payeesHorsSup: acc.payeesHorsSup + row.payeesHorsSup,
     compl10: acc.compl10 + row.compl10,
@@ -557,6 +558,7 @@ export default function ExportComptaModal({ open, onOpenChange, monthStart, mont
     supp25: acc.supp25 + row.supp25,
     supp50: acc.supp50 + row.supp50
   }), {
+    nbJoursTravailles: 0,
     totalPaid: 0,
     payeesHorsSup: 0,
     compl10: 0,
