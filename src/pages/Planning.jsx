@@ -64,7 +64,18 @@ export default function Planning() {
   const [hasHiddenItems, setHasHiddenItems] = useState(false); // Track hidden items for "Show All" button
   const queryClient = useQueryClient();
 
-  // Monitor localStorage for hidden items changes
+  // Undo/Redo system
+  const undoStack = useUndoStack();
+  
+  const tableContainerRef = useRef(null);
+
+  // Fetch current user
+  const { data: currentUser } = useQuery({
+    queryKey: ['currentUser'],
+    queryFn: () => base44.auth.me()
+  });
+
+  // Monitor localStorage for hidden items changes (after currentUser is declared)
   useEffect(() => {
     const checkHiddenItems = () => {
       if (!currentUser?.id) return;
@@ -94,17 +105,6 @@ export default function Planning() {
       window.removeEventListener('hidden-items-changed', checkHiddenItems);
     };
   }, [currentUser?.id]);
-
-  // Undo/Redo system
-  const undoStack = useUndoStack();
-  
-  const tableContainerRef = useRef(null);
-
-  // Fetch current user
-  const { data: currentUser } = useQuery({
-    queryKey: ['currentUser'],
-    queryFn: () => base44.auth.me()
-  });
 
   const currentMonth = currentDate.getMonth();
   const currentYear = currentDate.getFullYear();
