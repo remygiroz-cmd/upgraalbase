@@ -19,6 +19,7 @@ import {
   calculateShiftDuration as calcShiftDuration,
   parseHoursString
 } from '@/components/utils/monthlyRecapCalculations';
+import { getFinalRecap } from './recapWithOverrides';
 
 /**
  * Récap mensuel avec support 3 modes de calcul
@@ -48,6 +49,7 @@ export default function MonthlySummary({
 
   const year = monthStart.getFullYear();
   const month = monthStart.getMonth(); // 0-indexed for calculation engine
+  const monthKey = `${year}-${String(month + 1).padStart(2, '0')}`; // e.g. "2026-02"
 
   // Fetch calculation mode from AppSettings
   const { data: calculationSettings = [] } = useQuery({
@@ -57,6 +59,14 @@ export default function MonthlySummary({
   });
 
   const calculationMode = calculationSettings[0]?.planning_calculation_mode || 'disabled';
+
+  // Fetch export overrides
+  const { data: exportOverrides = [] } = useQuery({
+    queryKey: ['exportOverrides', monthKey],
+    queryFn: () => base44.entities.ExportComptaOverride.filter({ month_key: monthKey }),
+    staleTime: 60 * 1000,
+    enabled: !!employee?.id
+  });
 
   // Calculate automatic values using the calculation engine
   const calculatedRecap = useMemo(() => {
@@ -75,9 +85,14 @@ export default function MonthlySummary({
     );
   }, [calculationMode, employee, shifts, nonShiftEvents, nonShiftTypes, holidayDates, year, month]);
 
-  // Apply manual overrides from monthlyRecap entity
+  // 🎯 SOURCE DE VÉRITÉ : Récap final = auto + overrides export
+  const recapWithExportOverrides = useMemo(() => {
+    return getFinalRecap(monthKey, employee.id, calculatedRecap, exportOverrides);
+  }, [monthKey, employee.id, calculatedRecap, exportOverrides]);
+
+  // Apply manual overrides from monthlyRecap entity (legacy, kept for backward compatibility)
   const recapWithOverrides = useMemo(() => {
-    if (!monthlyRecap) return { ...calculatedRecap, overriddenFields: [] };
+    if (!monthlyRecap) return { ...recapWithExportOverrides, overriddenFields: [] };
 
     const overrides = {
       expectedDays: monthlyRecap.manual_expected_days,
@@ -97,8 +112,8 @@ export default function MonthlySummary({
       cpDays: monthlyRecap.manual_cp_days
     };
 
-    return applyManualOverrides(calculatedRecap, overrides);
-  }, [calculatedRecap, monthlyRecap]);
+    return applyManualOverrides(recapWithExportOverrides, overrides);
+  }, [recapWithExportOverrides, monthlyRecap]);
 
   // CP days from periods (for fallback in disabled mode)
   const autoCPDays = calculateMonthlyCPTotal(cpPeriods, monthStart, monthEnd);
@@ -191,7 +206,8 @@ ${deductionDetails.length > 0 ? `  Détail: ${deductionDetails.map(d => `${d.dat
   // Use CP from calculation or fallback
   const displayCPDays = cpDays ?? autoCPDays ?? 0;
 
-  const hasManualOverride = overriddenFields.length > 0 || !!monthlyRecap;
+  const hasExportOverride = exportOverrides.some(o => o.employee_id === employee.id);
+  const hasManualOverride = overriddenFields.length > 0 || !!monthlyRecap || hasExportOverride;
 
   // Mode badge colors
   const getModeColor = () => {
@@ -425,11 +441,11 @@ ${deductionDetails.length > 0 ? `  Détail: ${deductionDetails.map(d => `${d.dat
           </div>
         )}
 
-        {/* Manual override indicator */}
+        {/* Override indicator */}
         {hasManualOverride && (
           <div className="mt-1 text-[9px] text-blue-700 font-semibold flex items-center justify-center gap-1">
             <AlertCircle className="w-3 h-3" />
-            Valeurs modifiées
+            {hasExportOverride ? 'Export compta modifié' : 'Valeurs modifiées'}
           </div>
         )}
       </div>
