@@ -31,7 +31,7 @@ function formatDateFR(dateStr) {
  * Construit une ligne d'export en lisant les valeurs du récap calculé
  * (même logique que MonthlySummary)
  */
-function buildExportRow(employee, calculatedRecap, nonShiftTypes, cpPeriods) {
+function buildExportRow(employee, calculatedRecap, nonShiftTypes, cpPeriods, nonShiftEvents) {
   console.log('═════════════════════════════════════════════════');
   console.log('📊 BUILDING EXPORT ROW FROM CALCULATED RECAP');
   console.log('═════════════════════════════════════════════════');
@@ -47,8 +47,52 @@ function buildExportRow(employee, calculatedRecap, nonShiftTypes, cpPeriods) {
   const extraDays = calculatedRecap?.extraDays || 0;
   const joursSupp = extraDays > 0 ? `+${extraDays}` : '';
 
-  // 5) Payées (hors sup/comp) = workedHours (heures effectuées)
-  const payeesHorsSup = calculatedRecap?.workedHours || 0;
+  // 5) Payées (hors sup/comp) - CALCULER COMME DANS MONTHLYSUMMARY
+  // = Base contractuelle mensuelle - déductions (non-shifts impactant paie)
+  const parseContractHours = (hoursStr) => {
+    if (!hoursStr) return null;
+    const cleanStr = String(hoursStr).trim().replace(/h/gi, '').replace(/,/g, '.');
+    const hours = parseFloat(cleanStr);
+    return isNaN(hours) ? null : hours;
+  };
+
+  let payeesHorsSup = calculatedRecap?.workedHours || 0;
+  
+  const monthlyContractHours = parseContractHours(employee.contract_hours);
+  if (monthlyContractHours) {
+    const employeeNonShifts = nonShiftEvents.filter(ns => ns.employee_id === employee.id);
+    
+    const getDailyHoursForDate = (dateStr) => {
+      const date = new Date(dateStr);
+      const dayIndex = date.getDay();
+      const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+      const dayName = dayNames[dayIndex];
+
+      if (employee.weekly_schedule?.[dayName]) {
+        const dayConfig = employee.weekly_schedule[dayName];
+        if (dayConfig.worked) {
+          return dayConfig.hours || 0;
+        } else {
+          return 0;
+        }
+      }
+
+      const weeklyHours = parseContractHours(employee.contract_hours_weekly);
+      const workDaysPerWeek = employee.work_days_per_week || 5;
+      return weeklyHours / workDaysPerWeek;
+    };
+
+    let totalDeduction = 0;
+    employeeNonShifts.forEach(ns => {
+      const nsType = nonShiftTypes.find(t => t.id === ns.non_shift_type_id);
+      if (nsType?.impacts_payroll === true) {
+        const dailyHours = getDailyHoursForDate(ns.date);
+        totalDeduction += dailyHours;
+      }
+    });
+
+    payeesHorsSup = Math.max(0, monthlyContractHours - totalDeduction);
+  }
 
   // 6-9) Heures compl/supp - LECTURE DIRECTE
   const compl10 = calculatedRecap?.complementaryHours10 || 0;
@@ -56,10 +100,10 @@ function buildExportRow(employee, calculatedRecap, nonShiftTypes, cpPeriods) {
   const supp25 = calculatedRecap?.overtimeHours25 || 0;
   const supp50 = calculatedRecap?.overtimeHours50 || 0;
 
-  // 10) Férié
+  // 10) Férié - UNIQUEMENT SI ÉLIGIBLE
   const holidayDays = calculatedRecap?.holidaysWorkedDays || 0;
   const holidayHours = calculatedRecap?.holidaysWorkedHours || 0;
-  const holidayEligible = calculatedRecap?.eligibleForHolidayPay !== false;
+  const holidayEligible = calculatedRecap?.eligibleForHolidayPay === true;
   const ferieStr = holidayEligible && holidayDays > 0 
     ? `${holidayDays}j, ${holidayHours.toFixed(1)}h` 
     : '';
@@ -70,25 +114,48 @@ function buildExportRow(employee, calculatedRecap, nonShiftTypes, cpPeriods) {
     totalPaid += holidayHours;
   }
 
-  // 11) Non-shifts visibles récap
+  // 11) Non-shifts visibles récap AVEC DATES
   const nonShiftsVisible = [];
-  if (calculatedRecap?.nonShiftsByType) {
-    Object.entries(calculatedRecap.nonShiftsByType).forEach(([typeId, typeData]) => {
-      const nsType = nonShiftTypes.find(t => t.id === typeId);
-      if (nsType && nsType.visible_in_recap && typeData.count > 0) {
-        const code = nsType.code || nsType.label?.substring(0, 3).toUpperCase();
-        nonShiftsVisible.push(`${code} ${typeData.count}j`);
+  const employeeNonShifts = nonShiftEvents.filter(ns => ns.employee_id === employee.id);
+  
+  // Grouper par type
+  const nonShiftsByType = {};
+  employeeNonShifts.forEach(ns => {
+    const nsType = nonShiftTypes.find(t => t.id === ns.non_shift_type_id);
+    if (nsType && nsType.visible_in_recap) {
+      if (!nonShiftsByType[nsType.id]) {
+        nonShiftsByType[nsType.id] = {
+          type: nsType,
+          dates: []
+        };
       }
-    });
-  }
+      nonShiftsByType[nsType.id].dates.push(ns.date);
+    }
+  });
+
+  // Formater avec dates
+  Object.values(nonShiftsByType).forEach(({ type, dates }) => {
+    const code = type.code || type.label?.substring(0, 3).toUpperCase();
+    const count = dates.length;
+    const firstDate = dates.sort()[0];
+    const dateFormatted = formatDateFR(firstDate);
+    nonShiftsVisible.push(`${code} ${count}j le ${dateFormatted}`);
+  });
+  
   const nonShiftsStr = nonShiftsVisible.join('\n') || '';
 
-  // 12) CP décomptés
-  const totalCPDays = calculatedRecap?.cpDays || 0;
-  let cpStr = '';
-  if (totalCPDays > 0) {
-    cpStr = `${totalCPDays} CP`;
-  }
+  // 12) CP décomptés AVEC PÉRIODES
+  const employeeCPPeriods = cpPeriods.filter(cp => cp.employee_id === employee.id);
+  const cpLines = [];
+  
+  employeeCPPeriods.forEach(cp => {
+    const cpDays = cp.cp_days_manual || cp.cp_days_auto || 0;
+    const departDate = formatDateFR(cp.cp_start_date);
+    const repriseDate = formatDateFR(cp.return_date);
+    cpLines.push(`${cpDays} CP (départ le ${departDate}, reprise le ${repriseDate})`);
+  });
+  
+  const cpStr = cpLines.join('\n') || '';
 
   console.log('✅ Export row built:', {
     employeeName,
@@ -536,7 +603,7 @@ export default function ExportComptaModal({ open, onOpenChange, monthStart, mont
       }
 
       // Construire la ligne d'export depuis le récap calculé+overridé
-      return buildExportRow(employee, finalRecap, nonShiftTypes, cpPeriods);
+      return buildExportRow(employee, finalRecap, nonShiftTypes, cpPeriods, nonShiftEvents);
     })
     .filter(Boolean);
 
