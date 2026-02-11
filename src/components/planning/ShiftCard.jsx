@@ -277,12 +277,26 @@ const ShiftCard = React.memo(function ShiftCard({
                 style={{ color: colors.text }}
               />
             ) : (
-              <span
-                onClick={(e) => handleStartEdit('end', e)}
-                className="cursor-pointer hover:bg-white/50 px-1 py-0.5 rounded transition-colors"
-              >
-                {shift.end_time}
-              </span>
+              <div className="flex items-center gap-0.5">
+                <span
+                  onClick={(e) => handleStartEdit('end', e)}
+                  className="cursor-pointer hover:bg-white/50 px-1 py-0.5 rounded transition-colors"
+                >
+                  {shift.end_time}
+                </span>
+                <button
+                  onClick={handleSetEndNow}
+                  disabled={isSettingEndNow}
+                  className="p-0.5 hover:bg-green-100 rounded transition-colors disabled:opacity-50"
+                  title="Mettre fin maintenant"
+                >
+                  {isSettingEndNow ? (
+                    <div className="w-3 h-3 border-2 border-green-600 border-t-transparent rounded-full animate-spin" />
+                  ) : (
+                    <Clock className="w-3 h-3 text-green-600" />
+                  )}
+                </button>
+              </div>
             )}
           </div>
         </div>
