@@ -1105,6 +1105,9 @@ export default function Planning() {
                                           onDelete={handleDeleteShift}
                                           hasRestWarning={warnings.hasRestWarning}
                                           hasOvertimeWarning={warnings.hasOvertimeWarning}
+                                          currentYear={currentYear}
+                                          currentMonth={currentMonth}
+                                          resetVersion={resetVersion}
                                         />
                                       </div>
                                     );

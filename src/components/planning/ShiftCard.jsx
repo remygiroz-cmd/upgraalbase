@@ -21,7 +21,17 @@ const STATUS_ICONS = {
   cancelled: '❌'
 };
 
-const ShiftCard = React.memo(function ShiftCard({ shift, positions = [], onClick, onDelete, hasRestWarning, hasOvertimeWarning }) {
+const ShiftCard = React.memo(function ShiftCard({ 
+  shift, 
+  positions = [], 
+  onClick, 
+  onDelete, 
+  hasRestWarning, 
+  hasOvertimeWarning,
+  currentYear,
+  currentMonth,
+  resetVersion
+}) {
   const [editingField, setEditingField] = useState(null); // 'start' | 'end' | null
   const [tempValue, setTempValue] = useState('');
   const inputRef = useRef(null);
@@ -62,10 +72,20 @@ const ShiftCard = React.memo(function ShiftCard({ shift, positions = [], onClick
   // Mutation pour update du shift
   const updateShiftMutation = useMutation({
     mutationFn: ({ id, data }) => base44.entities.Shift.update(id, data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['shifts'] });
-      queryClient.invalidateQueries({ queryKey: ['allWeeklyRecaps'] });
-      queryClient.invalidateQueries({ queryKey: ['allMonthlyRecaps'] });
+    onSuccess: async () => {
+      // Invalider et refetch TOUTES les queries liées (comme la modale)
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['shifts', currentYear, currentMonth, resetVersion] }),
+        queryClient.invalidateQueries({ queryKey: ['allWeeklyRecaps', currentYear, currentMonth, resetVersion] }),
+        queryClient.invalidateQueries({ queryKey: ['allMonthlyRecaps', currentYear, currentMonth, resetVersion] })
+      ]);
+      
+      // Forcer un refetch immédiat pour mettre à jour l'UI
+      await Promise.all([
+        queryClient.refetchQueries({ queryKey: ['shifts', currentYear, currentMonth, resetVersion] }),
+        queryClient.refetchQueries({ queryKey: ['allWeeklyRecaps', currentYear, currentMonth, resetVersion] })
+      ]);
+      
       setEditingField(null);
       setTempValue('');
       toast.success('Horaire mis à jour');
