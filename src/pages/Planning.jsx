@@ -1105,9 +1105,7 @@ export default function Planning() {
                                           onDelete={handleDeleteShift}
                                           hasRestWarning={warnings.hasRestWarning}
                                           hasOvertimeWarning={warnings.hasOvertimeWarning}
-                                          currentYear={currentYear}
-                                          currentMonth={currentMonth}
-                                          resetVersion={resetVersion}
+                                          onSave={(id, data) => saveShiftMutation.mutate({ id, data })}
                                         />
                                       </div>
                                     );

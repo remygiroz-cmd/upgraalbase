@@ -28,14 +28,12 @@ const ShiftCard = React.memo(function ShiftCard({
   onDelete, 
   hasRestWarning, 
   hasOvertimeWarning,
-  currentYear,
-  currentMonth,
-  resetVersion
+  onSave
 }) {
   const [editingField, setEditingField] = useState(null); // 'start' | 'end' | null
   const [tempValue, setTempValue] = useState('');
+  const [isSaving, setIsSaving] = useState(false);
   const inputRef = useRef(null);
-  const queryClient = useQueryClient();
 
   const calculateDuration = () => {
     const [startH, startM] = shift.start_time.split(':').map(Number);
@@ -69,33 +67,30 @@ const ShiftCard = React.memo(function ShiftCard({
     }
   }, [editingField]);
 
-  // Mutation pour update du shift
-  const updateShiftMutation = useMutation({
-    mutationFn: ({ id, data }) => base44.entities.Shift.update(id, data),
-    onSuccess: async () => {
-      // Invalider et refetch TOUTES les queries liées (comme la modale)
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ['shifts', currentYear, currentMonth, resetVersion] }),
-        queryClient.invalidateQueries({ queryKey: ['allWeeklyRecaps', currentYear, currentMonth, resetVersion] }),
-        queryClient.invalidateQueries({ queryKey: ['allMonthlyRecaps', currentYear, currentMonth, resetVersion] })
-      ]);
+  // Handler pour sauvegarder via la même logique que la modale
+  const handleSaveTime = async (newStartTime, newEndTime) => {
+    setIsSaving(true);
+    
+    try {
+      // Utiliser exactement la même fonction que la modale
+      const shiftData = {
+        ...shift,
+        start_time: newStartTime,
+        end_time: newEndTime
+      };
       
-      // Forcer un refetch immédiat pour mettre à jour l'UI
-      await Promise.all([
-        queryClient.refetchQueries({ queryKey: ['shifts', currentYear, currentMonth, resetVersion] }),
-        queryClient.refetchQueries({ queryKey: ['allWeeklyRecaps', currentYear, currentMonth, resetVersion] })
-      ]);
+      // onSave est la même mutation que dans la modale (invalidation complète)
+      await onSave(shift.id, shiftData);
       
       setEditingField(null);
       setTempValue('');
       toast.success('Horaire mis à jour');
-    },
-    onError: (error) => {
+    } catch (error) {
       toast.error(`Erreur: ${error.message}`);
-      setEditingField(null);
-      setTempValue('');
+    } finally {
+      setIsSaving(false);
     }
-  });
+  };
 
   const handleStartEdit = (field, e) => {
     e.stopPropagation();
@@ -109,7 +104,7 @@ const ShiftCard = React.memo(function ShiftCard({
     setTempValue('');
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!tempValue || tempValue === (editingField === 'start' ? shift.start_time : shift.end_time)) {
       handleCancel();
       return;
@@ -137,14 +132,8 @@ const ShiftCard = React.memo(function ShiftCard({
       return;
     }
 
-    // Save
-    updateShiftMutation.mutate({
-      id: shift.id,
-      data: {
-        start_time: newStartTime,
-        end_time: newEndTime
-      }
-    });
+    // Save via onSave (même logique que modale)
+    await handleSaveTime(newStartTime, newEndTime);
   };
 
   const handleKeyDown = (e) => {
@@ -216,7 +205,7 @@ const ShiftCard = React.memo(function ShiftCard({
                 onKeyDown={handleKeyDown}
                 onBlur={handleBlur}
                 onClick={(e) => e.stopPropagation()}
-                disabled={updateShiftMutation.isPending}
+                disabled={isSaving}
                 className="w-16 px-1 py-0.5 text-[11px] font-bold border rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
                 style={{ color: colors.text }}
               />
@@ -239,7 +228,7 @@ const ShiftCard = React.memo(function ShiftCard({
                 onKeyDown={handleKeyDown}
                 onBlur={handleBlur}
                 onClick={(e) => e.stopPropagation()}
-                disabled={updateShiftMutation.isPending}
+                disabled={isSaving}
                 className="w-16 px-1 py-0.5 text-[11px] font-bold border rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
                 style={{ color: colors.text }}
               />
