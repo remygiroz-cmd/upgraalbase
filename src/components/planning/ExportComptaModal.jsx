@@ -5,12 +5,13 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { FileText, Send, Download, Loader2, AlertCircle } from 'lucide-react';
+import { FileText, Send, Download, Loader2, AlertCircle, Edit3 } from 'lucide-react';
 import { toast } from 'sonner';
 import { jsPDF } from 'jspdf';
 import 'jspdf-autotable';
-import { calculateMonthlyRecap, applyManualOverrides } from '@/components/utils/monthlyRecapCalculations';
+import { calculateMonthlyRecap } from '@/components/utils/monthlyRecapCalculations';
 import { getActiveMonthContext } from './monthContext';
+import ExportOverrideModal from './ExportOverrideModal';
 
 const MONTHS = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'];
 
@@ -27,11 +28,11 @@ function formatDateFR(dateStr) {
 }
 
 /**
- * SOURCE DE VÉRITÉ UNIQUE: RÉCAP MENSUEL CALCULÉ
- * Construit une ligne d'export en lisant les valeurs du récap calculé
- * (même logique que MonthlySummary)
+ * SOURCE DE VÉRITÉ UNIQUE: RÉCAP MENSUEL CALCULÉ + OVERRIDES
+ * Construit une ligne d'export en lisant les valeurs du récap calculé,
+ * puis applique les overrides s'ils existent
  */
-function buildExportRow(employee, calculatedRecap, nonShiftTypes, cpPeriods, nonShiftEvents) {
+function buildExportRow(employee, calculatedRecap, nonShiftTypes, cpPeriods, nonShiftEvents, override) {
   console.log('═════════════════════════════════════════════════');
   console.log('📊 BUILDING EXPORT ROW FROM CALCULATED RECAP');
   console.log('═════════════════════════════════════════════════');
@@ -40,15 +41,12 @@ function buildExportRow(employee, calculatedRecap, nonShiftTypes, cpPeriods, non
 
   const employeeName = `${employee.first_name} ${employee.last_name}`;
 
-  // 2) Nb de jours travaillés
-  const nbJoursTravailles = calculatedRecap?.workedDays || 0;
+  // === VALEURS AUTO (calculées) ===
+  const autoNbJoursTravailles = calculatedRecap?.workedDays || 0;
+  const autoExtraDays = calculatedRecap?.extraDays || 0;
+  const autoJoursSupp = autoExtraDays > 0 ? autoExtraDays : 0;
 
-  // 3) Jours supp
-  const extraDays = calculatedRecap?.extraDays || 0;
-  const joursSupp = extraDays > 0 ? `+${extraDays}` : '';
-
-  // 5) Payées (hors sup/comp) - CALCULER COMME DANS MONTHLYSUMMARY
-  // = Base contractuelle mensuelle - déductions (non-shifts impactant paie)
+  // === PAYÉES (HORS SUP/COMP) - CALCUL AUTO ===
   const parseContractHours = (hoursStr) => {
     if (!hoursStr) return null;
     const cleanStr = String(hoursStr).trim().replace(/h/gi, '').replace(/,/g, '.');
@@ -56,7 +54,7 @@ function buildExportRow(employee, calculatedRecap, nonShiftTypes, cpPeriods, non
     return isNaN(hours) ? null : hours;
   };
 
-  let payeesHorsSup = calculatedRecap?.workedHours || 0;
+  let autoPayeesHorsSup = calculatedRecap?.workedHours || 0;
   
   const monthlyContractHours = parseContractHours(employee.contract_hours);
   if (monthlyContractHours) {
@@ -91,59 +89,24 @@ function buildExportRow(employee, calculatedRecap, nonShiftTypes, cpPeriods, non
       }
     });
 
-    payeesHorsSup = Math.max(0, monthlyContractHours - totalDeduction);
+    autoPayeesHorsSup = Math.max(0, monthlyContractHours - totalDeduction);
   }
 
-  // 6-9) Heures compl/supp - LECTURE DIRECTE
-  const compl10 = calculatedRecap?.complementaryHours10 || 0;
-  const compl25 = calculatedRecap?.complementaryHours25 || 0;
-  const supp25 = calculatedRecap?.overtimeHours25 || 0;
-  const supp50 = calculatedRecap?.overtimeHours50 || 0;
+  // === HEURES COMPL/SUPP - VALEURS AUTO ===
+  const autoCompl10 = calculatedRecap?.complementaryHours10 || 0;
+  const autoCompl25 = calculatedRecap?.complementaryHours25 || 0;
+  const autoSupp25 = calculatedRecap?.overtimeHours25 || 0;
+  const autoSupp50 = calculatedRecap?.overtimeHours50 || 0;
 
-  // 10) Férié - UNIQUEMENT SI ÉLIGIBLE (utiliser les alias clairs)
-  const ferieEligible = calculatedRecap?.ferieEligible === true;
-  const ferieDays = calculatedRecap?.ferieDays || 0;
-  const ferieHours = calculatedRecap?.ferieHours || 0;
+  // === FÉRIÉ - VALEURS AUTO ===
+  const autoFerieEligible = calculatedRecap?.ferieEligible === true;
+  const autoFerieDays = calculatedRecap?.ferieDays || 0;
+  const autoFerieHours = calculatedRecap?.ferieHours || 0;
   
-  // Format hours: remove .0 if integer (9.0 → 9, 9.5 → 9.5)
-  const formatHours = (h) => h % 1 === 0 ? h.toFixed(0) : h.toFixed(1);
-  
-  const ferieStr = ferieEligible && ferieDays > 0 && ferieHours > 0
-    ? `${ferieDays}j, ${formatHours(ferieHours)}h` 
-    : '';
-  
-  // DEBUG LOG pour buildExportRow
-  if (employeeName.includes('Giuliano') || employeeName.includes('Maliwan')) {
-    console.log(`[FERIE DEBUG - buildExportRow] ${employeeName} :
-  ferieStr final = "${ferieStr}"
-  ferieEligible = ${ferieEligible}
-  ferieDays = ${ferieDays}
-  ferieHours = ${ferieHours}
-  recap keys:`, Object.keys(calculatedRecap || {}));
-  }
-
-  // 4) Total payé = Payées (hors sup/comp) + Compl 10% + Compl 25% + Supp 25% + Supp 50% + Férié (si éligible)
-  let totalPaid = payeesHorsSup + compl10 + compl25 + supp25 + supp50;
-  if (ferieEligible && ferieHours > 0) {
-    totalPaid += ferieHours;
-  }
-  
-  console.log(`💰 Total calculation for ${employeeName}:`, {
-    payeesHorsSup: payeesHorsSup.toFixed(1),
-    compl10: compl10.toFixed(1),
-    compl25: compl25.toFixed(1),
-    supp25: supp25.toFixed(1),
-    supp50: supp50.toFixed(1),
-    ferieHours: ferieHours.toFixed(1),
-    ferieEligible,
-    totalPaid: totalPaid.toFixed(1)
-  });
-
-  // 11) Non-shifts visibles récap AVEC DATES
+  // === NON-SHIFTS VISIBLES - CALCUL AUTO ===
   const nonShiftsVisible = [];
   const employeeNonShifts = nonShiftEvents.filter(ns => ns.employee_id === employee.id);
   
-  // Grouper par type
   const nonShiftsByType = {};
   employeeNonShifts.forEach(ns => {
     const nsType = nonShiftTypes.find(t => t.id === ns.non_shift_type_id);
@@ -158,7 +121,6 @@ function buildExportRow(employee, calculatedRecap, nonShiftTypes, cpPeriods, non
     }
   });
 
-  // Formater avec dates
   Object.values(nonShiftsByType).forEach(({ type, dates }) => {
     const code = type.code || type.label?.substring(0, 3).toUpperCase();
     const count = dates.length;
@@ -167,9 +129,9 @@ function buildExportRow(employee, calculatedRecap, nonShiftTypes, cpPeriods, non
     nonShiftsVisible.push(`${code} ${count}j le ${dateFormatted}`);
   });
   
-  const nonShiftsStr = nonShiftsVisible.join('\n') || '';
+  const autoNonShiftsStr = nonShiftsVisible.join('\n') || '';
 
-  // 12) CP décomptés AVEC PÉRIODES
+  // === CP DÉCOMPTÉS - CALCUL AUTO ===
   const employeeCPPeriods = cpPeriods.filter(cp => cp.employee_id === employee.id);
   const cpLines = [];
   
@@ -180,28 +142,43 @@ function buildExportRow(employee, calculatedRecap, nonShiftTypes, cpPeriods, non
     cpLines.push(`${cpDays} CP (départ le ${departDate}, reprise le ${repriseDate})`);
   });
   
-  const cpStr = cpLines.join('\n') || '';
+  const autoCpStr = cpLines.join('\n') || '';
 
-  console.log('✅ Export row built:', {
-    employeeName,
-    nbJoursTravailles,
-    joursSupp,
-    totalPaid: totalPaid.toFixed(1),
-    payeesHorsSup: payeesHorsSup.toFixed(1),
-    compl10: compl10.toFixed(1),
-    compl25: compl25.toFixed(1),
-    supp25: supp25.toFixed(1),
-    supp50: supp50.toFixed(1),
-    ferieStr,
-    nonShiftsStr,
-    cpStr
-  });
-  console.log('═════════════════════════════════════════════════\n');
+  // ═══════════════════════════════════════════════
+  // APPLIQUER LES OVERRIDES (source de vérité finale)
+  // ═══════════════════════════════════════════════
+  const nbJoursTravailles = override?.override_nbJoursTravailles ?? autoNbJoursTravailles;
+  const joursSupp = override?.override_joursSupp ?? autoJoursSupp;
+  const payeesHorsSup = override?.override_payeesHorsSupComp ?? autoPayeesHorsSup;
+  const compl10 = override?.override_compl10 ?? autoCompl10;
+  const compl25 = override?.override_compl25 ?? autoCompl25;
+  const supp25 = override?.override_supp25 ?? autoSupp25;
+  const supp50 = override?.override_supp50 ?? autoSupp50;
+  const ferieDays = override?.override_ferieDays ?? autoFerieDays;
+  const ferieHours = override?.override_ferieHours ?? autoFerieHours;
+  const nonShiftsStr = override?.override_nonShiftsText ?? autoNonShiftsStr;
+  const cpStr = override?.override_cpText ?? autoCpStr;
+
+  // Format hours: remove .0 if integer (9.0 → 9, 9.5 → 9.5)
+  const formatHours = (h) => h % 1 === 0 ? h.toFixed(0) : h.toFixed(1);
+  
+  // Férié display
+  const ferieEligible = ferieDays > 0 && ferieHours > 0;
+  const ferieStr = ferieEligible ? `${ferieDays}j, ${formatHours(ferieHours)}h` : '';
+  
+  // Jours supp display
+  const joursSupp_display = joursSupp > 0 ? `+${joursSupp}` : '';
+
+  // === TOTAL PAYÉ (avec valeurs finales) ===
+  let totalPaid = payeesHorsSup + compl10 + compl25 + supp25 + supp50;
+  if (ferieEligible) {
+    totalPaid += ferieHours;
+  }
 
   return {
     employeeName,
     nbJoursTravailles,
-    joursSupp,
+    joursSupp: joursSupp_display,
     totalPaid,
     payeesHorsSup,
     compl10,
@@ -209,9 +186,23 @@ function buildExportRow(employee, calculatedRecap, nonShiftTypes, cpPeriods, non
     supp25,
     supp50,
     ferieStr,
-    ferieEligible, // Exposer pour le debug fallback
+    ferieEligible,
     nonShiftsStr,
-    cpStr
+    cpStr,
+    // Valeurs auto pour la modale override
+    autoValues: {
+      nbJoursTravailles: autoNbJoursTravailles,
+      joursSupp: autoJoursSupp,
+      payeesHorsSup: autoPayeesHorsSup,
+      compl10: autoCompl10,
+      compl25: autoCompl25,
+      supp25: autoSupp25,
+      supp50: autoSupp50,
+      ferieDays: autoFerieDays,
+      ferieHours: autoFerieHours,
+      nonShiftsStr: autoNonShiftsStr,
+      cpStr: autoCpStr
+    }
   };
 }
 
@@ -221,6 +212,9 @@ export default function ExportComptaModal({ open, onOpenChange, monthStart, mont
   const [isSending, setIsSending] = useState(false);
   const [error, setError] = useState(null);
   const [debugData, setDebugData] = useState([]);
+  const [overrideModalOpen, setOverrideModalOpen] = useState(false);
+  const [selectedEmployee, setSelectedEmployee] = useState(null);
+  const [selectedAutoValues, setSelectedAutoValues] = useState(null);
 
   // DEBUG: Confirm modal is mounted
   React.useEffect(() => {
@@ -572,11 +566,18 @@ export default function ExportComptaModal({ open, onOpenChange, monthStart, mont
 
   const calculationMode = calculationSettings[0]?.planning_calculation_mode || 'disabled';
 
-  // 🎯 SOURCE UNIQUE: CALCUL DU RÉCAP MENSUEL (même logique que MonthlySummary)
-  // Build export data en CALCULANT le récap comme le fait MonthlySummary
+  // Fetch export overrides
+  const { data: overrides = [] } = useQuery({
+    queryKey: ['exportOverrides', monthKey, activeResetVersion],
+    queryFn: async () => {
+      return await base44.entities.ExportComptaOverride.filter({ month_key: monthKey });
+    },
+    enabled: open && activeResetVersion !== undefined
+  });
+
+  // 🎯 SOURCE UNIQUE: CALCUL DU RÉCAP MENSUEL + OVERRIDES EXPORT
   const exportData = employees
     .map(employee => {
-      // Filter data for this employee
       const employeeShifts = shifts.filter(s => s.employee_id === employee.id);
       const employeeNonShifts = nonShiftEvents.filter(e => e.employee_id === employee.id);
 
@@ -585,7 +586,7 @@ export default function ExportComptaModal({ open, onOpenChange, monthStart, mont
         return null;
       }
 
-      // CALCUL AUTOMATIQUE comme dans MonthlySummary
+      // CALCUL AUTOMATIQUE
       const calculatedRecap = calculateMonthlyRecap(
         calculationMode,
         employee,
@@ -594,83 +595,21 @@ export default function ExportComptaModal({ open, onOpenChange, monthStart, mont
         nonShiftTypes,
         holidayDates,
         year,
-        month - 1 // 0-indexed for calculation engine
+        month - 1
       );
 
-      // DEBUG: Log calculation for specific employees
-      const employeeName = `${employee.first_name} ${employee.last_name}`;
-      if (employeeName.includes('Giuliano') || employeeName.includes('Maliwan')) {
-        console.log(`[FERIE DEBUG] ${employeeName} - INPUTS pour calculateMonthlyRecap:`, {
-          employeeId: employee.id,
-          monthKey,
-          year,
-          month,
-          shiftsCount: employeeShifts.length,
-          nonShiftsCount: employeeNonShifts.length,
-          holidayDatesCount: holidayDates.length,
-          holidayDates,
-          calculationMode
-        });
-        console.log(`[FERIE DEBUG] ${employeeName} - OUTPUTS de calculateMonthlyRecap:`, {
-          ferieEligible: calculatedRecap?.ferieEligible,
-          ferieDays: calculatedRecap?.ferieDays,
-          ferieHours: calculatedRecap?.ferieHours,
-          eligibleForHolidayPay: calculatedRecap?.eligibleForHolidayPay,
-          holidaysWorkedDays: calculatedRecap?.holidaysWorkedDays,
-          holidaysWorkedHours: calculatedRecap?.holidaysWorkedHours
-        });
-      }
-
-      // Chercher le récap mensuel persisté pour les OVERRIDES
-      const persistedRecap = recaps.find(r => r.employee_id === employee.id);
-
-      // Appliquer les surcharges manuelles si elles existent
-      let finalRecap = calculatedRecap;
-      if (persistedRecap) {
-        const overrides = {
-          expectedDays: persistedRecap.manual_expected_days,
-          workedDays: persistedRecap.manual_days_worked,
-          extraDays: persistedRecap.manual_extra_days,
-          contractMonthlyHours: persistedRecap.manual_contract_hours,
-          adjustedContractHours: persistedRecap.manual_adjusted_hours,
-          workedHours: persistedRecap.manual_total_hours,
-          overtimeHours25: persistedRecap.manual_overtime_25,
-          overtimeHours50: persistedRecap.manual_overtime_50,
-          totalOvertimeHours: persistedRecap.manual_total_overtime,
-          complementaryHours10: persistedRecap.manual_complementary_10,
-          complementaryHours25: persistedRecap.manual_complementary_25,
-          totalComplementaryHours: persistedRecap.manual_total_complementary,
-          holidaysWorkedDays: persistedRecap.manual_holidays_days,
-          holidaysWorkedHours: persistedRecap.manual_holidays_hours,
-          cpDays: persistedRecap.manual_cp_days
-        };
-        finalRecap = applyManualOverrides(calculatedRecap, overrides);
-      }
-
-      // Skip si aucune heure travaillée après calcul
-      if (!finalRecap.workedHours || finalRecap.workedHours === 0) {
+      // Skip si aucune heure travaillée
+      if (!calculatedRecap.workedHours || calculatedRecap.workedHours === 0) {
         return null;
       }
 
-      // Construire la ligne d'export depuis le récap calculé+overridé
-      const row = buildExportRow(employee, finalRecap, nonShiftTypes, cpPeriods, nonShiftEvents);
+      // Chercher l'override export pour cet employé
+      const override = overrides.find(o => o.employee_id === employee.id);
+
+      // Construire la ligne d'export (auto + override)
+      const row = buildExportRow(employee, calculatedRecap, nonShiftTypes, cpPeriods, nonShiftEvents, override);
       
-      // DEBUG: Store debug data for Giuliano/Maliwan
-      if (employeeName.includes('Giuliano') || employeeName.includes('Maliwan')) {
-        setDebugData(prev => [...prev, {
-          employee: employeeName,
-          id: employee.id,
-          recap_ferieEligible: finalRecap?.ferieEligible,
-          recap_ferieDays: finalRecap?.ferieDays,
-          recap_ferieHours: finalRecap?.ferieHours,
-          recap_eligibleForHolidayPay: finalRecap?.eligibleForHolidayPay,
-          recap_holidaysWorkedDays: finalRecap?.holidaysWorkedDays,
-          recap_holidaysWorkedHours: finalRecap?.holidaysWorkedHours,
-          row_ferieStr: row?.ferieStr
-        }]);
-      }
-      
-      return row;
+      return { ...row, employee, override };
     })
     .filter(Boolean);
 
@@ -1028,7 +967,27 @@ export default function ExportComptaModal({ open, onOpenChange, monthStart, mont
                 <tbody className="divide-y">
                   {exportData.map((row, idx) => (
                     <tr key={idx} className="hover:bg-gray-50">
-                      <td className="px-2 py-2 font-medium">{row.employeeName}</td>
+                      <td className="px-2 py-2 font-medium flex items-center gap-2">
+                        {row.employeeName}
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          onClick={() => {
+                            setSelectedEmployee(row.employee);
+                            setSelectedAutoValues(row.autoValues);
+                            setOverrideModalOpen(true);
+                          }}
+                          className="h-6 w-6 text-orange-600 hover:text-orange-700 hover:bg-orange-50"
+                          title="Surcharger les valeurs"
+                        >
+                          <Edit3 className="w-3 h-3" />
+                        </Button>
+                        {row.override && (
+                          <span className="text-xs bg-orange-100 text-orange-700 px-1.5 py-0.5 rounded" title="Valeurs surchargées">
+                            ⚠
+                          </span>
+                        )}
+                      </td>
                       <td className="px-2 py-2 text-center">{row.nbJoursTravailles || 0}</td>
                       <td className="px-2 py-2 text-center text-red-600 font-semibold">{row.joursSupp || ''}</td>
                       <td className="px-2 py-2 text-right font-bold bg-blue-50">{row.totalPaid.toFixed(1)}h</td>
@@ -1037,13 +996,7 @@ export default function ExportComptaModal({ open, onOpenChange, monthStart, mont
                       <td className="px-2 py-2 text-right">{row.compl25 > 0 ? `${row.compl25.toFixed(1)}h` : ''}</td>
                       <td className="px-2 py-2 text-right">{row.supp25 > 0 ? `${row.supp25.toFixed(1)}h` : ''}</td>
                       <td className="px-2 py-2 text-right">{row.supp50 > 0 ? `${row.supp50.toFixed(1)}h` : ''}</td>
-                      <td className="px-2 py-2 text-center text-[10px] text-purple-700 whitespace-pre-line">
-                        {new URLSearchParams(window.location.search).get('debug') === '1' && row.ferieEligible ? (
-                          <span className="bg-red-100 text-red-700 font-bold px-1">DEBUG FERIE OK</span>
-                        ) : (
-                          row.ferieStr || ''
-                        )}
-                      </td>
+                      <td className="px-2 py-2 text-center text-[10px] text-purple-700 whitespace-pre-line">{row.ferieStr || ''}</td>
                       <td className="px-2 py-2 text-[10px] whitespace-pre-line">{row.nonShiftsStr || ''}</td>
                       <td className="px-2 py-2 text-[10px] whitespace-pre-line">{row.cpStr || ''}</td>
                     </tr>
@@ -1152,6 +1105,18 @@ Cordialement"
             </Button>
           </div>
         </div>
+
+        {/* Modal d'override */}
+        {selectedEmployee && selectedAutoValues && (
+          <ExportOverrideModal
+            open={overrideModalOpen}
+            onOpenChange={setOverrideModalOpen}
+            employee={selectedEmployee}
+            monthKey={monthKey}
+            autoValues={selectedAutoValues}
+            existingOverride={overrides.find(o => o.employee_id === selectedEmployee.id)}
+          />
+        )}
       </DialogContent>
     </Dialog>
   );
