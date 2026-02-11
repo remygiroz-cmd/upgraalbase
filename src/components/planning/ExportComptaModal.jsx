@@ -627,9 +627,9 @@ export default function ExportComptaModal({ open, onOpenChange, monthStart, mont
     doc.autoTable({
       startY: margin + 25,
       head: [[
-        'Employé', 'Poste/Équipe', 'Total payé', 'Payées\n(hors sup/comp)', 
+        'Employé', 'Nb j.\ntrav.', 'Jours\nsupp', 'Total payé', 'Payées\n(hors sup/comp)', 
         'Compl\n+10%', 'Compl\n+25%', 'Supp\n+25%', 'Supp\n+50%', 
-        'Férié', 'Non-shifts\nvisibles récap', 'CP décomptés'
+        'Férié', 'Non-shifts\nvisibles', 'CP\ndécomptés'
       ]],
       body: tableData,
       styles: {
@@ -646,17 +646,18 @@ export default function ExportComptaModal({ open, onOpenChange, monthStart, mont
         minCellHeight: 8
       },
       columnStyles: {
-        0: { cellWidth: 30 },
-        1: { cellWidth: 25 },
-        2: { cellWidth: 18, halign: 'right', fillColor: [219, 234, 254], fontStyle: 'bold' },
-        3: { cellWidth: 18, halign: 'right' },
-        4: { cellWidth: 14, halign: 'right' },
+        0: { cellWidth: 32 },
+        1: { cellWidth: 12, halign: 'center' },
+        2: { cellWidth: 12, halign: 'center', fontSize: 6 },
+        3: { cellWidth: 18, halign: 'right', fillColor: [219, 234, 254], fontStyle: 'bold' },
+        4: { cellWidth: 18, halign: 'right' },
         5: { cellWidth: 14, halign: 'right' },
         6: { cellWidth: 14, halign: 'right' },
         7: { cellWidth: 14, halign: 'right' },
-        8: { cellWidth: 20, halign: 'right', fontSize: 6, textColor: [147, 51, 234] },
-        9: { cellWidth: 40, fontSize: 6 },
-        10: { cellWidth: 50, fontSize: 6 }
+        8: { cellWidth: 14, halign: 'right' },
+        9: { cellWidth: 18, halign: 'center', fontSize: 6, textColor: [147, 51, 234] },
+        10: { cellWidth: 30, fontSize: 6 },
+        11: { cellWidth: 25, fontSize: 6 }
       },
       didParseCell: (data) => {
         if (data.row.index === tableData.length - 1) {
