@@ -28,6 +28,8 @@ import { calculateShiftDuration, checkMinimumRest } from '@/components/planning/
 import { parseLocalDate, formatLocalDate } from '@/components/planning/dateUtils';
 import { isDateInCPPeriod } from '@/components/planning/paidLeaveCalculations';
 import { usePlanningVersion, withPlanningVersion, filterByVersion } from '@/components/planning/usePlanningVersion';
+import { useUndoStack } from '@/components/planning/useUndoStack';
+import UndoRedoButtons from '@/components/planning/UndoRedoButtons';
 
 const DAYS = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche'];
 const MONTHS = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'];
@@ -55,7 +57,12 @@ export default function Planning() {
   const [weekConflictMode, setWeekConflictMode] = useState('replace');
   const [displayMode, setDisplayMode] = useState('normal'); // 'compact' | 'normal'
   const [showFab, setShowFab] = useState(false); // Floating Action Button
+  const [isUndoing, setIsUndoing] = useState(false);
+  const [isRedoing, setIsRedoing] = useState(false);
   const queryClient = useQueryClient();
+
+  // Undo/Redo system
+  const undoStack = useUndoStack();
 
   // Fetch current user
   const { data: currentUser } = useQuery({
@@ -288,26 +295,48 @@ export default function Planning() {
   }, [paidLeavePeriods]);
 
   const saveShiftMutation = useMutation({
-    mutationFn: ({ id, data }) => {
-      if (id) {
-        return base44.entities.Shift.update(id, data);
-      } else {
-        return base44.entities.Shift.create(withPlanningVersion(data, resetVersion, monthKey));
+    mutationFn: async ({ id, data, captureForUndo = false, beforeData = null }) => {
+      // Capturer l'état "before" si demandé
+      let before = beforeData;
+      if (captureForUndo && id && !before) {
+        const existing = shifts.find(s => s.id === id);
+        before = existing ? { ...existing } : null;
       }
+
+      // Exécuter la mutation
+      let result;
+      if (id) {
+        result = await base44.entities.Shift.update(id, data);
+      } else {
+        result = await base44.entities.Shift.create(withPlanningVersion(data, resetVersion, monthKey));
+      }
+
+      // Enregistrer dans undo stack si demandé
+      if (captureForUndo && !undoStack.isUndoingRef.current && !undoStack.isRedoingRef.current) {
+        undoStack.pushAction({
+          actionType: id ? 'updateShift' : 'createShift',
+          label: id ? 'Shift modifié' : 'Shift créé',
+          monthKey,
+          before: id ? { shift: before } : null,
+          after: { shift: result }
+        });
+      }
+
+      return result;
     },
     onSuccess: async () => {
-      // Invalider TOUTES les queries impactées (comme la modale doit le faire)
       await queryClient.invalidateQueries({ queryKey: ['shifts'] });
       await queryClient.invalidateQueries({ queryKey: ['allWeeklyRecaps'] });
       await queryClient.invalidateQueries({ queryKey: ['allMonthlyRecaps'] });
       
-      // Forcer refetch immédiat pour mise à jour UI
       await queryClient.refetchQueries({ 
         queryKey: ['allWeeklyRecaps', currentYear, currentMonth, resetVersion],
         exact: true 
       });
       
-      toast.success('Shift enregistré');
+      if (!undoStack.isUndoingRef.current && !undoStack.isRedoingRef.current) {
+        toast.success('Shift enregistré');
+      }
     },
     onError: (error) => {
       toast.error('Erreur lors de l\'enregistrement : ' + error.message);
@@ -315,10 +344,33 @@ export default function Planning() {
   });
 
   const deleteShiftMutation = useMutation({
-    mutationFn: (shiftId) => base44.entities.Shift.delete(shiftId),
+    mutationFn: async ({ shiftId, captureForUndo = false }) => {
+      // Capturer l'état avant suppression si demandé
+      let before = null;
+      if (captureForUndo) {
+        const existing = shifts.find(s => s.id === shiftId);
+        before = existing ? { ...existing } : null;
+      }
+
+      // Exécuter la suppression
+      await base44.entities.Shift.delete(shiftId);
+
+      // Enregistrer dans undo stack si demandé
+      if (captureForUndo && before && !undoStack.isUndoingRef.current && !undoStack.isRedoingRef.current) {
+        undoStack.pushAction({
+          actionType: 'deleteShift',
+          label: 'Shift supprimé',
+          monthKey,
+          before: { shift: before },
+          after: null
+        });
+      }
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['shifts'] });
-      toast.success('Shift supprimé');
+      if (!undoStack.isUndoingRef.current && !undoStack.isRedoingRef.current) {
+        toast.success('Shift supprimé');
+      }
     },
     onError: (error) => {
       toast.error('Erreur lors de la suppression : ' + error.message);
@@ -549,7 +601,7 @@ export default function Planning() {
   // Handle shift deletion
   const handleDeleteShift = (shift) => {
     if (window.confirm(`Supprimer ce shift de ${shift.start_time} à ${shift.end_time} ?`)) {
-      deleteShiftMutation.mutate(shift.id);
+      deleteShiftMutation.mutate({ shiftId: shift.id, captureForUndo: true });
     }
   };
 
@@ -789,6 +841,130 @@ export default function Planning() {
     toggleHolidayMutation.mutate({ date: dateStr, isHoliday: isCurrentlyHoliday });
   };
 
+  // Undo/Redo handlers
+  const handleUndo = async () => {
+    if (!undoStack.canUndo || isUndoing) return;
+
+    setIsUndoing(true);
+    undoStack.isUndoingRef.current = true;
+
+    try {
+      const action = undoStack.popUndo();
+      if (!action) return;
+
+      console.log('🔄 Undo:', action.actionType, action);
+
+      switch (action.actionType) {
+        case 'createShift':
+          // Undo create = delete
+          await base44.entities.Shift.delete(action.after.shift.id);
+          break;
+
+        case 'updateShift':
+          // Undo update = restore before
+          await base44.entities.Shift.update(action.before.shift.id, action.before.shift);
+          break;
+
+        case 'deleteShift':
+          // Undo delete = recreate
+          await base44.entities.Shift.create(withPlanningVersion(action.before.shift, resetVersion, monthKey));
+          break;
+
+        default:
+          console.warn('Action type non supporté:', action.actionType);
+      }
+
+      // Invalidate queries
+      await queryClient.invalidateQueries({ queryKey: ['shifts'] });
+      await queryClient.invalidateQueries({ queryKey: ['allWeeklyRecaps'] });
+      await queryClient.invalidateQueries({ queryKey: ['allMonthlyRecaps'] });
+
+      toast.success(`↩︎ ${action.label} annulé`);
+    } catch (error) {
+      console.error('❌ Erreur undo:', error);
+      toast.error('Impossible d\'annuler : ' + error.message);
+    } finally {
+      setIsUndoing(false);
+      undoStack.isUndoingRef.current = false;
+    }
+  };
+
+  const handleRedo = async () => {
+    if (!undoStack.canRedo || isRedoing) return;
+
+    setIsRedoing(true);
+    undoStack.isRedoingRef.current = true;
+
+    try {
+      const action = undoStack.popRedo();
+      if (!action) return;
+
+      console.log('🔁 Redo:', action.actionType, action);
+
+      switch (action.actionType) {
+        case 'createShift':
+          // Redo create
+          await base44.entities.Shift.create(withPlanningVersion(action.after.shift, resetVersion, monthKey));
+          break;
+
+        case 'updateShift':
+          // Redo update
+          await base44.entities.Shift.update(action.after.shift.id, action.after.shift);
+          break;
+
+        case 'deleteShift':
+          // Redo delete
+          await base44.entities.Shift.delete(action.before.shift.id);
+          break;
+
+        default:
+          console.warn('Action type non supporté:', action.actionType);
+      }
+
+      // Invalidate queries
+      await queryClient.invalidateQueries({ queryKey: ['shifts'] });
+      await queryClient.invalidateQueries({ queryKey: ['allWeeklyRecaps'] });
+      await queryClient.invalidateQueries({ queryKey: ['allMonthlyRecaps'] });
+
+      toast.success(`↪︎ ${action.label} rétabli`);
+    } catch (error) {
+      console.error('❌ Erreur redo:', error);
+      toast.error('Impossible de rétablir : ' + error.message);
+    } finally {
+      setIsRedoing(false);
+      undoStack.isRedoingRef.current = false;
+    }
+  };
+
+  // Keyboard shortcuts
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      // Ignorer si l'utilisateur tape dans un input
+      const target = e.target;
+      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) {
+        return;
+      }
+
+      const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
+      const ctrlOrCmd = isMac ? e.metaKey : e.ctrlKey;
+
+      // Undo: Ctrl+Z / Cmd+Z
+      if (ctrlOrCmd && e.key === 'z' && !e.shiftKey) {
+        e.preventDefault();
+        handleUndo();
+      }
+
+      // Redo: Ctrl+Y / Ctrl+Shift+Z / Cmd+Shift+Z
+      if (ctrlOrCmd && (e.key === 'y' || (e.key === 'z' && e.shiftKey))) {
+        e.preventDefault();
+        handleRedo();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [undoStack.canUndo, undoStack.canRedo, isUndoing, isRedoing]);
+
   return (
     <div className="space-y-2">
       <div className="flex items-center justify-between">
@@ -809,28 +985,40 @@ export default function Planning() {
 
       {/* Month Navigation & Filters */}
       <div className="bg-white border border-gray-200 rounded-lg p-3">
-        <div className="flex items-center justify-between gap-3 mb-3">
-          <Button 
-            onClick={previousMonth} 
-            variant="outline" 
-            size="sm"
-            className="border border-gray-300 hover:border-orange-500 hover:bg-orange-50"
-          >
-            <ChevronLeft className="w-4 h-4" />
-            <span className="ml-1 hidden sm:inline text-xs">Précédent</span>
-          </Button>
-          <h2 className="text-lg font-bold text-orange-600">
-            {MONTHS[currentMonth]} {currentYear}
-          </h2>
-          <Button 
-            onClick={nextMonth} 
-            variant="outline"
-            size="sm"
-            className="border border-gray-300 hover:border-orange-500 hover:bg-orange-50"
-          >
-            <span className="mr-1 hidden sm:inline text-xs">Suivant</span>
-            <ChevronRight className="w-4 h-4" />
-          </Button>
+        <div className="flex items-center justify-between gap-3 mb-3 flex-wrap">
+          <div className="flex items-center gap-2">
+            <Button 
+              onClick={previousMonth} 
+              variant="outline" 
+              size="sm"
+              className="border border-gray-300 hover:border-orange-500 hover:bg-orange-50"
+            >
+              <ChevronLeft className="w-4 h-4" />
+              <span className="ml-1 hidden sm:inline text-xs">Précédent</span>
+            </Button>
+            <h2 className="text-lg font-bold text-orange-600">
+              {MONTHS[currentMonth]} {currentYear}
+            </h2>
+            <Button 
+              onClick={nextMonth} 
+              variant="outline"
+              size="sm"
+              className="border border-gray-300 hover:border-orange-500 hover:bg-orange-50"
+            >
+              <span className="mr-1 hidden sm:inline text-xs">Suivant</span>
+              <ChevronRight className="w-4 h-4" />
+            </Button>
+          </div>
+
+          {/* Undo/Redo buttons */}
+          <UndoRedoButtons
+            canUndo={undoStack.canUndo}
+            canRedo={undoStack.canRedo}
+            onUndo={handleUndo}
+            onRedo={handleRedo}
+            isUndoing={isUndoing}
+            isRedoing={isRedoing}
+          />
         </div>
 
         {/* Filters */}
@@ -1115,7 +1303,7 @@ export default function Planning() {
                                           onDelete={handleDeleteShift}
                                           hasRestWarning={warnings.hasRestWarning}
                                           hasOvertimeWarning={warnings.hasOvertimeWarning}
-                                          onSave={(id, data) => saveShiftMutation.mutate({ id, data })}
+                                          onSave={(id, data) => saveShiftMutation.mutate({ id, data, captureForUndo: true })}
                                         />
                                       </div>
                                     );
@@ -1275,7 +1463,7 @@ export default function Planning() {
         existingShifts={selectedCell ? getShiftsForEmployeeAndDate(selectedCell.employeeId, selectedCell.date) : []}
         existingNonShifts={selectedCell ? getNonShiftsForEmployeeAndDate(selectedCell.employeeId, selectedCell.date) : []}
         allShifts={shifts}
-        onSave={(id, data) => saveShiftMutation.mutate({ id, data })}
+        onSave={(id, data) => saveShiftMutation.mutate({ id, data, captureForUndo: true })}
         currentUser={currentUser}
       />
 
