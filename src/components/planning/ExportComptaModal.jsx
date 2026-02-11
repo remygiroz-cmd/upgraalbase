@@ -773,42 +773,46 @@ export default function ExportComptaModal({ open, onOpenChange, monthStart, mont
                 <thead className="bg-gray-100">
                   <tr>
                     <th className="px-2 py-2 text-left font-semibold">Employé</th>
-                    <th className="px-2 py-2 text-left font-semibold">Poste/Équipe</th>
+                    <th className="px-2 py-2 text-center font-semibold">Nb j.<br/>trav.</th>
+                    <th className="px-2 py-2 text-center font-semibold">Jours<br/>supp</th>
                     <th className="px-2 py-2 text-right font-semibold bg-blue-50">Total payé</th>
                     <th className="px-2 py-2 text-right font-semibold">Payées<br/>(hors sup/comp)</th>
                     <th className="px-2 py-2 text-right font-semibold">Compl<br/>+10%</th>
                     <th className="px-2 py-2 text-right font-semibold">Compl<br/>+25%</th>
                     <th className="px-2 py-2 text-right font-semibold">Supp<br/>+25%</th>
                     <th className="px-2 py-2 text-right font-semibold">Supp<br/>+50%</th>
-                    <th className="px-2 py-2 text-right font-semibold">Férié</th>
-                    <th className="px-2 py-2 text-left font-semibold">Non-shifts<br/>visibles récap</th>
-                    <th className="px-2 py-2 text-left font-semibold">CP décomptés</th>
+                    <th className="px-2 py-2 text-center font-semibold">Férié</th>
+                    <th className="px-2 py-2 text-left font-semibold">Non-shifts<br/>visibles</th>
+                    <th className="px-2 py-2 text-left font-semibold">CP<br/>décomptés</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y">
                   {exportData.map((row, idx) => (
                     <tr key={idx} className="hover:bg-gray-50">
                       <td className="px-2 py-2 font-medium">{row.employeeName}</td>
-                      <td className="px-2 py-2 text-gray-600">{row.posteEquipeStr}</td>
+                      <td className="px-2 py-2 text-center">{row.nbJoursTravailles || 0}</td>
+                      <td className="px-2 py-2 text-center text-red-600 font-semibold">{row.joursSupp || ''}</td>
                       <td className="px-2 py-2 text-right font-bold bg-blue-50">{row.totalPaid.toFixed(1)}h</td>
                       <td className="px-2 py-2 text-right">{row.payeesHorsSup.toFixed(1)}h</td>
-                      <td className="px-2 py-2 text-right">{row.compl10 > 0 ? `${row.compl10.toFixed(1)}h` : '-'}</td>
-                      <td className="px-2 py-2 text-right">{row.compl25 > 0 ? `${row.compl25.toFixed(1)}h` : '-'}</td>
-                      <td className="px-2 py-2 text-right">{row.supp25 > 0 ? `${row.supp25.toFixed(1)}h` : '-'}</td>
-                      <td className="px-2 py-2 text-right">{row.supp50 > 0 ? `${row.supp50.toFixed(1)}h` : '-'}</td>
-                      <td className="px-2 py-2 text-right text-[10px] text-purple-700">{row.ferieStr}</td>
-                      <td className="px-2 py-2 text-[10px] whitespace-pre-line">{row.nonShiftsStr}</td>
-                      <td className="px-2 py-2 text-[10px]">{row.cpStr}</td>
+                      <td className="px-2 py-2 text-right">{row.compl10 > 0 ? `${row.compl10.toFixed(1)}h` : ''}</td>
+                      <td className="px-2 py-2 text-right">{row.compl25 > 0 ? `${row.compl25.toFixed(1)}h` : ''}</td>
+                      <td className="px-2 py-2 text-right">{row.supp25 > 0 ? `${row.supp25.toFixed(1)}h` : ''}</td>
+                      <td className="px-2 py-2 text-right">{row.supp50 > 0 ? `${row.supp50.toFixed(1)}h` : ''}</td>
+                      <td className="px-2 py-2 text-center text-[10px] text-purple-700">{row.ferieStr || ''}</td>
+                      <td className="px-2 py-2 text-[10px] whitespace-pre-line">{row.nonShiftsStr || ''}</td>
+                      <td className="px-2 py-2 text-[10px]">{row.cpStr || ''}</td>
                     </tr>
                   ))}
                   <tr className="bg-gray-200 font-bold">
-                    <td className="px-2 py-2" colSpan="2">TOTAL</td>
+                    <td className="px-2 py-2">TOTAL</td>
+                    <td className="px-2 py-2 text-center">{totals.nbJoursTravailles}</td>
+                    <td className="px-2 py-2"></td>
                     <td className="px-2 py-2 text-right bg-blue-100">{totals.totalPaid.toFixed(1)}h</td>
                     <td className="px-2 py-2 text-right">{totals.payeesHorsSup.toFixed(1)}h</td>
-                    <td className="px-2 py-2 text-right">{totals.compl10.toFixed(1)}h</td>
-                    <td className="px-2 py-2 text-right">{totals.compl25.toFixed(1)}h</td>
-                    <td className="px-2 py-2 text-right">{totals.supp25.toFixed(1)}h</td>
-                    <td className="px-2 py-2 text-right">{totals.supp50.toFixed(1)}h</td>
+                    <td className="px-2 py-2 text-right">{totals.compl10 > 0 ? `${totals.compl10.toFixed(1)}h` : ''}</td>
+                    <td className="px-2 py-2 text-right">{totals.compl25 > 0 ? `${totals.compl25.toFixed(1)}h` : ''}</td>
+                    <td className="px-2 py-2 text-right">{totals.supp25 > 0 ? `${totals.supp25.toFixed(1)}h` : ''}</td>
+                    <td className="px-2 py-2 text-right">{totals.supp50 > 0 ? `${totals.supp50.toFixed(1)}h` : ''}</td>
                     <td colSpan="3"></td>
                   </tr>
                 </tbody>
