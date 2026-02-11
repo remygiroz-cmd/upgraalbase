@@ -236,9 +236,8 @@ const ShiftCard = React.memo(function ShiftCard({
       </button>
       
       <div className="flex items-center justify-between gap-1">
-        <div className="flex items-center gap-1">
-          <Clock className="w-3 h-3" style={{ color: colors.text }} />
-          <div className="flex items-center gap-0.5 text-[11px] font-bold" style={{ color: colors.text }}>
+        <div className="flex items-center gap-1 flex-1 min-w-0">
+          <div className="flex items-center gap-0.5 text-[11px] font-bold flex-1 min-w-0" style={{ color: colors.text }}>
             {/* Heure de début - éditable inline */}
             {editingField === 'start' ? (
               <input

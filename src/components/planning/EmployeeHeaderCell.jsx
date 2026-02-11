@@ -21,7 +21,7 @@ const EmployeeHeaderCell = React.memo(React.forwardRef(({
       {...props}
       style={style}
       className={cn(
-        "border-r border-gray-200 px-2 py-2 text-center min-w-[140px] w-[140px] sm:w-[180px] relative group",
+        "border-r border-gray-200 px-2 py-2 text-center min-w-[150px] w-[150px] lg:min-w-[180px] lg:w-[180px] relative group flex-shrink-0",
         displayMode === 'compact' ? 'py-1' : 'py-3',
         isDragging && "bg-orange-100 shadow-2xl opacity-90"
       )}

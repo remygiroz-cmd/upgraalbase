@@ -131,13 +131,14 @@ export default function PinchZoomContainer({ children, className, monthKey }) {
       <div
         ref={containerRef}
         className={cn(
-          "touch-pan-x touch-pan-y",
+          "touch-pan-x touch-pan-y overflow-auto",
           isPinching && "pointer-events-none select-none",
           className
         )}
         style={{
           WebkitOverflowScrolling: 'touch',
-          touchAction: 'pan-x pan-y pinch-zoom'
+          touchAction: 'pan-x pan-y pinch-zoom',
+          height: '100%'
         }}
       >
         <div
@@ -145,8 +146,7 @@ export default function PinchZoomContainer({ children, className, monthKey }) {
             transform: `scale(${zoom})`,
             transformOrigin: 'top left',
             transition: isPinching ? 'none' : 'transform 0.1s ease-out',
-            width: `${100 / zoom}%`,
-            minWidth: `${100 / zoom}%`
+            minWidth: '100%'
           }}
         >
           {children}
