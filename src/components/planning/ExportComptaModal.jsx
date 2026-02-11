@@ -124,8 +124,8 @@ function buildExportRow(employee, calculatedRecap, nonShiftTypes, cpPeriods, non
 
   // 4) Total payé = Payées (hors sup/comp) + Compl 10% + Compl 25% + Supp 25% + Supp 50% + Férié (si éligible)
   let totalPaid = payeesHorsSup + compl10 + compl25 + supp25 + supp50;
-  if (holidayEligible && holidayHours > 0) {
-    totalPaid += holidayHours;
+  if (ferieEligible && ferieHours > 0) {
+    totalPaid += ferieHours;
   }
   
   console.log(`💰 Total calculation for ${employeeName}:`, {
@@ -134,8 +134,8 @@ function buildExportRow(employee, calculatedRecap, nonShiftTypes, cpPeriods, non
     compl25: compl25.toFixed(1),
     supp25: supp25.toFixed(1),
     supp50: supp50.toFixed(1),
-    holidayHours: holidayHours.toFixed(1),
-    holidayEligible,
+    ferieHours: ferieHours.toFixed(1),
+    ferieEligible,
     totalPaid: totalPaid.toFixed(1)
   });
 
