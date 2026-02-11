@@ -28,6 +28,21 @@ export function useHiddenItems(userId) {
     }
   }, [hiddenItems, storageKey]);
 
+  // Listen to external changes to localStorage (e.g., "Show All" button)
+  useEffect(() => {
+    const handleExternalChange = () => {
+      try {
+        const stored = localStorage.getItem(storageKey);
+        setHiddenItems(stored ? new Set(JSON.parse(stored)) : new Set());
+      } catch (error) {
+        console.error('Error reloading hidden items:', error);
+      }
+    };
+
+    window.addEventListener('hidden-items-changed', handleExternalChange);
+    return () => window.removeEventListener('hidden-items-changed', handleExternalChange);
+  }, [storageKey]);
+
   const hideItem = (itemKey) => {
     setHiddenItems(prev => new Set([...prev, itemKey]));
   };
