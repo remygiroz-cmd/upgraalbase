@@ -555,20 +555,19 @@ export default function ExportComptaModal({ open, onOpenChange, monthStart, mont
     enabled: open && activeResetVersion !== undefined
   });
 
-  const { data: holidayDates = [] } = useQuery({
-    queryKey: ['holidayDates', monthKey],
-    queryFn: async () => {
-      const allHolidays = await base44.entities.HolidayDate.filter({ is_active: true });
-      const monthStartStr = formatDate(monthStart);
-      const monthEndStr = formatDate(monthEnd);
-      const filtered = allHolidays
-        .filter(h => h.date >= monthStartStr && h.date <= monthEndStr)
-        .map(h => h.date);
-      console.log('🎉 Holiday dates:', filtered);
-      return filtered;
-    },
-    enabled: open
-  });
+  // Extract holiday dates from shifts with holiday_flag=true (source de vérité)
+  const holidayDates = React.useMemo(() => {
+    if (!shifts || shifts.length === 0) return [];
+    
+    const uniqueHolidayDates = [...new Set(
+      shifts
+        .filter(s => s.holiday_flag === true)
+        .map(s => s.date)
+    )];
+    
+    console.log('🎉 Holiday dates (from shifts with holiday_flag):', uniqueHolidayDates);
+    return uniqueHolidayDates;
+  }, [shifts]);
 
   const { data: calculationSettings = [] } = useQuery({
     queryKey: ['appSettings', 'planning_calculation_mode'],
