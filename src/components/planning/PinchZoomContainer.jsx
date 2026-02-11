@@ -30,14 +30,15 @@ export default function PinchZoomContainer({ children, className, monthKey }) {
     return Math.sqrt(dx * dx + dy * dy);
   };
 
-  // Handle touch events for pinch zoom
+  // Handle touch events for pinch zoom - ONLY preventDefault when 2 fingers
   useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
 
     const handleTouchStart = (e) => {
+      // Only handle 2-finger pinch, let 1-finger scroll through
       if (e.touches.length === 2) {
-        e.preventDefault();
+        e.preventDefault(); // Only block when pinching
         setIsPinching(true);
         touchesRef.current = Array.from(e.touches);
         initialDistanceRef.current = getDistance(e.touches[0], e.touches[1]);
@@ -46,6 +47,7 @@ export default function PinchZoomContainer({ children, className, monthKey }) {
     };
 
     const handleTouchMove = (e) => {
+      // Only handle when actively pinching with 2 fingers
       if (e.touches.length === 2 && isPinching) {
         e.preventDefault();
         const currentDistance = getDistance(e.touches[0], e.touches[1]);
@@ -53,6 +55,7 @@ export default function PinchZoomContainer({ children, className, monthKey }) {
         const newZoom = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, initialZoomRef.current * scale));
         setZoom(newZoom);
       }
+      // If 1 finger, do nothing - let native scroll work
     };
 
     const handleTouchEnd = (e) => {
@@ -62,10 +65,11 @@ export default function PinchZoomContainer({ children, className, monthKey }) {
       }
     };
 
+    // passive: false only for 2-finger detection, but we check touches.length first
     container.addEventListener('touchstart', handleTouchStart, { passive: false });
     container.addEventListener('touchmove', handleTouchMove, { passive: false });
-    container.addEventListener('touchend', handleTouchEnd);
-    container.addEventListener('touchcancel', handleTouchEnd);
+    container.addEventListener('touchend', handleTouchEnd, { passive: true });
+    container.addEventListener('touchcancel', handleTouchEnd, { passive: true });
 
     return () => {
       container.removeEventListener('touchstart', handleTouchStart);
@@ -127,7 +131,7 @@ export default function PinchZoomContainer({ children, className, monthKey }) {
         )}
       </div>
 
-      {/* Zoom container - scrollable wrapper */}
+      {/* Scrollable viewport - ALWAYS allows pan/scroll */}
       <div
         ref={containerRef}
         className={cn(
@@ -136,23 +140,37 @@ export default function PinchZoomContainer({ children, className, monthKey }) {
         )}
         style={{
           WebkitOverflowScrolling: 'touch',
-          touchAction: isPinching ? 'none' : 'pan-x pan-y',
+          touchAction: 'pan-x pan-y', // ALWAYS allow pan, never block scroll
           height: '100%',
-          width: '100%'
+          width: '100%',
+          position: 'relative'
         }}
       >
-        {/* Scaled content wrapper - maintains proper scroll dimensions */}
+        {/* Sizer - maintains scrollable area based on zoom */}
         <div
           style={{
-            transform: `scale(${zoom})`,
-            transformOrigin: 'top left',
-            transition: isPinching ? 'none' : 'transform 0.1s ease-out',
-            width: `${100 / zoom}%`,
-            minWidth: `${100 / zoom}%`,
-            pointerEvents: isPinching ? 'none' : 'auto'
+            width: zoom === 1 ? '100%' : `${zoom * 100}%`,
+            height: zoom === 1 ? '100%' : `${zoom * 100}%`,
+            minWidth: zoom === 1 ? '100%' : `${zoom * 100}%`,
+            position: 'relative'
           }}
         >
-          {children}
+          {/* Scaled content wrapper */}
+          <div
+            style={{
+              transform: `scale(${zoom})`,
+              transformOrigin: 'top left',
+              transition: isPinching ? 'none' : 'transform 0.1s ease-out',
+              width: zoom === 1 ? '100%' : `${100 / zoom}%`,
+              height: '100%',
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              pointerEvents: 'auto'
+            }}
+          >
+            {children}
+          </div>
         </div>
       </div>
     </div>
