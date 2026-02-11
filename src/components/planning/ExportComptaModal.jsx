@@ -489,27 +489,64 @@ export default function ExportComptaModal({ open, onOpenChange, monthStart, mont
 
   const calculationMode = calculationSettings[0]?.planning_calculation_mode || 'disabled';
 
-  // 🎯 SOURCE UNIQUE: MONTHLY RECAPS PERSISTÉS
-  // Build export data UNIQUEMENT à partir des récaps mensuels
+  // 🎯 SOURCE UNIQUE: CALCUL DU RÉCAP MENSUEL (même logique que MonthlySummary)
+  // Build export data en CALCULANT le récap comme le fait MonthlySummary
   const exportData = employees
     .map(employee => {
-      // Chercher le récap mensuel persisté pour cet employé
-      const monthlyRecap = recaps.find(r => r.employee_id === employee.id);
+      // Filter data for this employee
+      const employeeShifts = shifts.filter(s => s.employee_id === employee.id);
+      const employeeNonShifts = nonShiftEvents.filter(e => e.employee_id === employee.id);
 
-      // Skip si pas de recap (= employé inactif ce mois)
-      if (!monthlyRecap) {
-        console.log(`⚠️ No monthly recap for ${employee.first_name} ${employee.last_name} - skipping`);
+      // Skip if no activity at all
+      if (employeeShifts.length === 0 && employeeNonShifts.length === 0) {
         return null;
       }
 
-      // Skip si aucune activité (0 heures travaillées)
-      if (!monthlyRecap.worked_hours || monthlyRecap.worked_hours === 0) {
-        console.log(`⚠️ Zero hours for ${employee.first_name} ${employee.last_name} - skipping`);
+      // CALCUL AUTOMATIQUE comme dans MonthlySummary
+      const calculatedRecap = calculateMonthlyRecap(
+        calculationMode,
+        employee,
+        shifts,
+        nonShiftEvents,
+        nonShiftTypes,
+        holidayDates,
+        year,
+        month - 1 // 0-indexed for calculation engine
+      );
+
+      // Chercher le récap mensuel persisté pour les OVERRIDES
+      const persistedRecap = recaps.find(r => r.employee_id === employee.id);
+
+      // Appliquer les surcharges manuelles si elles existent
+      let finalRecap = calculatedRecap;
+      if (persistedRecap) {
+        const overrides = {
+          expectedDays: persistedRecap.manual_expected_days,
+          workedDays: persistedRecap.manual_days_worked,
+          extraDays: persistedRecap.manual_extra_days,
+          contractMonthlyHours: persistedRecap.manual_contract_hours,
+          adjustedContractHours: persistedRecap.manual_adjusted_hours,
+          workedHours: persistedRecap.manual_total_hours,
+          overtimeHours25: persistedRecap.manual_overtime_25,
+          overtimeHours50: persistedRecap.manual_overtime_50,
+          totalOvertimeHours: persistedRecap.manual_total_overtime,
+          complementaryHours10: persistedRecap.manual_complementary_10,
+          complementaryHours25: persistedRecap.manual_complementary_25,
+          totalComplementaryHours: persistedRecap.manual_total_complementary,
+          holidaysWorkedDays: persistedRecap.manual_holidays_days,
+          holidaysWorkedHours: persistedRecap.manual_holidays_hours,
+          cpDays: persistedRecap.manual_cp_days
+        };
+        finalRecap = applyManualOverrides(calculatedRecap, overrides).recap;
+      }
+
+      // Skip si aucune heure travaillée après calcul
+      if (!finalRecap.workedHours || finalRecap.workedHours === 0) {
         return null;
       }
 
-      // Construire la ligne d'export EN LISANT UNIQUEMENT LE RECAP
-      return buildExportRow(employee, monthlyRecap, nonShiftTypes, cpPeriods);
+      // Construire la ligne d'export depuis le récap calculé+overridé
+      return buildExportRow(employee, finalRecap, nonShiftTypes, cpPeriods);
     })
     .filter(Boolean);
 
