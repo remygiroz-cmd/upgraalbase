@@ -215,7 +215,7 @@ function buildExportRow(employee, calculatedRecap, nonShiftTypes, cpPeriods, non
   };
 }
 
-export default function ExportComptaModal({ open, onOpenChange, monthStart, monthEnd }) {
+export default function ExportComptaModal({ open, onOpenChange, monthStart, monthEnd, holidayDates: holidayDatesFromPlanning = [] }) {
   const [customMessage, setCustomMessage] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
   const [isSending, setIsSending] = useState(false);
@@ -555,19 +555,12 @@ export default function ExportComptaModal({ open, onOpenChange, monthStart, mont
     enabled: open && activeResetVersion !== undefined
   });
 
-  // Extract holiday dates from shifts with holiday_flag=true (source de vérité)
+  // Extract holiday dates from HolidayDate entity (source de vérité)
   const holidayDates = React.useMemo(() => {
-    if (!shifts || shifts.length === 0) return [];
-    
-    const uniqueHolidayDates = [...new Set(
-      shifts
-        .filter(s => s.holiday_flag === true)
-        .map(s => s.date)
-    )];
-    
-    console.log('🎉 Holiday dates (from shifts with holiday_flag):', uniqueHolidayDates);
-    return uniqueHolidayDates;
-  }, [shifts]);
+    const dates = (holidayDatesFromPlanning || []).map(h => h.date);
+    console.log('🎉 Holiday dates (from HolidayDate entity):', dates);
+    return dates;
+  }, [holidayDatesFromPlanning]);
 
   const { data: calculationSettings = [] } = useQuery({
     queryKey: ['appSettings', 'planning_calculation_mode'],
