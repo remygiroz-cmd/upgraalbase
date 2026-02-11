@@ -1405,23 +1405,27 @@ export default function Planning() {
                         <span className="lg:hidden">📊 Mois</span>
                       </div>
                       {(() => {
-                        // Check if any employee has hidden items
-                        const hasAnyHidden = employees.some(emp => {
-                          const { hasHiddenItems } = undoStack.hiddenItemsCache?.[emp.id] || {};
-                          return hasAnyHidden;
-                        });
+                        // Check if user has any hidden items in localStorage
+                        const storageKey = `planning-hidden-items-${currentUser?.id}`;
+                        let hasAnyHidden = false;
+                        
+                        try {
+                          const stored = localStorage.getItem(storageKey);
+                          if (stored) {
+                            const hiddenItems = JSON.parse(stored);
+                            hasAnyHidden = Array.isArray(hiddenItems) && hiddenItems.length > 0;
+                          }
+                        } catch (error) {
+                          // Ignore
+                        }
                         
                         return hasAnyHidden && (
                           <button
                             onClick={() => {
-                              // Clear all hidden items for all employees
-                              if (window.confirm('Réafficher tous les éléments masqués ?')) {
-                                employees.forEach(emp => {
-                                  const storageKey = `planning-hidden-items-${currentUser?.id}`;
-                                  localStorage.removeItem(storageKey);
-                                });
-                                window.location.reload();
-                              }
+                              // Clear all hidden items
+                              const storageKey = `planning-hidden-items-${currentUser?.id}`;
+                              localStorage.removeItem(storageKey);
+                              window.location.reload();
                             }}
                             className="text-[8px] text-gray-400 hover:text-gray-600 transition-colors underline"
                           >
