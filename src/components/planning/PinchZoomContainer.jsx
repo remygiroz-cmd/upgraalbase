@@ -127,26 +127,29 @@ export default function PinchZoomContainer({ children, className, monthKey }) {
         )}
       </div>
 
-      {/* Zoom container */}
+      {/* Zoom container - scrollable wrapper */}
       <div
         ref={containerRef}
         className={cn(
-          "touch-pan-x touch-pan-y overflow-auto",
-          isPinching && "pointer-events-none select-none",
+          "overflow-auto",
           className
         )}
         style={{
           WebkitOverflowScrolling: 'touch',
-          touchAction: 'pan-x pan-y pinch-zoom',
-          height: '100%'
+          touchAction: isPinching ? 'none' : 'pan-x pan-y',
+          height: '100%',
+          width: '100%'
         }}
       >
+        {/* Scaled content wrapper - maintains proper scroll dimensions */}
         <div
           style={{
             transform: `scale(${zoom})`,
             transformOrigin: 'top left',
             transition: isPinching ? 'none' : 'transform 0.1s ease-out',
-            minWidth: '100%'
+            width: `${100 / zoom}%`,
+            minWidth: `${100 / zoom}%`,
+            pointerEvents: isPinching ? 'none' : 'auto'
           }}
         >
           {children}

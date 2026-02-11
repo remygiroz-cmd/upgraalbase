@@ -1114,10 +1114,10 @@ export default function Planning() {
       </div>
 
       {/* Calendar Grid with pinch-to-zoom wrapper */}
-      <div className="bg-white border-2 border-gray-200 rounded-xl shadow-xl overflow-hidden flex flex-col" style={{ height: 'calc(100vh - 220px)' }}>
-        <PinchZoomContainer monthKey={monthKey} className="flex-1 overflow-auto">
-          <div ref={tableContainerRef} className="min-w-full h-full">
-            <div className="inline-block min-w-full">
+      <div className="bg-white border-2 border-gray-200 rounded-xl shadow-xl overflow-hidden" style={{ height: 'calc(100vh - 220px)' }}>
+        <PinchZoomContainer monthKey={monthKey}>
+          <div ref={tableContainerRef} className="min-w-full">
+            <div className="inline-block min-w-full" style={{ position: 'relative' }}>
             {/* Header - Sticky */}
             <DragDropContext onDragEnd={handleTeamDragEnd}>
               <div className="bg-gradient-to-r from-gray-100 to-gray-50 flex border-b-2 border-gray-300 sticky top-0 z-40 shadow-md">
