@@ -245,28 +245,17 @@ ${deductionDetails.length > 0 ? `  Détail: ${deductionDetails.map(d => `${d.dat
     );
   };
 
-  // Hideable item wrapper component
+  // Hideable item wrapper component - DISCRET
   const HideableItem = ({ itemKey, children, className = "" }) => {
     const hidden = isHidden(itemKey);
     const [hovering, setHovering] = useState(false);
 
-    if (hidden) {
-      return (
-        <div className={cn("mb-2 pb-2", className)}>
-          <button
-            onClick={() => showItem(itemKey)}
-            className="w-full py-1.5 px-2 bg-gray-100 hover:bg-gray-200 rounded text-[9px] text-gray-500 flex items-center justify-center gap-1 transition-colors"
-          >
-            <EyeOff className="w-3 h-3" />
-            Élément masqué - Cliquer pour afficher
-          </button>
-        </div>
-      );
-    }
-
     return (
       <div
-        className={cn("relative group/hide mb-2 pb-2", className)}
+        className={cn(
+          "relative group/hide",
+          hidden ? "opacity-0 h-0 overflow-hidden" : cn("mb-2 pb-2", className)
+        )}
         onMouseEnter={() => setHovering(true)}
         onMouseLeave={() => setHovering(false)}
       >
@@ -274,12 +263,12 @@ ${deductionDetails.length > 0 ? `  Détail: ${deductionDetails.map(d => `${d.dat
           <button
             onClick={(e) => {
               e.stopPropagation();
-              hideItem(itemKey);
+              hidden ? showItem(itemKey) : hideItem(itemKey);
             }}
             className="absolute -left-1 top-1/2 -translate-y-1/2 z-10 p-0.5 bg-white border border-gray-300 rounded shadow-sm hover:bg-gray-100 transition-colors"
-            title="Masquer cet élément (visuel uniquement)"
+            title={hidden ? "Afficher cet élément" : "Masquer cet élément (visuel uniquement)"}
           >
-            <Eye className="w-3 h-3 text-gray-500" />
+            {hidden ? <EyeOff className="w-3 h-3 text-gray-400" /> : <Eye className="w-3 h-3 text-gray-500" />}
           </button>
         )}
         {children}
@@ -303,17 +292,7 @@ ${deductionDetails.length > 0 ? `  Détail: ${deductionDetails.map(d => `${d.dat
           <Edit2 className="w-3 h-3 text-blue-600" />
         </button>
         
-        {/* Show all button (if items hidden) */}
-        {hasHiddenItems && (
-          <button
-            onClick={showAll}
-            className="absolute top-1 right-10 p-1 rounded hover:bg-gray-200 transition-colors text-[9px] text-blue-600 flex items-center gap-1"
-            title={`${hiddenCount} élément(s) masqué(s)`}
-          >
-            <EyeOff className="w-3 h-3" />
-            <span className="hidden lg:inline">Tout afficher</span>
-          </button>
-        )}
+
 
         {/* Mode indicator */}
         <div className="absolute top-1 left-1">

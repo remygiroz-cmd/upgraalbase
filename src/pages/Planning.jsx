@@ -1400,10 +1400,35 @@ export default function Planning() {
                   {/* Monthly Summary Row */}
                   <div className="bg-gradient-to-r from-blue-100 to-blue-50 border-t-4 border-blue-500 flex">
                     <div className="sticky left-0 z-20 bg-gradient-to-r from-blue-100 to-blue-50 border-r-2 border-blue-300 px-1 lg:px-2 py-2 lg:py-3 shadow-sm w-[80px] lg:w-[120px]">
-                      <div className="text-[9px] lg:text-[11px] font-bold text-blue-900 uppercase tracking-wide text-center">
+                      <div className="text-[9px] lg:text-[11px] font-bold text-blue-900 uppercase tracking-wide text-center mb-2">
                         <span className="hidden lg:inline">📊 Récap mensuel</span>
                         <span className="lg:hidden">📊 Mois</span>
                       </div>
+                      {(() => {
+                        // Check if any employee has hidden items
+                        const hasAnyHidden = employees.some(emp => {
+                          const { hasHiddenItems } = undoStack.hiddenItemsCache?.[emp.id] || {};
+                          return hasAnyHidden;
+                        });
+                        
+                        return hasAnyHidden && (
+                          <button
+                            onClick={() => {
+                              // Clear all hidden items for all employees
+                              if (window.confirm('Réafficher tous les éléments masqués ?')) {
+                                employees.forEach(emp => {
+                                  const storageKey = `planning-hidden-items-${currentUser?.id}`;
+                                  localStorage.removeItem(storageKey);
+                                });
+                                window.location.reload();
+                              }
+                            }}
+                            className="text-[8px] text-gray-400 hover:text-gray-600 transition-colors underline"
+                          >
+                            Tout afficher
+                          </button>
+                        );
+                      })()}
                     </div>
                     <div className="flex flex-1">
                       {employees.map(employee => {
