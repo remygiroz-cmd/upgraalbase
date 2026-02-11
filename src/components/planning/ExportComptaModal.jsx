@@ -649,7 +649,7 @@ export default function ExportComptaModal({ open, onOpenChange, monthStart, mont
           holidaysWorkedHours: persistedRecap.manual_holidays_hours,
           cpDays: persistedRecap.manual_cp_days
         };
-        finalRecap = applyManualOverrides(calculatedRecap, overrides).recap;
+        finalRecap = applyManualOverrides(calculatedRecap, overrides);
       }
 
       // Skip si aucune heure travaillée après calcul
