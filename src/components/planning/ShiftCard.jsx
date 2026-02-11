@@ -1,6 +1,9 @@
-import React from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { cn } from '@/lib/utils';
 import { Clock, Coffee, AlertTriangle, Trash2 } from 'lucide-react';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { base44 } from '@/api/base44Client';
+import { toast } from 'sonner';
 
 const hexToRgb = (hex) => {
   const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
@@ -19,6 +22,11 @@ const STATUS_ICONS = {
 };
 
 const ShiftCard = React.memo(function ShiftCard({ shift, positions = [], onClick, onDelete, hasRestWarning, hasOvertimeWarning }) {
+  const [editingField, setEditingField] = useState(null); // 'start' | 'end' | null
+  const [tempValue, setTempValue] = useState('');
+  const inputRef = useRef(null);
+  const queryClient = useQueryClient();
+
   const calculateDuration = () => {
     const [startH, startM] = shift.start_time.split(':').map(Number);
     const [endH, endM] = shift.end_time.split(':').map(Number);
@@ -41,6 +49,109 @@ const ShiftCard = React.memo(function ShiftCard({ shift, positions = [], onClick
     bg: `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.1)`,
     border: positionColor,
     text: positionColor
+  };
+
+  // Auto-focus input when editing starts
+  useEffect(() => {
+    if (editingField && inputRef.current) {
+      inputRef.current.focus();
+      inputRef.current.select();
+    }
+  }, [editingField]);
+
+  // Mutation pour update du shift
+  const updateShiftMutation = useMutation({
+    mutationFn: ({ id, data }) => base44.entities.Shift.update(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['shifts'] });
+      queryClient.invalidateQueries({ queryKey: ['allWeeklyRecaps'] });
+      queryClient.invalidateQueries({ queryKey: ['allMonthlyRecaps'] });
+      setEditingField(null);
+      setTempValue('');
+      toast.success('Horaire mis à jour');
+    },
+    onError: (error) => {
+      toast.error(`Erreur: ${error.message}`);
+      setEditingField(null);
+      setTempValue('');
+    }
+  });
+
+  const handleStartEdit = (field, e) => {
+    e.stopPropagation();
+    const currentValue = field === 'start' ? shift.start_time : shift.end_time;
+    setEditingField(field);
+    setTempValue(currentValue);
+  };
+
+  const handleCancel = () => {
+    setEditingField(null);
+    setTempValue('');
+  };
+
+  const handleSave = () => {
+    if (!tempValue || tempValue === (editingField === 'start' ? shift.start_time : shift.end_time)) {
+      handleCancel();
+      return;
+    }
+
+    // Validation format HH:mm
+    if (!/^\d{2}:\d{2}$/.test(tempValue)) {
+      toast.error('Format invalide (HH:mm requis)');
+      handleCancel();
+      return;
+    }
+
+    const newStartTime = editingField === 'start' ? tempValue : shift.start_time;
+    const newEndTime = editingField === 'end' ? tempValue : shift.end_time;
+
+    // Validation: end > start
+    const [startH, startM] = newStartTime.split(':').map(Number);
+    const [endH, endM] = newEndTime.split(':').map(Number);
+    const startMinutes = startH * 60 + startM;
+    const endMinutes = endH * 60 + endM;
+
+    if (endMinutes <= startMinutes && endH < 12) {
+      toast.error('L\'heure de fin doit être après l\'heure de début');
+      handleCancel();
+      return;
+    }
+
+    // Save
+    updateShiftMutation.mutate({
+      id: shift.id,
+      data: {
+        start_time: newStartTime,
+        end_time: newEndTime
+      }
+    });
+  };
+
+  const handleKeyDown = (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      handleSave();
+    } else if (e.key === 'Escape') {
+      e.preventDefault();
+      handleCancel();
+    } else if (e.key === 'Tab' && editingField === 'start') {
+      e.preventDefault();
+      handleSave();
+      // Passer à l'édition de end après un court délai
+      setTimeout(() => {
+        setEditingField('end');
+        setTempValue(shift.end_time);
+      }, 50);
+    }
+  };
+
+  const handleBlur = () => {
+    // Blur = validation automatique
+    setTimeout(() => {
+      if (editingField) {
+        handleSave();
+      }
+    }, 100);
   };
 
   return (
@@ -74,9 +185,53 @@ const ShiftCard = React.memo(function ShiftCard({ shift, positions = [], onClick
       <div className="flex items-center justify-between gap-1">
         <div className="flex items-center gap-1">
           <Clock className="w-3 h-3" style={{ color: colors.text }} />
-          <span className="text-[11px] font-bold" style={{ color: colors.text }}>
-            {shift.start_time} - {shift.end_time}
-          </span>
+          <div className="flex items-center gap-0.5 text-[11px] font-bold" style={{ color: colors.text }}>
+            {/* Heure de début - éditable inline */}
+            {editingField === 'start' ? (
+              <input
+                ref={inputRef}
+                type="time"
+                value={tempValue}
+                onChange={(e) => setTempValue(e.target.value)}
+                onKeyDown={handleKeyDown}
+                onBlur={handleBlur}
+                onClick={(e) => e.stopPropagation()}
+                disabled={updateShiftMutation.isPending}
+                className="w-16 px-1 py-0.5 text-[11px] font-bold border rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
+                style={{ color: colors.text }}
+              />
+            ) : (
+              <span
+                onClick={(e) => handleStartEdit('start', e)}
+                className="cursor-pointer hover:bg-white/50 px-1 py-0.5 rounded transition-colors"
+              >
+                {shift.start_time}
+              </span>
+            )}
+            <span className="mx-0.5">-</span>
+            {/* Heure de fin - éditable inline */}
+            {editingField === 'end' ? (
+              <input
+                ref={inputRef}
+                type="time"
+                value={tempValue}
+                onChange={(e) => setTempValue(e.target.value)}
+                onKeyDown={handleKeyDown}
+                onBlur={handleBlur}
+                onClick={(e) => e.stopPropagation()}
+                disabled={updateShiftMutation.isPending}
+                className="w-16 px-1 py-0.5 text-[11px] font-bold border rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
+                style={{ color: colors.text }}
+              />
+            ) : (
+              <span
+                onClick={(e) => handleStartEdit('end', e)}
+                className="cursor-pointer hover:bg-white/50 px-1 py-0.5 rounded transition-colors"
+              >
+                {shift.end_time}
+              </span>
+            )}
+          </div>
         </div>
         <span className="text-xs">{STATUS_ICONS[shift.status] || '📋'}</span>
       </div>
