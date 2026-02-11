@@ -111,6 +111,19 @@ function buildExportRow(employee, calculatedRecap, nonShiftTypes, cpPeriods, non
   const ferieStr = holidayEligible && holidayDays > 0 
     ? `${holidayDays}j, ${formatHours(holidayHours)}h` 
     : '';
+  
+  // DEBUG LOG pour Férié
+  if (employeeName.includes('Giuliano') || employeeName.includes('Maliwan') || employeeName.includes('Julie')) {
+    console.log(`🎉 FÉRIÉ DEBUG - ${employeeName}:`, {
+      holidayDays,
+      holidayHours,
+      holidayEligible,
+      ferieStr,
+      'calculatedRecap.eligibleForHolidayPay': calculatedRecap?.eligibleForHolidayPay,
+      'calculatedRecap.holidaysWorkedDays': calculatedRecap?.holidaysWorkedDays,
+      'calculatedRecap.holidaysWorkedHours': calculatedRecap?.holidaysWorkedHours
+    });
+  }
 
   // 4) Total payé = Payées (hors sup/comp) + Compl 10% + Compl 25% + Supp 25% + Supp 50% + Férié (si éligible)
   let totalPaid = payeesHorsSup + compl10 + compl25 + supp25 + supp50;
@@ -907,9 +920,9 @@ export default function ExportComptaModal({ open, onOpenChange, monthStart, mont
                       <td className="px-2 py-2 text-right">{row.compl25 > 0 ? `${row.compl25.toFixed(1)}h` : ''}</td>
                       <td className="px-2 py-2 text-right">{row.supp25 > 0 ? `${row.supp25.toFixed(1)}h` : ''}</td>
                       <td className="px-2 py-2 text-right">{row.supp50 > 0 ? `${row.supp50.toFixed(1)}h` : ''}</td>
-                      <td className="px-2 py-2 text-center text-[10px] text-purple-700">{row.ferieStr || ''}</td>
+                      <td className="px-2 py-2 text-center text-[10px] text-purple-700 whitespace-pre-line">{row.ferieStr || ''}</td>
                       <td className="px-2 py-2 text-[10px] whitespace-pre-line">{row.nonShiftsStr || ''}</td>
-                      <td className="px-2 py-2 text-[10px]">{row.cpStr || ''}</td>
+                      <td className="px-2 py-2 text-[10px] whitespace-pre-line">{row.cpStr || ''}</td>
                     </tr>
                   ))}
                   <tr className="bg-gray-200 font-bold">
