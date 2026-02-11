@@ -209,6 +209,7 @@ function buildExportRow(employee, calculatedRecap, nonShiftTypes, cpPeriods, non
     supp25,
     supp50,
     ferieStr,
+    ferieEligible, // Exposer pour le debug fallback
     nonShiftsStr,
     cpStr
   };
@@ -604,7 +605,7 @@ export default function ExportComptaModal({ open, onOpenChange, monthStart, mont
         month - 1 // 0-indexed for calculation engine
       );
 
-      // DEBUG: Log férié data for specific employees
+      // DEBUG: Collect debug data for specific employees
       const employeeName = `${employee.first_name} ${employee.last_name}`;
       if (employeeName.includes('Giuliano') || employeeName.includes('Maliwan')) {
         console.log(`[FERIE DEBUG] ${employeeName} (ID: ${employee.id}, monthKey: ${monthKey}):
@@ -616,19 +617,6 @@ export default function ExportComptaModal({ open, onOpenChange, monthStart, mont
     holidaysWorkedDays: calculatedRecap?.holidaysWorkedDays,
     holidaysWorkedHours: calculatedRecap?.holidaysWorkedHours
   });
-        
-        // Store for UI debug
-        setDebugData(prev => [...prev, {
-          employee: employeeName,
-          id: employee.id,
-          ferieEligible: calculatedRecap?.ferieEligible,
-          ferieDays: calculatedRecap?.ferieDays,
-          ferieHours: calculatedRecap?.ferieHours,
-          // Legacy fields pour comparaison
-          eligibleForHolidayPay: calculatedRecap?.eligibleForHolidayPay,
-          holidaysWorkedDays: calculatedRecap?.holidaysWorkedDays,
-          holidaysWorkedHours: calculatedRecap?.holidaysWorkedHours
-        }]);
       }
 
       // Chercher le récap mensuel persisté pour les OVERRIDES
@@ -663,7 +651,24 @@ export default function ExportComptaModal({ open, onOpenChange, monthStart, mont
       }
 
       // Construire la ligne d'export depuis le récap calculé+overridé
-      return buildExportRow(employee, finalRecap, nonShiftTypes, cpPeriods, nonShiftEvents);
+      const row = buildExportRow(employee, finalRecap, nonShiftTypes, cpPeriods, nonShiftEvents);
+      
+      // DEBUG: Store debug data for Giuliano/Maliwan
+      if (employeeName.includes('Giuliano') || employeeName.includes('Maliwan')) {
+        setDebugData(prev => [...prev, {
+          employee: employeeName,
+          id: employee.id,
+          recap_ferieEligible: finalRecap?.ferieEligible,
+          recap_ferieDays: finalRecap?.ferieDays,
+          recap_ferieHours: finalRecap?.ferieHours,
+          recap_eligibleForHolidayPay: finalRecap?.eligibleForHolidayPay,
+          recap_holidaysWorkedDays: finalRecap?.holidaysWorkedDays,
+          recap_holidaysWorkedHours: finalRecap?.holidaysWorkedHours,
+          row_ferieStr: row?.ferieStr
+        }]);
+      }
+      
+      return row;
     })
     .filter(Boolean);
 
@@ -921,22 +926,51 @@ export default function ExportComptaModal({ open, onOpenChange, monthStart, mont
         <div className="space-y-6">
           {/* Debug panel - visible uniquement avec ?debug=1 */}
           {new URLSearchParams(window.location.search).get('debug') === '1' && debugData.length > 0 && (
-            <div className="bg-yellow-50 border border-yellow-300 rounded-lg p-4">
-              <h3 className="text-sm font-bold text-yellow-900 mb-2">🔍 DEBUG - Données Férié (après calculateMonthlyRecap)</h3>
+            <div className="bg-yellow-50 border border-yellow-300 rounded-lg p-4 mb-6">
+              <h3 className="text-sm font-bold text-yellow-900 mb-3">🔍 DEBUG - Diagnostic Férié pour Giuliano & Maliwan</h3>
               {debugData.map((d, idx) => (
-                <div key={idx} className="text-xs font-mono text-yellow-900 mb-3 pb-3 border-b border-yellow-300">
-                  <strong>{d.employee}</strong> (ID: {d.id})<br/>
-                  <div className="mt-1 text-green-700 font-bold">
-                    ✅ Nouveaux alias (pour export):<br/>
-                    ferieEligible = {String(d.ferieEligible)}<br/>
-                    ferieDays = {d.ferieDays}<br/>
-                    ferieHours = {d.ferieHours}
+                <div key={idx} className="bg-white rounded p-3 mb-3 border-2 border-yellow-400">
+                  <div className="text-base font-bold text-yellow-900 mb-2">{d.employee}</div>
+                  
+                  <div className="grid grid-cols-2 gap-4 text-xs">
+                    <div>
+                      <div className="font-bold text-green-700 mb-1">📊 RECAP (après calculate):</div>
+                      <div className="font-mono bg-green-50 p-2 rounded">
+                        recap.ferieEligible = <span className="font-bold">{String(d.recap_ferieEligible)}</span><br/>
+                        recap.ferieDays = <span className="font-bold">{d.recap_ferieDays}</span><br/>
+                        recap.ferieHours = <span className="font-bold">{d.recap_ferieHours}</span>
+                      </div>
+                      <div className="mt-2 text-gray-500">
+                        Legacy (comparaison):<br/>
+                        eligibleForHolidayPay = {String(d.recap_eligibleForHolidayPay)}<br/>
+                        holidaysWorkedDays = {d.recap_holidaysWorkedDays}<br/>
+                        holidaysWorkedHours = {d.recap_holidaysWorkedHours}
+                      </div>
+                    </div>
+                    
+                    <div>
+                      <div className="font-bold text-blue-700 mb-1">📋 ROW (export final):</div>
+                      <div className="font-mono bg-blue-50 p-2 rounded">
+                        row.ferieStr = <span className="font-bold">"{d.row_ferieStr}"</span>
+                      </div>
+                      <div className="mt-2">
+                        {d.row_ferieStr ? (
+                          <span className="text-green-600 font-bold">✅ Valeur présente</span>
+                        ) : (
+                          <span className="text-red-600 font-bold">❌ VIDE - BUG ICI</span>
+                        )}
+                      </div>
+                    </div>
                   </div>
-                  <div className="mt-1 text-gray-600">
-                    Legacy (pour comparaison):<br/>
-                    eligibleForHolidayPay = {String(d.eligibleForHolidayPay)}<br/>
-                    holidaysWorkedDays = {d.holidaysWorkedDays}<br/>
-                    holidaysWorkedHours = {d.holidaysWorkedHours}
+                  
+                  <div className="mt-3 pt-3 border-t border-yellow-200">
+                    <div className="text-xs font-bold text-purple-700">
+                      {d.recap_ferieEligible === true && d.recap_ferieDays > 0 && d.recap_ferieHours > 0 ? (
+                        <span className="text-green-600">✅ ATTENDU: {d.recap_ferieDays}j, {d.recap_ferieHours}h</span>
+                      ) : (
+                        <span className="text-red-600">❌ Pas de férié détecté dans le recap</span>
+                      )}
+                    </div>
                   </div>
                 </div>
               ))}
@@ -1014,7 +1048,13 @@ export default function ExportComptaModal({ open, onOpenChange, monthStart, mont
                       <td className="px-2 py-2 text-right">{row.compl25 > 0 ? `${row.compl25.toFixed(1)}h` : ''}</td>
                       <td className="px-2 py-2 text-right">{row.supp25 > 0 ? `${row.supp25.toFixed(1)}h` : ''}</td>
                       <td className="px-2 py-2 text-right">{row.supp50 > 0 ? `${row.supp50.toFixed(1)}h` : ''}</td>
-                      <td className="px-2 py-2 text-center text-[10px] text-purple-700 whitespace-pre-line">{row.ferieStr || ''}</td>
+                      <td className="px-2 py-2 text-center text-[10px] text-purple-700 whitespace-pre-line">
+                        {new URLSearchParams(window.location.search).get('debug') === '1' && row.ferieEligible ? (
+                          <span className="bg-red-100 text-red-700 font-bold px-1">DEBUG FERIE OK</span>
+                        ) : (
+                          row.ferieStr || ''
+                        )}
+                      </td>
                       <td className="px-2 py-2 text-[10px] whitespace-pre-line">{row.nonShiftsStr || ''}</td>
                       <td className="px-2 py-2 text-[10px] whitespace-pre-line">{row.cpStr || ''}</td>
                     </tr>
