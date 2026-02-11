@@ -68,10 +68,21 @@ const ShiftCard = React.memo(function ShiftCard({
 
   // Handler pour sauvegarder via la même logique que la modale
   const handleSaveTime = (newStartTime, newEndTime) => {
+    // 🔥 CRITIQUE: Calculer base_hours_override exactement comme la modale (lignes 240-254)
+    const [startH, startM] = newStartTime.split(':').map(Number);
+    const [endH, endM] = newEndTime.split(':').map(Number);
+    
+    let totalMinutes = (endH * 60 + endM) - (startH * 60 + startM);
+    if (totalMinutes < 0) totalMinutes += 24 * 60;
+    totalMinutes -= (shift.break_minutes || 0);
+    
+    const decimalHours = Math.round((totalMinutes / 60) * 10) / 10;
+    
     const shiftData = {
       ...shift,
       start_time: newStartTime,
-      end_time: newEndTime
+      end_time: newEndTime,
+      base_hours_override: decimalHours // 🔥 Envoyer le même champ que la modale
     };
     
     // Appeler onSave exactement comme la modale
