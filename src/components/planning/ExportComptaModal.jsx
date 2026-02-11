@@ -108,22 +108,22 @@ function buildExportRow(employee, calculatedRecap, nonShiftTypes, cpPeriods, non
   // Format hours: remove .0 if integer (9.0 → 9, 9.5 → 9.5)
   const formatHours = (h) => h % 1 === 0 ? h.toFixed(0) : h.toFixed(1);
   
-  const ferieStr = holidayEligible && holidayDays > 0 
+  const ferieStr = holidayEligible && holidayDays > 0 && holidayHours > 0
     ? `${holidayDays}j, ${formatHours(holidayHours)}h` 
     : '';
   
-  // DEBUG LOG pour Férié
-  if (employeeName.includes('Giuliano') || employeeName.includes('Maliwan') || employeeName.includes('Julie')) {
-    console.log(`🎉 FÉRIÉ DEBUG - ${employeeName}:`, {
-      holidayDays,
-      holidayHours,
-      holidayEligible,
-      ferieStr,
-      'calculatedRecap.eligibleForHolidayPay': calculatedRecap?.eligibleForHolidayPay,
-      'calculatedRecap.holidaysWorkedDays': calculatedRecap?.holidaysWorkedDays,
-      'calculatedRecap.holidaysWorkedHours': calculatedRecap?.holidaysWorkedHours
-    });
-  }
+  // DEBUG LOG pour Férié (keep for diagnostic)
+  console.log(`🎉 FÉRIÉ - ${employeeName}:`, {
+    holidayDays,
+    holidayHours,
+    holidayEligible,
+    ferieStr,
+    rawData: {
+      eligibleForHolidayPay: calculatedRecap?.eligibleForHolidayPay,
+      holidaysWorkedDays: calculatedRecap?.holidaysWorkedDays,
+      holidaysWorkedHours: calculatedRecap?.holidaysWorkedHours
+    }
+  });
 
   // 4) Total payé = Payées (hors sup/comp) + Compl 10% + Compl 25% + Supp 25% + Supp 50% + Férié (si éligible)
   let totalPaid = payeesHorsSup + compl10 + compl25 + supp25 + supp50;
@@ -890,6 +890,44 @@ export default function ExportComptaModal({ open, onOpenChange, monthStart, mont
           {/* Tableau récapitulatif */}
           <div>
             <h3 className="text-lg font-semibold mb-3 text-gray-900">📊 Récapitulatif global de paie</h3>
+            
+            {/* Légende des codes non-shifts */}
+            {(() => {
+              // Extract all codes from export data
+              const codesSet = new Set();
+              exportData.forEach(row => {
+                if (row.nonShiftsStr) {
+                  const matches = row.nonShiftsStr.match(/[A-Z]+(?=\s+\d+j)/g);
+                  if (matches) {
+                    matches.forEach(code => codesSet.add(code));
+                  }
+                }
+              });
+              
+              if (codesSet.size === 0) return null;
+              
+              // Build legend mapping
+              const legendMap = {
+                'SS': 'Sans solde',
+                'MAL': 'Malade',
+                'CP': 'Congés payés',
+                'ABS': 'Absence',
+                'ABSNJ': 'Absence non justifiée',
+                'RTT': 'RTT',
+                'FORM': 'Formation',
+                'CONGE': 'Congé'
+              };
+              
+              const legendParts = Array.from(codesSet).map(code => 
+                `${code} = ${legendMap[code] || '(à définir)'}`
+              );
+              
+              return (
+                <div className="text-xs text-gray-500 mb-3 italic">
+                  * Légende : {legendParts.join(' • ')}
+                </div>
+              );
+            })()}
             <div className="overflow-x-auto border rounded-lg">
               <table className="w-full text-xs">
                 <thead className="bg-gray-100">
