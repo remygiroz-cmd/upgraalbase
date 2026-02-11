@@ -315,16 +315,20 @@ export function calculateMonthlyRecap(
     calculateMonthlyOvertime(result, employee, shifts, nonShiftEvents, nonShiftTypes, year, month, contractHoursWeekly);
   }
 
-  // Check holiday pay eligibility (8 months = ~240 days of employment)
+  // Holiday pay eligibility: employee must have WORKED on a holiday
+  // (Ancienneté is a separate legal requirement but for display we show if worked)
+  result.eligibleForHolidayPay = result.holidaysWorkedDays > 0;
+  
+  // Check seniority for legal compliance (optional info)
   if (employee.start_date) {
     const startDate = new Date(employee.start_date);
     const currentDate = new Date(year, month, 15); // Mid-month check
     const daysEmployed = Math.floor((currentDate - startDate) / (1000 * 60 * 60 * 24));
-    result.eligibleForHolidayPay = daysEmployed >= 240;
+    result.hasSufficientSeniority = daysEmployed >= 90; // 3 months
   }
 
   // Aliases pour export compta (mêmes valeurs, noms plus clairs)
-  result.ferieEligible = result.eligibleForHolidayPay;
+  result.ferieEligible = result.holidaysWorkedDays > 0; // TRUE only if worked on holiday
   result.ferieDays = result.holidaysWorkedDays;
   result.ferieHours = result.holidaysWorkedHours;
 
