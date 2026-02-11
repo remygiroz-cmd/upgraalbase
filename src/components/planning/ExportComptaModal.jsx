@@ -104,15 +104,30 @@ function buildExportRow(employee, calculatedRecap, nonShiftTypes, cpPeriods, non
   const holidayDays = calculatedRecap?.holidaysWorkedDays || 0;
   const holidayHours = calculatedRecap?.holidaysWorkedHours || 0;
   const holidayEligible = calculatedRecap?.eligibleForHolidayPay === true;
+  
+  // Format hours: remove .0 if integer (9.0 → 9, 9.5 → 9.5)
+  const formatHours = (h) => h % 1 === 0 ? h.toFixed(0) : h.toFixed(1);
+  
   const ferieStr = holidayEligible && holidayDays > 0 
-    ? `${holidayDays}j, ${holidayHours.toFixed(1)}h` 
+    ? `${holidayDays}j, ${formatHours(holidayHours)}h` 
     : '';
 
-  // 4) Total payé - SEUL CALCUL AUTORISÉ
+  // 4) Total payé = Payées (hors sup/comp) + Compl 10% + Compl 25% + Supp 25% + Supp 50% + Férié (si éligible)
   let totalPaid = payeesHorsSup + compl10 + compl25 + supp25 + supp50;
   if (holidayEligible && holidayHours > 0) {
     totalPaid += holidayHours;
   }
+  
+  console.log(`💰 Total calculation for ${employeeName}:`, {
+    payeesHorsSup: payeesHorsSup.toFixed(1),
+    compl10: compl10.toFixed(1),
+    compl25: compl25.toFixed(1),
+    supp25: supp25.toFixed(1),
+    supp50: supp50.toFixed(1),
+    holidayHours: holidayHours.toFixed(1),
+    holidayEligible,
+    totalPaid: totalPaid.toFixed(1)
+  });
 
   // 11) Non-shifts visibles récap AVEC DATES
   const nonShiftsVisible = [];
