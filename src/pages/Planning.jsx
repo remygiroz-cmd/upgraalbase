@@ -61,7 +61,39 @@ export default function Planning() {
   const [showFab, setShowFab] = useState(false); // Floating Action Button
   const [isUndoing, setIsUndoing] = useState(false);
   const [isRedoing, setIsRedoing] = useState(false);
+  const [hasHiddenItems, setHasHiddenItems] = useState(false); // Track hidden items for "Show All" button
   const queryClient = useQueryClient();
+
+  // Monitor localStorage for hidden items changes
+  useEffect(() => {
+    const checkHiddenItems = () => {
+      if (!currentUser?.id) return;
+      const storageKey = `planning-hidden-items-${currentUser.id}`;
+      try {
+        const stored = localStorage.getItem(storageKey);
+        if (stored) {
+          const hiddenItems = JSON.parse(stored);
+          setHasHiddenItems(Array.isArray(hiddenItems) && hiddenItems.length > 0);
+        } else {
+          setHasHiddenItems(false);
+        }
+      } catch (error) {
+        setHasHiddenItems(false);
+      }
+    };
+
+    checkHiddenItems();
+
+    // Listen to storage changes
+    window.addEventListener('storage', checkHiddenItems);
+    // Custom event for same-tab changes
+    window.addEventListener('hidden-items-changed', checkHiddenItems);
+
+    return () => {
+      window.removeEventListener('storage', checkHiddenItems);
+      window.removeEventListener('hidden-items-changed', checkHiddenItems);
+    };
+  }, [currentUser?.id]);
 
   // Undo/Redo system
   const undoStack = useUndoStack();
@@ -1404,35 +1436,19 @@ export default function Planning() {
                         <span className="hidden lg:inline">📊 Récap mensuel</span>
                         <span className="lg:hidden">📊 Mois</span>
                       </div>
-                      {(() => {
-                        // Check if user has any hidden items in localStorage
-                        const storageKey = `planning-hidden-items-${currentUser?.id}`;
-                        let hasAnyHidden = false;
-                        
-                        try {
-                          const stored = localStorage.getItem(storageKey);
-                          if (stored) {
-                            const hiddenItems = JSON.parse(stored);
-                            hasAnyHidden = Array.isArray(hiddenItems) && hiddenItems.length > 0;
-                          }
-                        } catch (error) {
-                          // Ignore
-                        }
-                        
-                        return hasAnyHidden && (
-                          <button
-                            onClick={() => {
-                              // Clear all hidden items
-                              const storageKey = `planning-hidden-items-${currentUser?.id}`;
-                              localStorage.removeItem(storageKey);
-                              window.location.reload();
-                            }}
-                            className="text-[8px] text-gray-400 hover:text-gray-600 transition-colors underline"
-                          >
-                            Tout afficher
-                          </button>
-                        );
-                      })()}
+                      {hasHiddenItems && (
+                        <button
+                          onClick={() => {
+                            const storageKey = `planning-hidden-items-${currentUser?.id}`;
+                            localStorage.removeItem(storageKey);
+                            // Dispatch custom event to update state
+                            window.dispatchEvent(new Event('hidden-items-changed'));
+                          }}
+                          className="text-[8px] text-gray-400 hover:text-gray-600 transition-colors underline"
+                        >
+                          Tout afficher
+                        </button>
+                      )}
                     </div>
                     <div className="flex flex-1">
                       {employees.map(employee => {
