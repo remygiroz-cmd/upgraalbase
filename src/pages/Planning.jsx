@@ -61,7 +61,6 @@ export default function Planning() {
   const [showFab, setShowFab] = useState(false); // Floating Action Button
   const [isUndoing, setIsUndoing] = useState(false);
   const [isRedoing, setIsRedoing] = useState(false);
-  const [hasHiddenItems, setHasHiddenItems] = useState(false); // Track hidden items for "Show All" button
   const queryClient = useQueryClient();
 
   // Undo/Redo system
@@ -74,37 +73,6 @@ export default function Planning() {
     queryKey: ['currentUser'],
     queryFn: () => base44.auth.me()
   });
-
-  // Monitor localStorage for hidden items changes (after currentUser is declared)
-  useEffect(() => {
-    const checkHiddenItems = () => {
-      if (!currentUser?.id) return;
-      const storageKey = `planning-hidden-items-${currentUser.id}`;
-      try {
-        const stored = localStorage.getItem(storageKey);
-        if (stored) {
-          const hiddenItems = JSON.parse(stored);
-          setHasHiddenItems(Array.isArray(hiddenItems) && hiddenItems.length > 0);
-        } else {
-          setHasHiddenItems(false);
-        }
-      } catch (error) {
-        setHasHiddenItems(false);
-      }
-    };
-
-    checkHiddenItems();
-
-    // Listen to storage changes
-    window.addEventListener('storage', checkHiddenItems);
-    // Custom event for same-tab changes
-    window.addEventListener('hidden-items-changed', checkHiddenItems);
-
-    return () => {
-      window.removeEventListener('storage', checkHiddenItems);
-      window.removeEventListener('hidden-items-changed', checkHiddenItems);
-    };
-  }, [currentUser?.id]);
 
   const currentMonth = currentDate.getMonth();
   const currentYear = currentDate.getFullYear();
@@ -1432,23 +1400,10 @@ export default function Planning() {
                   {/* Monthly Summary Row */}
                   <div className="bg-gradient-to-r from-blue-100 to-blue-50 border-t-4 border-blue-500 flex">
                     <div className="sticky left-0 z-20 bg-gradient-to-r from-blue-100 to-blue-50 border-r-2 border-blue-300 px-1 lg:px-2 py-2 lg:py-3 shadow-sm w-[80px] lg:w-[120px]">
-                      <div className="text-[9px] lg:text-[11px] font-bold text-blue-900 uppercase tracking-wide text-center mb-2">
+                      <div className="text-[9px] lg:text-[11px] font-bold text-blue-900 uppercase tracking-wide text-center">
                         <span className="hidden lg:inline">📊 Récap mensuel</span>
                         <span className="lg:hidden">📊 Mois</span>
                       </div>
-                      {hasHiddenItems && (
-                        <button
-                          onClick={() => {
-                            const storageKey = `planning-hidden-items-${currentUser?.id}`;
-                            localStorage.removeItem(storageKey);
-                            // Dispatch custom event to update state
-                            window.dispatchEvent(new Event('hidden-items-changed'));
-                          }}
-                          className="text-[8px] text-gray-400 hover:text-gray-600 transition-colors underline"
-                        >
-                          Tout afficher
-                        </button>
-                      )}
                     </div>
                     <div className="flex flex-1">
                       {employees.map(employee => {
