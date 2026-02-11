@@ -32,6 +32,7 @@ const ShiftCard = React.memo(function ShiftCard({
 }) {
   const [editingField, setEditingField] = useState(null); // 'start' | 'end' | null
   const [tempValue, setTempValue] = useState('');
+  const [isSettingEndNow, setIsSettingEndNow] = useState(false);
   const inputRef = useRef(null);
 
   const calculateDuration = () => {
@@ -92,6 +93,47 @@ const ShiftCard = React.memo(function ShiftCard({
     // Fermer l'édition immédiatement
     setEditingField(null);
     setTempValue('');
+  };
+
+  // Bouton "Fin maintenant" - met l'heure de fin à maintenant
+  const handleSetEndNow = async (e) => {
+    e.stopPropagation();
+    
+    // Calculer l'heure actuelle arrondie au 5 minutes
+    const now = new Date();
+    const minutes = now.getMinutes();
+    const roundedMinutes = Math.round(minutes / 5) * 5;
+    now.setMinutes(roundedMinutes);
+    now.setSeconds(0);
+    now.setMilliseconds(0);
+    
+    const hours = String(now.getHours()).padStart(2, '0');
+    const mins = String(now.getMinutes()).padStart(2, '0');
+    const currentTime = `${hours}:${mins}`;
+    
+    // Validation: currentTime doit être après startTime
+    const [startH, startM] = shift.start_time.split(':').map(Number);
+    const [nowH, nowM] = currentTime.split(':').map(Number);
+    const startMinutes = startH * 60 + startM;
+    const nowMinutes = nowH * 60 + nowM;
+    
+    // Gérer le cas où le shift ne passe pas minuit
+    if (nowMinutes <= startMinutes) {
+      toast.error('L\'heure de fin doit être après l\'heure de début');
+      return;
+    }
+    
+    setIsSettingEndNow(true);
+    
+    try {
+      // Utiliser exactement la même logique que l'édition inline
+      handleSaveTime(shift.start_time, currentTime);
+      toast.success(`Heure de fin mise à jour: ${currentTime}`);
+    } catch (error) {
+      toast.error(`Erreur: ${error.message}`);
+    } finally {
+      setIsSettingEndNow(false);
+    }
   };
 
   const handleStartEdit = (field, e) => {
