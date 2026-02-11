@@ -489,52 +489,27 @@ export default function ExportComptaModal({ open, onOpenChange, monthStart, mont
 
   const calculationMode = calculationSettings[0]?.planning_calculation_mode || 'disabled';
 
-  // Build export data using computePayrollBreakdown for accurate calculations
+  // 🎯 SOURCE UNIQUE: MONTHLY RECAPS PERSISTÉS
+  // Build export data UNIQUEMENT à partir des récaps mensuels
   const exportData = employees
     .map(employee => {
-      const team = teams.find(t => t.id === employee.team_id);
-      
-      const employeeShifts = shifts.filter(s => s.employee_id === employee.id);
-      const employeeNonShifts = nonShiftEvents.filter(e => e.employee_id === employee.id);
+      // Chercher le récap mensuel persisté pour cet employé
+      const monthlyRecap = recaps.find(r => r.employee_id === employee.id);
 
-      // Skip if no shifts at all
-      if (employeeShifts.length === 0 && employeeNonShifts.length === 0) {
+      // Skip si pas de recap (= employé inactif ce mois)
+      if (!monthlyRecap) {
+        console.log(`⚠️ No monthly recap for ${employee.first_name} ${employee.last_name} - skipping`);
         return null;
       }
 
-      // Compute payroll breakdown (corrected calculation)
-      const payrollBreakdown = computePayrollBreakdown(
-        employee,
-        monthContext,
-        shifts,
-        nonShiftEvents,
-        nonShiftTypes,
-        cpPeriods,
-        holidayDates
-      );
-
-      // Skip if no activity (worked hours = 0)
-      if (payrollBreakdown.basePaidHours === 0 && payrollBreakdown.totalPaid === 0) {
+      // Skip si aucune activité (0 heures travaillées)
+      if (!monthlyRecap.worked_hours || monthlyRecap.worked_hours === 0) {
+        console.log(`⚠️ Zero hours for ${employee.first_name} ${employee.last_name} - skipping`);
         return null;
       }
 
-      // Build export row with payroll breakdown
-      const fullRecap = {
-        paidBaseHours: payrollBreakdown.basePaidHours,
-        worked_hours: payrollBreakdown.basePaidHours,
-        overtime_25: payrollBreakdown.supp25Hours,
-        overtime_50: payrollBreakdown.supp50Hours,
-        complementary_10: payrollBreakdown.compl10Hours,
-        complementary_25: payrollBreakdown.compl25Hours,
-        holiday_eligible: payrollBreakdown.holidayHours > 0,
-        holiday_days_count: 0,
-        holiday_hours_worked: payrollBreakdown.holidayHours,
-        nonShiftsByType: payrollBreakdown.nonShiftsVisible,
-        shifts_count: employeeShifts.length,
-        cp_days_total: payrollBreakdown.cpDays
-      };
-
-      return buildExportRow(employee, fullRecap, nonShiftTypes, cpPeriods, team, monthStart, monthEnd);
+      // Construire la ligne d'export EN LISANT UNIQUEMENT LE RECAP
+      return buildExportRow(employee, monthlyRecap, nonShiftTypes, cpPeriods);
     })
     .filter(Boolean);
 
