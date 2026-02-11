@@ -300,16 +300,13 @@ ${deductionDetails.length > 0 ? `  Détail: ${deductionDetails.map(d => `${d.dat
         )}
 
         {/* SECTION 2: Hours */}
-        <div className="mb-2">
-          <div className="text-xl font-bold text-blue-900">
-            {renderValue(workedHours, 'workedHours', 'h')}
-          </div>
-          {paidHours !== null && (
-            <div className="text-[10px] text-gray-500 mt-1">
+        {paidHours !== null && (
+          <div className="mb-2">
+            <div className="text-[10px] text-gray-500">
               Payées (hors sup/comp): {paidHours.toFixed(1)}h
             </div>
-          )}
-        </div>
+          </div>
+        )}
 
         {/* SECTION 3: Overtime / Complementary Hours */}
         {calculationMode !== 'disabled' && (
