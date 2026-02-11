@@ -295,8 +295,18 @@ export default function Planning() {
         return base44.entities.Shift.create(withPlanningVersion(data, resetVersion, monthKey));
       }
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['shifts'] });
+    onSuccess: async () => {
+      // Invalider TOUTES les queries impactées (comme la modale doit le faire)
+      await queryClient.invalidateQueries({ queryKey: ['shifts'] });
+      await queryClient.invalidateQueries({ queryKey: ['allWeeklyRecaps'] });
+      await queryClient.invalidateQueries({ queryKey: ['allMonthlyRecaps'] });
+      
+      // Forcer refetch immédiat pour mise à jour UI
+      await queryClient.refetchQueries({ 
+        queryKey: ['allWeeklyRecaps', currentYear, currentMonth, resetVersion],
+        exact: true 
+      });
+      
       toast.success('Shift enregistré');
     },
     onError: (error) => {

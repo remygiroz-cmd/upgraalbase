@@ -32,7 +32,6 @@ const ShiftCard = React.memo(function ShiftCard({
 }) {
   const [editingField, setEditingField] = useState(null); // 'start' | 'end' | null
   const [tempValue, setTempValue] = useState('');
-  const [isSaving, setIsSaving] = useState(false);
   const inputRef = useRef(null);
 
   const calculateDuration = () => {
@@ -68,28 +67,20 @@ const ShiftCard = React.memo(function ShiftCard({
   }, [editingField]);
 
   // Handler pour sauvegarder via la même logique que la modale
-  const handleSaveTime = async (newStartTime, newEndTime) => {
-    setIsSaving(true);
+  const handleSaveTime = (newStartTime, newEndTime) => {
+    const shiftData = {
+      ...shift,
+      start_time: newStartTime,
+      end_time: newEndTime
+    };
     
-    try {
-      // Utiliser exactement la même fonction que la modale
-      const shiftData = {
-        ...shift,
-        start_time: newStartTime,
-        end_time: newEndTime
-      };
-      
-      // onSave est la même mutation que dans la modale (invalidation complète)
-      await onSave(shift.id, shiftData);
-      
-      setEditingField(null);
-      setTempValue('');
-      toast.success('Horaire mis à jour');
-    } catch (error) {
-      toast.error(`Erreur: ${error.message}`);
-    } finally {
-      setIsSaving(false);
-    }
+    // Appeler onSave exactement comme la modale
+    // La mutation gère son propre state/loading/success/error
+    onSave(shift.id, shiftData);
+    
+    // Fermer l'édition immédiatement
+    setEditingField(null);
+    setTempValue('');
   };
 
   const handleStartEdit = (field, e) => {
@@ -104,7 +95,7 @@ const ShiftCard = React.memo(function ShiftCard({
     setTempValue('');
   };
 
-  const handleSave = async () => {
+  const handleSave = () => {
     if (!tempValue || tempValue === (editingField === 'start' ? shift.start_time : shift.end_time)) {
       handleCancel();
       return;
@@ -133,7 +124,7 @@ const ShiftCard = React.memo(function ShiftCard({
     }
 
     // Save via onSave (même logique que modale)
-    await handleSaveTime(newStartTime, newEndTime);
+    handleSaveTime(newStartTime, newEndTime);
   };
 
   const handleKeyDown = (e) => {
@@ -205,7 +196,7 @@ const ShiftCard = React.memo(function ShiftCard({
                 onKeyDown={handleKeyDown}
                 onBlur={handleBlur}
                 onClick={(e) => e.stopPropagation()}
-                disabled={isSaving}
+                disabled={false}
                 className="w-16 px-1 py-0.5 text-[11px] font-bold border rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
                 style={{ color: colors.text }}
               />
@@ -228,7 +219,7 @@ const ShiftCard = React.memo(function ShiftCard({
                 onKeyDown={handleKeyDown}
                 onBlur={handleBlur}
                 onClick={(e) => e.stopPropagation()}
-                disabled={isSaving}
+                disabled={false}
                 className="w-16 px-1 py-0.5 text-[11px] font-bold border rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
                 style={{ color: colors.text }}
               />
