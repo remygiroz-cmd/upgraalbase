@@ -112,18 +112,17 @@ function buildExportRow(employee, calculatedRecap, nonShiftTypes, cpPeriods, non
     ? `${holidayDays}j, ${formatHours(holidayHours)}h` 
     : '';
   
-  // DEBUG LOG pour Férié (keep for diagnostic)
-  console.log(`🎉 FÉRIÉ - ${employeeName}:`, {
-    holidayDays,
-    holidayHours,
-    holidayEligible,
-    ferieStr,
-    rawData: {
-      eligibleForHolidayPay: calculatedRecap?.eligibleForHolidayPay,
-      holidaysWorkedDays: calculatedRecap?.holidaysWorkedDays,
-      holidaysWorkedHours: calculatedRecap?.holidaysWorkedHours
-    }
-  });
+  // DEBUG LOG pour Férié - Format spécifique pour Giuliano et Maliwan
+  if (employeeName.includes('Giuliano') || employeeName.includes('Maliwan')) {
+    console.log(`[FERIE DEBUG] ${employeeName} :
+  eligible = ${holidayEligible}
+  days = ${holidayDays}
+  hours = ${holidayHours}
+  calculatedRecap.eligibleForHolidayPay = ${calculatedRecap?.eligibleForHolidayPay}
+  calculatedRecap.holidaysWorkedDays = ${calculatedRecap?.holidaysWorkedDays}
+  calculatedRecap.holidaysWorkedHours = ${calculatedRecap?.holidaysWorkedHours}
+  ferieStr = "${ferieStr}"`);
+  }
 
   // 4) Total payé = Payées (hors sup/comp) + Compl 10% + Compl 25% + Supp 25% + Supp 50% + Férié (si éligible)
   let totalPaid = payeesHorsSup + compl10 + compl25 + supp25 + supp50;
