@@ -304,11 +304,6 @@ ${deductionDetails.length > 0 ? `  Détail: ${deductionDetails.map(d => `${d.dat
           <div className="text-xl font-bold text-blue-900">
             {renderValue(workedHours, 'workedHours', 'h')}
           </div>
-          {paidHours !== null && (
-            <div className="text-[10px] text-gray-500 mt-1">
-              Payées (hors sup/comp): {paidHours.toFixed(1)}h
-            </div>
-          )}
         </div>
 
         {/* SECTION 3: Overtime / Complementary Hours */}
