@@ -65,6 +65,8 @@ export default function Planning() {
 
   // Undo/Redo system
   const undoStack = useUndoStack();
+  
+  const tableContainerRef = useRef(null);
 
   // Fetch current user
   const { data: currentUser } = useQuery({
@@ -481,39 +483,7 @@ export default function Planning() {
     toast.success('Ordre des équipes mis à jour');
   };
 
-  // Sticky scrollbar
-  const tableContainerRef = useRef(null);
-  const scrollbarRef = useRef(null);
 
-  useEffect(() => {
-    const container = tableContainerRef.current;
-    const scrollbar = scrollbarRef.current;
-    if (!container || !scrollbar) return;
-
-    const handleScroll = () => {
-      scrollbar.scrollLeft = container.scrollLeft;
-    };
-
-    const handleScrollbarScroll = () => {
-      container.scrollLeft = scrollbar.scrollLeft;
-    };
-
-    container.addEventListener('scroll', handleScroll);
-    scrollbar.addEventListener('scroll', handleScrollbarScroll);
-
-    // Set scrollbar width
-    const updateScrollbarWidth = () => {
-      scrollbar.querySelector('div').style.width = container.scrollWidth + 'px';
-    };
-    updateScrollbarWidth();
-    window.addEventListener('resize', updateScrollbarWidth);
-
-    return () => {
-      container.removeEventListener('scroll', handleScroll);
-      scrollbar.removeEventListener('scroll', handleScrollbarScroll);
-      window.removeEventListener('resize', updateScrollbarWidth);
-    };
-  }, [employees.length]);
 
   // Pre-compute shift lookups for O(1) access - major performance improvement
   const shiftsLookup = React.useMemo(() => {
@@ -1120,15 +1090,6 @@ export default function Planning() {
           }
         }}
       />
-
-      {/* Sticky Scrollbar */}
-      <div 
-        ref={scrollbarRef}
-        className="bg-gray-100 border-2 border-gray-200 rounded-t-xl overflow-x-auto sticky top-[72px] lg:top-0 z-30 mb-2"
-        style={{ height: '16px' }}
-      >
-        <div style={{ height: '1px' }}></div>
-      </div>
 
       {/* Calendar Grid - Direct scrolling, no zoom wrapper */}
       <div className="bg-white border-2 border-gray-200 rounded-xl shadow-xl overflow-auto" style={{ height: 'calc(100vh - 220px)' }}>
