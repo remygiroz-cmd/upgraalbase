@@ -10,6 +10,7 @@ import {
   formatLocalDate
 } from '@/components/utils/weeklyHoursCalculation';
 import { calculateDayHours } from '@/components/utils/nonShiftHoursCalculation';
+import { usePlanningVersion, withPlanningVersion } from '@/components/planning/usePlanningVersion';
 
 /**
  * Récap semaine simplifié
@@ -42,6 +43,9 @@ export default function WeeklySummary({
 
   const queryClient = useQueryClient();
   const weekStartStr = formatLocalDate(weekStart);
+  
+  // Get planning version for reset system
+  const { resetVersion, monthKey } = usePlanningVersion(currentYear, currentMonth);
 
   // Heures contractuelles par semaine depuis l'employé
   const contractHoursPerWeek = parseContractHours(employee?.contract_hours_weekly) || 0;
@@ -235,76 +239,61 @@ export default function WeeklySummary({
   // Mutation pour sauvegarder/mettre à jour le recap
   const saveMutation = useMutation({
     mutationFn: async (baseValue) => {
-      const data = {
+      if (resetVersion === undefined || !monthKey) {
+        throw new Error('Planning version non disponible');
+      }
+
+      const dataToSave = {
         employee_id: employee.id,
         week_start: weekStartStr,
         base_override_hours: baseValue
       };
 
-      console.log('═══════════════════════════════════════════════════');
-      console.log('C) MUTATION - ENVOI AU SERVEUR');
-      console.log('═══════════════════════════════════════════════════');
-      console.log('payload envoyé:');
-      console.log('  - employee_id:', data.employee_id);
-      console.log('  - week_start:', data.week_start);
-      console.log('  - base_override_hours:', data.base_override_hours);
-      console.log('action:', weeklyRecap?.id ? 'UPDATE (ID: ' + weeklyRecap.id + ')' : 'CREATE');
-      console.log('═══════════════════════════════════════════════════\n');
+      console.log('💾 SAVE BASE - Mutation');
+      console.log('  employee:', employee.first_name, employee.last_name);
+      console.log('  week_start:', weekStartStr);
+      console.log('  base_override_hours:', baseValue);
+      console.log('  monthKey:', monthKey);
+      console.log('  resetVersion:', resetVersion);
+      console.log('  action:', weeklyRecap?.id ? `UPDATE (${weeklyRecap.id})` : 'CREATE');
 
       try {
         let result;
         if (weeklyRecap?.id) {
+          // Update existing recap
           result = await base44.entities.WeeklyRecap.update(weeklyRecap.id, {
             base_override_hours: baseValue
           });
+          console.log('✅ UPDATE SUCCESS - base saved:', result.base_override_hours);
         } else {
-          result = await base44.entities.WeeklyRecap.create(data);
+          // Create new recap with versioning
+          const dataWithVersion = withPlanningVersion(dataToSave, resetVersion, monthKey);
+          result = await base44.entities.WeeklyRecap.create(dataWithVersion);
+          console.log('✅ CREATE SUCCESS - base saved:', result.base_override_hours);
         }
-        
-        console.log('═══════════════════════════════════════════════════');
-        console.log('C) MUTATION - RÉPONSE DU SERVEUR');
-        console.log('═══════════════════════════════════════════════════');
-        console.log('response.id:', result.id);
-        console.log('response.employee_id:', result.employee_id);
-        console.log('response.week_start:', result.week_start);
-        console.log('response.base_override_hours:', result.base_override_hours);
-        console.log('✅ base_override_hours présent?:', result.base_override_hours !== null && result.base_override_hours !== undefined);
-        console.log('═══════════════════════════════════════════════════\n');
         
         return result;
       } catch (err) {
-        console.error('❌ MUTATION ERROR:', err);
+        console.error('❌ SAVE ERROR:', err);
         throw err;
       }
     },
     onSuccess: async (data) => {
-      console.log('[WeeklySummary] ✅ MUTATION SUCCESS - Closing edit mode');
+      console.log('✅ SAVE SUCCESS - base_override_hours:', data.base_override_hours);
       
-      // D'abord fermer l'édition
       setIsEditingBase(false);
       setBaseDraft('');
       
-      // Puis invalider et refetch
       queryClient.invalidateQueries({ queryKey: ['allWeeklyRecaps'] });
       if (onRecapUpdate) {
         await onRecapUpdate();
       }
       
-      // Vérifier après un court délai que les props ont bien changé
-      setTimeout(() => {
-        console.log('[WeeklySummary] 🔄 POST-SUCCESS CHECK:', {
-          employeeId: employee.id,
-          weekStartStr,
-          weeklyRecap: weeklyRecap,
-          baseOverrideFromDB: weeklyRecap?.base_override_hours,
-          expectedValue: data.base_override_hours
-        });
-      }, 200);
-      
-      toast.success('Base enregistrée ✓');
+      toast.success('Base hebdo enregistrée ✓');
     },
     onError: (error) => {
-      toast.error(`Erreur: ${error.message || 'Échec de la sauvegarde'}`);
+      console.error('❌ SAVE ERROR:', error);
+      toast.error(`Erreur d'enregistrement de la base hebdo: ${error.message || 'Échec'}`);
     }
   });
 
