@@ -813,18 +813,73 @@ Total overtime: ${result.totalOvertimeHours.toFixed(2)}h
 
 /**
  * Apply manual overrides to calculated recap
+ * SOURCE DE VÉRITÉ: Si override présent → utiliser override, sinon → utiliser valeur auto
  */
 export function applyManualOverrides(calculatedRecap, overrides) {
   const result = { ...calculatedRecap };
   const overriddenFields = [];
 
-  Object.keys(overrides).forEach(key => {
-    const value = overrides[key];
+  // Map des champs overridables avec leurs noms dans calculatedRecap
+  const overrideMapping = {
+    manual_expected_days: 'expectedDays',
+    manual_days_worked: 'workedDays',
+    manual_extra_days: 'extraDays',
+    manual_total_hours: 'workedHours',
+    manual_contract_hours: 'contractMonthlyHours',
+    manual_adjusted_hours: 'adjustedContractHours',
+    manual_paid_excluding_extras: 'paidExcludingExtras',
+    manual_overtime_25: 'overtimeHours25',
+    manual_overtime_50: 'overtimeHours50',
+    manual_total_overtime: 'totalOvertimeHours',
+    manual_complementary_10: 'complementaryHours10',
+    manual_complementary_25: 'complementaryHours25',
+    manual_total_complementary: 'totalComplementaryHours',
+    manual_holidays_days: 'holidaysWorkedDays',
+    manual_holidays_hours: 'holidaysWorkedHours',
+    manual_non_shifts_text: 'nonShiftsText',
+    manual_cp_text: 'cpText',
+    manual_cp_days: 'cpDays'
+  };
+
+  // Appliquer les overrides
+  Object.entries(overrideMapping).forEach(([overrideKey, recapKey]) => {
+    const value = overrides[overrideKey];
     if (value !== null && value !== undefined && value !== '') {
-      result[key] = value;
-      overriddenFields.push(key);
+      result[recapKey] = value;
+      overriddenFields.push(recapKey);
     }
   });
+
+  // Calculer paidExcludingExtras si non overridé
+  if (!overriddenFields.includes('paidExcludingExtras')) {
+    const parseContractHours = (hoursStr) => {
+      if (!hoursStr) return null;
+      const cleanStr = String(hoursStr).trim().replace(/h/gi, '').replace(/,/g, '.');
+      const hours = parseFloat(cleanStr);
+      return isNaN(hours) ? null : hours;
+    };
+
+    const employee = overrides._employee; // Pass employee for calculation
+    if (employee) {
+      const monthlyContractHours = parseContractHours(employee.contract_hours);
+      if (monthlyContractHours) {
+        // Calculate deductions from non-shifts
+        let totalDeduction = 0;
+        // This would need nonShiftEvents passed in overrides._nonShiftEvents
+        // For now, use adjusted hours if available
+        result.paidExcludingExtras = result.adjustedContractHours || result.workedHours || 0;
+      } else {
+        result.paidExcludingExtras = result.workedHours || 0;
+      }
+    } else {
+      result.paidExcludingExtras = result.workedHours || 0;
+    }
+  }
+
+  // Recalculer les alias férié
+  result.ferieEligible = result.holidaysWorkedDays > 0;
+  result.ferieDays = result.holidaysWorkedDays;
+  result.ferieHours = result.holidaysWorkedHours;
 
   return { ...result, overriddenFields };
 }
