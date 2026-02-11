@@ -112,16 +112,13 @@ function buildExportRow(employee, calculatedRecap, nonShiftTypes, cpPeriods, non
     ? `${holidayDays}j, ${formatHours(holidayHours)}h` 
     : '';
   
-  // DEBUG LOG pour Férié - Format spécifique pour Giuliano et Maliwan
+  // DEBUG LOG pour buildExportRow
   if (employeeName.includes('Giuliano') || employeeName.includes('Maliwan')) {
-    console.log(`[FERIE DEBUG] ${employeeName} :
-  eligible = ${holidayEligible}
-  days = ${holidayDays}
-  hours = ${holidayHours}
-  calculatedRecap.eligibleForHolidayPay = ${calculatedRecap?.eligibleForHolidayPay}
-  calculatedRecap.holidaysWorkedDays = ${calculatedRecap?.holidaysWorkedDays}
-  calculatedRecap.holidaysWorkedHours = ${calculatedRecap?.holidaysWorkedHours}
-  ferieStr = "${ferieStr}"`);
+    console.log(`[FERIE DEBUG - buildExportRow] ${employeeName} :
+  ferieStr final = "${ferieStr}"
+  holidayEligible = ${holidayEligible}
+  holidayDays = ${holidayDays}
+  holidayHours = ${holidayHours}`);
   }
 
   // 4) Total payé = Payées (hors sup/comp) + Compl 10% + Compl 25% + Supp 25% + Supp 50% + Férié (si éligible)
@@ -221,6 +218,14 @@ export default function ExportComptaModal({ open, onOpenChange, monthStart, mont
   const [isGenerating, setIsGenerating] = useState(false);
   const [isSending, setIsSending] = useState(false);
   const [error, setError] = useState(null);
+  const [debugData, setDebugData] = useState([]);
+
+  // DEBUG: Confirm modal is mounted
+  React.useEffect(() => {
+    if (open) {
+      console.log('[FERIE DEBUG] Export modal mounted - monthStart:', monthStart, 'monthEnd:', monthEnd);
+    }
+  }, [open, monthStart, monthEnd]);
 
   const year = monthStart.getFullYear();
   const month = monthStart.getMonth() + 1;
@@ -598,6 +603,29 @@ export default function ExportComptaModal({ open, onOpenChange, monthStart, mont
         month - 1 // 0-indexed for calculation engine
       );
 
+      // DEBUG: Log férié data for specific employees
+      const employeeName = `${employee.first_name} ${employee.last_name}`;
+      if (employeeName.includes('Giuliano') || employeeName.includes('Maliwan')) {
+        console.log(`[FERIE DEBUG] ${employeeName} (ID: ${employee.id}, monthKey: ${monthKey}):
+  eligible = ${calculatedRecap?.eligibleForHolidayPay}
+  days = ${calculatedRecap?.holidaysWorkedDays}
+  hours = ${calculatedRecap?.holidaysWorkedHours}
+  Full recap ferie fields:`, {
+    eligibleForHolidayPay: calculatedRecap?.eligibleForHolidayPay,
+    holidaysWorkedDays: calculatedRecap?.holidaysWorkedDays,
+    holidaysWorkedHours: calculatedRecap?.holidaysWorkedHours
+  });
+        
+        // Store for UI debug
+        setDebugData(prev => [...prev, {
+          employee: employeeName,
+          id: employee.id,
+          eligible: calculatedRecap?.eligibleForHolidayPay,
+          days: calculatedRecap?.holidaysWorkedDays,
+          hours: calculatedRecap?.holidaysWorkedHours
+        }]);
+      }
+
       // Chercher le récap mensuel persisté pour les OVERRIDES
       const persistedRecap = recaps.find(r => r.employee_id === employee.id);
 
@@ -886,6 +914,21 @@ export default function ExportComptaModal({ open, onOpenChange, monthStart, mont
         )}
 
         <div className="space-y-6">
+          {/* Debug panel - visible uniquement avec ?debug=1 */}
+          {new URLSearchParams(window.location.search).get('debug') === '1' && debugData.length > 0 && (
+            <div className="bg-yellow-50 border border-yellow-300 rounded-lg p-4">
+              <h3 className="text-sm font-bold text-yellow-900 mb-2">🔍 DEBUG - Données Férié</h3>
+              {debugData.map((d, idx) => (
+                <div key={idx} className="text-xs font-mono text-yellow-900 mb-2">
+                  <strong>{d.employee}</strong> (ID: {d.id})<br/>
+                  eligible = {String(d.eligible)}<br/>
+                  days = {d.days}<br/>
+                  hours = {d.hours}
+                </div>
+              ))}
+            </div>
+          )}
+
           {/* Tableau récapitulatif */}
           <div>
             <h3 className="text-lg font-semibold mb-3 text-gray-900">📊 Récapitulatif global de paie</h3>
