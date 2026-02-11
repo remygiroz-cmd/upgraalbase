@@ -100,25 +100,26 @@ function buildExportRow(employee, calculatedRecap, nonShiftTypes, cpPeriods, non
   const supp25 = calculatedRecap?.overtimeHours25 || 0;
   const supp50 = calculatedRecap?.overtimeHours50 || 0;
 
-  // 10) Férié - UNIQUEMENT SI ÉLIGIBLE
-  const holidayDays = calculatedRecap?.holidaysWorkedDays || 0;
-  const holidayHours = calculatedRecap?.holidaysWorkedHours || 0;
-  const holidayEligible = calculatedRecap?.eligibleForHolidayPay === true;
+  // 10) Férié - UNIQUEMENT SI ÉLIGIBLE (utiliser les alias clairs)
+  const ferieEligible = calculatedRecap?.ferieEligible === true;
+  const ferieDays = calculatedRecap?.ferieDays || 0;
+  const ferieHours = calculatedRecap?.ferieHours || 0;
   
   // Format hours: remove .0 if integer (9.0 → 9, 9.5 → 9.5)
   const formatHours = (h) => h % 1 === 0 ? h.toFixed(0) : h.toFixed(1);
   
-  const ferieStr = holidayEligible && holidayDays > 0 && holidayHours > 0
-    ? `${holidayDays}j, ${formatHours(holidayHours)}h` 
+  const ferieStr = ferieEligible && ferieDays > 0 && ferieHours > 0
+    ? `${ferieDays}j, ${formatHours(ferieHours)}h` 
     : '';
   
   // DEBUG LOG pour buildExportRow
   if (employeeName.includes('Giuliano') || employeeName.includes('Maliwan')) {
     console.log(`[FERIE DEBUG - buildExportRow] ${employeeName} :
   ferieStr final = "${ferieStr}"
-  holidayEligible = ${holidayEligible}
-  holidayDays = ${holidayDays}
-  holidayHours = ${holidayHours}`);
+  ferieEligible = ${ferieEligible}
+  ferieDays = ${ferieDays}
+  ferieHours = ${ferieHours}
+  recap keys:`, Object.keys(calculatedRecap || {}));
   }
 
   // 4) Total payé = Payées (hors sup/comp) + Compl 10% + Compl 25% + Supp 25% + Supp 50% + Férié (si éligible)
@@ -620,9 +621,13 @@ export default function ExportComptaModal({ open, onOpenChange, monthStart, mont
         setDebugData(prev => [...prev, {
           employee: employeeName,
           id: employee.id,
-          eligible: calculatedRecap?.eligibleForHolidayPay,
-          days: calculatedRecap?.holidaysWorkedDays,
-          hours: calculatedRecap?.holidaysWorkedHours
+          ferieEligible: calculatedRecap?.ferieEligible,
+          ferieDays: calculatedRecap?.ferieDays,
+          ferieHours: calculatedRecap?.ferieHours,
+          // Legacy fields pour comparaison
+          eligibleForHolidayPay: calculatedRecap?.eligibleForHolidayPay,
+          holidaysWorkedDays: calculatedRecap?.holidaysWorkedDays,
+          holidaysWorkedHours: calculatedRecap?.holidaysWorkedHours
         }]);
       }
 
@@ -917,13 +922,22 @@ export default function ExportComptaModal({ open, onOpenChange, monthStart, mont
           {/* Debug panel - visible uniquement avec ?debug=1 */}
           {new URLSearchParams(window.location.search).get('debug') === '1' && debugData.length > 0 && (
             <div className="bg-yellow-50 border border-yellow-300 rounded-lg p-4">
-              <h3 className="text-sm font-bold text-yellow-900 mb-2">🔍 DEBUG - Données Férié</h3>
+              <h3 className="text-sm font-bold text-yellow-900 mb-2">🔍 DEBUG - Données Férié (après calculateMonthlyRecap)</h3>
               {debugData.map((d, idx) => (
-                <div key={idx} className="text-xs font-mono text-yellow-900 mb-2">
+                <div key={idx} className="text-xs font-mono text-yellow-900 mb-3 pb-3 border-b border-yellow-300">
                   <strong>{d.employee}</strong> (ID: {d.id})<br/>
-                  eligible = {String(d.eligible)}<br/>
-                  days = {d.days}<br/>
-                  hours = {d.hours}
+                  <div className="mt-1 text-green-700 font-bold">
+                    ✅ Nouveaux alias (pour export):<br/>
+                    ferieEligible = {String(d.ferieEligible)}<br/>
+                    ferieDays = {d.ferieDays}<br/>
+                    ferieHours = {d.ferieHours}
+                  </div>
+                  <div className="mt-1 text-gray-600">
+                    Legacy (pour comparaison):<br/>
+                    eligibleForHolidayPay = {String(d.eligibleForHolidayPay)}<br/>
+                    holidaysWorkedDays = {d.holidaysWorkedDays}<br/>
+                    holidaysWorkedHours = {d.holidaysWorkedHours}
+                  </div>
                 </div>
               ))}
             </div>

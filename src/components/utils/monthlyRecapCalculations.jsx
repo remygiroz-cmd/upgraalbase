@@ -323,6 +323,11 @@ export function calculateMonthlyRecap(
     result.eligibleForHolidayPay = daysEmployed >= 240;
   }
 
+  // Aliases pour export compta (mêmes valeurs, noms plus clairs)
+  result.ferieEligible = result.eligibleForHolidayPay;
+  result.ferieDays = result.holidaysWorkedDays;
+  result.ferieHours = result.holidaysWorkedHours;
+
   return result;
 }
 
