@@ -592,31 +592,33 @@ export default function ExportComptaModal({ open, onOpenChange, monthStart, mont
     doc.text(`Généré le ${new Date().toLocaleDateString('fr-FR')} à ${new Date().toLocaleTimeString('fr-FR')}`, margin, margin + 20);
     doc.setTextColor(0, 0, 0);
 
-    // Tableau
+    // Tableau - ORDRE EXACT DES COLONNES
     const tableData = exportData.map(row => [
       row.employeeName,
-      row.posteEquipeStr,
+      row.nbJoursTravailles || 0,
+      row.joursSupp || '',
       row.totalPaid.toFixed(1) + 'h',
       row.payeesHorsSup.toFixed(1) + 'h',
-      row.compl10 > 0 ? row.compl10.toFixed(1) + 'h' : '-',
-      row.compl25 > 0 ? row.compl25.toFixed(1) + 'h' : '-',
-      row.supp25 > 0 ? row.supp25.toFixed(1) + 'h' : '-',
-      row.supp50 > 0 ? row.supp50.toFixed(1) + 'h' : '-',
-      row.ferieStr,
-      row.nonShiftsStr,
-      row.cpStr
+      row.compl10 > 0 ? row.compl10.toFixed(1) + 'h' : '',
+      row.compl25 > 0 ? row.compl25.toFixed(1) + 'h' : '',
+      row.supp25 > 0 ? row.supp25.toFixed(1) + 'h' : '',
+      row.supp50 > 0 ? row.supp50.toFixed(1) + 'h' : '',
+      row.ferieStr || '',
+      row.nonShiftsStr || '',
+      row.cpStr || ''
     ]);
 
     // Ligne TOTAL
     tableData.push([
       'TOTAL',
+      totals.nbJoursTravailles,
       '',
       totals.totalPaid.toFixed(1) + 'h',
       totals.payeesHorsSup.toFixed(1) + 'h',
-      totals.compl10.toFixed(1) + 'h',
-      totals.compl25.toFixed(1) + 'h',
-      totals.supp25.toFixed(1) + 'h',
-      totals.supp50.toFixed(1) + 'h',
+      totals.compl10 > 0 ? totals.compl10.toFixed(1) + 'h' : '',
+      totals.compl25 > 0 ? totals.compl25.toFixed(1) + 'h' : '',
+      totals.supp25 > 0 ? totals.supp25.toFixed(1) + 'h' : '',
+      totals.supp50 > 0 ? totals.supp50.toFixed(1) + 'h' : '',
       '',
       '',
       ''
