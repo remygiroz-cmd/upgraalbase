@@ -30,6 +30,7 @@ import { isDateInCPPeriod } from '@/components/planning/paidLeaveCalculations';
 import { usePlanningVersion, withPlanningVersion, filterByVersion } from '@/components/planning/usePlanningVersion';
 import { useUndoStack } from '@/components/planning/useUndoStack';
 import UndoRedoButtons from '@/components/planning/UndoRedoButtons';
+import PinchZoomContainer from '@/components/planning/PinchZoomContainer';
 
 const DAYS = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche'];
 const MONTHS = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'];
@@ -967,65 +968,69 @@ export default function Planning() {
 
   return (
     <div className="space-y-2">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <Calendar className="w-5 h-5 text-orange-600" />
-          <h1 className="text-lg font-bold text-gray-900">Planning mensuel</h1>
+      {/* Header - responsive mobile */}
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2 min-w-0 flex-1">
+          <Calendar className="w-4 h-4 lg:w-5 lg:h-5 text-orange-600 flex-shrink-0" />
+          <h1 className="text-base lg:text-lg font-bold text-gray-900 truncate">Planning mensuel</h1>
         </div>
         <Button
           onClick={() => setShowPlanningSettings(true)}
           variant="outline"
           size="icon"
-          className="h-8 w-8 border border-gray-300 hover:border-orange-500 hover:bg-orange-50"
+          className="h-8 w-8 border border-gray-300 hover:border-orange-500 hover:bg-orange-50 flex-shrink-0"
           title="Paramètres du planning"
         >
-          <Settings className="w-4 h-4" />
+          <Settings className="w-3.5 h-3.5 lg:w-4 lg:h-4" />
         </Button>
       </div>
 
-      {/* Month Navigation & Filters */}
-      <div className="bg-white border border-gray-200 rounded-lg p-3">
-        <div className="flex items-center justify-between gap-3 mb-3 flex-wrap">
-          <div className="flex items-center gap-2">
+      {/* Month Navigation & Filters - Mobile optimized */}
+      <div className="bg-white border border-gray-200 rounded-lg p-2 lg:p-3">
+        {/* Row 1: Navigation + Undo/Redo */}
+        <div className="flex items-center justify-between gap-2 mb-2 lg:mb-3">
+          <div className="flex items-center gap-1.5 lg:gap-2 flex-1 min-w-0">
             <Button 
               onClick={previousMonth} 
               variant="outline" 
               size="sm"
-              className="border border-gray-300 hover:border-orange-500 hover:bg-orange-50"
+              className="border border-gray-300 hover:border-orange-500 hover:bg-orange-50 h-7 lg:h-8 px-2 lg:px-3"
             >
-              <ChevronLeft className="w-4 h-4" />
-              <span className="ml-1 hidden sm:inline text-xs">Précédent</span>
+              <ChevronLeft className="w-3.5 h-3.5 lg:w-4 lg:h-4" />
+              <span className="ml-1 hidden sm:inline text-xs">Préc.</span>
             </Button>
-            <h2 className="text-lg font-bold text-orange-600">
+            <h2 className="text-sm lg:text-lg font-bold text-orange-600 truncate flex-1 text-center">
               {MONTHS[currentMonth]} {currentYear}
             </h2>
             <Button 
               onClick={nextMonth} 
               variant="outline"
               size="sm"
-              className="border border-gray-300 hover:border-orange-500 hover:bg-orange-50"
+              className="border border-gray-300 hover:border-orange-500 hover:bg-orange-50 h-7 lg:h-8 px-2 lg:px-3"
             >
-              <span className="mr-1 hidden sm:inline text-xs">Suivant</span>
-              <ChevronRight className="w-4 h-4" />
+              <span className="mr-1 hidden sm:inline text-xs">Suiv.</span>
+              <ChevronRight className="w-3.5 h-3.5 lg:w-4 lg:h-4" />
             </Button>
           </div>
 
-          {/* Undo/Redo buttons */}
-          <UndoRedoButtons
-            canUndo={undoStack.canUndo}
-            canRedo={undoStack.canRedo}
-            onUndo={handleUndo}
-            onRedo={handleRedo}
-            isUndoing={isUndoing}
-            isRedoing={isRedoing}
-          />
+          {/* Undo/Redo buttons - hidden on very small screens */}
+          <div className="hidden sm:block">
+            <UndoRedoButtons
+              canUndo={undoStack.canUndo}
+              canRedo={undoStack.canRedo}
+              onUndo={handleUndo}
+              onRedo={handleRedo}
+              isUndoing={isUndoing}
+              isRedoing={isRedoing}
+            />
+          </div>
         </div>
 
-        {/* Filters */}
-        <div className="flex flex-col sm:flex-row gap-2">
+        {/* Row 2: Filters - Mobile collapsible */}
+        <div className="flex flex-col sm:flex-row gap-2 text-xs lg:text-sm">
           <div className="flex-1">
-            <Label className="text-[10px] font-semibold text-gray-600 mb-1 flex items-center gap-1">
-              <Filter className="w-3 h-3" />
+            <Label className="text-[9px] lg:text-[10px] font-semibold text-gray-600 mb-1 flex items-center gap-1">
+              <Filter className="w-2.5 h-2.5 lg:w-3 lg:h-3" />
               Type de vue
             </Label>
             <Select value={filterType} onValueChange={(value) => {
@@ -1033,7 +1038,7 @@ export default function Planning() {
               setSelectedTeam('');
               setSelectedEmployee('');
             }}>
-              <SelectTrigger className="h-8 text-xs border border-gray-300 hover:border-orange-400">
+              <SelectTrigger className="h-7 lg:h-8 text-[11px] lg:text-xs border border-gray-300 hover:border-orange-400">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -1046,9 +1051,9 @@ export default function Planning() {
 
           {filterType === 'team' && (
             <div className="flex-1">
-              <Label className="text-[10px] font-semibold text-gray-600 mb-1">Équipe</Label>
+              <Label className="text-[9px] lg:text-[10px] font-semibold text-gray-600 mb-1">Équipe</Label>
               <Select value={selectedTeam} onValueChange={setSelectedTeam}>
-                <SelectTrigger className="h-8 text-xs border border-gray-300 hover:border-orange-400">
+                <SelectTrigger className="h-7 lg:h-8 text-[11px] lg:text-xs border border-gray-300 hover:border-orange-400">
                   <SelectValue placeholder="Choisir..." />
                 </SelectTrigger>
                 <SelectContent>
@@ -1070,9 +1075,9 @@ export default function Planning() {
 
           {filterType === 'employee' && (
             <div className="flex-1">
-              <Label className="text-[10px] font-semibold text-gray-600 mb-1">Employé</Label>
+              <Label className="text-[9px] lg:text-[10px] font-semibold text-gray-600 mb-1">Employé</Label>
               <Select value={selectedEmployee} onValueChange={setSelectedEmployee}>
-                <SelectTrigger className="h-8 text-xs border border-gray-300 hover:border-orange-400">
+                <SelectTrigger className="h-7 lg:h-8 text-[11px] lg:text-xs border border-gray-300 hover:border-orange-400">
                   <SelectValue placeholder="Choisir..." />
                 </SelectTrigger>
                 <SelectContent>
@@ -1108,15 +1113,16 @@ export default function Planning() {
         <div style={{ height: '1px' }}></div>
       </div>
 
-      {/* Calendar Grid with dedicated scroll container */}
-      <div className="bg-white border-2 border-gray-200 rounded-xl shadow-xl overflow-hidden flex flex-col" style={{ height: 'calc(100vh - 240px)' }}>
-        <div ref={tableContainerRef} className="overflow-x-auto overflow-y-auto flex-1">
+      {/* Calendar Grid with pinch-to-zoom wrapper */}
+      <PinchZoomContainer monthKey={monthKey}>
+        <div className="bg-white border-2 border-gray-200 rounded-xl shadow-xl overflow-hidden flex flex-col" style={{ height: 'calc(100vh - 220px)' }}>
+          <div ref={tableContainerRef} className="overflow-x-auto overflow-y-auto flex-1">
           <div className="inline-block min-w-full">
             {/* Header - Sticky */}
             <DragDropContext onDragEnd={handleTeamDragEnd}>
               <div className="bg-gradient-to-r from-gray-100 to-gray-50 flex border-b-2 border-gray-300 sticky top-0 z-40 shadow-md">
-                <div className="sticky left-0 z-50 bg-gradient-to-r from-gray-100 to-gray-50 border-r-2 border-gray-300 px-4 py-3 text-left text-sm font-bold text-gray-900 w-[120px] shadow-md flex items-center gap-2">
-                  <Calendar className="w-4 h-4 text-orange-600" />
+                <div className="sticky left-0 z-50 bg-gradient-to-r from-gray-100 to-gray-50 border-r-2 border-gray-300 px-2 lg:px-4 py-2 lg:py-3 text-left text-xs lg:text-sm font-bold text-gray-900 w-[80px] lg:w-[120px] shadow-md flex items-center gap-1 lg:gap-2">
+                  <Calendar className="w-3.5 h-3.5 lg:w-4 lg:h-4 text-orange-600" />
                   <span className="hidden sm:inline">Jour</span>
                 </div>
                 <Droppable droppableId="employees" direction="horizontal">
@@ -1181,18 +1187,18 @@ export default function Planning() {
                         dayInfo.isToday && "bg-blue-50/80"
                       )}>
                         <div className={cn(
-                          "sticky left-0 z-20 border-r-2 border-gray-300 px-4 py-3 shadow-sm w-[120px] flex flex-col justify-center bg-white",
+                          "sticky left-0 z-20 border-r-2 border-gray-300 px-2 lg:px-4 py-2 lg:py-3 shadow-sm w-[80px] lg:w-[120px] flex flex-col justify-center bg-white",
                           dayInfo.isWeekend && "bg-orange-50/30",
                           dayInfo.isToday && "bg-gradient-to-r from-blue-100 to-blue-50 border-l-4 border-l-blue-500"
                         )}>
                           <div className={cn(
-                            "font-bold text-xs uppercase tracking-wide",
+                            "font-bold text-[9px] lg:text-xs uppercase tracking-wide",
                             dayInfo.isToday ? "text-blue-900" : "text-gray-600"
                           )}>
-                            {dayInfo.dayName}
+                            {dayInfo.dayName.substring(0, 3)}
                           </div>
                           <div className={cn(
-                            "text-2xl font-bold",
+                            "text-xl lg:text-2xl font-bold",
                             dayInfo.isToday ? "text-blue-700" : "text-gray-900"
                           )}>
                             {dayInfo.day}
@@ -1203,14 +1209,14 @@ export default function Planning() {
                               handleToggleHoliday(dateStr);
                             }}
                             className={cn(
-                              "mt-1 text-[9px] px-1.5 py-0.5 rounded-full font-semibold transition-all",
+                              "mt-1 text-[8px] lg:text-[9px] px-1 lg:px-1.5 py-0.5 rounded-full font-semibold transition-all",
                               isHolidayDate(dateStr)
                                 ? "bg-purple-600 text-white hover:bg-purple-700"
                                 : "bg-gray-200 text-gray-600 hover:bg-purple-100 hover:text-purple-700"
                             )}
                             title={isHolidayDate(dateStr) ? "Retirer jour férié" : "Marquer jour férié"}
                           >
-                            {isHolidayDate(dateStr) ? "🎉 Férié" : "+ Férié"}
+                            {isHolidayDate(dateStr) ? "🎉" : "+F"}
                           </button>
                         </div>
                         <div className="flex flex-1">
@@ -1241,7 +1247,7 @@ export default function Planning() {
                                 key={employee.id}
                                 onClick={() => handleCellClick(employee.id, dateStr, dayInfo)}
                                 className={cn(
-                                  "border-r border-gray-200 px-2 py-2 cursor-pointer hover:bg-orange-50 transition-all group relative min-w-[140px] w-[140px] sm:w-[180px] flex",
+                                  "border-r border-gray-200 px-1.5 lg:px-2 py-1.5 lg:py-2 cursor-pointer hover:bg-orange-50 transition-all group relative min-w-[150px] w-[150px] lg:min-w-[180px] lg:w-[180px] flex",
                                   dayInfo.isWeekend && "bg-orange-50/20",
                                   isCPDay && "bg-green-100/40"
                                 )}
@@ -1320,12 +1326,13 @@ export default function Planning() {
                         </div>
                       </div>
                       
-                      {/* Week summary row */}
+                      {/* Week summary row - Mobile collapsed */}
                       {(dayInfo.isLastDayOfWeek || index === daysArray.length - 1) && (
                         <div className="bg-gradient-to-r from-gray-200 to-gray-100 border-b-2 border-gray-400 flex">
-                          <div className="sticky left-0 z-20 bg-gradient-to-r from-gray-200 to-gray-100 border-r-2 border-gray-400 px-2 py-3 shadow-sm w-[120px]">
-                            <div className="text-[10px] font-bold text-gray-700 uppercase tracking-wide mb-1">
-                              📊 Récap. semaine
+                          <div className="sticky left-0 z-20 bg-gradient-to-r from-gray-200 to-gray-100 border-r-2 border-gray-400 px-1 lg:px-2 py-2 lg:py-3 shadow-sm w-[80px] lg:w-[120px]">
+                            <div className="text-[9px] lg:text-[10px] font-bold text-gray-700 uppercase tracking-wide mb-1">
+                              <span className="hidden lg:inline">📊 Récap. semaine</span>
+                              <span className="lg:hidden">📊</span>
                             </div>
                             {(() => {
                               const weekStart = getWeekStart(dayInfo.date);
@@ -1336,11 +1343,11 @@ export default function Planning() {
                                 return (
                                   <button
                                     onClick={() => handleCopyWeekFromAbove(weekStart)}
-                                    className="text-[9px] px-1.5 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded flex items-center gap-1 w-full justify-center font-semibold shadow-sm transition-colors"
+                                    className="text-[8px] lg:text-[9px] px-1 lg:px-1.5 py-0.5 lg:py-1 bg-blue-600 hover:bg-blue-700 text-white rounded flex items-center gap-0.5 lg:gap-1 w-full justify-center font-semibold shadow-sm transition-colors"
                                     title="Copier la semaine du dessus"
                                   >
-                                    <ArrowDown className="w-3 h-3" />
-                                    Copier ↑
+                                    <ArrowDown className="w-2.5 h-2.5 lg:w-3 lg:h-3" />
+                                    <span className="hidden lg:inline">Copier ↑</span>
                                   </button>
                                 );
                               }
@@ -1377,7 +1384,7 @@ export default function Planning() {
                               }
 
                               return (
-                                <div key={employee.id} className="border-r border-gray-200 min-w-[140px] w-[140px] sm:w-[180px]">
+                                <div key={employee.id} className="border-r border-gray-200 min-w-[150px] w-[150px] lg:min-w-[180px] lg:w-[180px]">
                                   <WeeklySummary
                                     employee={employee}
                                     shifts={shifts}
@@ -1414,9 +1421,10 @@ export default function Planning() {
 
                   {/* Monthly Summary Row */}
                   <div className="bg-gradient-to-r from-blue-100 to-blue-50 border-t-4 border-blue-500 flex">
-                    <div className="sticky left-0 z-20 bg-gradient-to-r from-blue-100 to-blue-50 border-r-2 border-blue-300 px-2 py-3 shadow-sm w-[120px]">
-                      <div className="text-[11px] font-bold text-blue-900 uppercase tracking-wide text-center">
-                        📊 Récap mensuel
+                    <div className="sticky left-0 z-20 bg-gradient-to-r from-blue-100 to-blue-50 border-r-2 border-blue-300 px-1 lg:px-2 py-2 lg:py-3 shadow-sm w-[80px] lg:w-[120px]">
+                      <div className="text-[9px] lg:text-[11px] font-bold text-blue-900 uppercase tracking-wide text-center">
+                        <span className="hidden lg:inline">📊 Récap mensuel</span>
+                        <span className="lg:hidden">📊 Mois</span>
                       </div>
                     </div>
                     <div className="flex flex-1">
@@ -1426,7 +1434,7 @@ export default function Planning() {
                         const monthlyRecap = monthlyRecapsLookup.get(employee.id) || null;
 
                         return (
-                          <div key={employee.id} className="border-r border-blue-200 min-w-[140px] w-[140px] sm:w-[180px]">
+                          <div key={employee.id} className="border-r border-blue-200 min-w-[150px] w-[150px] lg:min-w-[180px] lg:w-[180px]">
                             <MonthlySummary
                               employee={employee}
                               shifts={shifts}
@@ -1448,7 +1456,8 @@ export default function Planning() {
                             </div>
                             </div>
                             </div>
-      </div>
+        </div>
+      </PinchZoomContainer>
 
       {/* Shift Modal */}
       <ShiftFormModal
