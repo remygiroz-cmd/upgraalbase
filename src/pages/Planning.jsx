@@ -31,6 +31,7 @@ import { usePlanningVersion, withPlanningVersion, filterByVersion } from '@/comp
 import { useUndoStack } from '@/components/planning/useUndoStack';
 import UndoRedoButtons from '@/components/planning/UndoRedoButtons';
 import PinchZoomContainer from '@/components/planning/PinchZoomContainer';
+import TodaySummary from '@/components/planning/TodaySummary';
 
 const DAYS = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche'];
 const MONTHS = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'];
@@ -1104,6 +1105,22 @@ export default function Planning() {
         </div>
       </div>
 
+      {/* Today Summary */}
+      <TodaySummary
+        shifts={shifts}
+        nonShiftEvents={nonShiftEvents}
+        nonShiftTypes={nonShiftTypes}
+        employees={employees}
+        positions={positions}
+        onEmployeeClick={(employeeId, dateStr) => {
+          // Scroll to employee's today cell
+          const element = document.querySelector(`[data-employee-date="${employeeId}-${dateStr}"]`);
+          if (element) {
+            element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }
+        }}
+      />
+
       {/* Sticky Scrollbar */}
       <div 
         ref={scrollbarRef}
@@ -1245,6 +1262,7 @@ export default function Planning() {
                               <div
                                 key={employee.id}
                                 onClick={() => handleCellClick(employee.id, dateStr, dayInfo)}
+                                data-employee-date={`${employee.id}-${dateStr}`}
                                 className={cn(
                                   "border-r border-gray-200 px-1.5 lg:px-2 py-1.5 lg:py-2 cursor-pointer hover:bg-orange-50 transition-all group relative min-w-[150px] w-[150px] lg:min-w-[180px] lg:w-[180px] flex",
                                   dayInfo.isWeekend && "bg-orange-50/20",
