@@ -28,116 +28,98 @@ function formatDateFR(dateStr) {
 }
 
 /**
- * Construit une ligne d'export pour un employé à partir de son récap mensuel
- * IMPORTANT: Le récap mensuel doit être pré-calculé avec toutes les valeurs
+ * SOURCE DE VÉRITÉ UNIQUE: RÉCAP MENSUEL
+ * Construit une ligne d'export en lisant UNIQUEMENT les données du récap mensuel
+ * AUCUN RECALCUL - Simple lecture et formatage
  */
-function buildExportRow(employee, calculatedRecap, nonShiftTypes, cpPeriods, team, monthStart, monthEnd) {
-  const monthStartStr = formatDate(monthStart);
-  const monthEndStr = formatDate(monthEnd);
+function buildExportRow(employee, monthlyRecap, nonShiftTypes, cpPeriods) {
+  console.log('═════════════════════════════════════════════════');
+  console.log('📊 BUILDING EXPORT ROW FROM MONTHLY RECAP');
+  console.log('═════════════════════════════════════════════════');
+  console.log('Employee:', employee.first_name, employee.last_name);
+  console.log('MonthlyRecap:', monthlyRecap);
 
-  console.log('Building export row for:', employee.first_name, employee.last_name);
-  console.log('  Calculated recap:', calculatedRecap);
-
-  // A) Employé
   const employeeName = `${employee.first_name} ${employee.last_name}`;
 
-  // B) Poste/Équipe
-  let posteEquipe = [];
-  if (employee.position) posteEquipe.push(employee.position);
-  if (team?.name) posteEquipe.push(team.name);
-  const posteEquipeStr = posteEquipe.join(' / ') || '-';
+  // 2) Nb de jours travaillés - lecture du recap
+  // Format: "X / Y j" → prendre X
+  const workedDaysMatch = monthlyRecap?.days_worked_display?.match(/^(\d+)/);
+  const nbJoursTravailles = workedDaysMatch ? parseInt(workedDaysMatch[1]) : (monthlyRecap?.days_worked || 0);
 
-  // 2) Payées (hors sup/comp) - depuis recap calculé
-  const payeesHorsSup = calculatedRecap?.paidBaseHours || calculatedRecap?.worked_hours || 0;
+  // 3) Jours supp - lecture du recap
+  // Format: "+X j sup" ou vide
+  const extraDaysMatch = monthlyRecap?.extra_days_display?.match(/\+(\d+)/);
+  const joursSupp = extraDaysMatch ? `+${extraDaysMatch[1]}` : '';
 
-  // 3) Compl +10%
-  const compl10 = calculatedRecap?.complementary_10 || 0;
+  // 5) Payées (hors sup/comp) - LECTURE DIRECTE depuis recap
+  const payeesHorsSup = monthlyRecap?.worked_hours || 0;
 
-  // 4) Compl +25%
-  const compl25 = calculatedRecap?.complementary_25 || 0;
+  // 6) Compl +10% - LECTURE DIRECTE
+  const compl10 = monthlyRecap?.complementary_10 || 0;
 
-  // 5) Supp +25%
-  const supp25 = calculatedRecap?.overtime_25 || 0;
+  // 7) Compl +25% - LECTURE DIRECTE
+  const compl25 = monthlyRecap?.complementary_25 || 0;
 
-  // 6) Supp +50%
-  const supp50 = calculatedRecap?.overtime_50 || 0;
+  // 8) Supp +25% - LECTURE DIRECTE
+  const supp25 = monthlyRecap?.overtime_25 || 0;
 
-  // 7) Férié (jours + heures)
-  const holidayEligible = calculatedRecap?.holiday_eligible !== false;
-  const holidayDays = calculatedRecap?.holiday_days_count || 0;
-  const holidayHours = calculatedRecap?.holiday_hours_worked || 0;
+  // 9) Supp +50% - LECTURE DIRECTE
+  const supp50 = monthlyRecap?.overtime_50 || 0;
+
+  // 10) Férié - LECTURE depuis recap
+  const holidayDays = monthlyRecap?.holiday_days_count || 0;
+  const holidayHours = monthlyRecap?.holiday_hours_worked || 0;
+  const holidayEligible = monthlyRecap?.holiday_eligible !== false;
   const ferieStr = holidayEligible && holidayDays > 0 
-    ? `${holidayDays}j (${holidayHours.toFixed(1)}h)` 
-    : '-';
+    ? `${holidayDays}j, ${holidayHours.toFixed(1)}h` 
+    : '';
 
-  // 1) Total payé
-  const isPartTime = employee.work_time_type === 'part_time';
-  let totalPaid = payeesHorsSup;
-  
-  if (isPartTime) {
-    totalPaid += compl10 + compl25;
-  } else {
-    totalPaid += supp25 + supp50;
-  }
-  
-  if (holidayEligible) {
+  // 4) Total payé - SEUL CALCUL AUTORISÉ
+  let totalPaid = payeesHorsSup + compl10 + compl25 + supp25 + supp50;
+  if (holidayEligible && holidayHours > 0) {
     totalPaid += holidayHours;
   }
 
-  // 8) Non-shifts visibles récap
+  // 11) Non-shifts visibles récap - LECTURE depuis recap
   const nonShiftsVisible = [];
-  if (calculatedRecap?.nonShiftsByType) {
-    Object.entries(calculatedRecap.nonShiftsByType).forEach(([typeId, typeData]) => {
+  if (monthlyRecap?.nonShiftsByType) {
+    Object.entries(monthlyRecap.nonShiftsByType).forEach(([typeId, typeData]) => {
       const nsType = nonShiftTypes.find(t => t.id === typeId);
       if (nsType && nsType.visible_in_recap && typeData.count > 0) {
-        const dates = (typeData.dates || []).sort().map(d => {
-          const dt = new Date(d + 'T00:00:00');
-          return dt.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
-        }).join(', ');
         const code = nsType.code || nsType.label?.substring(0, 3).toUpperCase();
-        nonShiftsVisible.push(`${code} (${dates})`);
+        nonShiftsVisible.push(`${code} ${typeData.count}j`);
       }
     });
   }
-  const nonShiftsStr = nonShiftsVisible.join('\n') || '-';
+  const nonShiftsStr = nonShiftsVisible.join('\n') || '';
 
-  // 9) CP décomptés + détails périodes
-  const employeeCPPeriods = cpPeriods.filter(p => 
-    p.employee_id === employee.id &&
-    p.start_cp <= monthEndStr &&
-    p.end_cp >= monthStartStr
-  );
-  
-  let cpStr = '-';
-  if (employeeCPPeriods.length > 0) {
-    const totalCPDays = calculatedRecap?.cp_days_total || 0;
-    const periodDetails = employeeCPPeriods.map(p => {
-      // Use the new field names: cp_start_date and return_date
-      if (!p.cp_start_date || !p.return_date) {
-        console.error('⚠️ CP period with missing dates:', p);
-        return '(dates invalides)';
-      }
-      const departDate = formatDateFR(p.cp_start_date);
-      const repriseDate = formatDateFR(p.return_date);
-      return `(départ le ${departDate}, reprise le ${repriseDate})`;
-    }).join(' ; ');
-    cpStr = `${totalCPDays} CP décomptés ${periodDetails}`;
+  // 12) CP décomptés - LECTURE depuis recap
+  const totalCPDays = monthlyRecap?.cp_days_total || 0;
+  let cpStr = '';
+  if (totalCPDays > 0) {
+    cpStr = `${totalCPDays} CP`;
   }
 
-  console.log('  Row result:', {
-    totalPaid,
-    payeesHorsSup,
-    compl10,
-    compl25,
-    supp25,
-    supp50,
-    holidayDays,
-    holidayHours
+  console.log('✅ Export row built:', {
+    employeeName,
+    nbJoursTravailles,
+    joursSupp,
+    totalPaid: totalPaid.toFixed(1),
+    payeesHorsSup: payeesHorsSup.toFixed(1),
+    compl10: compl10.toFixed(1),
+    compl25: compl25.toFixed(1),
+    supp25: supp25.toFixed(1),
+    supp50: supp50.toFixed(1),
+    ferieStr,
+    nonShiftsStr,
+    cpStr
   });
+  console.log('═════════════════════════════════════════════════\n');
 
   return {
     employeeName,
-    posteEquipeStr,
+    nbJoursTravailles,
+    joursSupp,
     totalPaid,
     payeesHorsSup,
     compl10,
@@ -146,9 +128,7 @@ function buildExportRow(employee, calculatedRecap, nonShiftTypes, cpPeriods, tea
     supp50,
     ferieStr,
     nonShiftsStr,
-    cpStr,
-    employee,
-    recap: calculatedRecap
+    cpStr
   };
 }
 
