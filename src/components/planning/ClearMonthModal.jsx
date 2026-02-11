@@ -16,107 +16,26 @@ export default function ClearMonthModal({ isOpen, onClose, year, month }) {
 
   const resetMutation = useMutation({
     mutationFn: async () => {
-      const user = await base44.auth.me();
-      const stats = { deleted: {} };
-
-      console.log(`🧨 [RESET TOTAL] Début du reset pour ${monthKey}`);
-
-      // 1) Supprimer tous les shifts du mois
-      const shiftsToDelete = await base44.entities.Shift.filter({ month_key: monthKey });
-      for (const shift of shiftsToDelete) {
-        await base44.entities.Shift.delete(shift.id);
-      }
-      stats.deleted.shifts = shiftsToDelete.length;
-      console.log(`✓ Supprimé ${shiftsToDelete.length} shifts`);
-
-      // 2) Supprimer tous les non-shifts du mois
-      const nonShiftsToDelete = await base44.entities.NonShiftEvent.filter({ month_key: monthKey });
-      for (const ns of nonShiftsToDelete) {
-        await base44.entities.NonShiftEvent.delete(ns.id);
-      }
-      stats.deleted.nonShifts = nonShiftsToDelete.length;
-      console.log(`✓ Supprimé ${nonShiftsToDelete.length} non-shifts`);
-
-      // 3) Supprimer toutes les périodes de CP qui commencent dans ce mois
-      const cpToDelete = await base44.entities.PaidLeavePeriod.filter({ month_key: monthKey });
-      for (const cp of cpToDelete) {
-        await base44.entities.PaidLeavePeriod.delete(cp.id);
-      }
-      stats.deleted.cpPeriods = cpToDelete.length;
-      console.log(`✓ Supprimé ${cpToDelete.length} périodes CP`);
-
-      // 4) Supprimer tous les récaps hebdomadaires
-      const weeklyRecaps = await base44.entities.WeeklyRecap.filter({ month_key: monthKey });
-      for (const recap of weeklyRecaps) {
-        await base44.entities.WeeklyRecap.delete(recap.id);
-      }
-      stats.deleted.weeklyRecaps = weeklyRecaps.length;
-      console.log(`✓ Supprimé ${weeklyRecaps.length} récaps hebdo`);
-
-      // 5) Supprimer tous les récaps mensuels
-      const monthlyRecaps = await base44.entities.MonthlyRecap.filter({ 
-        year, 
-        month: month + 1 
-      });
-      for (const recap of monthlyRecaps) {
-        await base44.entities.MonthlyRecap.delete(recap.id);
-      }
-      stats.deleted.monthlyRecaps = monthlyRecaps.length;
-      console.log(`✓ Supprimé ${monthlyRecaps.length} récaps mensuels`);
-
-      // 6) Supprimer tous les overrides d'export compta
-      const exportOverrides = await base44.entities.ExportComptaOverride.filter({ 
-        month_key: monthKey 
-      });
-      for (const override of exportOverrides) {
-        await base44.entities.ExportComptaOverride.delete(override.id);
-      }
-      stats.deleted.exportOverrides = exportOverrides.length;
-      console.log(`✓ Supprimé ${exportOverrides.length} overrides export`);
-
-      // 7) Nettoyer/créer le PlanningMonth
-      let planningMonths = await base44.entities.PlanningMonth.filter({ 
-        year, 
-        month 
-      });
-
-      let planningMonth = planningMonths[0];
-
-      if (planningMonth) {
-        // Incrémenter la version ET marquer le reset
-        const newVersion = (planningMonth.reset_version || 0) + 1;
-        
-        await base44.entities.PlanningMonth.update(planningMonth.id, {
-          reset_version: newVersion,
-          reset_at: new Date().toISOString(),
-          reset_by: user.email,
-          reset_by_name: user.full_name
-        });
-
-        stats.version = newVersion;
-      } else {
-        // Créer un nouveau mois propre
-        const newMonth = await base44.entities.PlanningMonth.create({
-          year,
-          month,
-          month_key: monthKey,
-          reset_version: 1,
-          reset_at: new Date().toISOString(),
-          reset_by: user.email,
-          reset_by_name: user.full_name
-        });
-
-        stats.version = 1;
-      }
-
-      console.log(`✅ [RESET TOTAL] Terminé:`, stats);
-      return stats;
-    },
-    onSuccess: (stats) => {
-      const { deleted, version } = stats;
-      const total = Object.values(deleted).reduce((acc, val) => acc + val, 0);
+      console.log(`🧨 [RESET FRONTEND] Lancement reset ${monthKey} via backend function`);
       
-      console.log(`✅ [RESET TOTAL] ${monthKey} réinitialisé - ${total} lignes supprimées`);
+      // Appeler la fonction backend qui fait le travail lourd
+      const response = await base44.functions.invoke('resetMonth', {
+        year,
+        month,
+        monthKey
+      });
+
+      if (!response.data.success) {
+        throw new Error(response.data.error || 'Erreur lors du reset');
+      }
+
+      console.log(`✅ [RESET FRONTEND] Terminé:`, response.data.stats);
+      return response.data;
+    },
+    onSuccess: (data) => {
+      const { stats, totalDeleted } = data;
+      
+      console.log(`✅ [RESET FRONTEND] ${monthKey} réinitialisé en ${stats.duration}ms`);
       
       // Invalidate all planning queries
       queryClient.invalidateQueries({ queryKey: ['shifts'] });
@@ -128,9 +47,24 @@ export default function ClearMonthModal({ isOpen, onClose, year, month }) {
       queryClient.invalidateQueries({ queryKey: ['planningMonth'] });
 
       setResetting(false);
-      toast.success(`✓ Mois ${monthKey} réinitialisé - ${total} éléments supprimés`, {
-        duration: 4000
-      });
+      
+      // Toast avec détails
+      toast.success(
+        <div className="text-sm">
+          <div className="font-bold mb-1">✓ Mois {monthKey} réinitialisé</div>
+          <div className="text-xs space-y-0.5 text-gray-600">
+            <div>• {stats.deleted.shifts} shifts supprimés</div>
+            <div>• {stats.deleted.nonShifts} absences supprimées</div>
+            <div>• {stats.deleted.cpPeriods} périodes CP supprimées</div>
+            <div>• {stats.deleted.monthlyRecaps} récaps mensuels supprimés</div>
+            <div>• {stats.deleted.exportOverrides} overrides export supprimés</div>
+            <div className="text-blue-600 font-medium pt-1">
+              Total: {totalDeleted} éléments en {stats.duration}ms
+            </div>
+          </div>
+        </div>,
+        { duration: 6000 }
+      );
       onClose();
     },
     onError: (error) => {
