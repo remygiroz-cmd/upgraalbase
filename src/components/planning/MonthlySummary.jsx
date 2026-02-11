@@ -192,27 +192,41 @@ ${deductionDetails.length > 0 ? `  Détail: ${deductionDetails.map(d => `${d.dat
   // Mutation for saving a single field
   const saveFieldMutation = useMutation({
     mutationFn: async ({ field, value }) => {
+      console.log('💾 SAVING FIELD:', { field, value, employeeId: employee.id, monthlyRecapId: monthlyRecap?.id });
+      
       const data = { [field]: value === '' || value === null ? null : value };
       
+      let result;
       if (monthlyRecap?.id) {
-        return await base44.entities.MonthlyRecap.update(monthlyRecap.id, data);
+        console.log('📝 Updating existing recap:', monthlyRecap.id);
+        result = await base44.entities.MonthlyRecap.update(monthlyRecap.id, data);
       } else {
-        return await base44.entities.MonthlyRecap.create({
+        console.log('✨ Creating new recap');
+        result = await base44.entities.MonthlyRecap.create({
           employee_id: employee.id,
           employee_name: `${employee.first_name} ${employee.last_name}`,
           year,
           month: month + 1,
           month_key: `${year}-${String(month + 1).padStart(2, '0')}`,
-          reset_version: monthlyRecap?.reset_version || 0,
+          reset_version: 0,
           ...data
         });
       }
+      
+      console.log('✅ Save successful:', result);
+      return result;
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
+      console.log('🔄 Invalidating queries and updating state');
       queryClient.invalidateQueries({ queryKey: ['allMonthlyRecaps'] });
+      queryClient.invalidateQueries({ queryKey: ['monthlyRecaps'] });
       if (onRecapUpdate) onRecapUpdate();
       setEditingField(null);
       setEditValue('');
+    },
+    onError: (error) => {
+      console.error('❌ Save failed:', error);
+      alert('Erreur lors de la sauvegarde: ' + error.message);
     }
   });
 
@@ -278,13 +292,18 @@ ${deductionDetails.length > 0 ? `  Détail: ${deductionDetails.map(d => `${d.dat
     };
 
     const saveEdit = () => {
+      console.log('💡 Save triggered for field:', field, 'manualField:', manualField, 'editValue:', editValue);
+      
       if (editValue === '') {
+        console.log('→ Saving NULL (resetting to auto)');
         saveFieldMutation.mutate({ field: manualField, value: null });
       } else {
         const numValue = parseFloat(editValue);
         if (!isNaN(numValue) && !multiline) {
+          console.log('→ Saving NUMBER:', numValue);
           saveFieldMutation.mutate({ field: manualField, value: numValue });
         } else {
+          console.log('→ Saving TEXT:', editValue);
           saveFieldMutation.mutate({ field: manualField, value: editValue });
         }
       }
