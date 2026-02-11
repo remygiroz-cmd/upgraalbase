@@ -1423,6 +1423,7 @@ export default function Planning() {
                               holidayDates={holidayDates}
                               cpPeriods={employeeCpPeriods}
                               monthlyRecap={monthlyRecap}
+                              currentUser={currentUser}
                             />
                           </div>
                         );

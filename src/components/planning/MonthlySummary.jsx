@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { cn } from '@/lib/utils';
-import { Edit2, RotateCcw, AlertCircle, Clock, Calendar, Coffee, Sun, Briefcase } from 'lucide-react';
+import { Edit2, RotateCcw, AlertCircle, Clock, Calendar, Coffee, Sun, Briefcase, Eye, EyeOff } from 'lucide-react';
+import { useHiddenItems } from './useHiddenItems';
 import { calculateMonthlyCPTotal } from './paidLeaveCalculations';
 import { parseContractHours } from '@/components/utils/weeklyHoursCalculation';
 import { calculateDayHours } from '@/components/utils/nonShiftHoursCalculation';
@@ -42,10 +43,14 @@ export default function MonthlySummary({
   holidayDates = [],
   cpPeriods = [],
   monthlyRecap = null,
-  onRecapUpdate
+  onRecapUpdate,
+  currentUser
 }) {
   const [showEditDialog, setShowEditDialog] = useState(false);
   const queryClient = useQueryClient();
+  
+  // Hidden items management
+  const { hideItem, showItem, isHidden, showAll, hasHiddenItems, hiddenCount } = useHiddenItems(currentUser?.id);
 
   const year = monthStart.getFullYear();
   const month = monthStart.getMonth(); // 0-indexed for calculation engine
@@ -240,6 +245,48 @@ ${deductionDetails.length > 0 ? `  Détail: ${deductionDetails.map(d => `${d.dat
     );
   };
 
+  // Hideable item wrapper component
+  const HideableItem = ({ itemKey, children, className = "" }) => {
+    const hidden = isHidden(itemKey);
+    const [hovering, setHovering] = useState(false);
+
+    if (hidden) {
+      return (
+        <div className={cn("mb-2 pb-2", className)}>
+          <button
+            onClick={() => showItem(itemKey)}
+            className="w-full py-1.5 px-2 bg-gray-100 hover:bg-gray-200 rounded text-[9px] text-gray-500 flex items-center justify-center gap-1 transition-colors"
+          >
+            <EyeOff className="w-3 h-3" />
+            Élément masqué - Cliquer pour afficher
+          </button>
+        </div>
+      );
+    }
+
+    return (
+      <div
+        className={cn("relative group/hide mb-2 pb-2", className)}
+        onMouseEnter={() => setHovering(true)}
+        onMouseLeave={() => setHovering(false)}
+      >
+        {hovering && (
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              hideItem(itemKey);
+            }}
+            className="absolute -left-1 top-1/2 -translate-y-1/2 z-10 p-0.5 bg-white border border-gray-300 rounded shadow-sm hover:bg-gray-100 transition-colors"
+            title="Masquer cet élément (visuel uniquement)"
+          >
+            <Eye className="w-3 h-3 text-gray-500" />
+          </button>
+        )}
+        {children}
+      </div>
+    );
+  };
+
   return (
     <>
       <div className={cn(
@@ -255,6 +302,18 @@ ${deductionDetails.length > 0 ? `  Détail: ${deductionDetails.map(d => `${d.dat
         >
           <Edit2 className="w-3 h-3 text-blue-600" />
         </button>
+        
+        {/* Show all button (if items hidden) */}
+        {hasHiddenItems && (
+          <button
+            onClick={showAll}
+            className="absolute top-1 right-10 p-1 rounded hover:bg-gray-200 transition-colors text-[9px] text-blue-600 flex items-center gap-1"
+            title={`${hiddenCount} élément(s) masqué(s)`}
+          >
+            <EyeOff className="w-3 h-3" />
+            <span className="hidden lg:inline">Tout afficher</span>
+          </button>
+        )}
 
         {/* Mode indicator */}
         <div className="absolute top-1 left-1">
@@ -281,7 +340,7 @@ ${deductionDetails.length > 0 ? `  Détail: ${deductionDetails.map(d => `${d.dat
 
         {/* SECTION 1: Days */}
         {calculationMode !== 'disabled' ? (
-          <div className="mb-2 pb-2 border-b border-gray-200">
+          <HideableItem itemKey="workedDays" className="border-b border-gray-200">
             <div className="flex items-center justify-center gap-1 text-xs text-gray-700">
               <Calendar className="w-3 h-3" />
               <span className="font-semibold">{renderValue(workedDays, 'workedDays', '', 0)}</span>
@@ -292,20 +351,22 @@ ${deductionDetails.length > 0 ? `  Détail: ${deductionDetails.map(d => `${d.dat
                 +{renderValue(extraDays, 'extraDays', ' j sup', 0)}
               </div>
             )}
-          </div>
+          </HideableItem>
         ) : (
-          <div className="text-xs text-gray-700 mb-1">
-            <span className="font-semibold">{renderValue(workedDays, 'workedDays', '', 0)}</span> jour{(workedDays || 0) > 1 ? 's' : ''}
-          </div>
+          <HideableItem itemKey="workedDays" className="">
+            <div className="text-xs text-gray-700">
+              <span className="font-semibold">{renderValue(workedDays, 'workedDays', '', 0)}</span> jour{(workedDays || 0) > 1 ? 's' : ''}
+            </div>
+          </HideableItem>
         )}
 
         {/* SECTION 2: Hours */}
         {paidHours !== null && (
-          <div className="mb-2">
+          <HideableItem itemKey="paidHours">
             <div className="text-[10px] text-gray-500">
               Payées (hors sup/comp): {paidHours.toFixed(1)}h
             </div>
-          </div>
+          </HideableItem>
         )}
 
         {/* SECTION 3: Overtime / Complementary Hours */}
@@ -314,7 +375,7 @@ ${deductionDetails.length > 0 ? `  Détail: ${deductionDetails.map(d => `${d.dat
             {isPartTime ? (
               // Part-time: Heures complémentaires (only show if >= 0.05)
               totalComplementaryHours >= 0.05 && (
-                <div className="mb-2 pb-2 border-b border-gray-200">
+                <HideableItem itemKey="complementaryHours" className="border-b border-gray-200">
                   <div className="bg-green-50 rounded p-1.5">
                     <div className="text-[10px] font-bold text-green-800 mb-0.5 flex items-center justify-center gap-1">
                       <Clock className="w-3 h-3" />
@@ -332,12 +393,12 @@ ${deductionDetails.length > 0 ? `  Détail: ${deductionDetails.map(d => `${d.dat
                       )}
                     </div>
                   </div>
-                </div>
+                </HideableItem>
               )
             ) : (
               // Full-time: Heures supplémentaires (only show if >= 0.05)
               totalOvertimeHours >= 0.05 && (
-                <div className="mb-2 pb-2 border-b border-gray-200">
+                <HideableItem itemKey="overtimeHours" className="border-b border-gray-200">
                   <div className="bg-orange-50 rounded p-1.5">
                     <div className="text-[10px] font-bold text-orange-800 mb-0.5 flex items-center justify-center gap-1">
                       <Briefcase className="w-3 h-3" />
@@ -355,7 +416,7 @@ ${deductionDetails.length > 0 ? `  Détail: ${deductionDetails.map(d => `${d.dat
                       )}
                     </div>
                   </div>
-                </div>
+                </HideableItem>
               )
             )}
           </>
@@ -363,16 +424,18 @@ ${deductionDetails.length > 0 ? `  Détail: ${deductionDetails.map(d => `${d.dat
 
         {/* SECTION 4: Holidays worked */}
         {calculationMode !== 'disabled' && holidaysWorkedDays > 0 && eligibleForHolidayPay && (
-          <div className="mb-2 text-[10px]">
-            <div className="flex items-center justify-center gap-1 text-red-700 font-medium">
-              <Sun className="w-3 h-3" />
-              Jours fériés: {renderValue(holidaysWorkedDays, 'holidaysWorkedDays', '', 0)}j
-              ({renderValue(holidaysWorkedHours, 'holidaysWorkedHours', 'h')})
+          <HideableItem itemKey="holidaysWorked">
+            <div className="text-[10px]">
+              <div className="flex items-center justify-center gap-1 text-red-700 font-medium">
+                <Sun className="w-3 h-3" />
+                Jours fériés: {renderValue(holidaysWorkedDays, 'holidaysWorkedDays', '', 0)}j
+                ({renderValue(holidaysWorkedHours, 'holidaysWorkedHours', 'h')})
+              </div>
+              <div className="text-[9px] text-red-600">
+                Éligible majoration férié
+              </div>
             </div>
-            <div className="text-[9px] text-red-600">
-              Éligible majoration férié
-            </div>
-          </div>
+          </HideableItem>
         )}
 
         {/* SECTION 5: Non-shifts summary (filtered by visible_in_recap) */}
@@ -398,6 +461,7 @@ ${deductionDetails.length > 0 ? `  Détail: ${deductionDetails.map(d => `${d.dat
               const uniqueDays = occurrencesByStatus[status.id]?.size || 0;
               return {
                 code: status.code || status.label?.substring(0, 3).toUpperCase(),
+                statusId: status.id,
                 count: uniqueDays
               };
             })
@@ -406,10 +470,12 @@ ${deductionDetails.length > 0 ? `  Détail: ${deductionDetails.map(d => `${d.dat
           return displayLines.length > 0 && (
             <div className="mb-2 text-[9px] text-gray-600 space-y-0.5">
               {displayLines.map((line, idx) => (
-                <div key={idx} className="flex items-center justify-center gap-1">
-                  <span className="font-mono bg-gray-100 px-1 rounded">{line.code}</span>
-                  <span>{line.count}j</span>
-                </div>
+                <HideableItem key={idx} itemKey={`nonShift_${line.statusId}`}>
+                  <div className="flex items-center justify-center gap-1">
+                    <span className="font-mono bg-gray-100 px-1 rounded">{line.code}</span>
+                    <span>{line.count}j</span>
+                  </div>
+                </HideableItem>
               ))}
             </div>
           );
@@ -417,12 +483,12 @@ ${deductionDetails.length > 0 ? `  Détail: ${deductionDetails.map(d => `${d.dat
 
         {/* SECTION 6: CP décomptés (always show if CP periods exist) */}
         {cpPeriods.length > 0 && displayCPDays > 0 && (
-          <div className="mt-2 pt-2 border-t border-gray-200">
+          <HideableItem itemKey="cpDays" className="mt-2 pt-2 border-t border-gray-200">
             <div className="text-[10px] font-semibold text-green-700 flex items-center justify-center gap-1">
               <Coffee className="w-3 h-3" />
               CP décomptés: {renderValue(displayCPDays, 'cpDays', ' j', 0)}
             </div>
-          </div>
+          </HideableItem>
         )}
 
         {/* Override indicator */}
