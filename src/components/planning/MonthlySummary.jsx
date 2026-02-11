@@ -1,18 +1,13 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { cn } from '@/lib/utils';
-import { Edit2, RotateCcw, AlertCircle, Clock, Calendar, Coffee, Sun, Briefcase } from 'lucide-react';
+import { RotateCcw, AlertCircle, Clock, Calendar, Coffee, Sun, Briefcase, Check, X } from 'lucide-react';
 import { calculateMonthlyCPTotal } from './paidLeaveCalculations';
 import { parseContractHours } from '@/components/utils/weeklyHoursCalculation';
 import { calculateDayHours } from '@/components/utils/nonShiftHoursCalculation';
 import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Label } from '@/components/ui/label';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Badge } from '@/components/ui/badge';
-import { toast } from 'sonner';
 import {
   calculateMonthlyRecap,
   applyManualOverrides,
@@ -43,7 +38,8 @@ export default function MonthlySummary({
   monthlyRecap = null,
   onRecapUpdate
 }) {
-  const [showEditDialog, setShowEditDialog] = useState(false);
+  const [editingField, setEditingField] = useState(null);
+  const [editValue, setEditValue] = useState('');
   const queryClient = useQueryClient();
 
   const year = monthStart.getFullYear();
@@ -193,6 +189,46 @@ ${deductionDetails.length > 0 ? `  Détail: ${deductionDetails.map(d => `${d.dat
 
   const hasManualOverride = overriddenFields.length > 0 || !!monthlyRecap;
 
+  // Mutation for saving a single field
+  const saveFieldMutation = useMutation({
+    mutationFn: async ({ field, value }) => {
+      const data = { [field]: value === '' || value === null ? null : value };
+      
+      if (monthlyRecap?.id) {
+        return await base44.entities.MonthlyRecap.update(monthlyRecap.id, data);
+      } else {
+        return await base44.entities.MonthlyRecap.create({
+          employee_id: employee.id,
+          employee_name: `${employee.first_name} ${employee.last_name}`,
+          year,
+          month: month + 1,
+          month_key: `${year}-${String(month + 1).padStart(2, '0')}`,
+          reset_version: monthlyRecap?.reset_version || 0,
+          ...data
+        });
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['allMonthlyRecaps'] });
+      if (onRecapUpdate) onRecapUpdate();
+      setEditingField(null);
+      setEditValue('');
+    }
+  });
+
+  // Mutation for resetting a single field
+  const resetFieldMutation = useMutation({
+    mutationFn: async (field) => {
+      if (monthlyRecap?.id) {
+        return await base44.entities.MonthlyRecap.update(monthlyRecap.id, { [field]: null });
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['allMonthlyRecaps'] });
+      if (onRecapUpdate) onRecapUpdate();
+    }
+  });
+
   // Mode badge colors
   const getModeColor = () => {
     if (calculationMode === 'disabled') return 'bg-gray-400';
@@ -209,560 +245,452 @@ ${deductionDetails.length > 0 ? `  Détail: ${deductionDetails.map(d => `${d.dat
   // Check if a field is overridden
   const isOverridden = (fieldName) => overriddenFields.includes(fieldName);
 
-  // Render value with override indicator
-  const renderValue = (value, fieldName, unit = '', decimals = 1) => {
-    const isOvr = isOverridden(fieldName);
-    const displayVal = value !== null && value !== undefined
+  // Editable field component
+  const EditableValue = ({ 
+    field, 
+    manualField, 
+    value, 
+    autoValue, 
+    unit = '', 
+    decimals = 1,
+    multiline = false,
+    className = ''
+  }) => {
+    const isEditing = editingField === field;
+    const isOvr = isOverridden(field);
+    const inputRef = useRef(null);
+
+    useEffect(() => {
+      if (isEditing && inputRef.current) {
+        inputRef.current.focus();
+        if (!multiline) inputRef.current.select();
+      }
+    }, [isEditing, multiline]);
+
+    const displayVal = value !== null && value !== undefined 
       ? (typeof value === 'number' ? value.toFixed(decimals) : value)
-      : '-';
+      : (typeof autoValue === 'number' ? autoValue.toFixed(decimals) : autoValue);
+
+    const startEdit = () => {
+      const currentVal = value !== null && value !== undefined ? value : autoValue;
+      setEditingField(field);
+      setEditValue(currentVal !== null && currentVal !== undefined ? String(currentVal) : '');
+    };
+
+    const saveEdit = () => {
+      if (editValue === '') {
+        saveFieldMutation.mutate({ field: manualField, value: null });
+      } else {
+        const numValue = parseFloat(editValue);
+        if (!isNaN(numValue) && !multiline) {
+          saveFieldMutation.mutate({ field: manualField, value: numValue });
+        } else {
+          saveFieldMutation.mutate({ field: manualField, value: editValue });
+        }
+      }
+    };
+
+    const cancelEdit = () => {
+      setEditingField(null);
+      setEditValue('');
+    };
+
+    const handleKeyDown = (e) => {
+      if (e.key === 'Enter' && !multiline) {
+        e.preventDefault();
+        saveEdit();
+      } else if (e.key === 'Escape') {
+        cancelEdit();
+      }
+    };
+
+    if (isEditing) {
+      return (
+        <span className="inline-flex items-center gap-0.5">
+          {multiline ? (
+            <textarea
+              ref={inputRef}
+              value={editValue}
+              onChange={(e) => setEditValue(e.target.value)}
+              onKeyDown={handleKeyDown}
+              onBlur={saveEdit}
+              className="text-[9px] px-1 py-0.5 border border-blue-400 rounded w-full min-h-[40px]"
+              rows={3}
+            />
+          ) : (
+            <input
+              ref={inputRef}
+              type={typeof autoValue === 'number' ? 'number' : 'text'}
+              step={decimals === 0 ? '1' : '0.1'}
+              value={editValue}
+              onChange={(e) => setEditValue(e.target.value)}
+              onKeyDown={handleKeyDown}
+              onBlur={saveEdit}
+              className="text-xs px-1 py-0.5 border border-blue-400 rounded w-16 text-center"
+            />
+          )}
+          <button
+            onMouseDown={(e) => { e.preventDefault(); saveEdit(); }}
+            className="p-0.5 hover:bg-green-100 rounded"
+          >
+            <Check className="w-3 h-3 text-green-600" />
+          </button>
+          <button
+            onMouseDown={(e) => { e.preventDefault(); cancelEdit(); }}
+            className="p-0.5 hover:bg-red-100 rounded"
+          >
+            <X className="w-3 h-3 text-red-600" />
+          </button>
+        </span>
+      );
+    }
 
     return (
-      <span className={cn(isOvr && 'text-blue-700 font-semibold')}>
-        {displayVal}{unit}
-        {isOvr && <span className="text-[8px] ml-0.5 text-blue-500">*</span>}
+      <span className={cn("inline-flex items-center gap-1 group", className)}>
+        <span
+          onClick={startEdit}
+          className={cn(
+            "cursor-pointer hover:bg-blue-50 px-1 rounded transition-colors",
+            isOvr && "text-blue-700 font-semibold"
+          )}
+        >
+          {displayVal}{unit}
+        </span>
+        {isOvr && (
+          <button
+            onClick={() => resetFieldMutation.mutate(manualField)}
+            className="opacity-0 group-hover:opacity-100 p-0.5 hover:bg-orange-100 rounded transition-opacity"
+            title="Revenir au calcul auto"
+          >
+            <RotateCcw className="w-3 h-3 text-orange-600" />
+          </button>
+        )}
       </span>
     );
   };
 
   return (
-    <>
-      <div className={cn(
-        "px-2 py-3 text-center relative group border-t-2 border-gray-300",
-        hasManualOverride && "bg-blue-50",
-        calculationMode !== 'disabled' && "bg-gradient-to-b from-gray-50 to-white"
-      )}>
-        {/* Edit button */}
-        <button
-          onClick={() => setShowEditDialog(true)}
-          className="absolute top-1 right-1 p-1 rounded hover:bg-gray-200 transition-colors opacity-0 group-hover:opacity-100"
-          title="Éditer le récapitulatif"
-        >
-          <Edit2 className="w-3 h-3 text-blue-600" />
-        </button>
+    <div className={cn(
+      "px-2 py-3 text-center relative group border-t-2 border-gray-300",
+      hasManualOverride && "bg-blue-50",
+      calculationMode !== 'disabled' && "bg-gradient-to-b from-gray-50 to-white"
+    )}>
 
-        {/* Mode indicator */}
-        <div className="absolute top-1 left-1">
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger>
-                <Badge className={cn("text-[8px] px-1 py-0", getModeColor())}>
-                  {getModeLabel()}
-                </Badge>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p className="text-xs">
-                  Mode de calcul: {calculationMode === 'disabled' ? 'Désactivé (manuel)' :
-                    calculationMode === 'weekly' ? 'Hebdomadaire' : 'Mensuel (lissage)'}
-                </p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-        </div>
-
-        <div className="text-[10px] font-bold text-gray-600 uppercase mb-2 mt-3">
-          Récap mois
-        </div>
-
-        {/* SECTION 1: Days */}
-        {calculationMode !== 'disabled' ? (
-          <div className="mb-2 pb-2 border-b border-gray-200">
-            <div className="flex items-center justify-center gap-1 text-xs text-gray-700">
-              <Calendar className="w-3 h-3" />
-              <span className="font-semibold">{renderValue(workedDays, 'workedDays', '', 0)}</span>
-              <span className="text-gray-500">/ {expectedDays || '-'} j</span>
-            </div>
-            {extraDays > 0 && (
-              <div className="text-[10px] text-orange-600 font-medium">
-                +{renderValue(extraDays, 'extraDays', ' j sup', 0)}
-              </div>
-            )}
-          </div>
-        ) : (
-          <div className="text-xs text-gray-700 mb-1">
-            <span className="font-semibold">{renderValue(workedDays, 'workedDays', '', 0)}</span> jour{(workedDays || 0) > 1 ? 's' : ''}
-          </div>
-        )}
-
-        {/* SECTION 2: Hours */}
-        <div className="mb-2">
-          <div className="text-xl font-bold text-blue-900">
-            {renderValue(workedHours, 'workedHours', 'h')}
-          </div>
-          <div className="text-[9px] text-gray-600 font-semibold">
-            Effectuées
-          </div>
-          {calculationMode !== 'disabled' && (
-            <div className="text-xs text-gray-500 mt-0.5">
-              Base: {renderValue(contractMonthlyHours, 'contractMonthlyHours', 'h')}
-              {adjustedContractHours !== contractMonthlyHours && adjustedContractHours !== null && (
-                <span className="text-orange-600 ml-1">
-                  (ajusté: {renderValue(adjustedContractHours, 'adjustedContractHours', 'h')})
-                </span>
-              )}
-            </div>
-          )}
-          {paidHours !== null && (
-            <div className="text-[10px] text-gray-500 mt-1">
-              Payées (hors sup/comp): {paidHours.toFixed(1)}h
-            </div>
-          )}
-        </div>
-
-        {/* SECTION 3: Overtime / Complementary Hours */}
-        {calculationMode !== 'disabled' && (
-          <>
-            {isPartTime ? (
-              // Part-time: Heures complémentaires (only show if >= 0.05)
-              totalComplementaryHours >= 0.05 && (
-                <div className="mb-2 pb-2 border-b border-gray-200">
-                  <div className="bg-green-50 rounded p-1.5">
-                    <div className="text-[10px] font-bold text-green-800 mb-0.5 flex items-center justify-center gap-1">
-                      <Clock className="w-3 h-3" />
-                      H. Complémentaires
-                    </div>
-                    <div className="text-sm font-bold text-green-700">
-                      {renderValue(totalComplementaryHours, 'totalComplementaryHours', 'h')}
-                    </div>
-                    <div className="text-[9px] text-green-600 space-y-0.5">
-                      {complementaryHours10 > 0 && (
-                        <div>+10%: {renderValue(complementaryHours10, 'complementaryHours10', 'h')}</div>
-                      )}
-                      {complementaryHours25 > 0 && (
-                        <div>+25%: {renderValue(complementaryHours25, 'complementaryHours25', 'h')}</div>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              )
-            ) : (
-              // Full-time: Heures supplémentaires (only show if >= 0.05)
-              totalOvertimeHours >= 0.05 && (
-                <div className="mb-2 pb-2 border-b border-gray-200">
-                  <div className="bg-orange-50 rounded p-1.5">
-                    <div className="text-[10px] font-bold text-orange-800 mb-0.5 flex items-center justify-center gap-1">
-                      <Briefcase className="w-3 h-3" />
-                      H. Supplémentaires
-                    </div>
-                    <div className="text-sm font-bold text-orange-700">
-                      {renderValue(totalOvertimeHours, 'totalOvertimeHours', 'h')}
-                    </div>
-                    <div className="text-[9px] text-orange-600 space-y-0.5">
-                      {overtimeHours25 > 0 && (
-                        <div>+25%: {renderValue(overtimeHours25, 'overtimeHours25', 'h')}</div>
-                      )}
-                      {overtimeHours50 > 0 && (
-                        <div>+50%: {renderValue(overtimeHours50, 'overtimeHours50', 'h')}</div>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              )
-            )}
-          </>
-        )}
-
-        {/* SECTION 4: Holidays worked */}
-        {calculationMode !== 'disabled' && holidaysWorkedDays > 0 && eligibleForHolidayPay && (
-          <div className="mb-2 text-[10px]">
-            <div className="flex items-center justify-center gap-1 text-red-700 font-medium">
-              <Sun className="w-3 h-3" />
-              Jours fériés: {renderValue(holidaysWorkedDays, 'holidaysWorkedDays', '', 0)}j
-              ({renderValue(holidaysWorkedHours, 'holidaysWorkedHours', 'h')})
-            </div>
-            <div className="text-[9px] text-red-600">
-              Éligible majoration férié
-            </div>
-          </div>
-        )}
-
-        {/* SECTION 5: Non-shifts summary (filtered by visible_in_recap) */}
-        {calculationMode !== 'disabled' && (() => {
-          // Filter non-shifts to only show those with visible_in_recap === true
-          const visibleStatuses = nonShiftTypes.filter(t => t.visible_in_recap === true);
-          
-          // Calculate occurrences per status (unique days per employee)
-          const employeeNonShifts = nonShiftEvents.filter(ns => ns.employee_id === employee.id);
-          const occurrencesByStatus = {};
-          
-          employeeNonShifts.forEach(ns => {
-            const statusId = ns.non_shift_type_id;
-            if (!occurrencesByStatus[statusId]) {
-              occurrencesByStatus[statusId] = new Set();
-            }
-            occurrencesByStatus[statusId].add(ns.date);
-          });
-          
-          // Build display lines for visible statuses only
-          const displayLines = visibleStatuses
-            .map(status => {
-              const uniqueDays = occurrencesByStatus[status.id]?.size || 0;
-              return {
-                code: status.code || status.label?.substring(0, 3).toUpperCase(),
-                count: uniqueDays
-              };
-            })
-            .filter(line => line.count > 0);
-          
-          return displayLines.length > 0 && (
-            <div className="mb-2 text-[9px] text-gray-600 space-y-0.5">
-              {displayLines.map((line, idx) => (
-                <div key={idx} className="flex items-center justify-center gap-1">
-                  <span className="font-mono bg-gray-100 px-1 rounded">{line.code}</span>
-                  <span>{line.count}j</span>
-                </div>
-              ))}
-            </div>
-          );
-        })()}
-
-        {/* SECTION 6: CP décomptés (always show if CP periods exist) */}
-        {cpPeriods.length > 0 && displayCPDays > 0 && (
-          <div className="mt-2 pt-2 border-t border-gray-200">
-            <div className="text-[10px] font-semibold text-green-700 flex items-center justify-center gap-1">
-              <Coffee className="w-3 h-3" />
-              CP décomptés: {renderValue(displayCPDays, 'cpDays', ' j', 0)}
-            </div>
-          </div>
-        )}
-
-        {/* Manual override indicator */}
-        {hasManualOverride && (
-          <div className="mt-1 text-[9px] text-blue-700 font-semibold flex items-center justify-center gap-1">
-            <AlertCircle className="w-3 h-3" />
-            Valeurs modifiées
-          </div>
-        )}
+      {/* Mode indicator */}
+      <div className="absolute top-1 left-1">
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger>
+              <Badge className={cn("text-[8px] px-1 py-0", getModeColor())}>
+                {getModeLabel()}
+              </Badge>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p className="text-xs">
+                Mode de calcul: {calculationMode === 'disabled' ? 'Désactivé (manuel)' :
+                  calculationMode === 'weekly' ? 'Hebdomadaire' : 'Mensuel (lissage)'}
+              </p>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
       </div>
 
-      <EditMonthlyRecapDialog
-        open={showEditDialog}
-        onOpenChange={setShowEditDialog}
-        employee={employee}
-        year={year}
-        month={month + 1} // DB uses 1-indexed months
-        calculatedValues={calculatedRecap}
-        currentRecap={monthlyRecap}
-        onRecapUpdate={onRecapUpdate}
-        calculationMode={calculationMode}
-        autoCPDays={autoCPDays}
-      />
-    </>
-  );
-}
-
-function EditMonthlyRecapDialog({
-  open,
-  onOpenChange,
-  employee,
-  year,
-  month,
-  calculatedValues,
-  currentRecap,
-  onRecapUpdate,
-  calculationMode,
-  autoCPDays
-}) {
-  const queryClient = useQueryClient();
-  const [formData, setFormData] = useState({});
-
-  React.useEffect(() => {
-    if (open) {
-      // Initialize form with current manual values or empty
-      setFormData({
-        manual_expected_days: currentRecap?.manual_expected_days ?? '',
-        manual_days_worked: currentRecap?.manual_days_worked ?? '',
-        manual_extra_days: currentRecap?.manual_extra_days ?? '',
-        manual_contract_hours: currentRecap?.manual_contract_hours ?? '',
-        manual_adjusted_hours: currentRecap?.manual_adjusted_hours ?? '',
-        manual_total_hours: currentRecap?.manual_total_hours ?? '',
-        manual_overtime_25: currentRecap?.manual_overtime_25 ?? '',
-        manual_overtime_50: currentRecap?.manual_overtime_50 ?? '',
-        manual_total_overtime: currentRecap?.manual_total_overtime ?? '',
-        manual_complementary_10: currentRecap?.manual_complementary_10 ?? '',
-        manual_complementary_25: currentRecap?.manual_complementary_25 ?? '',
-        manual_total_complementary: currentRecap?.manual_total_complementary ?? '',
-        manual_holidays_days: currentRecap?.manual_holidays_days ?? '',
-        manual_holidays_hours: currentRecap?.manual_holidays_hours ?? '',
-        manual_cp_days: currentRecap?.manual_cp_days ?? '',
-        notes: currentRecap?.notes || ''
-      });
-    }
-  }, [open, currentRecap]);
-
-  const saveMutation = useMutation({
-    mutationFn: async (data) => {
-      if (currentRecap) {
-        return await base44.entities.MonthlyRecap.update(currentRecap.id, data);
-      } else {
-        return await base44.entities.MonthlyRecap.create({
-          employee_id: employee.id,
-          year,
-          month,
-          ...data
-        });
-      }
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['allMonthlyRecaps'] });
-      if (onRecapUpdate) onRecapUpdate();
-      toast.success('Récapitulatif enregistré');
-      onOpenChange(false);
-    }
-  });
-
-  const deleteMutation = useMutation({
-    mutationFn: async () => {
-      if (currentRecap) {
-        return await base44.entities.MonthlyRecap.delete(currentRecap.id);
-      }
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['allMonthlyRecaps'] });
-      if (onRecapUpdate) onRecapUpdate();
-      toast.success('Modifications supprimées');
-      onOpenChange(false);
-    }
-  });
-
-  const handleSave = () => {
-    const cleanData = {};
-    Object.keys(formData).forEach(key => {
-      if (formData[key] !== '' && formData[key] !== null && formData[key] !== undefined) {
-        if (key === 'notes') {
-          cleanData[key] = formData[key];
-        } else {
-          cleanData[key] = parseFloat(formData[key]);
-        }
-      }
-    });
-
-    saveMutation.mutate(cleanData);
-  };
-
-  const resetField = (fieldName) => {
-    setFormData(prev => ({ ...prev, [fieldName]: '' }));
-  };
-
-  const monthNames = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'];
-
-  const isPartTime = employee.work_time_type === 'part_time';
-
-  // Get calculated value for display
-  const getCalcValue = (fieldName) => {
-    const mapping = {
-      manual_expected_days: 'expectedDays',
-      manual_days_worked: 'workedDays',
-      manual_extra_days: 'extraDays',
-      manual_contract_hours: 'contractMonthlyHours',
-      manual_adjusted_hours: 'adjustedContractHours',
-      manual_total_hours: 'workedHours',
-      manual_overtime_25: 'overtimeHours25',
-      manual_overtime_50: 'overtimeHours50',
-      manual_total_overtime: 'totalOvertimeHours',
-      manual_complementary_10: 'complementaryHours10',
-      manual_complementary_25: 'complementaryHours25',
-      manual_total_complementary: 'totalComplementaryHours',
-      manual_holidays_days: 'holidaysWorkedDays',
-      manual_holidays_hours: 'holidaysWorkedHours',
-      manual_cp_days: 'cpDays'
-    };
-
-    const calcField = mapping[fieldName];
-    const value = calculatedValues?.[calcField];
-
-    if (fieldName === 'manual_cp_days' && (value === null || value === undefined)) {
-      return autoCPDays || 0;
-    }
-
-    return value !== null && value !== undefined
-      ? (typeof value === 'number' ? value.toFixed(1) : value)
-      : '-';
-  };
-
-  // Input with reset button
-  const FieldInput = ({ name, label, step = '0.1', disabled = false }) => {
-    const hasValue = formData[name] !== '' && formData[name] !== null && formData[name] !== undefined;
-    const calcValue = getCalcValue(name);
-
-    return (
-      <div>
-        <Label className="text-xs text-gray-700 flex items-center justify-between">
-          <span>{label}</span>
-          {hasValue && (
-            <button
-              type="button"
-              onClick={() => resetField(name)}
-              className="text-blue-600 hover:text-blue-800 p-0.5"
-              title="Réinitialiser au calcul auto"
-            >
-              <RotateCcw className="w-3 h-3" />
-            </button>
-          )}
-        </Label>
-        <Input
-          type="number"
-          step={step}
-          min="0"
-          placeholder={calculationMode !== 'disabled' ? `Auto: ${calcValue}` : 'Saisir...'}
-          value={formData[name]}
-          onChange={(e) => setFormData({...formData, [name]: e.target.value})}
-          disabled={disabled}
-          className={cn(
-            "mt-1",
-            hasValue && "border-blue-400 bg-blue-50"
-          )}
-        />
+      <div className="text-[10px] font-bold text-gray-600 uppercase mb-2 mt-3">
+        Récap mois
       </div>
-    );
-  };
 
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle className="text-xl font-bold text-blue-600">
-            Éditer le récapitulatif mensuel
-          </DialogTitle>
-          <p className="text-sm text-gray-600">
-            {employee.first_name} {employee.last_name} - {monthNames[month - 1]} {year}
-          </p>
-          <Badge className={cn("w-fit mt-1",
-            calculationMode === 'disabled' ? 'bg-gray-400' :
-            calculationMode === 'weekly' ? 'bg-blue-500' : 'bg-purple-500'
-          )}>
-            Mode: {calculationMode === 'disabled' ? 'Manuel' : calculationMode === 'weekly' ? 'Hebdomadaire' : 'Mensuel'}
-          </Badge>
-        </DialogHeader>
-
-        <div className="space-y-6 mt-4">
-          {/* Info box */}
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-xs text-gray-700">
-            <strong>Mode de saisie :</strong> Les champs vides utilisent le calcul automatique.
-            Saisissez une valeur pour la remplacer. L'icône <RotateCcw className="w-3 h-3 inline" /> réinitialise au calcul.
-          </div>
-
-          {/* Section 1: Days */}
-          <div className="border rounded-lg p-4">
-            <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
-              <Calendar className="w-4 h-4 text-gray-600" />
-              Jours
-            </h3>
-            <div className="grid grid-cols-3 gap-4">
-              <FieldInput name="manual_expected_days" label="Jours prévus" step="1" />
-              <FieldInput name="manual_days_worked" label="Jours travaillés" step="1" />
-              <FieldInput name="manual_extra_days" label="Jours supplémentaires" step="1" />
-            </div>
-          </div>
-
-          {/* Section 2: Hours */}
-          <div className="border rounded-lg p-4">
-            <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
-              <Clock className="w-4 h-4 text-gray-600" />
-              Heures
-            </h3>
-            <div className="grid grid-cols-3 gap-4">
-              <FieldInput name="manual_total_hours" label="Heures effectuées" />
-              <FieldInput name="manual_contract_hours" label="Base contractuelle" />
-              <FieldInput name="manual_adjusted_hours" label="Base ajustée" />
-            </div>
-          </div>
-
-          {/* Section 3: Overtime / Complementary */}
-          <div className="border rounded-lg p-4">
-            <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
-              <Briefcase className="w-4 h-4 text-gray-600" />
-              {isPartTime ? 'Heures complémentaires (temps partiel)' : 'Heures supplémentaires (temps plein)'}
-            </h3>
-
-            {isPartTime ? (
-              <div className="grid grid-cols-3 gap-4">
-                <FieldInput name="manual_complementary_10" label="H. compl. +10%" />
-                <FieldInput name="manual_complementary_25" label="H. compl. +25%" />
-                <FieldInput name="manual_total_complementary" label="Total complémentaires" />
-              </div>
-            ) : (
-              <div className="grid grid-cols-3 gap-4">
-                <FieldInput name="manual_overtime_25" label="H. sup. +25%" />
-                <FieldInput name="manual_overtime_50" label="H. sup. +50%" />
-                <FieldInput name="manual_total_overtime" label="Total supplémentaires" />
-              </div>
-            )}
-
-            <p className="text-[10px] text-gray-500 mt-2">
-              {isPartTime
-                ? 'Temps partiel: +10% jusqu\'à 10% du contrat, +25% au-delà. Max 1/3 du contrat.'
-                : 'Temps plein: +25% de 36h à 43h/sem, +50% au-delà de 43h/sem.'}
-            </p>
-          </div>
-
-          {/* Section 4: Holidays */}
-          <div className="border rounded-lg p-4">
-            <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
-              <Sun className="w-4 h-4 text-gray-600" />
-              Jours fériés travaillés
-            </h3>
-            <div className="grid grid-cols-2 gap-4">
-              <FieldInput name="manual_holidays_days" label="Nombre de jours" step="1" />
-              <FieldInput name="manual_holidays_hours" label="Heures fériées" />
-            </div>
-            <p className="text-[10px] text-gray-500 mt-2">
-              Majoration applicable après 8 mois d'ancienneté.
-            </p>
-          </div>
-
-          {/* Section 5: CP */}
-          <div className="border rounded-lg p-4">
-            <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
-              <Coffee className="w-4 h-4 text-gray-600" />
-              Congés payés
-            </h3>
-            <div className="w-1/3">
-              <FieldInput name="manual_cp_days" label="CP décomptés" step="0.5" />
-            </div>
-          </div>
-
-          {/* Section 6: Notes */}
-          <div className="border rounded-lg p-4">
-            <Label className="text-xs text-gray-700">Notes / Commentaires</Label>
-            <textarea
-              className="w-full mt-1 px-3 py-2 border border-gray-300 rounded-md text-sm"
-              rows={3}
-              placeholder="Commentaires sur ce mois..."
-              value={formData.notes}
-              onChange={(e) => setFormData({...formData, notes: e.target.value})}
+      {/* SECTION 1: Days */}
+      {calculationMode !== 'disabled' ? (
+        <div className="mb-2 pb-2 border-b border-gray-200">
+          <div className="flex items-center justify-center gap-1 text-xs text-gray-700">
+            <Calendar className="w-3 h-3" />
+            <EditableValue
+              field="workedDays"
+              manualField="manual_days_worked"
+              value={monthlyRecap?.manual_days_worked}
+              autoValue={calculatedRecap.workedDays}
+              unit=""
+              decimals={0}
+              className="font-semibold"
+            />
+            <span className="text-gray-500">/</span>
+            <EditableValue
+              field="expectedDays"
+              manualField="manual_expected_days"
+              value={monthlyRecap?.manual_expected_days}
+              autoValue={calculatedRecap.expectedDays}
+              unit=" j"
+              decimals={0}
             />
           </div>
+          {extraDays > 0 && (
+            <div className="text-[10px] text-orange-600 font-medium">
+              +<EditableValue
+                field="extraDays"
+                manualField="manual_extra_days"
+                value={monthlyRecap?.manual_extra_days}
+                autoValue={calculatedRecap.extraDays}
+                unit=" j sup"
+                decimals={0}
+              />
+            </div>
+          )}
+        </div>
+      ) : (
+        <div className="text-xs text-gray-700 mb-1">
+          <EditableValue
+            field="workedDays"
+            manualField="manual_days_worked"
+            value={monthlyRecap?.manual_days_worked}
+            autoValue={calculatedRecap.workedDays}
+            unit=" jour"
+            decimals={0}
+            className="font-semibold"
+          />
+        </div>
+      )}
 
-          {/* Actions */}
-          <div className="flex gap-3 pt-4 border-t">
-            <Button
-              type="button"
-              onClick={handleSave}
-              className="flex-1 bg-blue-600 hover:bg-blue-700"
-            >
-              Enregistrer
-            </Button>
-            {currentRecap && (
-              <Button
-                type="button"
-                onClick={() => deleteMutation.mutate()}
-                variant="outline"
-                className="border-red-300 text-red-700 hover:bg-red-50"
-              >
-                <RotateCcw className="w-4 h-4 mr-2" />
-                Tout réinitialiser
-              </Button>
+      {/* SECTION 2: Hours */}
+      <div className="mb-2">
+        <div className="text-xl font-bold text-blue-900">
+          <EditableValue
+            field="workedHours"
+            manualField="manual_total_hours"
+            value={monthlyRecap?.manual_total_hours}
+            autoValue={calculatedRecap.workedHours}
+            unit="h"
+          />
+        </div>
+        <div className="text-[9px] text-gray-600 font-semibold">
+          Effectuées
+        </div>
+        {calculationMode !== 'disabled' && (
+          <div className="text-xs text-gray-500 mt-0.5">
+            Base: <EditableValue
+              field="contractMonthlyHours"
+              manualField="manual_contract_hours"
+              value={monthlyRecap?.manual_contract_hours}
+              autoValue={calculatedRecap.contractMonthlyHours}
+              unit="h"
+            />
+            {adjustedContractHours !== contractMonthlyHours && adjustedContractHours !== null && (
+              <span className="text-orange-600 ml-1">
+                (ajusté: <EditableValue
+                  field="adjustedContractHours"
+                  manualField="manual_adjusted_hours"
+                  value={monthlyRecap?.manual_adjusted_hours}
+                  autoValue={calculatedRecap.adjustedContractHours}
+                  unit="h"
+                />)
+              </span>
             )}
-            <Button
-              type="button"
-              onClick={() => onOpenChange(false)}
-              variant="outline"
-            >
-              Annuler
-            </Button>
+          </div>
+        )}
+        {paidHours !== null && (
+          <div className="text-[10px] text-gray-500 mt-1">
+            Payées (hors sup/comp): <EditableValue
+              field="paidExcludingExtras"
+              manualField="manual_paid_excluding_extras"
+              value={monthlyRecap?.manual_paid_excluding_extras}
+              autoValue={paidHours}
+              unit="h"
+            />
+          </div>
+        )}
+      </div>
+
+      {/* SECTION 3: Overtime / Complementary Hours */}
+      {calculationMode !== 'disabled' && (
+        <>
+          {isPartTime ? (
+            // Part-time: Heures complémentaires
+            totalComplementaryHours >= 0.05 && (
+              <div className="mb-2 pb-2 border-b border-gray-200">
+                <div className="bg-green-50 rounded p-1.5">
+                  <div className="text-[10px] font-bold text-green-800 mb-0.5 flex items-center justify-center gap-1">
+                    <Clock className="w-3 h-3" />
+                    H. Complémentaires
+                  </div>
+                  <div className="text-sm font-bold text-green-700">
+                    <EditableValue
+                      field="totalComplementaryHours"
+                      manualField="manual_total_complementary"
+                      value={monthlyRecap?.manual_total_complementary}
+                      autoValue={calculatedRecap.totalComplementaryHours}
+                      unit="h"
+                    />
+                  </div>
+                  <div className="text-[9px] text-green-600 space-y-0.5">
+                    {complementaryHours10 > 0 && (
+                      <div>+10%: <EditableValue
+                        field="complementaryHours10"
+                        manualField="manual_complementary_10"
+                        value={monthlyRecap?.manual_complementary_10}
+                        autoValue={calculatedRecap.complementaryHours10}
+                        unit="h"
+                      /></div>
+                    )}
+                    {complementaryHours25 > 0 && (
+                      <div>+25%: <EditableValue
+                        field="complementaryHours25"
+                        manualField="manual_complementary_25"
+                        value={monthlyRecap?.manual_complementary_25}
+                        autoValue={calculatedRecap.complementaryHours25}
+                        unit="h"
+                      /></div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )
+          ) : (
+            // Full-time: Heures supplémentaires
+            totalOvertimeHours >= 0.05 && (
+              <div className="mb-2 pb-2 border-b border-gray-200">
+                <div className="bg-orange-50 rounded p-1.5">
+                  <div className="text-[10px] font-bold text-orange-800 mb-0.5 flex items-center justify-center gap-1">
+                    <Briefcase className="w-3 h-3" />
+                    H. Supplémentaires
+                  </div>
+                  <div className="text-sm font-bold text-orange-700">
+                    <EditableValue
+                      field="totalOvertimeHours"
+                      manualField="manual_total_overtime"
+                      value={monthlyRecap?.manual_total_overtime}
+                      autoValue={calculatedRecap.totalOvertimeHours}
+                      unit="h"
+                    />
+                  </div>
+                  <div className="text-[9px] text-orange-600 space-y-0.5">
+                    {overtimeHours25 > 0 && (
+                      <div>+25%: <EditableValue
+                        field="overtimeHours25"
+                        manualField="manual_overtime_25"
+                        value={monthlyRecap?.manual_overtime_25}
+                        autoValue={calculatedRecap.overtimeHours25}
+                        unit="h"
+                      /></div>
+                    )}
+                    {overtimeHours50 > 0 && (
+                      <div>+50%: <EditableValue
+                        field="overtimeHours50"
+                        manualField="manual_overtime_50"
+                        value={monthlyRecap?.manual_overtime_50}
+                        autoValue={calculatedRecap.overtimeHours50}
+                        unit="h"
+                      /></div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )
+          )}
+        </>
+      )}
+
+      {/* SECTION 4: Holidays worked */}
+      {calculationMode !== 'disabled' && holidaysWorkedDays > 0 && eligibleForHolidayPay && (
+        <div className="mb-2 text-[10px]">
+          <div className="flex items-center justify-center gap-1 text-red-700 font-medium">
+            <Sun className="w-3 h-3" />
+            Jours fériés: <EditableValue
+              field="holidaysWorkedDays"
+              manualField="manual_holidays_days"
+              value={monthlyRecap?.manual_holidays_days}
+              autoValue={calculatedRecap.holidaysWorkedDays}
+              unit="j"
+              decimals={0}
+            />
+            (<EditableValue
+              field="holidaysWorkedHours"
+              manualField="manual_holidays_hours"
+              value={monthlyRecap?.manual_holidays_hours}
+              autoValue={calculatedRecap.holidaysWorkedHours}
+              unit="h"
+            />)
+          </div>
+          <div className="text-[9px] text-red-600">
+            Éligible majoration férié
           </div>
         </div>
-      </DialogContent>
-    </Dialog>
+      )}
+
+      {/* SECTION 5: Non-shifts summary */}
+      {(() => {
+        const visibleStatuses = nonShiftTypes.filter(t => t.visible_in_recap === true);
+        const employeeNonShifts = nonShiftEvents.filter(ns => ns.employee_id === employee.id);
+        const occurrencesByStatus = {};
+        
+        employeeNonShifts.forEach(ns => {
+          const statusId = ns.non_shift_type_id;
+          if (!occurrencesByStatus[statusId]) {
+            occurrencesByStatus[statusId] = new Set();
+          }
+          occurrencesByStatus[statusId].add(ns.date);
+        });
+        
+        const displayLines = visibleStatuses
+          .map(status => {
+            const uniqueDays = occurrencesByStatus[status.id]?.size || 0;
+            return {
+              code: status.code || status.label?.substring(0, 3).toUpperCase(),
+              count: uniqueDays
+            };
+          })
+          .filter(line => line.count > 0);
+        
+        const autoText = displayLines.map(l => `${l.code} ${l.count}j`).join('\n');
+        
+        return displayLines.length > 0 && (
+          <div className="mb-2 text-[9px] text-gray-600">
+            <EditableValue
+              field="nonShiftsText"
+              manualField="manual_non_shifts_text"
+              value={monthlyRecap?.manual_non_shifts_text}
+              autoValue={autoText}
+              multiline={true}
+            />
+          </div>
+        );
+      })()}
+
+      {/* SECTION 6: CP décomptés */}
+      {cpPeriods.length > 0 && displayCPDays > 0 && (
+        <div className="mt-2 pt-2 border-t border-gray-200">
+          <div className="text-[10px] font-semibold text-green-700 flex items-center justify-center gap-1">
+            <Coffee className="w-3 h-3" />
+            CP décomptés: <EditableValue
+              field="cpDays"
+              manualField="manual_cp_days"
+              value={monthlyRecap?.manual_cp_days}
+              autoValue={autoCPDays}
+              unit=" j"
+              decimals={0}
+            />
+          </div>
+          {monthlyRecap?.manual_cp_text && (
+            <div className="text-[9px] text-gray-500 mt-1">
+              <EditableValue
+                field="cpText"
+                manualField="manual_cp_text"
+                value={monthlyRecap?.manual_cp_text}
+                autoValue=""
+                multiline={true}
+              />
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Manual override indicator */}
+      {hasManualOverride && (
+        <div className="mt-1 text-[9px] text-blue-700 font-semibold flex items-center justify-center gap-1">
+          <AlertCircle className="w-3 h-3" />
+          Valeurs modifiées
+        </div>
+      )}
+    </div>
   );
 }
+
+// Removed EditMonthlyRecapDialog - inline editing only
