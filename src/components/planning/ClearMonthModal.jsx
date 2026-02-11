@@ -17,8 +17,64 @@ export default function ClearMonthModal({ isOpen, onClose, year, month }) {
   const resetMutation = useMutation({
     mutationFn: async () => {
       const user = await base44.auth.me();
+      const stats = { deleted: {} };
 
-      // Get or create PlanningMonth record
+      console.log(`🧨 [RESET TOTAL] Début du reset pour ${monthKey}`);
+
+      // 1) Supprimer tous les shifts du mois
+      const shiftsToDelete = await base44.entities.Shift.filter({ month_key: monthKey });
+      for (const shift of shiftsToDelete) {
+        await base44.entities.Shift.delete(shift.id);
+      }
+      stats.deleted.shifts = shiftsToDelete.length;
+      console.log(`✓ Supprimé ${shiftsToDelete.length} shifts`);
+
+      // 2) Supprimer tous les non-shifts du mois
+      const nonShiftsToDelete = await base44.entities.NonShiftEvent.filter({ month_key: monthKey });
+      for (const ns of nonShiftsToDelete) {
+        await base44.entities.NonShiftEvent.delete(ns.id);
+      }
+      stats.deleted.nonShifts = nonShiftsToDelete.length;
+      console.log(`✓ Supprimé ${nonShiftsToDelete.length} non-shifts`);
+
+      // 3) Supprimer toutes les périodes de CP qui commencent dans ce mois
+      const cpToDelete = await base44.entities.PaidLeavePeriod.filter({ month_key: monthKey });
+      for (const cp of cpToDelete) {
+        await base44.entities.PaidLeavePeriod.delete(cp.id);
+      }
+      stats.deleted.cpPeriods = cpToDelete.length;
+      console.log(`✓ Supprimé ${cpToDelete.length} périodes CP`);
+
+      // 4) Supprimer tous les récaps hebdomadaires
+      const weeklyRecaps = await base44.entities.WeeklyRecap.filter({ month_key: monthKey });
+      for (const recap of weeklyRecaps) {
+        await base44.entities.WeeklyRecap.delete(recap.id);
+      }
+      stats.deleted.weeklyRecaps = weeklyRecaps.length;
+      console.log(`✓ Supprimé ${weeklyRecaps.length} récaps hebdo`);
+
+      // 5) Supprimer tous les récaps mensuels
+      const monthlyRecaps = await base44.entities.MonthlyRecap.filter({ 
+        year, 
+        month: month + 1 
+      });
+      for (const recap of monthlyRecaps) {
+        await base44.entities.MonthlyRecap.delete(recap.id);
+      }
+      stats.deleted.monthlyRecaps = monthlyRecaps.length;
+      console.log(`✓ Supprimé ${monthlyRecaps.length} récaps mensuels`);
+
+      // 6) Supprimer tous les overrides d'export compta
+      const exportOverrides = await base44.entities.ExportComptaOverride.filter({ 
+        month_key: monthKey 
+      });
+      for (const override of exportOverrides) {
+        await base44.entities.ExportComptaOverride.delete(override.id);
+      }
+      stats.deleted.exportOverrides = exportOverrides.length;
+      console.log(`✓ Supprimé ${exportOverrides.length} overrides export`);
+
+      // 7) Nettoyer/créer le PlanningMonth
       let planningMonths = await base44.entities.PlanningMonth.filter({ 
         year, 
         month 
@@ -27,7 +83,7 @@ export default function ClearMonthModal({ isOpen, onClose, year, month }) {
       let planningMonth = planningMonths[0];
 
       if (planningMonth) {
-        // Increment reset version
+        // Incrémenter la version ET marquer le reset
         const newVersion = (planningMonth.reset_version || 0) + 1;
         
         await base44.entities.PlanningMonth.update(planningMonth.id, {
@@ -37,9 +93,9 @@ export default function ClearMonthModal({ isOpen, onClose, year, month }) {
           reset_by_name: user.full_name
         });
 
-        return { version: newVersion, isNew: false };
+        stats.version = newVersion;
       } else {
-        // Create new PlanningMonth with version 1
+        // Créer un nouveau mois propre
         const newMonth = await base44.entities.PlanningMonth.create({
           year,
           month,
@@ -50,23 +106,30 @@ export default function ClearMonthModal({ isOpen, onClose, year, month }) {
           reset_by_name: user.full_name
         });
 
-        return { version: 1, isNew: true };
+        stats.version = 1;
       }
+
+      console.log(`✅ [RESET TOTAL] Terminé:`, stats);
+      return stats;
     },
-    onSuccess: ({ version, isNew }) => {
-      console.log(`✅ [HARD RESET] Mois ${monthKey} réinitialisé instantanément - version ${version}`);
+    onSuccess: (stats) => {
+      const { deleted, version } = stats;
+      const total = Object.values(deleted).reduce((acc, val) => acc + val, 0);
       
-      // Invalidate all planning queries to force refetch with new version
+      console.log(`✅ [RESET TOTAL] ${monthKey} réinitialisé - ${total} lignes supprimées`);
+      
+      // Invalidate all planning queries
       queryClient.invalidateQueries({ queryKey: ['shifts'] });
       queryClient.invalidateQueries({ queryKey: ['nonShiftEvents'] });
       queryClient.invalidateQueries({ queryKey: ['paidLeavePeriods'] });
       queryClient.invalidateQueries({ queryKey: ['weeklyRecaps'] });
-      queryClient.invalidateQueries({ queryKey: ['monthlyRecaps'] });
+      queryClient.invalidateQueries({ queryKey: ['allMonthlyRecaps'] });
+      queryClient.invalidateQueries({ queryKey: ['exportOverrides'] });
       queryClient.invalidateQueries({ queryKey: ['planningMonth'] });
 
       setResetting(false);
-      toast.success(`✓ Planning réinitialisé instantanément (version ${version})`, {
-        duration: 3000
+      toast.success(`✓ Mois ${monthKey} réinitialisé - ${total} éléments supprimés`, {
+        duration: 4000
       });
       onClose();
     },
@@ -104,13 +167,14 @@ export default function ClearMonthModal({ isOpen, onClose, year, month }) {
               <AlertTriangle className="w-6 h-6 text-red-600 mt-0.5 flex-shrink-0" />
               <div className="flex-1">
                 <h3 className="font-bold text-red-900 text-base mb-2">
-                  ⚡ Réinitialisation instantanée
+                  🧨 Réinitialisation complète
                 </h3>
                 <p className="text-red-800 text-sm leading-relaxed">
-                  <strong>Cette action est immédiate et définitive.</strong>
+                  <strong>Cette action est IRRÉVERSIBLE.</strong>
                   <br />
-                  Le mois sera marqué comme "réinitialisé" - toutes les données actuelles 
-                  (shifts, absences, CP, récaps, surcharges) deviendront invisibles instantanément.
+                  Toutes les données du mois seront SUPPRIMÉES définitivement :
+                  shifts, absences, CP, récaps hebdo/mensuels, et overrides d'export compta.
+                  Vous repartirez sur un mois complètement vierge.
                 </p>
               </div>
             </div>
@@ -118,12 +182,13 @@ export default function ClearMonthModal({ isOpen, onClose, year, month }) {
 
           {/* Explanation */}
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-sm text-blue-900">
-            <p className="font-semibold mb-2">💡 Nouveau système de reset ultra-rapide :</p>
+            <p className="font-semibold mb-2">📋 Éléments supprimés :</p>
             <ul className="list-disc list-inside space-y-1 text-blue-800">
-              <li>Pas de suppression manuelle = instantané</li>
-              <li>Le mois est versionné - les anciennes données sont archivées automatiquement</li>
-              <li>Vous repartez sur un mois complètement vierge</li>
-              <li>Les surcharges manuelles sont également réinitialisées</li>
+              <li>Tous les shifts et absences</li>
+              <li>Toutes les périodes de CP</li>
+              <li>Tous les récaps hebdomadaires et mensuels</li>
+              <li>Tous les overrides d'export compta</li>
+              <li>Le mois sera comme neuf - prêt à être replanifié</li>
             </ul>
           </div>
 
@@ -139,7 +204,7 @@ export default function ClearMonthModal({ isOpen, onClose, year, month }) {
               htmlFor="confirm"
               className="text-sm font-medium text-gray-900 cursor-pointer select-none"
             >
-              Je confirme vouloir réinitialiser ce mois instantanément
+              Je confirme vouloir SUPPRIMER DÉFINITIVEMENT toutes les données de ce mois
             </label>
           </div>
         </div>
@@ -165,7 +230,7 @@ export default function ClearMonthModal({ isOpen, onClose, year, month }) {
             ) : (
               <>
                 <Trash2 className="w-4 h-4 mr-2" />
-                Réinitialiser instantanément
+                Supprimer et réinitialiser
               </>
             )}
           </Button>
