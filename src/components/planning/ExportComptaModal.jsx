@@ -11,7 +11,6 @@ import { jsPDF } from 'jspdf';
 import 'jspdf-autotable';
 import { calculateMonthlyRecap, applyManualOverrides } from '@/components/utils/monthlyRecapCalculations';
 import { getActiveMonthContext } from './monthContext';
-import { computePayrollBreakdown } from '@/components/utils/payrollBreakdown';
 
 const MONTHS = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'];
 
