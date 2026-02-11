@@ -28,48 +28,39 @@ function formatDateFR(dateStr) {
 }
 
 /**
- * SOURCE DE VÉRITÉ UNIQUE: RÉCAP MENSUEL
- * Construit une ligne d'export en lisant UNIQUEMENT les données du récap mensuel
- * AUCUN RECALCUL - Simple lecture et formatage
+ * SOURCE DE VÉRITÉ UNIQUE: RÉCAP MENSUEL CALCULÉ
+ * Construit une ligne d'export en lisant les valeurs du récap calculé
+ * (même logique que MonthlySummary)
  */
-function buildExportRow(employee, monthlyRecap, nonShiftTypes, cpPeriods) {
+function buildExportRow(employee, calculatedRecap, nonShiftTypes, cpPeriods) {
   console.log('═════════════════════════════════════════════════');
-  console.log('📊 BUILDING EXPORT ROW FROM MONTHLY RECAP');
+  console.log('📊 BUILDING EXPORT ROW FROM CALCULATED RECAP');
   console.log('═════════════════════════════════════════════════');
   console.log('Employee:', employee.first_name, employee.last_name);
-  console.log('MonthlyRecap:', monthlyRecap);
+  console.log('CalculatedRecap:', calculatedRecap);
 
   const employeeName = `${employee.first_name} ${employee.last_name}`;
 
-  // 2) Nb de jours travaillés - lecture du recap
-  // Format: "X / Y j" → prendre X
-  const workedDaysMatch = monthlyRecap?.days_worked_display?.match(/^(\d+)/);
-  const nbJoursTravailles = workedDaysMatch ? parseInt(workedDaysMatch[1]) : (monthlyRecap?.days_worked || 0);
+  // 2) Nb de jours travaillés
+  const nbJoursTravailles = calculatedRecap?.workedDays || 0;
 
-  // 3) Jours supp - lecture du recap
-  // Format: "+X j sup" ou vide
-  const extraDaysMatch = monthlyRecap?.extra_days_display?.match(/\+(\d+)/);
-  const joursSupp = extraDaysMatch ? `+${extraDaysMatch[1]}` : '';
+  // 3) Jours supp
+  const extraDays = calculatedRecap?.extraDays || 0;
+  const joursSupp = extraDays > 0 ? `+${extraDays}` : '';
 
-  // 5) Payées (hors sup/comp) - LECTURE DIRECTE depuis recap
-  const payeesHorsSup = monthlyRecap?.worked_hours || 0;
+  // 5) Payées (hors sup/comp) = workedHours (heures effectuées)
+  const payeesHorsSup = calculatedRecap?.workedHours || 0;
 
-  // 6) Compl +10% - LECTURE DIRECTE
-  const compl10 = monthlyRecap?.complementary_10 || 0;
+  // 6-9) Heures compl/supp - LECTURE DIRECTE
+  const compl10 = calculatedRecap?.complementaryHours10 || 0;
+  const compl25 = calculatedRecap?.complementaryHours25 || 0;
+  const supp25 = calculatedRecap?.overtimeHours25 || 0;
+  const supp50 = calculatedRecap?.overtimeHours50 || 0;
 
-  // 7) Compl +25% - LECTURE DIRECTE
-  const compl25 = monthlyRecap?.complementary_25 || 0;
-
-  // 8) Supp +25% - LECTURE DIRECTE
-  const supp25 = monthlyRecap?.overtime_25 || 0;
-
-  // 9) Supp +50% - LECTURE DIRECTE
-  const supp50 = monthlyRecap?.overtime_50 || 0;
-
-  // 10) Férié - LECTURE depuis recap
-  const holidayDays = monthlyRecap?.holiday_days_count || 0;
-  const holidayHours = monthlyRecap?.holiday_hours_worked || 0;
-  const holidayEligible = monthlyRecap?.holiday_eligible !== false;
+  // 10) Férié
+  const holidayDays = calculatedRecap?.holidaysWorkedDays || 0;
+  const holidayHours = calculatedRecap?.holidaysWorkedHours || 0;
+  const holidayEligible = calculatedRecap?.eligibleForHolidayPay !== false;
   const ferieStr = holidayEligible && holidayDays > 0 
     ? `${holidayDays}j, ${holidayHours.toFixed(1)}h` 
     : '';
@@ -80,10 +71,10 @@ function buildExportRow(employee, monthlyRecap, nonShiftTypes, cpPeriods) {
     totalPaid += holidayHours;
   }
 
-  // 11) Non-shifts visibles récap - LECTURE depuis recap
+  // 11) Non-shifts visibles récap
   const nonShiftsVisible = [];
-  if (monthlyRecap?.nonShiftsByType) {
-    Object.entries(monthlyRecap.nonShiftsByType).forEach(([typeId, typeData]) => {
+  if (calculatedRecap?.nonShiftsByType) {
+    Object.entries(calculatedRecap.nonShiftsByType).forEach(([typeId, typeData]) => {
       const nsType = nonShiftTypes.find(t => t.id === typeId);
       if (nsType && nsType.visible_in_recap && typeData.count > 0) {
         const code = nsType.code || nsType.label?.substring(0, 3).toUpperCase();
@@ -93,8 +84,8 @@ function buildExportRow(employee, monthlyRecap, nonShiftTypes, cpPeriods) {
   }
   const nonShiftsStr = nonShiftsVisible.join('\n') || '';
 
-  // 12) CP décomptés - LECTURE depuis recap
-  const totalCPDays = monthlyRecap?.cp_days_total || 0;
+  // 12) CP décomptés
+  const totalCPDays = calculatedRecap?.cpDays || 0;
   let cpStr = '';
   if (totalCPDays > 0) {
     cpStr = `${totalCPDays} CP`;
