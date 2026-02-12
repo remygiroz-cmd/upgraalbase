@@ -29,6 +29,8 @@ export default function Conversation() {
   const [isUrgent, setIsUrgent] = useState(false);
   const [urgentLevel, setUrgentLevel] = useState('info');
   const textareaRef = useRef(null);
+  const typingTimeoutRef = useRef(null);
+  const lastTypingUpdateRef = useRef(0);
 
   // Get conversation ID from URL
   const urlParams = new URLSearchParams(window.location.search);
@@ -124,6 +126,35 @@ export default function Conversation() {
     );
   }, [mentionableEmployees, mentionSearch]);
 
+  // Calculate who is typing (excluding current user and stale indicators)
+  const whoIsTyping = useMemo(() => {
+    if (!typingIndicators.length || !employees.length || !currentEmployee?.id) return [];
+
+    const now = new Date();
+    const sixSecondsAgo = new Date(now.getTime() - 6000);
+
+    return typingIndicators
+      .filter(ti => 
+        ti.is_typing && 
+        ti.employee_id !== currentEmployee.id &&
+        new Date(ti.updated_date) > sixSecondsAgo
+      )
+      .map(ti => employees.find(emp => emp.id === ti.employee_id))
+      .filter(Boolean);
+  }, [typingIndicators, employees, currentEmployee?.id]);
+
+  // Format typing indicator text
+  const typingText = useMemo(() => {
+    if (whoIsTyping.length === 0) return '';
+    if (whoIsTyping.length === 1) {
+      return `${whoIsTyping[0].first_name} écrit…`;
+    }
+    if (whoIsTyping.length === 2) {
+      return `${whoIsTyping[0].first_name} et ${whoIsTyping[1].first_name} écrivent…`;
+    }
+    return `${whoIsTyping.length} personnes écrivent…`;
+  }, [whoIsTyping]);
+
   // Mark messages as read - fetch ALL reads for this conversation for status calculation
   const { data: messageReads = [] } = useQuery({
     queryKey: ['messageReads', conversationId],
@@ -131,6 +162,15 @@ export default function Conversation() {
     enabled: !!conversationId && !!currentEmployee?.id,
     staleTime: 0,
     refetchInterval: 10000 // Refetch every 10 seconds for real-time updates
+  });
+
+  // Get typing indicators
+  const { data: typingIndicators = [] } = useQuery({
+    queryKey: ['typingIndicators', conversationId],
+    queryFn: () => base44.entities.TypingIndicator.filter({ conversation_id: conversationId }),
+    enabled: !!conversationId && !!currentEmployee?.id,
+    staleTime: 0,
+    refetchInterval: 2000 // Poll every 2 seconds
   });
 
   const markAsReadMutation = useMutation({
@@ -153,6 +193,30 @@ export default function Conversation() {
       queryClient.invalidateQueries({ queryKey: ['myMessageReads'] });
       queryClient.invalidateQueries({ queryKey: ['myConversations'] });
       queryClient.invalidateQueries({ queryKey: ['allMessages'] });
+    }
+  });
+
+  // Set typing indicator
+  const setTypingMutation = useMutation({
+    mutationFn: async (isTyping) => {
+      // Try to find existing indicator
+      const existing = typingIndicators.find(ti => 
+        ti.conversation_id === conversationId && 
+        ti.employee_id === currentEmployee.id
+      );
+
+      if (existing) {
+        return await base44.entities.TypingIndicator.update(existing.id, { is_typing: isTyping });
+      } else {
+        return await base44.entities.TypingIndicator.create({
+          conversation_id: conversationId,
+          employee_id: currentEmployee.id,
+          is_typing: isTyping
+        });
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['typingIndicators'] });
     }
   });
 
@@ -263,6 +327,10 @@ export default function Conversation() {
   const handleSend = () => {
     if (!messageText.trim()) return;
     
+    // Clear typing indicator immediately
+    clearTimeout(typingTimeoutRef.current);
+    setTypingMutation.mutate(false);
+    
     // Extract mentions from text
     const mentions = [];
     const regex = /@(\w+)/g;
@@ -298,6 +366,23 @@ export default function Conversation() {
   const handleTextChange = (e) => {
     const text = e.target.value;
     setMessageText(text);
+    
+    // Typing indicator logic (throttled)
+    const now = Date.now();
+    
+    // Clear previous timeout
+    clearTimeout(typingTimeoutRef.current);
+    
+    // Set typing to true (throttled - max once per 2 seconds)
+    if (text.trim() && now - lastTypingUpdateRef.current > 2000) {
+      setTypingMutation.mutate(true);
+      lastTypingUpdateRef.current = now;
+    }
+    
+    // Set timeout to clear typing after 3 seconds of inactivity
+    typingTimeoutRef.current = setTimeout(() => {
+      setTypingMutation.mutate(false);
+    }, 3000);
     
     // Detect @ for mentions
     const cursorPosition = e.target.selectionStart;
@@ -339,6 +424,16 @@ export default function Conversation() {
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [sortedMessages]);
+
+  // Cleanup typing indicator on unmount or conversation change
+  useEffect(() => {
+    return () => {
+      clearTimeout(typingTimeoutRef.current);
+      if (currentEmployee?.id && conversationId) {
+        setTypingMutation.mutate(false);
+      }
+    };
+  }, [conversationId, currentEmployee?.id]);
 
   // Generate conversation title and avatar
   const conversationTitle = useMemo(() => {
@@ -560,6 +655,18 @@ export default function Conversation() {
 
       {/* Messages */}
       <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
+        {/* Typing indicator */}
+        {typingText && (
+          <div className="flex items-center gap-2 text-sm text-gray-500 italic px-2">
+            <div className="flex gap-1">
+              <span className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+              <span className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+              <span className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+            </div>
+            <span>{typingText}</span>
+          </div>
+        )}
+
         {sortedMessages.length === 0 ? (
           <div className="text-center text-gray-500 py-12">
             <p className="text-sm">Aucun message</p>
