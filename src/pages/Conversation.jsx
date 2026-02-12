@@ -24,6 +24,8 @@ export default function Conversation() {
   const [showMentions, setShowMentions] = useState(false);
   const [mentionSearch, setMentionSearch] = useState('');
   const [mentionPosition, setMentionPosition] = useState(0);
+  const [isUrgent, setIsUrgent] = useState(false);
+  const [urgentLevel, setUrgentLevel] = useState('info');
   const textareaRef = useRef(null);
 
   // Get conversation ID from URL
@@ -75,6 +77,13 @@ export default function Conversation() {
     return [...messages]
       .filter(m => m.is_pinned && !m.is_deleted)
       .sort((a, b) => new Date(b.pinned_at) - new Date(a.pinned_at));
+  }, [messages]);
+
+  const urgentMessages = useMemo(() => {
+    return [...messages]
+      .filter(m => m.is_urgent && !m.is_deleted)
+      .sort((a, b) => new Date(b.created_date) - new Date(a.created_date))
+      .slice(0, 3);
   }, [messages]);
 
   // Get message mentions
@@ -161,12 +170,19 @@ export default function Conversation() {
 
   // Send message mutation
   const sendMessageMutation = useMutation({
-    mutationFn: async ({ text, mentions }) => {
-      const message = await base44.entities.Message.create({
+    mutationFn: async ({ text, mentions, isUrgent, urgentLevel }) => {
+      const messageData = {
         conversation_id: conversationId,
         sender_employee_id: currentEmployee.id,
         text: text.trim()
-      });
+      };
+
+      if (isUrgent) {
+        messageData.is_urgent = true;
+        messageData.urgent_level = urgentLevel;
+      }
+
+      const message = await base44.entities.Message.create(messageData);
 
       // Create mentions
       if (mentions.length > 0) {
@@ -258,8 +274,19 @@ export default function Conversation() {
       }
     }
     
-    sendMessageMutation.mutate({ text: messageText, mentions });
+    sendMessageMutation.mutate({ 
+      text: messageText, 
+      mentions,
+      isUrgent,
+      urgentLevel: isUrgent ? urgentLevel : undefined
+    });
+    setIsUrgent(false);
   };
+
+  const canSendUrgent = useMemo(() => {
+    if (!currentEmployee) return false;
+    return currentUser?.role === 'admin' || currentEmployee.permission_level === 'manager';
+  }, [currentUser, currentEmployee]);
 
   const handleTextChange = (e) => {
     const text = e.target.value;
@@ -418,6 +445,41 @@ export default function Conversation() {
         </div>
       </div>
 
+      {/* Urgent Messages */}
+      {urgentMessages.length > 0 && (
+        <div className="bg-red-50 border-b border-red-200 px-4 py-3">
+          <div className="flex items-center gap-2 mb-2">
+            <span className="text-lg">📣</span>
+            <h3 className="text-sm font-semibold text-red-900">Annonces récentes</h3>
+          </div>
+          <div className="space-y-2">
+            {urgentMessages.map(msg => {
+              const sender = employees.find(emp => emp.id === msg.sender_employee_id);
+              const levelColors = {
+                info: 'bg-blue-50 border-blue-200',
+                important: 'bg-orange-50 border-orange-200',
+                critique: 'bg-red-100 border-red-300'
+              };
+              return (
+                <button
+                  key={msg.id}
+                  onClick={() => scrollToMessage(msg.id)}
+                  className={cn(
+                    "w-full rounded-lg p-3 hover:opacity-80 transition-colors text-left border",
+                    levelColors[msg.urgent_level] || levelColors.info
+                  )}
+                >
+                  <p className="text-xs text-gray-500 mb-1">
+                    📣 {sender?.first_name} {sender?.last_name}
+                  </p>
+                  <p className="text-sm text-gray-900 line-clamp-2">{msg.text}</p>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
       {/* Pinned Messages */}
       {pinnedMessages.length > 0 && (
         <div className="bg-yellow-50 border-b border-yellow-200 px-4 py-3">
@@ -492,11 +554,18 @@ export default function Conversation() {
                 <div className="relative group/message flex items-start gap-2">
                   <div className={cn(
                     "max-w-[70%] rounded-2xl px-4 py-2 relative",
-                    isMe 
-                      ? "bg-blue-600 text-white rounded-br-sm" 
-                      : isMentioned
-                        ? "bg-blue-50 text-gray-900 rounded-bl-sm shadow-sm ring-2 ring-blue-200"
-                        : "bg-white text-gray-900 rounded-bl-sm shadow-sm",
+                    msg.is_urgent && !isMe && (
+                      msg.urgent_level === 'critique' ? "bg-red-50 text-gray-900 rounded-bl-sm shadow-sm ring-2 ring-red-300" :
+                      msg.urgent_level === 'important' ? "bg-orange-50 text-gray-900 rounded-bl-sm shadow-sm ring-2 ring-orange-300" :
+                      "bg-blue-50 text-gray-900 rounded-bl-sm shadow-sm ring-2 ring-blue-300"
+                    ),
+                    !msg.is_urgent && (
+                      isMe 
+                        ? "bg-blue-600 text-white rounded-br-sm" 
+                        : isMentioned
+                          ? "bg-blue-50 text-gray-900 rounded-bl-sm shadow-sm ring-2 ring-blue-200"
+                          : "bg-white text-gray-900 rounded-bl-sm shadow-sm"
+                    ),
                     msg.is_pinned && "ring-2 ring-yellow-400"
                   )}>
                     {isMentioned && !isMe && (
@@ -508,7 +577,8 @@ export default function Conversation() {
                       <Pin className={cn("w-3 h-3 absolute -top-1 -right-1", isMe ? "text-yellow-300" : "text-yellow-600")} />
                     )}
                     {!isMe && (
-                      <p className="text-xs font-semibold mb-1 opacity-70">
+                      <p className="text-xs font-semibold mb-1 opacity-70 flex items-center gap-1">
+                        {msg.is_urgent && <span>📣</span>}
                         {sender?.first_name} {sender?.last_name}
                       </p>
                     )}
@@ -572,6 +642,32 @@ export default function Conversation() {
 
       {/* Input */}
       <div className="bg-white border-t border-gray-200 px-4 py-3 relative">
+        {/* Urgent toggle for admin/managers */}
+        {canSendUrgent && (
+          <div className="mb-2 flex items-center gap-3">
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={isUrgent}
+                onChange={(e) => setIsUrgent(e.target.checked)}
+                className="w-4 h-4 text-blue-600 rounded"
+              />
+              <span className="text-sm font-medium text-gray-700">📣 Annonce urgente</span>
+            </label>
+            {isUrgent && (
+              <select
+                value={urgentLevel}
+                onChange={(e) => setUrgentLevel(e.target.value)}
+                className="text-xs border border-gray-300 rounded px-2 py-1"
+              >
+                <option value="info">Info</option>
+                <option value="important">Important</option>
+                <option value="critique">Critique</option>
+              </select>
+            )}
+          </div>
+        )}
+
         {/* Mentions dropdown */}
         {showMentions && filteredMentionableEmployees.length > 0 && (
           <div className="absolute bottom-full left-4 right-4 mb-2 bg-white border border-gray-200 rounded-lg shadow-lg max-h-48 overflow-y-auto">
