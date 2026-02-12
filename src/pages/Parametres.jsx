@@ -17,6 +17,7 @@ import { cn } from '@/lib/utils';
 
 export default function Parametres() {
   const queryClient = useQueryClient();
+  const [activeTab, setActiveTab] = useState('profile');
 
   const { data: currentUser, isLoading } = useQuery({
     queryKey: ['currentUser'],
