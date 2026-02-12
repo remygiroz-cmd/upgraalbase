@@ -79,6 +79,9 @@ export default function MonthlySummary({
     // Convert holidayDates array of objects to array of date strings
     const holidayDateStrings = holidayDates.map(h => h.date || h);
 
+    // Filter WeeklyRecaps for this employee
+    const employeeWeeklyRecaps = weeklyRecaps.filter(wr => wr.employee_id === employee.id);
+
     return calculateMonthlyRecap(
       calculationMode,
       employee,
@@ -87,9 +90,10 @@ export default function MonthlySummary({
       nonShiftTypes,
       holidayDateStrings,
       year,
-      month
+      month,
+      employeeWeeklyRecaps // Pass employee's weekly recaps
     );
-  }, [calculationMode, employee, shifts, nonShiftEvents, nonShiftTypes, holidayDates, year, month]);
+  }, [calculationMode, employee, shifts, nonShiftEvents, nonShiftTypes, holidayDates, year, month, weeklyRecaps]);
 
   // 🎯 SOURCE DE VÉRITÉ : Récap final = auto + overrides export
   const recapWithExportOverrides = useMemo(() => {
