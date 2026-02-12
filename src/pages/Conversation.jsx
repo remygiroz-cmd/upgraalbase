@@ -285,7 +285,11 @@ export default function Conversation() {
 
   const canSendUrgent = useMemo(() => {
     if (!currentEmployee) return false;
-    return currentUser?.role === 'admin' || currentEmployee.permission_level === 'manager';
+    // Admin always can
+    if (currentUser?.role === 'admin') return true;
+    // Check role permissions for messages_urgents
+    if (currentEmployee.permission_level === 'manager') return true;
+    return false;
   }, [currentUser, currentEmployee]);
 
   const handleTextChange = (e) => {

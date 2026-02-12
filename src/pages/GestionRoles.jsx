@@ -22,7 +22,8 @@ const MODULES = [
   { key: 'equipe', label: 'Équipe & Shifts' },
   { key: 'pertes', label: 'Invendus & Pertes' },
   { key: 'stocks', label: 'Inventaires' },
-  { key: 'parametres', label: 'Paramètres' }
+  { key: 'parametres', label: 'Paramètres' },
+  { key: 'messages_urgents', label: 'Messages urgents' }
 ];
 
 export default function GestionRoles() {
