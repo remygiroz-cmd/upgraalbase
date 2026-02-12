@@ -1,8 +1,10 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
-import { Plus, MessageCircle, Bell, RefreshCw, AtSign, Megaphone } from 'lucide-react';
+import { Plus, MessageCircle, Bell, RefreshCw, AtSign, Megaphone, Users, Circle, ArrowRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { useNavigate } from 'react-router-dom';
+import { createPageUrl } from '@/utils';
 import AnnouncementsList from '@/components/messaging/AnnouncementsList';
 import ConversationsList from '@/components/messaging/ConversationsList';
 import NewConversationModal from '@/components/messaging/NewConversationModal';
@@ -10,6 +12,7 @@ import UrgentAnnouncementModal from '@/components/messaging/UrgentAnnouncementMo
 import CreateUrgentAnnouncementModal from '@/components/messaging/CreateUrgentAnnouncementModal';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
+import { calculatePresenceStatus } from '@/components/utils/presenceUtils';
 
 export default function Home() {
   const [showNewConversation, setShowNewConversation] = useState(false);
@@ -18,6 +21,7 @@ export default function Home() {
   const [filterMode, setFilterMode] = useState('all'); // 'all' | 'mentions'
   const [showCreateUrgentAnnouncement, setShowCreateUrgentAnnouncement] = useState(false);
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
 
   // Get current user
   const { data: currentUser } = useQuery({
@@ -245,6 +249,28 @@ export default function Home() {
     return currentUser?.role === 'admin' || currentEmployee.permission_level === 'manager';
   }, [currentUser, currentEmployee]);
 
+  const isManagerOrAdmin = useMemo(() => {
+    if (!currentEmployee) return false;
+    return currentUser?.role === 'admin' || currentEmployee.permission_level === 'manager';
+  }, [currentUser, currentEmployee]);
+
+  // Get urgent announcements history for managers
+  const { data: allUrgentAnnouncements = [] } = useQuery({
+    queryKey: ['allUrgentAnnouncements'],
+    queryFn: () => base44.entities.UrgentAnnouncement.list(),
+    enabled: isManagerOrAdmin,
+    staleTime: 60000
+  });
+
+  // Get online employees count for managers
+  const onlineEmployeesCount = useMemo(() => {
+    if (!employees.length) return 0;
+    return employees.filter(emp => {
+      const presence = calculatePresenceStatus(emp.last_seen_at);
+      return presence.status === 'online';
+    }).length;
+  }, [employees]);
+
   // Auto-initialize system conversations on first load
   useEffect(() => {
     const initConversations = async () => {
@@ -343,6 +369,73 @@ export default function Home() {
       </div>
 
       <div className="max-w-4xl mx-auto px-4 py-6 space-y-6">
+        {/* Manager/Admin Quick Actions */}
+        {isManagerOrAdmin && (
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {/* Annonces urgentes card */}
+            <button
+              onClick={() => navigate(createPageUrl('AnnoncesUrgentes'))}
+              className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 hover:shadow-md transition-all text-left group"
+            >
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-orange-100 flex items-center justify-center">
+                    <Megaphone className="w-5 h-5 text-orange-600" />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-gray-900">Annonces urgentes</h3>
+                    <p className="text-xs text-gray-500">Gérer les alertes</p>
+                  </div>
+                </div>
+                <ArrowRight className="w-5 h-5 text-gray-400 group-hover:text-gray-600 group-hover:translate-x-1 transition-all" />
+              </div>
+              <div className="flex items-center gap-4 text-sm">
+                <div className="flex items-center gap-1">
+                  <Circle className="w-2 h-2 text-red-500 fill-red-500" />
+                  <span className="text-gray-600">
+                    {urgentAnnouncements.length} active{urgentAnnouncements.length > 1 ? 's' : ''}
+                  </span>
+                </div>
+                <div className="text-gray-400">•</div>
+                <div className="text-gray-600">
+                  {allUrgentAnnouncements.length} total
+                </div>
+              </div>
+            </button>
+
+            {/* Présence card */}
+            <button
+              onClick={() => navigate(createPageUrl('Presence'))}
+              className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 hover:shadow-md transition-all text-left group"
+            >
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center">
+                    <Users className="w-5 h-5 text-green-600" />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-gray-900">Présence</h3>
+                    <p className="text-xs text-gray-500">Statuts en temps réel</p>
+                  </div>
+                </div>
+                <ArrowRight className="w-5 h-5 text-gray-400 group-hover:text-gray-600 group-hover:translate-x-1 transition-all" />
+              </div>
+              <div className="flex items-center gap-4 text-sm">
+                <div className="flex items-center gap-1">
+                  <Circle className="w-2 h-2 text-green-500 fill-green-500" />
+                  <span className="text-gray-600">
+                    {onlineEmployeesCount} en ligne
+                  </span>
+                </div>
+                <div className="text-gray-400">•</div>
+                <div className="text-gray-600">
+                  {employees.filter(e => e.is_active !== false).length} employés
+                </div>
+              </div>
+            </button>
+          </div>
+        )}
+
         {/* Announcements Section */}
         {announcements.length > 0 && (
           <AnnouncementsList 

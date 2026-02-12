@@ -82,17 +82,7 @@ export default function Layout({ children, currentPageName }) {
     { name: 'CoffreFactures', label: 'Coffre à factures', icon: Receipt, module: 'equipe' },
   ].filter(link => hasPermission(link.module));
 
-  // Annonces urgentes link (admin/manager only)
-  const canViewUrgentAnnouncements = currentUser?.role === 'admin' || hasPermission('messages_urgents');
-  const urgentAnnouncementsLink = canViewUrgentAnnouncements
-    ? [{ name: 'AnnoncesUrgentes', label: 'Annonces urgentes', icon: Megaphone, module: 'messages_urgents' }]
-    : [];
 
-  // Presence link (admin/manager only)
-  const canViewPresence = currentUser?.role === 'admin' || hasPermission('messages_urgents');
-  const presenceLink = canViewPresence
-    ? [{ name: 'Presence', label: 'Présence', icon: Users, module: 'messages_urgents' }]
-    : [];
 
   const caisseLinks = [
     { name: 'Pertes', label: 'Invendus & Pertes', icon: PackageMinus, module: 'pertes' },
@@ -308,24 +298,7 @@ export default function Layout({ children, currentPageName }) {
                     active={currentPageName === link.name}
                   />
                 ))}
-                {urgentAnnouncementsLink.map((link) => (
-                  <NavLink
-                    key={link.name}
-                    to={link.name}
-                    icon={link.icon}
-                    label={link.label}
-                    active={currentPageName === link.name}
-                  />
-                ))}
-                {presenceLink.map((link) => (
-                  <NavLink
-                    key={link.name}
-                    to={link.name}
-                    icon={link.icon}
-                    label={link.label}
-                    active={currentPageName === link.name}
-                  />
-                ))}
+
               </div>
             </div>
 

@@ -47,6 +47,8 @@
  *
  * The mainPage value must match a key in the PAGES object exactly.
  */
+import AnnoncesUrgentes from './pages/AnnoncesUrgentes';
+import AnnouncementDetail from './pages/AnnouncementDetail';
 import CoffreFactures from './pages/CoffreFactures';
 import Conversation from './pages/Conversation';
 import Equipe from './pages/Equipe';
@@ -60,19 +62,19 @@ import MiseEnPlace from './pages/MiseEnPlace';
 import Parametres from './pages/Parametres';
 import Pertes from './pages/Pertes';
 import Planning from './pages/Planning';
+import Presence from './pages/Presence';
 import Recettes from './pages/Recettes';
 import RegistrePersonnel from './pages/RegistrePersonnel';
 import Stocks from './pages/Stocks';
 import Temperatures from './pages/Temperatures';
 import TemplatesRH from './pages/TemplatesRH';
 import TravailDuJour from './pages/TravailDuJour';
-import AnnoncesUrgentes from './pages/AnnoncesUrgentes';
-import AnnouncementDetail from './pages/AnnouncementDetail';
-import Presence from './pages/Presence';
 import __Layout from './Layout.jsx';
 
 
 export const PAGES = {
+    "AnnoncesUrgentes": AnnoncesUrgentes,
+    "AnnouncementDetail": AnnouncementDetail,
     "CoffreFactures": CoffreFactures,
     "Conversation": Conversation,
     "Equipe": Equipe,
@@ -86,15 +88,13 @@ export const PAGES = {
     "Parametres": Parametres,
     "Pertes": Pertes,
     "Planning": Planning,
+    "Presence": Presence,
     "Recettes": Recettes,
     "RegistrePersonnel": RegistrePersonnel,
     "Stocks": Stocks,
     "Temperatures": Temperatures,
     "TemplatesRH": TemplatesRH,
     "TravailDuJour": TravailDuJour,
-    "AnnoncesUrgentes": AnnoncesUrgentes,
-    "AnnouncementDetail": AnnouncementDetail,
-    "Presence": Presence,
 }
 
 export const pagesConfig = {
