@@ -72,7 +72,7 @@ export default function Parametres() {
 
 
       <div className="max-w-4xl mx-auto">
-        <Tabs defaultValue="profile" className="space-y-6">
+        <Tabs defaultValue="profile" value={activeTab} onValueChange={setActiveTab} className="space-y-6">
           <TabsList className="grid grid-cols-2 sm:grid-cols-3 lg:flex lg:flex-wrap gap-2 bg-transparent p-0 h-auto">
             {isAdmin && (
               <TabsTrigger 
