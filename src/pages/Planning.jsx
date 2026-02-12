@@ -1506,6 +1506,7 @@ export default function Planning() {
                                monthlyRecap={monthlyRecap}
                                currentUser={currentUser}
                                weeklyRecaps={allWeeklyRecaps}
+                               disabled={!canModifyPlanning}
                             />
                           </div>
                         );
