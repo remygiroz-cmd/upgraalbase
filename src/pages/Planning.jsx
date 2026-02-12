@@ -1749,10 +1749,10 @@ export default function Planning() {
                 <div className="text-xs text-gray-500">Envoi comptabilité</div>
               </div>
             </button>
-          </div>
-        )}
-        
-        <button
+            </div>
+            )}
+
+            <button
           onClick={() => setShowFab(!showFab)}
           className="w-14 h-14 bg-gradient-to-r from-pink-500 to-rose-500 hover:from-pink-600 hover:to-rose-600 rounded-full shadow-2xl flex items-center justify-center transition-all hover:scale-110 active:scale-95"
         >
