@@ -236,9 +236,22 @@ const ShiftCard = React.memo(function ShiftCard({
       <button
         onClick={(e) => {
           e.stopPropagation();
+          if (disabled) {
+            toast.error('Lecture seule — vous n\'avez pas la permission de modifier le planning', {
+              duration: 3000,
+              icon: '🔒'
+            });
+            return;
+          }
           onDelete(shift);
         }}
-        className="absolute -top-2 -left-2 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600 shadow-lg"
+        disabled={disabled}
+        className={cn(
+          "absolute -top-2 -left-2 rounded-full p-1 transition-opacity shadow-lg",
+          disabled 
+            ? "bg-gray-400 text-gray-200 opacity-30 cursor-not-allowed"
+            : "bg-red-500 text-white opacity-0 group-hover:opacity-100 hover:bg-red-600"
+        )}
       >
         <Trash2 className="w-3 h-3" />
       </button>
