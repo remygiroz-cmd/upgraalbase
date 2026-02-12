@@ -985,6 +985,7 @@ export default function Planning() {
               variant="outline" 
               size="sm"
               className="border border-gray-300 hover:border-orange-500 hover:bg-orange-50 h-7 lg:h-8 px-2 lg:px-3"
+              disabled={!canModifyPlanning}
             >
               <ChevronLeft className="w-3.5 h-3.5 lg:w-4 lg:h-4" />
               <span className="ml-1 hidden sm:inline text-xs">Préc.</span>
