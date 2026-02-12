@@ -53,12 +53,23 @@ export default function TodaySummary({
       teamGroups.set(team, []);
     }
     
-    // Sort shifts by start time
+    // Sort shifts by start time and deduplicate identical times
     const sortedShifts = [...empShifts].sort((a, b) => a.start_time.localeCompare(b.start_time));
+    
+    // Merge identical shift times (keep only unique start_time-end_time pairs)
+    const uniqueShifts = [];
+    const seen = new Set();
+    sortedShifts.forEach(shift => {
+      const key = `${shift.start_time}-${shift.end_time}`;
+      if (!seen.has(key)) {
+        seen.add(key);
+        uniqueShifts.push(shift);
+      }
+    });
     
     teamGroups.get(team).push({
       employee,
-      shifts: sortedShifts
+      shifts: uniqueShifts
     });
   });
   
