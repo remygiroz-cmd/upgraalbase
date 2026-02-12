@@ -43,6 +43,25 @@ export default function GestionRoles() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['roles'] })
   });
 
+  const savePermissionsMutation = useMutation({
+    mutationFn: async () => {
+      for (const [roleId, changedPerms] of Object.entries(editingPermissions)) {
+        const role = roles.find(r => r.id === roleId);
+        const fullPermissions = { ...role?.permissions || {}, ...changedPerms };
+        await base44.entities.Role.update(roleId, { permissions: fullPermissions });
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['roles'] });
+      toast.success('Permissions mises à jour avec succès');
+      setEditingPermissions({});
+    },
+    onError: (error) => {
+      toast.error('Erreur lors de la sauvegarde des permissions');
+      console.error(error);
+    }
+  });
+
     const togglePermission = (roleId, permissionKey) => {
     const role = roles.find(r => r.id === roleId);
     const currentPerms = editingPermissions[roleId] || role?.permissions || {};
