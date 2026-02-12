@@ -45,7 +45,8 @@ export default function MonthlySummary({
   monthlyRecap = null,
   onRecapUpdate,
   currentUser,
-  weeklyRecaps = [] // NOUVEAU: pour utiliser les overrides du BASE hebdomadaire
+  weeklyRecaps = [], // NOUVEAU: pour utiliser les overrides du BASE hebdomadaire
+  disabled = false // Mode lecture seule
 }) {
   const [showEditDialog, setShowEditDialog] = useState(false);
   const queryClient = useQueryClient();
@@ -258,13 +259,15 @@ ${deductionDetails.length > 0 ? `  Détail: ${deductionDetails.map(d => `${d.dat
     if (hidden) {
       return (
         <div className={cn("mb-2 pb-2", className)}>
-          <button
-            onClick={() => showItem(itemKey)}
-            className="w-full py-1.5 px-2 bg-gray-100 hover:bg-gray-200 rounded text-[9px] text-gray-500 flex items-center justify-center gap-1 transition-colors"
-          >
-            <EyeOff className="w-3 h-3" />
-            Élément masqué - Cliquer pour afficher
-          </button>
+          {!disabled && (
+            <button
+              onClick={() => showItem(itemKey)}
+              className="w-full py-1.5 px-2 bg-gray-100 hover:bg-gray-200 rounded text-[9px] text-gray-500 flex items-center justify-center gap-1 transition-colors"
+            >
+              <EyeOff className="w-3 h-3" />
+              Élément masqué - Cliquer pour afficher
+            </button>
+          )}
         </div>
       );
     }
@@ -272,10 +275,10 @@ ${deductionDetails.length > 0 ? `  Détail: ${deductionDetails.map(d => `${d.dat
     return (
       <div
         className={cn("relative group/hide mb-2 pb-2", className)}
-        onMouseEnter={() => setHovering(true)}
+        onMouseEnter={() => !disabled && setHovering(true)}
         onMouseLeave={() => setHovering(false)}
       >
-        {hovering && (
+        {hovering && !disabled && (
           <button
             onClick={(e) => {
               e.stopPropagation();
@@ -300,16 +303,18 @@ ${deductionDetails.length > 0 ? `  Détail: ${deductionDetails.map(d => `${d.dat
         calculationMode !== 'disabled' && "bg-gradient-to-b from-gray-50 to-white"
       )}>
         {/* Edit button */}
-        <button
-          onClick={() => setShowEditDialog(true)}
-          className="absolute top-1 right-1 p-1 rounded hover:bg-gray-200 transition-colors opacity-0 group-hover:opacity-100"
-          title="Éditer le récapitulatif"
-        >
-          <Edit2 className="w-3 h-3 text-blue-600" />
-        </button>
+        {!disabled && (
+          <button
+            onClick={() => setShowEditDialog(true)}
+            className="absolute top-1 right-1 p-1 rounded hover:bg-gray-200 transition-colors opacity-0 group-hover:opacity-100"
+            title="Éditer le récapitulatif"
+          >
+            <Edit2 className="w-3 h-3 text-blue-600" />
+          </button>
+        )}
         
         {/* Show all button (if items hidden) */}
-        {hasHiddenItems && (
+        {!disabled && hasHiddenItems && (
           <button
             onClick={showAll}
             className="absolute top-1 right-10 p-1 rounded hover:bg-gray-200 transition-colors text-[9px] text-blue-600 flex items-center gap-1"
