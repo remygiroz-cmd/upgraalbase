@@ -83,7 +83,8 @@ export default function Layout({ children, currentPageName }) {
   ].filter(link => hasPermission(link.module));
 
   // Annonces urgentes link (admin/manager only)
-  const urgentAnnouncementsLink = (currentUser?.role === 'admin' || currentEmployee?.permission_level === 'manager') 
+  const canViewUrgentAnnouncements = currentUser?.role === 'admin' || hasPermission('messages_urgents');
+  const urgentAnnouncementsLink = canViewUrgentAnnouncements
     ? [{ name: 'AnnoncesUrgentes', label: 'Annonces urgentes', icon: Megaphone, module: 'messages_urgents' }]
     : [];
 
