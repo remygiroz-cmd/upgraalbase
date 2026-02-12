@@ -75,17 +75,8 @@ export default function GestionRoles() {
     }));
   };
 
-  const handleSaveAll = async () => {
-    for (const [roleId, changedPerms] of Object.entries(editingPermissions)) {
-      const role = roles.find(r => r.id === roleId);
-      const fullPermissions = { ...role?.permissions || {}, ...changedPerms };
-      
-      await base44.entities.Role.update(roleId, { permissions: fullPermissions });
-    }
-    
-    queryClient.invalidateQueries({ queryKey: ['roles'] });
-    toast.success('Permissions mises à jour');
-    setEditingPermissions({});
+  const handleSaveAll = () => {
+    savePermissionsMutation.mutate();
   };
 
   const hasChanges = Object.keys(editingPermissions).length > 0;
