@@ -74,6 +74,20 @@ export default function Planning() {
     queryFn: () => base44.auth.me()
   });
 
+  // Fetch user role to check planning_modify permission
+  const { data: userRole } = useQuery({
+    queryKey: ['userRole', currentUser?.role_id],
+    queryFn: async () => {
+      if (!currentUser?.role_id) return null;
+      const roles = await base44.entities.Role.filter({ id: currentUser.role_id });
+      return roles[0] || null;
+    },
+    enabled: !!currentUser?.role_id
+  });
+
+  // Check if user can modify planning (admin or has planning_modify permission)
+  const canModifyPlanning = currentUser?.role === 'admin' || userRole?.permissions?.planning_modify || false;
+
   const currentMonth = currentDate.getMonth();
   const currentYear = currentDate.getFullYear();
 
