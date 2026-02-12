@@ -386,7 +386,7 @@ export default function Parametres() {
           {/* Roles Tab */}
           {isAdmin && (
             <TabsContent value="roles">
-              <GestionRoles />
+              <GestionRoles onSaveRequired={() => handleSavePreferences()} hasChanges={true} />
             </TabsContent>
           )}
 
