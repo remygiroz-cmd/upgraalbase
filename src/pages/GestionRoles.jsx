@@ -297,15 +297,19 @@ function RoleFormModal({ open, onClose, role }) {
                   className={cn(
                     "flex items-center gap-3 p-3 rounded-lg border-2 cursor-pointer transition-all",
                     form.permissions[module.key]
-                      ? "bg-green-50 border-green-500"
+                      ? module.special ? "bg-blue-50 border-blue-500" : "bg-green-50 border-green-500"
                       : "bg-gray-50 border-gray-300 hover:border-gray-400"
                   )}
+                  title={module.special ? "Permet aux utilisateurs de modifier le planning" : ""}
                 >
                   <input
                     type="checkbox"
                     checked={form.permissions[module.key] || false}
                     onChange={() => togglePermission(module.key)}
-                    className="w-5 h-5 rounded border-gray-300 text-green-600 focus:ring-green-500"
+                    className={cn(
+                      "w-5 h-5 rounded border-gray-300 focus:ring-2",
+                      module.special ? "text-blue-600 focus:ring-blue-500" : "text-green-600 focus:ring-green-500"
+                    )}
                   />
                   <span className="text-sm font-medium text-gray-900">{module.label}</span>
                 </label>
