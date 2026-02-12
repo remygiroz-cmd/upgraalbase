@@ -13,6 +13,7 @@ const SEVERITY_CONFIG = {
     color: 'text-blue-600',
     bg: 'bg-blue-50',
     border: 'border-blue-300',
+    ring: 'ring-blue-500',
     label: 'Information'
   },
   important: {
@@ -20,6 +21,7 @@ const SEVERITY_CONFIG = {
     color: 'text-orange-600',
     bg: 'bg-orange-50',
     border: 'border-orange-300',
+    ring: 'ring-orange-500',
     label: 'Important'
   },
   critique: {
@@ -27,6 +29,7 @@ const SEVERITY_CONFIG = {
     color: 'text-red-600',
     bg: 'bg-red-50',
     border: 'border-red-300',
+    ring: 'ring-red-500',
     label: 'Critique'
   }
 };
@@ -37,6 +40,19 @@ export default function UrgentAnnouncementModal({
   onAcknowledge 
 }) {
   const queryClient = useQueryClient();
+
+  // Vibration mobile pour annonces critiques (une seule fois)
+  React.useEffect(() => {
+    if (announcement?.severity === 'critique') {
+      const vibratedKey = `vibrated_announcement_${announcement.id}`;
+      const hasVibrated = localStorage.getItem(vibratedKey);
+      
+      if (!hasVibrated && navigator.vibrate) {
+        navigator.vibrate([200, 100, 200]);
+        localStorage.setItem(vibratedKey, 'true');
+      }
+    }
+  }, [announcement?.id, announcement?.severity]);
 
   const acknowledgeMutation = useMutation({
     mutationFn: async () => {
@@ -66,22 +82,21 @@ export default function UrgentAnnouncementModal({
   return (
     <Dialog open={!!announcement} onOpenChange={() => {}}>
       <DialogContent 
-        className="max-w-2xl max-h-[90vh] overflow-y-auto"
+        className={cn("max-w-2xl max-h-[90vh] overflow-y-auto border-2", config.border, config.bg)}
         hideCloseButton
+        onPointerDownOutside={(e) => e.preventDefault()}
+        onEscapeKeyDown={(e) => e.preventDefault()}
       >
-        <DialogHeader>
-          <div className={cn(
-            "flex items-center gap-3 p-4 rounded-lg mb-4",
-            config.bg,
-            config.border,
-            "border-2"
-          )}>
-            <Icon className={cn("w-8 h-8", config.color)} />
+        <DialogHeader className={cn("border-b-2 pb-4", config.border)}>
+          <div className="flex items-center gap-4">
+            <div className={cn("p-3 rounded-lg ring-2", config.bg, config.ring)}>
+              <Icon className={cn("w-7 h-7", config.color)} />
+            </div>
             <div className="flex-1">
-              <div className={cn("text-xs font-semibold uppercase mb-1", config.color)}>
-                {config.label}
+              <div className={cn("text-xs font-bold uppercase mb-1", config.color)}>
+                ⚠️ {config.label}
               </div>
-              <DialogTitle className="text-xl font-bold text-gray-900">
+              <DialogTitle className="text-2xl font-bold text-gray-900">
                 {announcement.title}
               </DialogTitle>
             </div>
