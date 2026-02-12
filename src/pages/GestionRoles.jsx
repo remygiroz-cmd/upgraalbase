@@ -136,7 +136,7 @@ export default function GestionRoles() {
                       className={cn(
                         "text-[10px] sm:text-xs px-2 py-1.5 rounded-lg font-medium text-center break-words transition-all cursor-pointer hover:opacity-80",
                         isEnabled
-                          ? module.special ? "bg-blue-500 text-white" : "bg-green-500 text-white"
+                          ? "bg-green-500 text-white"
                           : "bg-gray-300 text-gray-600"
                       )}
                       title={module.special ? "Permission spéciale pour modifier le planning" : ""}
