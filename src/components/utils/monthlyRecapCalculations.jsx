@@ -328,11 +328,11 @@ export function calculateMonthlyRecap(
   // Calculate overtime/complementary based on mode
   if (mode === 'weekly') {
     // Weekly calculation: check each week individually
-    calculateWeeklyOvertime(result, employee, shifts, nonShiftEvents, nonShiftTypes, year, month, contractHoursWeekly);
+    calculateWeeklyOvertime(result, employee, shifts, nonShiftEvents, nonShiftTypes, year, month, contractHoursWeekly, weeklyRecaps);
   } else if (mode === 'monthly') {
     // Monthly calculation: STILL calculates week-by-week for legal compliance
     // The difference is only in how base hours are displayed/adjusted
-    calculateMonthlyOvertime(result, employee, shifts, nonShiftEvents, nonShiftTypes, year, month, contractHoursWeekly);
+    calculateMonthlyOvertime(result, employee, shifts, nonShiftEvents, nonShiftTypes, year, month, contractHoursWeekly, weeklyRecaps);
   }
 
   // Holiday pay eligibility: employee must have WORKED on a holiday
