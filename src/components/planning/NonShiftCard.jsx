@@ -31,9 +31,22 @@ const NonShiftCard = React.memo(function NonShiftCard({ nonShift, nonShiftType, 
       <button
         onClick={(e) => {
           e.stopPropagation();
+          if (disabled) {
+            toast.error('Lecture seule — vous n\'avez pas la permission de modifier le planning', {
+              duration: 3000,
+              icon: '🔒'
+            });
+            return;
+          }
           onDelete(nonShift);
         }}
-        className="opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-red-100 transition-all"
+        disabled={disabled}
+        className={cn(
+          "p-1 rounded transition-all",
+          disabled
+            ? "opacity-30 cursor-not-allowed"
+            : "opacity-0 group-hover:opacity-100 hover:bg-red-100"
+        )}
       >
         <Trash2 className="w-3 h-3 text-red-600" />
       </button>
