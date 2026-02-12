@@ -212,6 +212,18 @@ export default function Conversation() {
           sortedMessages.map(msg => {
             const sender = employees.find(emp => emp.id === msg.sender_employee_id);
             const isMe = msg.sender_employee_id === currentEmployee.id;
+            const isSystem = !msg.sender_employee_id;
+
+            // System message
+            if (isSystem) {
+              return (
+                <div key={msg.id} className="flex justify-center">
+                  <div className="bg-gray-100 text-gray-600 text-xs px-4 py-2 rounded-full max-w-[80%] text-center">
+                    {msg.text}
+                  </div>
+                </div>
+              );
+            }
 
             return (
               <div

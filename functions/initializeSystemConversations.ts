@@ -33,12 +33,23 @@ Deno.serve(async (req) => {
       if (!adminEmployee) {
         results.errors.push("Aucun employé admin trouvé pour créer la conversation entreprise");
       } else {
+        const now = new Date().toISOString();
         const newConv = await base44.asServiceRole.entities.Conversation.create({
           title: "📢 Annonces entreprise",
           type: "entreprise",
           participant_employee_ids: employeesWithAccounts.map(emp => emp.id),
-          created_by_employee_id: adminEmployee.id
+          created_by_employee_id: adminEmployee.id,
+          last_message_text: "Bienvenue dans les annonces de l'entreprise.",
+          last_message_at: now
         });
+        
+        // Create welcome message
+        await base44.asServiceRole.entities.Message.create({
+          conversation_id: newConv.id,
+          sender_employee_id: null,
+          text: "Bienvenue dans les annonces de l'entreprise."
+        });
+        
         results.entreprise = { created: true, id: newConv.id };
       }
     } else {
@@ -70,13 +81,25 @@ Deno.serve(async (req) => {
       );
 
       if (!existingTeamConv) {
+        const now = new Date().toISOString();
+        const welcomeText = `Bienvenue dans la conversation de l'équipe ${teamName}.`;
         const newConv = await base44.asServiceRole.entities.Conversation.create({
           title: teamTitle,
           type: "equipe",
           team_id: teamName,
           participant_employee_ids: teamEmployees.map(emp => emp.id),
-          created_by_employee_id: adminEmployee.id
+          created_by_employee_id: adminEmployee.id,
+          last_message_text: welcomeText,
+          last_message_at: now
         });
+        
+        // Create welcome message
+        await base44.asServiceRole.entities.Message.create({
+          conversation_id: newConv.id,
+          sender_employee_id: null,
+          text: welcomeText
+        });
+        
         results.equipes.push({ team: teamName, created: true, id: newConv.id });
       } else {
         // Update participants
@@ -107,12 +130,24 @@ Deno.serve(async (req) => {
 
     if (directionEmployees.length > 0) {
       if (!directionConv) {
+        const now = new Date().toISOString();
+        const welcomeText = "Espace de discussion réservé à la direction.";
         const newConv = await base44.asServiceRole.entities.Conversation.create({
           title: "🧠 Direction",
           type: "equipe",
           participant_employee_ids: directionEmployees.map(emp => emp.id),
-          created_by_employee_id: adminEmployee.id
+          created_by_employee_id: adminEmployee.id,
+          last_message_text: welcomeText,
+          last_message_at: now
         });
+        
+        // Create welcome message
+        await base44.asServiceRole.entities.Message.create({
+          conversation_id: newConv.id,
+          sender_employee_id: null,
+          text: welcomeText
+        });
+        
         results.direction = { created: true, id: newConv.id };
       } else {
         // Update participants
