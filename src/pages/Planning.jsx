@@ -1467,6 +1467,7 @@ export default function Planning() {
                                     }}
                                     nonShiftEvents={nonShiftEvents}
                                     nonShiftTypes={nonShiftTypes}
+                                    disabled={!canModifyPlanning}
                                   />
                                 </div>
                               );
