@@ -47,15 +47,47 @@ export default function NewConversationModal({
       });
   }, [employees, currentEmployee, searchTerm]);
 
+  // Get all conversations to check for duplicates
+  const { data: allConversations = [] } = useQuery({
+    queryKey: ['allConversations'],
+    queryFn: () => base44.entities.Conversation.list(),
+    enabled: open
+  });
+
   const createConversationMutation = useMutation({
     mutationFn: async (data) => {
+      // For private conversations, check for duplicates
+      if (data.type === 'privee') {
+        const participantSet = new Set(data.participant_employee_ids);
+        const existingPrivate = allConversations.find(conv => {
+          if (conv.type !== 'privee') return false;
+          const convSet = new Set(conv.participant_employee_ids || []);
+          return convSet.size === participantSet.size && 
+                 [...participantSet].every(id => convSet.has(id));
+        });
+
+        if (existingPrivate) {
+          return existingPrivate; // Return existing instead of creating
+        }
+      }
+
       return await base44.entities.Conversation.create(data);
     },
-    onSuccess: (newConv) => {
+    onSuccess: (conv) => {
       queryClient.invalidateQueries({ queryKey: ['myConversations'] });
-      toast.success('Conversation créée');
+      queryClient.invalidateQueries({ queryKey: ['allConversations'] });
+      
+      const isExisting = !conv.created_date || 
+                        new Date() - new Date(conv.created_date) > 5000;
+      
+      if (isExisting) {
+        toast.success('Conversation ouverte');
+      } else {
+        toast.success('Conversation créée');
+      }
+      
       onOpenChange(false);
-      navigate(createPageUrl('Conversation') + '?id=' + newConv.id);
+      navigate(createPageUrl('Conversation') + '?id=' + conv.id);
       resetForm();
     },
     onError: () => {
@@ -84,7 +116,12 @@ export default function NewConversationModal({
       created_by_employee_id: currentEmployee.id
     };
 
-    if (title.trim()) {
+    // Auto-generate title for private conversations
+    if (selectedType === 'privee' && !title.trim()) {
+      const otherEmployees = employees.filter(emp => selectedEmployees.includes(emp.id));
+      const names = otherEmployees.map(emp => emp.first_name).join(' & ');
+      conversationData.title = `${currentEmployee.first_name} & ${names}`;
+    } else if (title.trim()) {
       conversationData.title = title.trim();
     }
 
