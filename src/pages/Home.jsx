@@ -67,23 +67,36 @@ export default function Home() {
     staleTime: 60 * 1000
   });
 
-  // Today's date for TodaySummary (SAME as Planning)
+  // EXACT same data fetching as Planning
   const today = new Date();
-  const todayStr = formatLocalDate(today);
+  const currentMonth = today.getMonth();
+  const currentYear = today.getFullYear();
 
-  // Fetch shifts for today (SAME as Planning)
-  const { data: todayShifts = [] } = useQuery({
-    queryKey: ['todayShifts', todayStr],
-    queryFn: () => base44.entities.Shift.filter({ date: todayStr }),
+  // Fetch shifts for CURRENT MONTH (SAME as Planning)
+  const { data: currentMonthShifts = [] } = useQuery({
+    queryKey: ['shifts', currentYear, currentMonth],
+    queryFn: async () => {
+      const firstDay = formatLocalDate(new Date(currentYear, currentMonth, 1));
+      const lastDay = formatLocalDate(new Date(currentYear, currentMonth + 1, 0));
+      
+      const allShifts = await base44.entities.Shift.list();
+      return allShifts.filter(s => s.date >= firstDay && s.date <= lastDay);
+    },
     enabled: !!currentEmployee,
     staleTime: 5 * 60 * 1000,
     refetchInterval: 5 * 60 * 1000
   });
 
-  // Fetch non-shift events for today (SAME as Planning)
-  const { data: todayNonShiftEvents = [] } = useQuery({
-    queryKey: ['todayNonShifts', todayStr],
-    queryFn: () => base44.entities.NonShiftEvent.filter({ date: todayStr }),
+  // Fetch non-shift events for CURRENT MONTH (SAME as Planning)
+  const { data: currentMonthNonShiftEvents = [] } = useQuery({
+    queryKey: ['nonShiftEvents', currentYear, currentMonth],
+    queryFn: async () => {
+      const firstDay = formatLocalDate(new Date(currentYear, currentMonth, 1));
+      const lastDay = formatLocalDate(new Date(currentYear, currentMonth + 1, 0));
+      
+      const allEvents = await base44.entities.NonShiftEvent.list();
+      return allEvents.filter(e => e.date >= firstDay && e.date <= lastDay);
+    },
     enabled: !!currentEmployee,
     staleTime: 5 * 60 * 1000,
     refetchInterval: 5 * 60 * 1000
@@ -108,19 +121,32 @@ export default function Home() {
     staleTime: 10 * 60 * 1000
   });
 
-  // Filter and sort employees EXACTLY like Planning does
-  const sortedEmployeesForToday = useMemo(() => {
+  // Fetch positions (SAME as Planning)
+  const { data: positions = [] } = useQuery({
+    queryKey: ['positions'],
+    queryFn: async () => {
+      const all = await base44.entities.Position.filter({ is_active: true });
+      return all.sort((a, b) => (a.order || 0) - (b.order || 0));
+    },
+    enabled: !!currentEmployee,
+    staleTime: 10 * 60 * 1000
+  });
+
+  // EXACT same employee filtering logic as Planning's sortedEmployees
+  const sortedEmployees = useMemo(() => {
     if (!employees.length || !allTeams.length) return [];
 
-    // Only show employees who have shifts today OR are active
-    const activeEmployees = employees.filter(emp => {
+    // Current month logic: employés actifs + archivés avec au moins 1 shift ce mois
+    const filteredEmployees = employees.filter(emp => {
       if (emp.is_active === true) return true;
-      const hasShiftsToday = todayShifts.some(s => s.employee_id === emp.id);
-      return hasShiftsToday;
+      
+      // Employé archivé: vérifier s'il a au moins 1 shift ce mois
+      const hasShiftsThisMonth = currentMonthShifts.some(s => s.employee_id === emp.id);
+      return hasShiftsThisMonth;
     });
-
-    // Sort by team order then by first name (EXACTLY like Planning)
-    return [...activeEmployees].sort((a, b) => {
+    
+    // Trier par équipe puis par nom (EXACT same as Planning)
+    return [...filteredEmployees].sort((a, b) => {
       const teamA = allTeams.find(t => t.id === a.team_id);
       const teamB = allTeams.find(t => t.id === b.team_id);
       
@@ -129,9 +155,10 @@ export default function Home() {
       
       if (orderA !== orderB) return orderA - orderB;
       
+      // Same team, sort by name
       return (a.first_name || '').localeCompare(b.first_name || '');
     });
-  }, [employees, allTeams, todayShifts]);
+  }, [employees, allTeams, currentMonthShifts]);
 
   // Get conversation members for current employee
   const { data: myConversationMembers = [] } = useQuery({
@@ -480,14 +507,14 @@ export default function Home() {
       </div>
 
       <div className="max-w-4xl mx-auto px-4 py-6 space-y-6">
-        {/* Today's Staff Summary - SAME as Planning */}
-        {currentEmployee && (
+        {/* Today's Staff Summary - EXACT same as Planning */}
+        {currentEmployee && sortedEmployees.length > 0 && (
           <TodaySummary
-            shifts={todayShifts}
-            nonShiftEvents={todayNonShiftEvents}
+            shifts={currentMonthShifts}
+            nonShiftEvents={currentMonthNonShiftEvents}
             nonShiftTypes={nonShiftTypes}
-            employees={sortedEmployeesForToday}
-            positions={[]}
+            employees={sortedEmployees}
+            positions={positions}
           />
         )}
 
