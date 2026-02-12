@@ -1414,16 +1414,17 @@ export default function Planning() {
                         return (
                           <div key={employee.id} className="border-r border-blue-200 min-w-[150px] w-[150px] lg:min-w-[180px] lg:w-[180px]">
                             <MonthlySummary
-                              employee={employee}
-                              shifts={shifts}
-                              nonShiftEvents={nonShiftEvents}
-                              nonShiftTypes={nonShiftTypes}
-                              monthStart={new Date(currentYear, currentMonth, 1)}
-                              monthEnd={new Date(currentYear, currentMonth + 1, 0)}
-                              holidayDates={holidayDates}
-                              cpPeriods={employeeCpPeriods}
-                              monthlyRecap={monthlyRecap}
-                              currentUser={currentUser}
+                               employee={employee}
+                               shifts={shifts}
+                               nonShiftEvents={nonShiftEvents}
+                               nonShiftTypes={nonShiftTypes}
+                               monthStart={new Date(currentYear, currentMonth, 1)}
+                               monthEnd={new Date(currentYear, currentMonth + 1, 0)}
+                               holidayDates={holidayDates}
+                               cpPeriods={employeeCpPeriods}
+                               monthlyRecap={monthlyRecap}
+                               currentUser={currentUser}
+                               weeklyRecaps={allWeeklyRecaps}
                             />
                           </div>
                         );
