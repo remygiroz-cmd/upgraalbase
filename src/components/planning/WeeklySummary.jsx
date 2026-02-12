@@ -35,7 +35,8 @@ export default function WeeklySummary({
   currentMonth,
   currentYear,
   nonShiftEvents = [],
-  nonShiftTypes = []
+  nonShiftTypes = [],
+  disabled = false // Mode lecture seule
 }) {
   const [showConfirm, setShowConfirm] = useState(false);
   const [isEditingBase, setIsEditingBase] = useState(false);
@@ -325,12 +326,19 @@ export default function WeeklySummary({
   };
 
   const handleStartEdit = useCallback(() => {
+    if (disabled) {
+      toast.error('Lecture seule — vous n\'avez pas la permission de modifier le planning', {
+        duration: 3000,
+        icon: '🔒'
+      });
+      return;
+    }
     // Initialiser baseDraft avec la valeur RÉELLEMENT AFFICHÉE (source de vérité)
     const currentBase = displayedBase;
     console.log('[WeeklySummary] 🖊️ START EDIT - initializing baseDraft with:', currentBase);
     setBaseDraft(currentBase.toString());
     setIsEditingBase(true);
-  }, [displayedBase]);
+  }, [displayedBase, disabled]);
 
   const handleCancelEdit = useCallback(() => {
     setIsEditingBase(false);
@@ -395,7 +403,7 @@ export default function WeeklySummary({
       isPartialWeek && !hasOverride && "bg-amber-50/30"
     )}>
       {/* Bouton supprimer semaine */}
-      {hasShifts && (
+      {hasShifts && !disabled && (
         <button
           onClick={(e) => {
             e.stopPropagation();
@@ -459,11 +467,13 @@ export default function WeeklySummary({
         ) : (
           <button
             onClick={handleStartEdit}
+            disabled={disabled}
             className={cn(
               "text-sm font-bold hover:bg-gray-100 px-2 py-0.5 rounded transition-colors",
-              hasOverride ? "text-blue-700" : "text-gray-700"
+              hasOverride ? "text-blue-700" : "text-gray-700",
+              disabled && "cursor-not-allowed opacity-70 hover:bg-transparent"
             )}
-            title="Cliquer pour modifier"
+            title={disabled ? "Lecture seule" : "Cliquer pour modifier"}
           >
             {displayedBase.toFixed(2)}h
             {hasOverride && <span className="text-[8px] ml-1">*</span>}
@@ -512,7 +522,7 @@ export default function WeeklySummary({
       )}
 
       {/* Bouton copier */}
-      {onCopyFromAbove && (
+      {onCopyFromAbove && !disabled && (
         <button
           onClick={(e) => {
             e.stopPropagation();
