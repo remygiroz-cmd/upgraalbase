@@ -446,8 +446,17 @@ Weeks to process: ${weeks.length}
       }
     });
     
-    // Calculate base hours for this week (based on visible contractual days)
-    const weeklyBase = contractDaysVisible * dailyContractHours;
+    // CRITICAL: Check if there's a WeeklyRecap override for this employee/week
+    const weekRecapKey = `${employee.id}_${weekKey}`;
+    const weekRecap = weeklyRecaps.find(wr => `${wr.employee_id}_${wr.week_start}` === weekRecapKey);
+    
+    // Use override if available, otherwise calculate from contract
+    const weeklyBase = weekRecap?.base_override_hours ?? (contractDaysVisible * dailyContractHours);
+    
+    console.log(`[WEEK OVERRIDE CHECK] ${employee.first_name} ${employee.last_name} - ${weekKey}
+    weekRecap found: ${!!weekRecap}
+    base_override_hours: ${weekRecap?.base_override_hours}
+    weeklyBase (final): ${weeklyBase}`);
     
     // Calculate worked hours (on visible days only)
     let weekHours = 0;
