@@ -1,13 +1,14 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
-import { ArrowLeft, Send, Users, User, Pin, MoreVertical, X } from 'lucide-react';
+import { ArrowLeft, Send, Users, User, Pin, MoreVertical, X, Circle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
+import { calculatePresenceStatus, getOnlineCount } from '@/components/utils/presenceUtils';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -388,7 +389,7 @@ export default function Conversation() {
       const hash = others[0].first_name?.charCodeAt(0) || 0;
       const color = colors[hash % colors.length];
       
-      return { initial, color, type: 'privee' };
+      return { initial, color, type: 'privee', employee: others[0] };
     }
     
     // Team conversation
@@ -399,6 +400,31 @@ export default function Conversation() {
     // Other types
     return { initial: null, color: 'bg-purple-100', type: 'other' };
   }, [conversation, currentEmployee, employees]);
+
+  // Calculate presence info
+  const presenceInfo = useMemo(() => {
+    if (!conversation || !employees.length) return null;
+
+    // Private conversation: show other person's status
+    if (conversation.type === 'privee' && avatarData?.employee) {
+      return {
+        type: 'single',
+        presence: calculatePresenceStatus(avatarData.employee.last_seen_at)
+      };
+    }
+
+    // Team/group conversation: show online count
+    if (conversation.type === 'equipe' || conversation.type === 'entreprise') {
+      const onlineCount = getOnlineCount(conversation.participant_employee_ids, employees);
+      return {
+        type: 'group',
+        onlineCount,
+        totalCount: conversation.participant_employee_ids?.length || 0
+      };
+    }
+
+    return null;
+  }, [conversation, employees, avatarData]);
 
   if (!conversationId || !conversation) {
     return (
@@ -443,9 +469,28 @@ export default function Conversation() {
 
         <div className="flex-1 min-w-0">
           <h1 className="font-semibold text-gray-900 truncate">{conversationTitle}</h1>
-          <p className="text-xs text-gray-500">
-            {conversation.participant_employee_ids?.length || 0} participant{(conversation.participant_employee_ids?.length || 0) > 1 ? 's' : ''}
-          </p>
+          {presenceInfo?.type === 'single' ? (
+            <div className="flex items-center gap-1.5 text-xs">
+              <Circle className={cn("w-2 h-2", presenceInfo.presence.dotColor)} />
+              <span className={presenceInfo.presence.color}>
+                {presenceInfo.presence.label}
+              </span>
+            </div>
+          ) : presenceInfo?.type === 'group' ? (
+            <p className="text-xs text-gray-500">
+              {presenceInfo.onlineCount > 0 && (
+                <span className="text-green-600 font-medium">
+                  {presenceInfo.onlineCount} en ligne
+                </span>
+              )}
+              {presenceInfo.onlineCount > 0 && ' • '}
+              {presenceInfo.totalCount} participant{presenceInfo.totalCount > 1 ? 's' : ''}
+            </p>
+          ) : (
+            <p className="text-xs text-gray-500">
+              {conversation.participant_employee_ids?.length || 0} participant{(conversation.participant_employee_ids?.length || 0) > 1 ? 's' : ''}
+            </p>
+          )}
         </div>
       </div>
 

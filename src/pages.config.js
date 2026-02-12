@@ -68,6 +68,7 @@ import TemplatesRH from './pages/TemplatesRH';
 import TravailDuJour from './pages/TravailDuJour';
 import AnnoncesUrgentes from './pages/AnnoncesUrgentes';
 import AnnouncementDetail from './pages/AnnouncementDetail';
+import Presence from './pages/Presence';
 import __Layout from './Layout.jsx';
 
 
@@ -93,6 +94,7 @@ export const PAGES = {
     "TravailDuJour": TravailDuJour,
     "AnnoncesUrgentes": AnnoncesUrgentes,
     "AnnouncementDetail": AnnouncementDetail,
+    "Presence": Presence,
 }
 
 export const pagesConfig = {

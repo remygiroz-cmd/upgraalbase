@@ -88,6 +88,12 @@ export default function Layout({ children, currentPageName }) {
     ? [{ name: 'AnnoncesUrgentes', label: 'Annonces urgentes', icon: Megaphone, module: 'messages_urgents' }]
     : [];
 
+  // Presence link (admin/manager only)
+  const canViewPresence = currentUser?.role === 'admin' || hasPermission('messages_urgents');
+  const presenceLink = canViewPresence
+    ? [{ name: 'Presence', label: 'Présence', icon: Users, module: 'messages_urgents' }]
+    : [];
+
   const caisseLinks = [
     { name: 'Pertes', label: 'Invendus & Pertes', icon: PackageMinus, module: 'pertes' },
   ].filter(link => hasPermission(link.module));
@@ -303,6 +309,15 @@ export default function Layout({ children, currentPageName }) {
                   />
                 ))}
                 {urgentAnnouncementsLink.map((link) => (
+                  <NavLink
+                    key={link.name}
+                    to={link.name}
+                    icon={link.icon}
+                    label={link.label}
+                    active={currentPageName === link.name}
+                  />
+                ))}
+                {presenceLink.map((link) => (
                   <NavLink
                     key={link.name}
                     to={link.name}
