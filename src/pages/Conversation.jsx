@@ -154,9 +154,15 @@ export default function Conversation() {
       return others.map(emp => emp.first_name).join(', ') || 'Conversation';
     }
 
-    // For team conversations: "👥 Équipe {name}"
+    // For team conversations: use title as-is (should already have prefix)
     if (conversation.type === 'equipe') {
-      return conversation.title ? `👥 Équipe ${conversation.title}` : '👥 Équipe';
+      if (conversation.title) {
+        // If title already starts with emoji or "Équipe", use as-is
+        return conversation.title.startsWith('👥') || conversation.title.startsWith('Équipe')
+          ? conversation.title
+          : `👥 Équipe ${conversation.title}`;
+      }
+      return '👥 Équipe';
     }
 
     // For other types, use title or type

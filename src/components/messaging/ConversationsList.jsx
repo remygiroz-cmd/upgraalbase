@@ -95,9 +95,16 @@ export default function ConversationsList({
         }
       }
       
-      // For team conversations: show "👥 Équipe {name}"
+      // For team conversations: use title as-is (should already have prefix)
       if (conv.type === 'equipe') {
-        displayTitle = conv.title ? `👥 Équipe ${conv.title}` : '👥 Équipe';
+        if (conv.title) {
+          // If title already starts with emoji or "Équipe", use as-is
+          displayTitle = conv.title.startsWith('👥') || conv.title.startsWith('Équipe') 
+            ? conv.title 
+            : `👥 Équipe ${conv.title}`;
+        } else {
+          displayTitle = '👥 Équipe';
+        }
         avatarColor = 'bg-gray-100 text-gray-600';
       }
 
