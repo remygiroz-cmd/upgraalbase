@@ -407,7 +407,7 @@ export default function Parametres() {
         </Tabs>
 
         {/* Save Button - Only for user preference tabs */}
-        {(['profile', 'notifications', 'interface', 'session', 'establishment'].includes(document.querySelector('[data-state="active"]')?.getAttribute('value') || 'profile')) && (
+        {(['profile', 'notifications', 'interface', 'session', 'establishment'].includes(activeTab)) && (
           <div className="sticky bottom-6 mt-6 flex justify-center sm:justify-end">
             <Button
               onClick={handleSavePreferences}
