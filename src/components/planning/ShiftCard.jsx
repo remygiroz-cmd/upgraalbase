@@ -139,6 +139,13 @@ const ShiftCard = React.memo(function ShiftCard({
 
   const handleStartEdit = (field, e) => {
     e.stopPropagation();
+    if (disabled) {
+      toast.error('Lecture seule — vous n\'avez pas la permission de modifier le planning', {
+        duration: 3000,
+        icon: '🔒'
+      });
+      return;
+    }
     const currentValue = field === 'start' ? shift.start_time : shift.end_time;
     setEditingField(field);
     setTempValue(currentValue);
