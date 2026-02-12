@@ -1384,12 +1384,27 @@ export default function Planning() {
                               const hasEventsAbove = hasWeekEvents(weekAbove);
                               
                               if (hasEventsAbove && weekAbove.getMonth() >= new Date(currentYear, currentMonth, 1).getMonth()) {
-                                return (
-                                  <button
-                                    onClick={() => handleCopyWeekFromAbove(weekStart)}
-                                    className="text-[8px] lg:text-[9px] px-1 lg:px-1.5 py-0.5 lg:py-1 bg-blue-600 hover:bg-blue-700 text-white rounded flex items-center gap-0.5 lg:gap-1 w-full justify-center font-semibold shadow-sm transition-colors"
-                                    title="Copier la semaine du dessus"
-                                  >
+                              return (
+                              <button
+                              onClick={() => {
+                              if (!canModifyPlanning) {
+                              toast.error('Lecture seule — vous n\'avez pas la permission de modifier le planning', {
+                              duration: 3000,
+                              icon: '🔒'
+                              });
+                              return;
+                              }
+                              handleCopyWeekFromAbove(weekStart);
+                              }}
+                              disabled={!canModifyPlanning}
+                              className={cn(
+                              "text-[8px] lg:text-[9px] px-1 lg:px-1.5 py-0.5 lg:py-1 text-white rounded flex items-center gap-0.5 lg:gap-1 w-full justify-center font-semibold shadow-sm transition-colors",
+                              canModifyPlanning
+                              ? "bg-blue-600 hover:bg-blue-700 cursor-pointer"
+                              : "bg-gray-400 cursor-not-allowed opacity-60"
+                              )}
+                              title={canModifyPlanning ? "Copier la semaine du dessus" : "Lecture seule"}
+                              >
                                     <ArrowDown className="w-2.5 h-2.5 lg:w-3 lg:h-3" />
                                     <span className="hidden lg:inline">Copier ↑</span>
                                   </button>
