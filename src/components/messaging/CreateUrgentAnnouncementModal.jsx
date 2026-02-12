@@ -53,9 +53,22 @@ export default function CreateUrgentAnnouncementModal({
   const createMutation = useMutation({
     mutationFn: async (data) => {
       const now = new Date();
-      const endsAt = form.customEndsAt 
-        ? new Date(form.customEndsAt) 
-        : new Date(now.getTime() + form.quickDuration * 60 * 60 * 1000);
+      let endsAt;
+
+      if (form.customEndsAt) {
+        // User provided custom end date
+        endsAt = new Date(form.customEndsAt);
+      } else {
+        // Calculate based on quick duration (in hours)
+        endsAt = new Date(now.getTime() + form.quickDuration * 60 * 60 * 1000);
+      }
+
+      // Security: ensure endsAt is at least 1 hour after startsAt
+      const minEndsAt = new Date(now.getTime() + 60 * 60 * 1000); // now + 1 hour
+      if (endsAt <= now) {
+        endsAt = minEndsAt;
+        toast.warning('Date de fin ajustée à minimum 1 heure');
+      }
 
       const announcementData = {
         title: data.title,
@@ -78,7 +91,12 @@ export default function CreateUrgentAnnouncementModal({
       }
 
       if (process.env.NODE_ENV === 'development') {
-        console.log('[UrgentAnnouncements] Creating announcement:', announcementData);
+        console.log('[UrgentAnnouncements] Creating announcement:', {
+          ...announcementData,
+          duration_hours: form.quickDuration,
+          starts_at_readable: now.toLocaleString('fr-FR'),
+          ends_at_readable: endsAt.toLocaleString('fr-FR')
+        });
       }
 
       const created = await base44.entities.UrgentAnnouncement.create(announcementData);
@@ -91,6 +109,7 @@ export default function CreateUrgentAnnouncementModal({
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['urgentAnnouncements'] });
+      queryClient.invalidateQueries({ queryKey: ['debugAllUrgentAnnouncements'] });
       toast.success('Annonce créée avec succès');
       resetForm();
       onOpenChange(false);
