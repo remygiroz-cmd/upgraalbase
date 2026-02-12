@@ -177,10 +177,14 @@ function RoleFormModal({ open, onClose, role }) {
 
   React.useEffect(() => {
     if (role) {
+      // Merge existing permissions with all possible modules
+      const allModules = MODULES.reduce((acc, m) => ({ ...acc, [m.key]: false }), {});
+      const mergedPermissions = { ...allModules, ...(role.permissions || {}) };
+      
       setForm({
         name: role.name || '',
         description: role.description || '',
-        permissions: role.permissions || MODULES.reduce((acc, m) => ({ ...acc, [m.key]: false }), {}),
+        permissions: mergedPermissions,
         is_active: role.is_active !== false
       });
     } else {
