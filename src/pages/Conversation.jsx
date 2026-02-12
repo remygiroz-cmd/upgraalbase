@@ -126,6 +126,24 @@ export default function Conversation() {
     );
   }, [mentionableEmployees, mentionSearch]);
 
+  // Mark messages as read - fetch ALL reads for this conversation for status calculation
+  const { data: messageReads = [] } = useQuery({
+    queryKey: ['messageReads', conversationId],
+    queryFn: () => base44.entities.MessageRead.filter({ conversation_id: conversationId }),
+    enabled: !!conversationId && !!currentEmployee?.id,
+    staleTime: 0,
+    refetchInterval: 10000 // Refetch every 10 seconds for real-time updates
+  });
+
+  // Get typing indicators
+  const { data: typingIndicators = [] } = useQuery({
+    queryKey: ['typingIndicators', conversationId],
+    queryFn: () => base44.entities.TypingIndicator.filter({ conversation_id: conversationId }),
+    enabled: !!conversationId && !!currentEmployee?.id,
+    staleTime: 0,
+    refetchInterval: 2000 // Poll every 2 seconds
+  });
+
   // Calculate who is typing (excluding current user and stale indicators)
   const whoIsTyping = useMemo(() => {
     if (!typingIndicators.length || !employees.length || !currentEmployee?.id) return [];
@@ -154,24 +172,6 @@ export default function Conversation() {
     }
     return `${whoIsTyping.length} personnes écrivent…`;
   }, [whoIsTyping]);
-
-  // Mark messages as read - fetch ALL reads for this conversation for status calculation
-  const { data: messageReads = [] } = useQuery({
-    queryKey: ['messageReads', conversationId],
-    queryFn: () => base44.entities.MessageRead.filter({ conversation_id: conversationId }),
-    enabled: !!conversationId && !!currentEmployee?.id,
-    staleTime: 0,
-    refetchInterval: 10000 // Refetch every 10 seconds for real-time updates
-  });
-
-  // Get typing indicators
-  const { data: typingIndicators = [] } = useQuery({
-    queryKey: ['typingIndicators', conversationId],
-    queryFn: () => base44.entities.TypingIndicator.filter({ conversation_id: conversationId }),
-    enabled: !!conversationId && !!currentEmployee?.id,
-    staleTime: 0,
-    refetchInterval: 2000 // Poll every 2 seconds
-  });
 
   const markAsReadMutation = useMutation({
     mutationFn: async (messagesToMark) => {
