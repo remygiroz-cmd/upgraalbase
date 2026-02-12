@@ -1762,7 +1762,8 @@ export default function Planning() {
             <Plus className="w-6 h-6 text-white" />
           )}
         </button>
-      </div>
+        </div>
+      )}
     </div>
   );
 }
