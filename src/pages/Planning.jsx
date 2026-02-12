@@ -964,15 +964,17 @@ export default function Planning() {
           <Calendar className="w-4 h-4 lg:w-5 lg:h-5 text-orange-600 flex-shrink-0" />
           <h1 className="text-base lg:text-lg font-bold text-gray-900 truncate">Planning mensuel</h1>
         </div>
-        <Button
-          onClick={() => setShowPlanningSettings(true)}
-          variant="outline"
-          size="icon"
-          className="h-8 w-8 border border-gray-300 hover:border-orange-500 hover:bg-orange-50 flex-shrink-0"
-          title="Paramètres du planning"
-        >
-          <Settings className="w-3.5 h-3.5 lg:w-4 lg:h-4" />
-        </Button>
+        {canModifyPlanning && (
+          <Button
+            onClick={() => setShowPlanningSettings(true)}
+            variant="outline"
+            size="icon"
+            className="h-8 w-8 border border-gray-300 hover:border-orange-500 hover:bg-orange-50 flex-shrink-0"
+            title="Paramètres du planning"
+          >
+            <Settings className="w-3.5 h-3.5 lg:w-4 lg:h-4" />
+          </Button>
+        )}
       </div>
 
       {/* Month Navigation & Filters - Mobile optimized */}
