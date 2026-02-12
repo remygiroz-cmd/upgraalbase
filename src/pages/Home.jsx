@@ -1,202 +1,212 @@
-import React from 'react';
-import { Link } from 'react-router-dom';
-import { createPageUrl } from '@/utils';
+import React, { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
-import { 
-  ChefHat, 
-  ClipboardList, 
-  Thermometer, 
-  BookOpen, 
-  History,
-  Users, 
-  PackageMinus, 
-  Package,
-  ArrowRight,
-  AlertCircle
-} from 'lucide-react';
-import { motion } from 'framer-motion';
-import LoadingSpinner from '@/components/ui/LoadingSpinner';
+import { Plus, MessageCircle, Bell } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import AnnouncementsList from '@/components/messaging/AnnouncementsList';
+import ConversationsList from '@/components/messaging/ConversationsList';
+import NewConversationModal from '@/components/messaging/NewConversationModal';
+import { cn } from '@/lib/utils';
 
 export default function Home() {
-  const { data: currentUser, isLoading: loadingUser } = useQuery({
+  const [showNewConversation, setShowNewConversation] = useState(false);
+
+  // Get current user
+  const { data: currentUser } = useQuery({
     queryKey: ['currentUser'],
-    queryFn: () => base44.auth.me(),
-    staleTime: 0,
-    refetchOnMount: true
+    queryFn: () => base44.auth.me()
   });
 
-  const { data: appSettings = [] } = useQuery({
-    queryKey: ['appSettings'],
-    queryFn: () => base44.entities.AppSettings.filter({ setting_key: 'app_logo' })
+  // Get current employee record
+  const { data: employees = [] } = useQuery({
+    queryKey: ['allEmployees'],
+    queryFn: () => base44.entities.Employee.list(),
+    enabled: !!currentUser
   });
 
-  const { data: userRole } = useQuery({
-    queryKey: ['userRole', currentUser?.role_id],
+  const currentEmployee = useMemo(() => {
+    if (!currentUser?.email || !employees.length) return null;
+    const normalizeEmail = (email) => email?.trim().toLowerCase() || '';
+    return employees.find(emp => normalizeEmail(emp.email) === normalizeEmail(currentUser.email));
+  }, [currentUser, employees]);
+
+  // Get active announcements
+  const { data: announcements = [] } = useQuery({
+    queryKey: ['activeAnnouncements'],
     queryFn: async () => {
-      if (!currentUser?.role_id) return null;
-      const roles = await base44.entities.Role.filter({ id: currentUser.role_id });
-      return roles[0] || null;
+      const now = new Date().toISOString();
+      const all = await base44.entities.Announcement.list();
+      
+      return all
+        .filter(a => {
+          const startsOk = !a.starts_at || new Date(a.starts_at) <= new Date(now);
+          const endsOk = !a.ends_at || new Date(a.ends_at) > new Date(now);
+          return startsOk && endsOk;
+        })
+        .sort((a, b) => {
+          if (a.is_pinned !== b.is_pinned) return b.is_pinned ? 1 : -1;
+          return new Date(b.created_date) - new Date(a.created_date);
+        });
     },
-    enabled: !!currentUser?.role_id
+    enabled: !!currentEmployee,
+    staleTime: 60 * 1000
   });
 
-  const { data: permissionOverride } = useQuery({
-    queryKey: ['permissionOverride', currentUser?.email],
+  // Get conversations
+  const { data: conversations = [] } = useQuery({
+    queryKey: ['myConversations', currentEmployee?.id],
     queryFn: async () => {
-      if (!currentUser?.email) return null;
-      const overrides = await base44.entities.UserPermissionOverride.filter({ user_email: currentUser.email });
-      return overrides[0] || null;
+      if (!currentEmployee?.id) return [];
+      
+      const all = await base44.entities.Conversation.list();
+      
+      return all
+        .filter(conv => {
+          if (conv.type === 'entreprise') return true;
+          return conv.participant_employee_ids?.includes(currentEmployee.id);
+        })
+        .sort((a, b) => {
+          const aTime = a.last_message_at ? new Date(a.last_message_at) : new Date(a.created_date);
+          const bTime = b.last_message_at ? new Date(b.last_message_at) : new Date(b.created_date);
+          return bTime - aTime;
+        })
+        .slice(0, 30);
     },
-    enabled: !!currentUser?.email
+    enabled: !!currentEmployee?.id,
+    staleTime: 30 * 1000
   });
 
-  const logoUrl = appSettings[0]?.logo_url || 'https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/69497257a1b1a9a05e568521/71ee8b574_logonouveau.png';
+  // Get all messages for unread count
+  const { data: allMessages = [] } = useQuery({
+    queryKey: ['allMessages'],
+    queryFn: () => base44.entities.Message.list(),
+    enabled: !!currentEmployee?.id,
+    staleTime: 30 * 1000
+  });
 
-  const hasPermission = (moduleKey) => {
-    if (currentUser?.role === 'admin') return true;
-    if (permissionOverride?.permissions_override?.[moduleKey] !== undefined) {
-      return permissionOverride.permissions_override[moduleKey];
-    }
-    return userRole?.permissions?.[moduleKey] || false;
-  };
+  // Get message reads
+  const { data: messageReads = [] } = useQuery({
+    queryKey: ['myMessageReads', currentEmployee?.id],
+    queryFn: () => base44.entities.MessageRead.filter({ employee_id: currentEmployee.id }),
+    enabled: !!currentEmployee?.id,
+    staleTime: 30 * 1000
+  });
 
-  const allModules = [
-    {
-      title: 'Cuisine',
-      color: 'emerald',
-      items: [
-        { name: 'MiseEnPlace', label: 'Mise en Place', icon: ClipboardList, desc: 'Catalogue des tâches', module: 'mise_en_place' },
-        { name: 'TravailDuJour', label: 'Travail du Jour', icon: ChefHat, desc: 'Production quotidienne', module: 'travail_du_jour' },
-        { name: 'Temperatures', label: 'Températures', icon: Thermometer, desc: 'Conformité HACCP', module: 'temperatures' },
-        { name: 'Recettes', label: 'Recettes', icon: BookOpen, desc: 'Fiches techniques', module: 'recettes' },
-        { name: 'Historique', label: 'Historique', icon: History, desc: 'Archives de production', module: 'historique' },
-      ]
-    },
-    {
-      title: 'Gestion',
-      color: 'indigo',
-      items: [
-        { name: 'Equipe', label: 'Équipe & Shifts', icon: Users, desc: 'Planning et RH', module: 'equipe' },
-        { name: 'Pertes', label: 'Invendus & Pertes', icon: PackageMinus, desc: 'Contrôle Food Cost', module: 'pertes' },
-        { name: 'Stocks', label: 'Inventaires', icon: Package, desc: 'Stocks & Commandes', module: 'stocks' },
-      ]
-    }
-  ];
+  // Calculate unread counts
+  const unreadCounts = useMemo(() => {
+    if (!currentEmployee?.id) return {};
+    
+    const readMessageIds = new Set(messageReads.map(mr => mr.message_id));
+    const counts = {};
+    
+    conversations.forEach(conv => {
+      const convMessages = allMessages.filter(m => 
+        m.conversation_id === conv.id && 
+        m.sender_employee_id !== currentEmployee.id &&
+        !m.is_deleted
+      );
+      
+      counts[conv.id] = convMessages.filter(m => !readMessageIds.has(m.id)).length;
+    });
+    
+    return counts;
+  }, [conversations, allMessages, messageReads, currentEmployee?.id]);
 
-  const modules = allModules.map(section => ({
-    ...section,
-    items: section.items.filter(item => hasPermission(item.module))
-  })).filter(section => section.items.length > 0);
+  const totalUnread = useMemo(() => {
+    return Object.values(unreadCounts).reduce((sum, count) => sum + count, 0);
+  }, [unreadCounts]);
 
-  if (loadingUser) {
-    return <LoadingSpinner />;
-  }
-
-  const containerVariants = {
-    hidden: { opacity: 0 },
-    visible: {
-      opacity: 1,
-      transition: { staggerChildren: 0.1 }
-    }
-  };
-
-  const itemVariants = {
-    hidden: { opacity: 0, y: 20 },
-    visible: { opacity: 1, y: 0 }
-  };
-
-  if (modules.length === 0) {
+  if (!currentEmployee) {
     return (
-      <div className="max-w-2xl mx-auto text-center py-12">
-        <div className="bg-amber-50 border-2 border-amber-300 rounded-2xl p-8">
-          <div className="w-16 h-16 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <AlertCircle className="w-8 h-8 text-amber-600" />
-          </div>
-          <h2 className="text-2xl font-bold text-gray-900 mb-3">Aucun accès autorisé</h2>
-          <p className="text-gray-700 mb-4">
-            Vous n'avez actuellement accès à aucun module de l'application.
-          </p>
-          <p className="text-sm text-gray-600">
-            Contactez votre administrateur pour obtenir les autorisations nécessaires.
-          </p>
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-16 h-16 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-gray-600">Chargement...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="max-w-6xl mx-auto px-2 sm:px-0">
-      {/* Hero */}
-      <motion.div 
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="text-center mb-8 sm:mb-12"
-      >
-        <div className="inline-flex items-center justify-center mb-4 sm:mb-6">
-          <img 
-            src={logoUrl} 
-            alt="UpGraal Logo" 
-            className="w-24 h-24 sm:w-32 sm:h-32 object-contain"
+    <div className="min-h-screen bg-gray-50">
+      {/* Header */}
+      <div className="bg-white border-b border-gray-200 sticky top-0 z-10">
+        <div className="max-w-4xl mx-auto px-4 py-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900">Accueil</h1>
+              <p className="text-sm text-gray-600">
+                Bonjour {currentEmployee.first_name} 👋
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              {totalUnread > 0 && (
+                <div className="relative">
+                  <Bell className="w-6 h-6 text-gray-600" />
+                  <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
+                    {totalUnread > 9 ? '9+' : totalUnread}
+                  </span>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="max-w-4xl mx-auto px-4 py-6 space-y-6">
+        {/* Announcements Section */}
+        {announcements.length > 0 && (
+          <AnnouncementsList 
+            announcements={announcements} 
+            currentEmployee={currentEmployee}
+          />
+        )}
+
+        {/* Conversations Section */}
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200">
+          <div className="px-4 py-3 border-b border-gray-200">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <MessageCircle className="w-5 h-5 text-gray-600" />
+                <h2 className="text-lg font-semibold text-gray-900">Messages</h2>
+              </div>
+              {totalUnread > 0 && (
+                <span className="bg-blue-100 text-blue-700 text-xs font-semibold px-2 py-1 rounded-full">
+                  {totalUnread} non lu{totalUnread > 1 ? 's' : ''}
+                </span>
+              )}
+            </div>
+          </div>
+
+          <ConversationsList
+            conversations={conversations}
+            currentEmployee={currentEmployee}
+            employees={employees}
+            unreadCounts={unreadCounts}
           />
         </div>
-        <h1 className="text-3xl sm:text-4xl font-bold mb-2 sm:mb-3 text-gray-900">UpGraal</h1>
-        <p className="text-gray-700 text-base sm:text-lg px-4">Votre système de gestion cuisine temps réel</p>
-      </motion.div>
+      </div>
 
-      {/* Modules */}
-      {modules.map((module, moduleIndex) => (
-        <motion.section 
-          key={module.title}
-          variants={containerVariants}
-          initial="hidden"
-          animate="visible"
-          className="mb-6 sm:mb-10"
-        >
-          <h2 className="text-xs sm:text-sm font-semibold text-gray-600 uppercase tracking-wider mb-3 sm:mb-4 px-1">
-            {module.title}
-          </h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
-            {module.items.map((item, index) => (
-              <motion.div key={item.name} variants={itemVariants}>
-                <Link
-                  to={createPageUrl(item.name)}
-                  className={`
-                    group block p-4 sm:p-5 rounded-xl sm:rounded-2xl border-2 transition-all duration-200
-                    bg-white border-gray-300
-                    hover:bg-gray-50 hover:border-gray-400 hover:shadow-md
-                    active:scale-[0.98] touch-manipulation
-                  `}
-                >
-                  <div className="flex items-start justify-between">
-                    <div className={`
-                      w-10 h-10 sm:w-12 sm:h-12 rounded-lg sm:rounded-xl flex items-center justify-center mb-3 sm:mb-4 flex-shrink-0
-                      bg-${module.color}-600/20 text-${module.color}-400
-                    `}>
-                      <item.icon className="w-5 h-5 sm:w-6 sm:h-6" />
-                    </div>
-                    <ArrowRight className="w-4 h-4 sm:w-5 sm:h-5 text-gray-400 group-hover:text-gray-600 transition-colors flex-shrink-0" />
-                  </div>
-                  <h3 className="font-semibold text-base sm:text-lg mb-1 text-gray-900 line-clamp-2">{item.label}</h3>
-                  <p className="text-xs sm:text-sm text-gray-600 line-clamp-2">{item.desc}</p>
-                </Link>
-              </motion.div>
-            ))}
-          </div>
-        </motion.section>
-      ))}
-
-      {/* Footer Info */}
-      <motion.div 
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 0.5 }}
-        className="mt-8 sm:mt-12 p-4 sm:p-6 rounded-xl sm:rounded-2xl bg-gray-100 border-2 border-gray-300 text-center"
+      {/* Floating Action Button */}
+      <button
+        onClick={() => setShowNewConversation(true)}
+        className={cn(
+          "fixed bottom-6 right-6 w-14 h-14 bg-blue-600 hover:bg-blue-700 text-white rounded-full shadow-lg",
+          "flex items-center justify-center transition-all hover:scale-110",
+          "lg:bottom-8 lg:right-8"
+        )}
+        title="Nouveau message"
       >
-        <p className="text-gray-700 text-xs sm:text-sm px-2">
-          Application optimisée pour tablettes tactiles • Mode hors-ligne partiel disponible
-        </p>
-      </motion.div>
+        <Plus className="w-6 h-6" />
+      </button>
+
+      {/* New Conversation Modal */}
+      <NewConversationModal
+        open={showNewConversation}
+        onOpenChange={setShowNewConversation}
+        currentEmployee={currentEmployee}
+        employees={employees}
+      />
     </div>
   );
 }

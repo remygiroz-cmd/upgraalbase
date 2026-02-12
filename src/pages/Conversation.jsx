@@ -1,0 +1,292 @@
+import React, { useState, useEffect, useRef, useMemo } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { base44 } from '@/api/base44Client';
+import { ArrowLeft, Send, Users, User } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Textarea } from '@/components/ui/textarea';
+import { useNavigate } from 'react-router-dom';
+import { createPageUrl } from '@/utils';
+import { cn } from '@/lib/utils';
+import { toast } from 'sonner';
+
+export default function Conversation() {
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const messagesEndRef = useRef(null);
+  const [messageText, setMessageText] = useState('');
+
+  // Get conversation ID from URL
+  const urlParams = new URLSearchParams(window.location.search);
+  const conversationId = urlParams.get('id');
+
+  // Get current user and employee
+  const { data: currentUser } = useQuery({
+    queryKey: ['currentUser'],
+    queryFn: () => base44.auth.me()
+  });
+
+  const { data: employees = [] } = useQuery({
+    queryKey: ['allEmployees'],
+    queryFn: () => base44.entities.Employee.list()
+  });
+
+  const currentEmployee = useMemo(() => {
+    if (!currentUser?.email || !employees.length) return null;
+    const normalizeEmail = (email) => email?.trim().toLowerCase() || '';
+    return employees.find(emp => normalizeEmail(emp.email) === normalizeEmail(currentUser.email));
+  }, [currentUser, employees]);
+
+  // Get conversation
+  const { data: conversations = [] } = useQuery({
+    queryKey: ['conversations'],
+    queryFn: () => base44.entities.Conversation.list(),
+    enabled: !!conversationId
+  });
+
+  const conversation = conversations.find(c => c.id === conversationId);
+
+  // Get messages
+  const { data: messages = [] } = useQuery({
+    queryKey: ['messages', conversationId],
+    queryFn: () => base44.entities.Message.filter({ conversation_id: conversationId }),
+    enabled: !!conversationId,
+    staleTime: 10 * 1000,
+    refetchInterval: 5000 // Poll every 5 seconds
+  });
+
+  const sortedMessages = useMemo(() => {
+    return [...messages]
+      .filter(m => !m.is_deleted)
+      .sort((a, b) => new Date(a.created_date) - new Date(b.created_date));
+  }, [messages]);
+
+  // Mark messages as read
+  const { data: messageReads = [] } = useQuery({
+    queryKey: ['messageReads', conversationId],
+    queryFn: () => base44.entities.MessageRead.filter({ conversation_id: conversationId }),
+    enabled: !!conversationId && !!currentEmployee?.id
+  });
+
+  const markAsReadMutation = useMutation({
+    mutationFn: async (messageId) => {
+      // Check if already read
+      const alreadyRead = messageReads.some(mr => 
+        mr.message_id === messageId && mr.employee_id === currentEmployee.id
+      );
+      
+      if (!alreadyRead) {
+        return await base44.entities.MessageRead.create({
+          message_id: messageId,
+          employee_id: currentEmployee.id,
+          conversation_id: conversationId,
+          read_at: new Date().toISOString()
+        });
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['messageReads'] });
+      queryClient.invalidateQueries({ queryKey: ['myMessageReads'] });
+    }
+  });
+
+  // Mark unread messages as read
+  useEffect(() => {
+    if (!currentEmployee?.id || !sortedMessages.length) return;
+
+    const readMessageIds = new Set(messageReads.map(mr => mr.message_id));
+    const unreadMessages = sortedMessages.filter(m => 
+      m.sender_employee_id !== currentEmployee.id && 
+      !readMessageIds.has(m.id)
+    );
+
+    unreadMessages.forEach(msg => {
+      markAsReadMutation.mutate(msg.id);
+    });
+  }, [sortedMessages, currentEmployee?.id, messageReads]);
+
+  // Send message mutation
+  const sendMessageMutation = useMutation({
+    mutationFn: async (text) => {
+      const message = await base44.entities.Message.create({
+        conversation_id: conversationId,
+        sender_employee_id: currentEmployee.id,
+        text: text.trim()
+      });
+
+      // Update conversation last message
+      await base44.entities.Conversation.update(conversationId, {
+        last_message_text: text.trim().substring(0, 100),
+        last_message_at: new Date().toISOString()
+      });
+
+      return message;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['messages'] });
+      queryClient.invalidateQueries({ queryKey: ['myConversations'] });
+      setMessageText('');
+    },
+    onError: () => {
+      toast.error('Erreur lors de l\'envoi');
+    }
+  });
+
+  const handleSend = () => {
+    if (!messageText.trim()) return;
+    sendMessageMutation.mutate(messageText);
+  };
+
+  // Auto-scroll to bottom
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [sortedMessages]);
+
+  // Generate conversation title
+  const conversationTitle = useMemo(() => {
+    if (!conversation) return '';
+    if (conversation.title) return conversation.title;
+
+    if (conversation.type === 'privee') {
+      const otherIds = conversation.participant_employee_ids?.filter(id => id !== currentEmployee?.id) || [];
+      const others = employees.filter(emp => otherIds.includes(emp.id));
+      return others.map(emp => `${emp.first_name} ${emp.last_name}`).join(', ') || 'Conversation';
+    }
+
+    return conversation.type === 'entreprise' ? 'Entreprise' : 'Conversation';
+  }, [conversation, currentEmployee, employees]);
+
+  if (!conversationId || !conversation) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <p className="text-gray-600">Conversation introuvable</p>
+      </div>
+    );
+  }
+
+  if (!currentEmployee) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="w-16 h-16 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="h-screen flex flex-col bg-gray-50">
+      {/* Header */}
+      <div className="bg-white border-b border-gray-200 px-4 py-3 flex items-center gap-3">
+        <button
+          onClick={() => navigate(createPageUrl('Home'))}
+          className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+        >
+          <ArrowLeft className="w-5 h-5 text-gray-600" />
+        </button>
+
+        <div className={cn(
+          "w-10 h-10 rounded-full flex items-center justify-center",
+          conversation.type === 'privee' ? "bg-blue-100" : "bg-purple-100"
+        )}>
+          {conversation.type === 'privee' ? (
+            <User className="w-5 h-5 text-blue-600" />
+          ) : (
+            <Users className="w-5 h-5 text-purple-600" />
+          )}
+        </div>
+
+        <div className="flex-1 min-w-0">
+          <h1 className="font-semibold text-gray-900 truncate">{conversationTitle}</h1>
+          <p className="text-xs text-gray-500">
+            {conversation.participant_employee_ids?.length || 0} participant{(conversation.participant_employee_ids?.length || 0) > 1 ? 's' : ''}
+          </p>
+        </div>
+      </div>
+
+      {/* Messages */}
+      <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
+        {sortedMessages.length === 0 ? (
+          <div className="text-center text-gray-500 py-12">
+            <p className="text-sm">Aucun message</p>
+            <p className="text-xs mt-1">Envoyez le premier message</p>
+          </div>
+        ) : (
+          sortedMessages.map(msg => {
+            const sender = employees.find(emp => emp.id === msg.sender_employee_id);
+            const isMe = msg.sender_employee_id === currentEmployee.id;
+
+            return (
+              <div
+                key={msg.id}
+                className={cn(
+                  "flex gap-2",
+                  isMe ? "justify-end" : "justify-start"
+                )}
+              >
+                {!isMe && (
+                  <div className="w-8 h-8 rounded-full bg-gray-300 flex-shrink-0 flex items-center justify-center text-white text-xs font-semibold">
+                    {sender?.first_name?.charAt(0)}{sender?.last_name?.charAt(0)}
+                  </div>
+                )}
+
+                <div className={cn(
+                  "max-w-[70%] rounded-2xl px-4 py-2",
+                  isMe 
+                    ? "bg-blue-600 text-white rounded-br-sm" 
+                    : "bg-white text-gray-900 rounded-bl-sm shadow-sm"
+                )}>
+                  {!isMe && (
+                    <p className="text-xs font-semibold mb-1 opacity-70">
+                      {sender?.first_name} {sender?.last_name}
+                    </p>
+                  )}
+                  <p className="text-sm whitespace-pre-wrap break-words">{msg.text}</p>
+                  <p className={cn(
+                    "text-[10px] mt-1",
+                    isMe ? "text-blue-100" : "text-gray-500"
+                  )}>
+                    {new Date(msg.created_date).toLocaleTimeString('fr-FR', {
+                      hour: '2-digit',
+                      minute: '2-digit'
+                    })}
+                  </p>
+                </div>
+
+                {isMe && (
+                  <div className="w-8 h-8 rounded-full bg-blue-600 flex-shrink-0 flex items-center justify-center text-white text-xs font-semibold">
+                    {currentEmployee.first_name?.charAt(0)}{currentEmployee.last_name?.charAt(0)}
+                  </div>
+                )}
+              </div>
+            );
+          })
+        )}
+        <div ref={messagesEndRef} />
+      </div>
+
+      {/* Input */}
+      <div className="bg-white border-t border-gray-200 px-4 py-3">
+        <div className="flex gap-2 items-end">
+          <Textarea
+            placeholder="Écrivez votre message..."
+            value={messageText}
+            onChange={(e) => setMessageText(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                handleSend();
+              }
+            }}
+            className="flex-1 min-h-[44px] max-h-32 resize-none"
+            rows={1}
+          />
+          <Button
+            onClick={handleSend}
+            disabled={!messageText.trim() || sendMessageMutation.isPending}
+            className="bg-blue-600 hover:bg-blue-700 h-11 px-4"
+          >
+            <Send className="w-4 h-4" />
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
