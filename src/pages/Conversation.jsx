@@ -21,6 +21,10 @@ export default function Conversation() {
   const messagesEndRef = useRef(null);
   const messageRefs = useRef({});
   const [messageText, setMessageText] = useState('');
+  const [showMentions, setShowMentions] = useState(false);
+  const [mentionSearch, setMentionSearch] = useState('');
+  const [mentionPosition, setMentionPosition] = useState(0);
+  const textareaRef = useRef(null);
 
   // Get conversation ID from URL
   const urlParams = new URLSearchParams(window.location.search);
@@ -73,6 +77,42 @@ export default function Conversation() {
       .sort((a, b) => new Date(b.pinned_at) - new Date(a.pinned_at));
   }, [messages]);
 
+  // Get message mentions
+  const { data: messageMentions = [] } = useQuery({
+    queryKey: ['messageMentions', conversationId],
+    queryFn: () => base44.entities.MessageMention.filter({ conversation_id: conversationId }),
+    enabled: !!conversationId
+  });
+
+  // Mentionable employees
+  const mentionableEmployees = useMemo(() => {
+    if (!conversation || !employees.length) return [];
+    
+    // For private conversations: only other participant
+    if (conversation.type === 'privee') {
+      const otherIds = conversation.participant_employee_ids?.filter(id => id !== currentEmployee?.id) || [];
+      return employees.filter(emp => otherIds.includes(emp.id));
+    }
+    
+    // For team/entreprise: all participants except self
+    const participantIds = conversation.participant_employee_ids || [];
+    return employees.filter(emp => 
+      emp.id !== currentEmployee?.id && 
+      participantIds.includes(emp.id) &&
+      emp.is_active !== false
+    );
+  }, [conversation, employees, currentEmployee]);
+
+  // Filter mentionable employees by search
+  const filteredMentionableEmployees = useMemo(() => {
+    if (!mentionSearch) return mentionableEmployees;
+    const search = mentionSearch.toLowerCase();
+    return mentionableEmployees.filter(emp =>
+      emp.first_name?.toLowerCase().includes(search) ||
+      emp.last_name?.toLowerCase().includes(search)
+    );
+  }, [mentionableEmployees, mentionSearch]);
+
   // Mark messages as read
   const { data: messageReads = [] } = useQuery({
     queryKey: ['messageReads', conversationId],
@@ -121,12 +161,22 @@ export default function Conversation() {
 
   // Send message mutation
   const sendMessageMutation = useMutation({
-    mutationFn: async (text) => {
+    mutationFn: async ({ text, mentions }) => {
       const message = await base44.entities.Message.create({
         conversation_id: conversationId,
         sender_employee_id: currentEmployee.id,
         text: text.trim()
       });
+
+      // Create mentions
+      if (mentions.length > 0) {
+        const mentionRecords = mentions.map(empId => ({
+          message_id: message.id,
+          mentioned_employee_id: empId,
+          conversation_id: conversationId
+        }));
+        await base44.entities.MessageMention.bulkCreate(mentionRecords);
+      }
 
       // Update conversation last message
       await base44.entities.Conversation.update(conversationId, {
@@ -139,6 +189,7 @@ export default function Conversation() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['messages'] });
       queryClient.invalidateQueries({ queryKey: ['myConversations'] });
+      queryClient.invalidateQueries({ queryKey: ['messageMentions'] });
       setMessageText('');
     },
     onError: () => {
@@ -192,7 +243,62 @@ export default function Conversation() {
 
   const handleSend = () => {
     if (!messageText.trim()) return;
-    sendMessageMutation.mutate(messageText);
+    
+    // Extract mentions from text
+    const mentions = [];
+    const regex = /@(\w+)/g;
+    let match;
+    while ((match = regex.exec(messageText)) !== null) {
+      const name = match[1];
+      const emp = mentionableEmployees.find(e => 
+        e.first_name?.toLowerCase() === name.toLowerCase()
+      );
+      if (emp && !mentions.includes(emp.id)) {
+        mentions.push(emp.id);
+      }
+    }
+    
+    sendMessageMutation.mutate({ text: messageText, mentions });
+  };
+
+  const handleTextChange = (e) => {
+    const text = e.target.value;
+    setMessageText(text);
+    
+    // Detect @ for mentions
+    const cursorPosition = e.target.selectionStart;
+    const textBeforeCursor = text.slice(0, cursorPosition);
+    const lastAtIndex = textBeforeCursor.lastIndexOf('@');
+    
+    if (lastAtIndex !== -1) {
+      const textAfterAt = textBeforeCursor.slice(lastAtIndex + 1);
+      if (!textAfterAt.includes(' ') && textAfterAt.length < 20) {
+        setMentionSearch(textAfterAt);
+        setMentionPosition(lastAtIndex);
+        setShowMentions(true);
+        return;
+      }
+    }
+    
+    setShowMentions(false);
+  };
+
+  const insertMention = (employee) => {
+    const beforeMention = messageText.slice(0, mentionPosition);
+    const afterMention = messageText.slice(mentionPosition);
+    const afterAt = afterMention.slice(1);
+    const nextSpace = afterAt.indexOf(' ');
+    const textAfterMention = nextSpace === -1 ? '' : afterAt.slice(nextSpace);
+    
+    const newText = `${beforeMention}@${employee.first_name} ${textAfterMention}`;
+    setMessageText(newText);
+    setShowMentions(false);
+    setMentionSearch('');
+    
+    // Focus back on textarea
+    setTimeout(() => {
+      textareaRef.current?.focus();
+    }, 0);
   };
 
   // Auto-scroll to bottom
@@ -363,6 +469,11 @@ export default function Conversation() {
               );
             }
 
+            // Check if current user is mentioned
+            const isMentioned = messageMentions.some(m => 
+              m.message_id === msg.id && m.mentioned_employee_id === currentEmployee.id
+            );
+
             return (
               <div
                 key={msg.id}
@@ -383,9 +494,16 @@ export default function Conversation() {
                     "max-w-[70%] rounded-2xl px-4 py-2 relative",
                     isMe 
                       ? "bg-blue-600 text-white rounded-br-sm" 
-                      : "bg-white text-gray-900 rounded-bl-sm shadow-sm",
+                      : isMentioned
+                        ? "bg-blue-50 text-gray-900 rounded-bl-sm shadow-sm ring-2 ring-blue-200"
+                        : "bg-white text-gray-900 rounded-bl-sm shadow-sm",
                     msg.is_pinned && "ring-2 ring-yellow-400"
                   )}>
+                    {isMentioned && !isMe && (
+                      <div className="absolute -top-2 -right-2 bg-blue-600 text-white text-[10px] font-bold w-5 h-5 rounded-full flex items-center justify-center">
+                        @
+                      </div>
+                    )}
                     {msg.is_pinned && (
                       <Pin className={cn("w-3 h-3 absolute -top-1 -right-1", isMe ? "text-yellow-300" : "text-yellow-600")} />
                     )}
@@ -453,16 +571,43 @@ export default function Conversation() {
       </div>
 
       {/* Input */}
-      <div className="bg-white border-t border-gray-200 px-4 py-3">
+      <div className="bg-white border-t border-gray-200 px-4 py-3 relative">
+        {/* Mentions dropdown */}
+        {showMentions && filteredMentionableEmployees.length > 0 && (
+          <div className="absolute bottom-full left-4 right-4 mb-2 bg-white border border-gray-200 rounded-lg shadow-lg max-h-48 overflow-y-auto">
+            {filteredMentionableEmployees.map(emp => (
+              <button
+                key={emp.id}
+                onClick={() => insertMention(emp)}
+                className="w-full px-4 py-2 hover:bg-gray-50 text-left flex items-center gap-2"
+              >
+                <div className="w-8 h-8 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center text-xs font-semibold">
+                  {emp.first_name?.charAt(0)}{emp.last_name?.charAt(0)}
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-gray-900">
+                    {emp.first_name} {emp.last_name}
+                  </p>
+                  <p className="text-xs text-gray-500">{emp.position || emp.email}</p>
+                </div>
+              </button>
+            ))}
+          </div>
+        )}
+
         <div className="flex gap-2 items-end">
           <Textarea
-            placeholder="Écrivez votre message..."
+            ref={textareaRef}
+            placeholder="Écrivez votre message... (@ pour mentionner)"
             value={messageText}
-            onChange={(e) => setMessageText(e.target.value)}
+            onChange={handleTextChange}
             onKeyDown={(e) => {
-              if (e.key === 'Enter' && !e.shiftKey) {
+              if (e.key === 'Enter' && !e.shiftKey && !showMentions) {
                 e.preventDefault();
                 handleSend();
+              }
+              if (e.key === 'Escape') {
+                setShowMentions(false);
               }
             }}
             className="flex-1 min-h-[44px] max-h-32 resize-none"

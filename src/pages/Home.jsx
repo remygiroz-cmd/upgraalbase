@@ -13,6 +13,7 @@ export default function Home() {
   const [showNewConversation, setShowNewConversation] = useState(false);
   const [initializingConversations, setInitializingConversations] = useState(false);
   const [showArchived, setShowArchived] = useState(false);
+  const [filterMode, setFilterMode] = useState('all'); // 'all' | 'mentions'
   const queryClient = useQueryClient();
 
   // Get current user
@@ -106,6 +107,15 @@ export default function Home() {
   const { data: messageReads = [] } = useQuery({
     queryKey: ['myMessageReads', currentEmployee?.id],
     queryFn: () => base44.entities.MessageRead.filter({ employee_id: currentEmployee.id }),
+    enabled: !!currentEmployee?.id,
+    staleTime: 0,
+    refetchOnMount: 'always'
+  });
+
+  // Get mentions for current user
+  const { data: myMentions = [] } = useQuery({
+    queryKey: ['myMentions', currentEmployee?.id],
+    queryFn: () => base44.entities.MessageMention.filter({ mentioned_employee_id: currentEmployee.id }),
     enabled: !!currentEmployee?.id,
     staleTime: 0,
     refetchOnMount: 'always'
