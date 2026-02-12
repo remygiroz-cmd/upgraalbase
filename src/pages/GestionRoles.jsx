@@ -134,7 +134,18 @@ export default function GestionRoles() {
         })}
       </div>
 
-
+      {/* Save Button */}
+      {hasChanges && (
+       <div className="fixed bottom-6 right-6 z-40">
+         <Button
+           onClick={handleSaveAll}
+           className="bg-orange-600 hover:bg-orange-700 shadow-lg min-h-[48px] px-6"
+         >
+           <Save className="w-4 h-4 mr-2" />
+           Enregistrer les paramètres
+         </Button>
+       </div>
+      )}
 
       <ConfirmDialog
         open={!!confirmDelete}
