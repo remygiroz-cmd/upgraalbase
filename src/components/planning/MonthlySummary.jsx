@@ -44,7 +44,8 @@ export default function MonthlySummary({
   cpPeriods = [],
   monthlyRecap = null,
   onRecapUpdate,
-  currentUser
+  currentUser,
+  weeklyRecaps = [] // NOUVEAU: pour utiliser les overrides du BASE hebdomadaire
 }) {
   const [showEditDialog, setShowEditDialog] = useState(false);
   const queryClient = useQueryClient();
