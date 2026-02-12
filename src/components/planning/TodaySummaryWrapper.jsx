@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import TodaySummary from './TodaySummary';
@@ -13,27 +13,29 @@ export default function TodaySummaryWrapper({ currentEmployee }) {
   const { data: shifts = [], refetch: refetchShifts } = useQuery({
     queryKey: ['todayShifts', todayStr],
     queryFn: () => base44.entities.Shift.filter({ date: todayStr }),
-    staleTime: 5 * 60 * 1000 // 5 minutes
+    staleTime: 5 * 60 * 1000,
+    refetchInterval: 5 * 60 * 1000 // Auto-refresh every 5 minutes
   });
 
   // Fetch non-shift events for today
   const { data: nonShiftEvents = [], refetch: refetchEvents } = useQuery({
     queryKey: ['todayNonShifts', todayStr],
     queryFn: () => base44.entities.NonShiftEvent.filter({ date: todayStr }),
-    staleTime: 5 * 60 * 1000
+    staleTime: 5 * 60 * 1000,
+    refetchInterval: 5 * 60 * 1000
   });
 
-  // Fetch all employees
-  const { data: employees = [] } = useQuery({
+  // Fetch all employees (active only for today's display)
+  const { data: allEmployees = [] } = useQuery({
     queryKey: ['allEmployees'],
     queryFn: () => base44.entities.Employee.list(),
     staleTime: 10 * 60 * 1000
   });
 
-  // Fetch positions
-  const { data: positions = [] } = useQuery({
-    queryKey: ['positions'],
-    queryFn: () => base44.entities.Position.list(),
+  // Fetch teams for ordering
+  const { data: allTeams = [] } = useQuery({
+    queryKey: ['teams'],
+    queryFn: () => base44.entities.Team.filter({ is_active: true }),
     staleTime: 10 * 60 * 1000
   });
 
@@ -43,6 +45,33 @@ export default function TodaySummaryWrapper({ currentEmployee }) {
     queryFn: () => base44.entities.NonShiftType.list(),
     staleTime: 10 * 60 * 1000
   });
+
+  // Filter and sort employees EXACTLY like Planning does
+  const employees = useMemo(() => {
+    // Only show employees who have shifts today OR are active
+    const activeEmployees = allEmployees.filter(emp => {
+      // Active employees
+      if (emp.is_active === true) return true;
+      
+      // Inactive employees with shifts today
+      const hasShiftsToday = shifts.some(s => s.employee_id === emp.id);
+      return hasShiftsToday;
+    });
+
+    // Sort by team order then by name (EXACTLY like Planning)
+    return [...activeEmployees].sort((a, b) => {
+      const teamA = allTeams.find(t => t.id === a.team_id);
+      const teamB = allTeams.find(t => t.id === b.team_id);
+      
+      const orderA = teamA?.order ?? 999;
+      const orderB = teamB?.order ?? 999;
+      
+      if (orderA !== orderB) return orderA - orderB;
+      
+      // Same team, sort by first name
+      return (a.first_name || '').localeCompare(b.first_name || '');
+    });
+  }, [allEmployees, allTeams, shifts]);
 
   const handleRefresh = () => {
     refetchShifts();
@@ -76,7 +105,7 @@ export default function TodaySummaryWrapper({ currentEmployee }) {
         nonShiftEvents={nonShiftEvents}
         nonShiftTypes={nonShiftTypes}
         employees={employees}
-        positions={positions}
+        positions={[]}
       />
     </div>
   );
