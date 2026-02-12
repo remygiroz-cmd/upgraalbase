@@ -2,7 +2,8 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { Plus, MessageCircle, Bell, RefreshCw, AtSign, Megaphone, Users, Circle, ArrowRight, ArchiveRestore } from 'lucide-react';
-import TodaySummaryWrapper from '@/components/planning/TodaySummaryWrapper';
+import TodaySummary from '@/components/planning/TodaySummary';
+import { formatLocalDate } from '@/components/planning/dateUtils';
 import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
@@ -65,6 +66,72 @@ export default function Home() {
     enabled: !!currentEmployee,
     staleTime: 60 * 1000
   });
+
+  // Today's date for TodaySummary (SAME as Planning)
+  const today = new Date();
+  const todayStr = formatLocalDate(today);
+
+  // Fetch shifts for today (SAME as Planning)
+  const { data: todayShifts = [] } = useQuery({
+    queryKey: ['todayShifts', todayStr],
+    queryFn: () => base44.entities.Shift.filter({ date: todayStr }),
+    enabled: !!currentEmployee,
+    staleTime: 5 * 60 * 1000,
+    refetchInterval: 5 * 60 * 1000
+  });
+
+  // Fetch non-shift events for today (SAME as Planning)
+  const { data: todayNonShiftEvents = [] } = useQuery({
+    queryKey: ['todayNonShifts', todayStr],
+    queryFn: () => base44.entities.NonShiftEvent.filter({ date: todayStr }),
+    enabled: !!currentEmployee,
+    staleTime: 5 * 60 * 1000,
+    refetchInterval: 5 * 60 * 1000
+  });
+
+  // Fetch teams (SAME as Planning)
+  const { data: allTeams = [] } = useQuery({
+    queryKey: ['teams'],
+    queryFn: () => base44.entities.Team.filter({ is_active: true }),
+    enabled: !!currentEmployee,
+    staleTime: 10 * 60 * 1000
+  });
+
+  // Fetch non-shift types (SAME as Planning)
+  const { data: nonShiftTypes = [] } = useQuery({
+    queryKey: ['nonShiftTypes'],
+    queryFn: async () => {
+      const types = await base44.entities.NonShiftType.filter({ is_active: true });
+      return types.sort((a, b) => (a.order || 0) - (b.order || 0));
+    },
+    enabled: !!currentEmployee,
+    staleTime: 10 * 60 * 1000
+  });
+
+  // Filter and sort employees EXACTLY like Planning does
+  const sortedEmployeesForToday = useMemo(() => {
+    if (!employees.length || !allTeams.length) return [];
+
+    // Only show employees who have shifts today OR are active
+    const activeEmployees = employees.filter(emp => {
+      if (emp.is_active === true) return true;
+      const hasShiftsToday = todayShifts.some(s => s.employee_id === emp.id);
+      return hasShiftsToday;
+    });
+
+    // Sort by team order then by first name (EXACTLY like Planning)
+    return [...activeEmployees].sort((a, b) => {
+      const teamA = allTeams.find(t => t.id === a.team_id);
+      const teamB = allTeams.find(t => t.id === b.team_id);
+      
+      const orderA = teamA?.order ?? 999;
+      const orderB = teamB?.order ?? 999;
+      
+      if (orderA !== orderB) return orderA - orderB;
+      
+      return (a.first_name || '').localeCompare(b.first_name || '');
+    });
+  }, [employees, allTeams, todayShifts]);
 
   // Get conversation members for current employee
   const { data: myConversationMembers = [] } = useQuery({
@@ -413,8 +480,16 @@ export default function Home() {
       </div>
 
       <div className="max-w-4xl mx-auto px-4 py-6 space-y-6">
-        {/* Today's Staff Summary */}
-        <TodaySummaryWrapper currentEmployee={currentEmployee} />
+        {/* Today's Staff Summary - SAME as Planning */}
+        {currentEmployee && (
+          <TodaySummary
+            shifts={todayShifts}
+            nonShiftEvents={todayNonShiftEvents}
+            nonShiftTypes={nonShiftTypes}
+            employees={sortedEmployeesForToday}
+            positions={[]}
+          />
+        )}
 
         {/* Manager/Admin Quick Actions */}
         {isManagerOrAdmin && (
