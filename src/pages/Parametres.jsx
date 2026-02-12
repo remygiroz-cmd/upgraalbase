@@ -405,17 +405,19 @@ export default function Parametres() {
           )}
         </Tabs>
 
-        {/* Save Button */}
-        <div className="sticky bottom-6 mt-6 flex justify-center sm:justify-end">
-          <Button
-            onClick={handleSavePreferences}
-            className="bg-orange-600 hover:bg-orange-700 shadow-lg w-full sm:w-auto min-h-[48px]"
-            disabled={updateUserMutation.isPending}>
+        {/* Save Button - Only for user preference tabs */}
+        {(['profile', 'notifications', 'interface', 'session', 'establishment'].includes(document.querySelector('[data-state="active"]')?.getAttribute('value') || 'profile')) && (
+          <div className="sticky bottom-6 mt-6 flex justify-center sm:justify-end">
+            <Button
+              onClick={handleSavePreferences}
+              className="bg-orange-600 hover:bg-orange-700 shadow-lg w-full sm:w-auto min-h-[48px]"
+              disabled={updateUserMutation.isPending}>
 
-            <Save className="w-4 h-4 mr-2" />
-            Enregistrer les paramètres
-          </Button>
-        </div>
+              <Save className="w-4 h-4 mr-2" />
+              Enregistrer les paramètres
+            </Button>
+          </div>
+        )}
       </div>
     </div>);
 
