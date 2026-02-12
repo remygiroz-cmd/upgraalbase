@@ -1270,6 +1270,13 @@ export default function Planning() {
                                    <div 
                                      onClick={(e) => {
                                        e.stopPropagation();
+                                       if (!canModifyPlanning) {
+                                         toast.error('Lecture seule — vous n\'avez pas la permission de modifier le planning', {
+                                           duration: 3000,
+                                           icon: '🔒'
+                                         });
+                                         return;
+                                       }
                                        setModalState({
                                          isOpen: true,
                                          actionType: 'DELETE_CP',
@@ -1277,8 +1284,13 @@ export default function Planning() {
                                        });
                                        setSelectedCPPeriod(cpPeriod);
                                      }}
-                                     className="absolute -top-1 -right-1 z-10 bg-green-600 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full shadow-md cursor-pointer hover:bg-red-600 transition-colors"
-                                     title="Cliquer pour supprimer"
+                                     className={cn(
+                                       "absolute -top-1 -right-1 z-10 text-[9px] font-bold px-1.5 py-0.5 rounded-full shadow-md transition-colors",
+                                       canModifyPlanning
+                                         ? "bg-green-600 text-white cursor-pointer hover:bg-red-600"
+                                         : "bg-gray-400 text-gray-200 cursor-not-allowed opacity-60"
+                                     )}
+                                     title={canModifyPlanning ? "Cliquer pour supprimer" : "Lecture seule"}
                                    >
                                      🟢 {cpPeriod.cp_days_manual || cpPeriod.cp_days_auto} CP
                                    </div>
