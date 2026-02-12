@@ -270,8 +270,8 @@ const ShiftCard = React.memo(function ShiftCard({
                 onKeyDown={handleKeyDown}
                 onBlur={handleBlur}
                 onClick={(e) => e.stopPropagation()}
-                disabled={false}
-                className="w-16 px-1 py-0.5 text-[11px] font-bold border rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
+                disabled={disabled}
+                className="w-16 px-1 py-0.5 text-[11px] font-bold border rounded focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
                 style={{ color: colors.text }}
               />
             ) : (
