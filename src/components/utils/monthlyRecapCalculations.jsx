@@ -604,7 +604,7 @@ Total overtime: ${result.totalOvertimeHours.toFixed(2)}h
  * Calculate overtime using monthly smoothing method
  * CRITICAL: Base hours calculated based on contractual days visible in the month for PARTIAL weeks
  */
-function calculateMonthlyOvertime(result, employee, shifts, nonShiftEvents, nonShiftTypes, year, month, contractHoursWeekly) {
+function calculateMonthlyOvertime(result, employee, shifts, nonShiftEvents, nonShiftTypes, year, month, contractHoursWeekly, weeklyRecaps = []) {
   const isPartTime = employee.work_time_type === 'part_time';
   
   // Calculate daily contract hours
