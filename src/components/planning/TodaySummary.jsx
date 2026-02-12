@@ -1,7 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { Users, ChevronDown, ChevronUp } from 'lucide-react';
+import { Users, ChevronDown, ChevronUp, AlertTriangle, Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { formatLocalDate } from '@/components/planning/dateUtils';
+import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { base44 } from '@/api/base44Client';
+import { toast } from 'sonner';
 
 export default function TodaySummary({ 
   shifts = [], 
@@ -15,6 +19,8 @@ export default function TodaySummary({
     const saved = localStorage.getItem('todaySummary_expanded');
     return saved !== null ? saved === 'true' : true;
   });
+  const [showDiagnostic, setShowDiagnostic] = useState(false);
+  const [deleting, setDeleting] = useState(null);
 
   useEffect(() => {
     localStorage.setItem('todaySummary_expanded', expanded);
@@ -90,6 +96,27 @@ export default function TodaySummary({
     };
   }).filter(a => a.employee);
   
+  const handleDeleteShift = async (shiftId) => {
+    if (!window.confirm('Supprimer ce shift fantôme ?')) return;
+    
+    setDeleting(shiftId);
+    try {
+      await base44.entities.Shift.delete(shiftId);
+      toast.success('Shift supprimé');
+      window.location.reload();
+    } catch (error) {
+      toast.error('Erreur: ' + error.message);
+    } finally {
+      setDeleting(null);
+    }
+  };
+
+  // Detect phantom shifts (shifts for employees not in the list or without real data)
+  const phantomShifts = todayShifts.filter(shift => {
+    const employee = employees.find(e => e.id === shift.employee_id);
+    return !employee; // Employee not found = phantom
+  });
+
   if (totalPresent === 0 && absences.length === 0) {
     return (
       <div className="bg-blue-50 border-2 border-blue-200 rounded-lg p-3 mb-2">
@@ -102,25 +129,45 @@ export default function TodaySummary({
   }
   
   return (
-    <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border-2 border-blue-200 rounded-lg overflow-hidden">
-      {/* Header - clickable */}
-      <button
-        onClick={() => setExpanded(!expanded)}
-        className="w-full p-3 flex items-center justify-between hover:bg-blue-100/50 transition-colors"
-      >
-        <div className="flex items-center gap-2">
-          <Users className="w-4 h-4 text-blue-600" />
-          <span className="font-bold text-sm text-blue-900">
-            Aujourd'hui — Effectif : {totalPresent}
-          </span>
+    <>
+      <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border-2 border-blue-200 rounded-lg overflow-hidden">
+        {/* Header - clickable */}
+        <div className="w-full p-3 flex items-center justify-between">
+          <button
+            onClick={() => setExpanded(!expanded)}
+            className="flex items-center gap-2 hover:opacity-70 transition-opacity flex-1"
+          >
+            <Users className="w-4 h-4 text-blue-600" />
+            <span className="font-bold text-sm text-blue-900">
+              Aujourd'hui — Effectif : {totalPresent}
+            </span>
+            {phantomShifts.length > 0 && (
+              <span className="ml-2 bg-red-500 text-white text-xs font-bold px-2 py-0.5 rounded-full">
+                {phantomShifts.length} fantôme{phantomShifts.length > 1 ? 's' : ''}
+              </span>
+            )}
+          </button>
+          
+          <div className="flex items-center gap-2">
+            {todayShifts.length > 0 && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowDiagnostic(true)}
+                className="text-xs h-7"
+                title="Diagnostic des shifts"
+              >
+                <AlertTriangle className="w-3 h-3 mr-1" />
+                Debug
+              </Button>
+            )}
+            {expanded ? (
+              <ChevronUp className="w-4 h-4 text-blue-600" />
+            ) : (
+              <ChevronDown className="w-4 h-4 text-blue-600" />
+            )}
+          </div>
         </div>
-        
-        {expanded ? (
-          <ChevronUp className="w-4 h-4 text-blue-600" />
-        ) : (
-          <ChevronDown className="w-4 h-4 text-blue-600" />
-        )}
-      </button>
       
       {/* Content */}
       {expanded && (
@@ -178,6 +225,107 @@ export default function TodaySummary({
           )}
         </div>
       )}
-    </div>
+      </div>
+
+      {/* Diagnostic Modal */}
+      <Dialog open={showDiagnostic} onOpenChange={setShowDiagnostic}>
+        <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="w-5 h-5 text-orange-600" />
+              Diagnostic des shifts du jour
+            </DialogTitle>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <div className="bg-gray-50 border border-gray-200 rounded-lg p-3">
+              <p className="text-sm text-gray-700">
+                <strong>Total shifts aujourd'hui :</strong> {todayShifts.length}
+              </p>
+              <p className="text-sm text-gray-700">
+                <strong>Employés uniques :</strong> {employeeShiftsMap.size}
+              </p>
+              {phantomShifts.length > 0 && (
+                <p className="text-sm text-red-600 font-semibold mt-2">
+                  ⚠️ {phantomShifts.length} shift(s) fantôme(s) détecté(s)
+                </p>
+              )}
+            </div>
+
+            {phantomShifts.length > 0 && (
+              <div className="bg-red-50 border-2 border-red-300 rounded-lg p-4">
+                <h3 className="font-bold text-red-900 mb-3 flex items-center gap-2">
+                  <AlertTriangle className="w-4 h-4" />
+                  Shifts fantômes (employé introuvable)
+                </h3>
+                <div className="space-y-2">
+                  {phantomShifts.map(shift => (
+                    <div key={shift.id} className="bg-white border border-red-200 rounded p-3 flex items-start justify-between">
+                      <div className="flex-1">
+                        <p className="font-mono text-xs text-gray-500">ID: {shift.id}</p>
+                        <p className="text-sm"><strong>Employee ID:</strong> {shift.employee_id || 'NULL'}</p>
+                        <p className="text-sm"><strong>Employee Name:</strong> {shift.employee_name || 'NULL'}</p>
+                        <p className="text-sm"><strong>Horaire:</strong> {shift.start_time} - {shift.end_time}</p>
+                        <p className="text-sm"><strong>Position:</strong> {shift.position || 'N/A'}</p>
+                        <p className="text-sm text-gray-500"><strong>Créé le:</strong> {new Date(shift.created_date).toLocaleString('fr-FR')}</p>
+                      </div>
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        onClick={() => handleDeleteShift(shift.id)}
+                        disabled={deleting === shift.id}
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <div>
+              <h3 className="font-bold text-gray-900 mb-3">Tous les shifts du jour</h3>
+              <div className="space-y-2 max-h-96 overflow-y-auto">
+                {todayShifts.map(shift => {
+                  const employee = employees.find(e => e.id === shift.employee_id);
+                  const isPhantom = !employee;
+                  
+                  return (
+                    <div 
+                      key={shift.id} 
+                      className={cn(
+                        "border rounded p-3 text-sm",
+                        isPhantom ? "bg-red-50 border-red-300" : "bg-white border-gray-200"
+                      )}
+                    >
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                          <p className={cn("font-semibold", isPhantom && "text-red-700")}>
+                            {employee ? `${employee.first_name} ${employee.last_name}` : '❌ EMPLOYÉ INTROUVABLE'}
+                          </p>
+                          <p className="text-gray-600">{shift.start_time} - {shift.end_time}</p>
+                          <p className="text-gray-500 text-xs">Position: {shift.position || 'N/A'}</p>
+                          <p className="text-gray-400 text-xs font-mono">ID: {shift.id}</p>
+                        </div>
+                        {isPhantom && (
+                          <Button
+                            variant="destructive"
+                            size="sm"
+                            onClick={() => handleDeleteShift(shift.id)}
+                            disabled={deleting === shift.id}
+                          >
+                            <Trash2 className="w-3 h-3" />
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }
