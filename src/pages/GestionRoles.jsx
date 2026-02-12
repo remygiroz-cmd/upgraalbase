@@ -208,7 +208,11 @@ function RoleFormModal({ open, onClose, role }) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['roles'] });
+      toast.success(role?.id ? 'Rôle mis à jour avec succès' : 'Rôle créé avec succès');
       onClose();
+    },
+    onError: (error) => {
+      toast.error('Erreur: ' + (error?.message || 'Impossible de sauvegarder'));
     }
   });
 
