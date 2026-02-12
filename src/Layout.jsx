@@ -20,7 +20,8 @@ import {
         FileText,
         File,
         Receipt,
-        Calendar
+        Calendar,
+        Megaphone
       } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import UserAccessCheck from '@/components/UserAccessCheck';
@@ -80,6 +81,11 @@ export default function Layout({ children, currentPageName }) {
     { name: 'GestionPostes', label: 'Postes & Templates RH', icon: File, module: 'equipe' },
     { name: 'CoffreFactures', label: 'Coffre à factures', icon: Receipt, module: 'equipe' },
   ].filter(link => hasPermission(link.module));
+
+  // Annonces urgentes link (admin/manager only)
+  const urgentAnnouncementsLink = (currentUser?.role === 'admin' || currentEmployee?.permission_level === 'manager') 
+    ? [{ name: 'AnnoncesUrgentes', label: 'Annonces urgentes', icon: Megaphone, module: 'messages_urgents' }]
+    : [];
 
   const caisseLinks = [
     { name: 'Pertes', label: 'Invendus & Pertes', icon: PackageMinus, module: 'pertes' },
@@ -287,6 +293,15 @@ export default function Layout({ children, currentPageName }) {
               </h2>
               <div className="space-y-0.5">
                 {gestionLinks.map((link) => (
+                  <NavLink
+                    key={link.name}
+                    to={link.name}
+                    icon={link.icon}
+                    label={link.label}
+                    active={currentPageName === link.name}
+                  />
+                ))}
+                {urgentAnnouncementsLink.map((link) => (
                   <NavLink
                     key={link.name}
                     to={link.name}
