@@ -90,32 +90,15 @@ export default function CreateUrgentAnnouncementModal({
         announcementData.audience_employee_ids = data.audienceEmployeeIds;
       }
 
-      if (process.env.NODE_ENV === 'development') {
-        console.log('[UrgentAnnouncements] Creating announcement:', {
-          ...announcementData,
-          duration_hours: form.quickDuration,
-          starts_at_readable: now.toLocaleString('fr-FR'),
-          ends_at_readable: endsAt.toLocaleString('fr-FR')
-        });
-      }
-
-      const created = await base44.entities.UrgentAnnouncement.create(announcementData);
-      
-      if (process.env.NODE_ENV === 'development') {
-        console.log('[UrgentAnnouncements] Announcement created:', created);
-      }
-      
-      return created;
+      return await base44.entities.UrgentAnnouncement.create(announcementData);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['urgentAnnouncements'] });
-      queryClient.invalidateQueries({ queryKey: ['debugAllUrgentAnnouncements'] });
       toast.success('Annonce créée avec succès');
       resetForm();
       onOpenChange(false);
     },
-    onError: (error) => {
-      console.error('[UrgentAnnouncements] Error creating announcement:', error);
+    onError: () => {
       toast.error('Erreur lors de la création');
     }
   });

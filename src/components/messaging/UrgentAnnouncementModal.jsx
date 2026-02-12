@@ -40,40 +40,20 @@ export default function UrgentAnnouncementModal({
 
   const acknowledgeMutation = useMutation({
     mutationFn: async () => {
-      if (process.env.NODE_ENV === 'development') {
-        console.log('[UrgentAnnouncements] Creating ack:', {
-          announcement_id: announcement.id,
-          employee_id: currentEmployee.id
-        });
-      }
-      
-      const ack = await base44.entities.UrgentAnnouncementAck.create({
+      return await base44.entities.UrgentAnnouncementAck.create({
         announcement_id: announcement.id,
         employee_id: currentEmployee.id,
         acknowledged_at: new Date().toISOString(),
         acknowledged_by_user_id: currentEmployee.user_id
       });
-      
-      if (process.env.NODE_ENV === 'development') {
-        console.log('[UrgentAnnouncements] Ack created:', ack);
-      }
-      
-      return ack;
     },
     onSuccess: () => {
-      // Invalidate all relevant queries to force refresh
       queryClient.invalidateQueries({ queryKey: ['urgentAnnouncements'] });
       queryClient.invalidateQueries({ queryKey: ['urgentAnnouncementAcks'] });
-      
-      if (process.env.NODE_ENV === 'development') {
-        console.log('[UrgentAnnouncements] Queries invalidated, calling onAcknowledge');
-      }
-      
       onAcknowledge();
       toast.success('Annonce marquée comme lue');
     },
-    onError: (error) => {
-      console.error('[UrgentAnnouncements] Error creating ack:', error);
+    onError: () => {
       toast.error('Erreur lors de la validation');
     }
   });
