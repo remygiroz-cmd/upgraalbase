@@ -1,8 +1,9 @@
 import React from 'react';
 import { Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { toast } from 'sonner';
 
-const NonShiftCard = React.memo(function NonShiftCard({ nonShift, nonShiftType, onClick, onDelete }) {
+const NonShiftCard = React.memo(function NonShiftCard({ nonShift, nonShiftType, onClick, onDelete, disabled = false }) {
   if (!nonShiftType) return null;
 
   return (
