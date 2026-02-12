@@ -220,7 +220,7 @@ const ShiftCard = React.memo(function ShiftCard({
       onClick={onClick}
       className={cn(
         "relative rounded-lg border-2 p-2 transition-all group h-full flex flex-col justify-center",
-        disabled ? "cursor-not-allowed opacity-60" : "cursor-pointer hover:shadow-md",
+        disabled ? "cursor-not-allowed" : "cursor-pointer hover:shadow-md",
         shift.status === 'cancelled' && "opacity-50"
       )}
       style={{ 
