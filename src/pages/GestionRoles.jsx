@@ -87,53 +87,25 @@ export default function GestionRoles() {
       <PageHeader
         icon={Shield}
         title="Gestion des rôles"
-        subtitle="Définir les accès par module pour chaque rôle"
-        actions={
-          <Button
-            onClick={() => {
-              setEditingRole(null);
-              setShowModal(true);
-            }}
-            className="bg-orange-600 hover:bg-orange-700 min-h-[44px]"
-          >
-            <Plus className="w-4 h-4 mr-2" />
-            Nouveau rôle
-          </Button>
-        }
+        subtitle="Cliquez sur les permissions pour les modifier"
       />
 
       <div className="grid gap-3 sm:gap-4">
-        {roles.map((role) => (
-          <div
-            key={role.id}
-            className="bg-white rounded-lg sm:rounded-xl border-2 border-gray-200 p-3 sm:p-6"
-          >
-            <div className="flex flex-col sm:flex-row items-start justify-between gap-3 sm:gap-4 mb-3 sm:mb-4">
-              <div className="flex-1 min-w-0 w-full sm:w-auto">
-                <h3 className="text-base sm:text-lg font-bold text-gray-900 break-words">{role.name}</h3>
-                {role.description && (
-                  <p className="text-xs sm:text-sm text-gray-600 mt-1 break-words">{role.description}</p>
-                )}
-              </div>
-              <div className="flex items-center gap-1 w-full sm:w-auto justify-end">
-                <Button
-                  variant="outline"
-                  size="icon"
-                  onClick={() => handleDuplicate(role)}
-                  className="border-gray-300 hover:bg-gray-50 min-h-[44px] min-w-[44px]"
-                  title="Dupliquer"
-                >
-                  <Copy className="w-4 h-4" />
-                </Button>
-                <Button
-                  variant="outline"
-                  size="icon"
-                  onClick={() => handleEdit(role)}
-                  className="border-gray-300 hover:bg-gray-50 min-h-[44px] min-w-[44px]"
-                  title="Modifier"
-                >
-                  <Pencil className="w-4 h-4" />
-                </Button>
+        {roles.map((role) => {
+          const currentPerms = editingPermissions[role.id] || role.permissions || {};
+          
+          return (
+            <div
+              key={role.id}
+              className="bg-white rounded-lg sm:rounded-xl border-2 border-gray-200 p-3 sm:p-6"
+            >
+              <div className="flex flex-col sm:flex-row items-start justify-between gap-3 sm:gap-4 mb-3 sm:mb-4">
+                <div className="flex-1 min-w-0 w-full sm:w-auto">
+                  <h3 className="text-base sm:text-lg font-bold text-gray-900 break-words">{role.name}</h3>
+                  {role.description && (
+                    <p className="text-xs sm:text-sm text-gray-600 mt-1 break-words">{role.description}</p>
+                  )}
+                </div>
                 <Button
                   variant="outline"
                   size="icon"
@@ -144,36 +116,46 @@ export default function GestionRoles() {
                   <Trash2 className="w-4 h-4" />
                 </Button>
               </div>
-            </div>
 
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-1.5 sm:gap-2">
-              {MODULES.map((module) => (
-                <div
-                  key={module.key}
-                  className={cn(
-                    "text-[10px] sm:text-xs px-2 py-1.5 rounded-lg font-medium text-center break-words",
-                    role.permissions?.[module.key]
-                      ? module.special ? "bg-blue-100 text-blue-700" : "bg-green-100 text-green-700"
-                      : "bg-gray-100 text-gray-500"
-                  )}
-                  title={module.special ? "Permission spéciale pour modifier le planning" : ""}
-                >
-                  {module.label}
-                </div>
-              ))}
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-1.5 sm:gap-2">
+                {MODULES.map((module) => {
+                  const isEnabled = currentPerms[module.key] || false;
+                  
+                  return (
+                    <button
+                      key={module.key}
+                      onClick={() => togglePermission(role.id, module.key)}
+                      className={cn(
+                        "text-[10px] sm:text-xs px-2 py-1.5 rounded-lg font-medium text-center break-words transition-all cursor-pointer hover:opacity-80",
+                        isEnabled
+                          ? module.special ? "bg-blue-500 text-white" : "bg-green-500 text-white"
+                          : "bg-gray-300 text-gray-600"
+                      )}
+                      title={module.special ? "Permission spéciale pour modifier le planning" : ""}
+                    >
+                      {module.label}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
-      <RoleFormModal
-        open={showModal}
-        onClose={() => {
-          setShowModal(false);
-          setEditingRole(null);
-        }}
-        role={editingRole}
-      />
+      {/* Save Button */}
+      {hasChanges && (
+        <div className="fixed bottom-6 right-6 z-50">
+          <Button
+            onClick={handleSaveAll}
+            disabled={savePermissionsMutation.isPending}
+            className="bg-orange-600 hover:bg-orange-700 shadow-lg min-h-[48px] px-6"
+          >
+            <Save className="w-4 h-4 mr-2" />
+            Enregistrer les paramètres
+          </Button>
+        </div>
+      )}
 
       <ConfirmDialog
         open={!!confirmDelete}
