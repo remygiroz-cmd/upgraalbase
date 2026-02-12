@@ -1301,12 +1301,23 @@ export default function Planning() {
                                           positions={positions}
                                           onClick={(e) => {
                                             e.stopPropagation();
+                                            if (!canModifyPlanning) {
+                                              toast.error('Vous n\'avez pas la permission de modifier le planning');
+                                              return;
+                                            }
                                             handleCellClick(employee.id, dateStr, dayInfo);
                                           }}
-                                          onDelete={handleDeleteShift}
+                                          onDelete={(s) => {
+                                            if (!canModifyPlanning) {
+                                              toast.error('Vous n\'avez pas la permission de modifier le planning');
+                                              return;
+                                            }
+                                            handleDeleteShift(s);
+                                          }}
                                           hasRestWarning={warnings.hasRestWarning}
                                           hasOvertimeWarning={warnings.hasOvertimeWarning}
-                                          onSave={(id, data) => saveShiftMutation.mutate({ id, data, captureForUndo: true })}
+                                          onSave={canModifyPlanning ? (id, data) => saveShiftMutation.mutate({ id, data, captureForUndo: true }) : null}
+                                          disabled={!canModifyPlanning}
                                         />
                                       </div>
                                     );
