@@ -43,23 +43,9 @@ export default function GestionRoles() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['roles'] })
   });
 
-  const savePermissionsMutation = useMutation({
-    mutationFn: async ({ roleId, permissions }) => {
-      return base44.entities.Role.update(roleId, { permissions });
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['roles'] });
-      toast.success('Permissions mises à jour');
-      setEditingPermissions({});
-    },
-    onError: () => {
-      toast.error('Erreur lors de la sauvegarde');
-    }
-  });
-
-  const togglePermission = (roleId, permissionKey) => {
-    const key = `${roleId}_${permissionKey}`;
-    const currentPerms = editingPermissions[roleId] || roles.find(r => r.id === roleId)?.permissions || {};
+    const togglePermission = (roleId, permissionKey) => {
+    const role = roles.find(r => r.id === roleId);
+    const currentPerms = editingPermissions[roleId] || role?.permissions || {};
     
     setEditingPermissions(prev => ({
       ...prev,
@@ -70,12 +56,17 @@ export default function GestionRoles() {
     }));
   };
 
-  const handleSaveAll = () => {
-    Object.entries(editingPermissions).forEach(([roleId, permissions]) => {
-      if (Object.keys(permissions).length > 0) {
-        savePermissionsMutation.mutate({ roleId, permissions });
-      }
-    });
+  const handleSaveAll = async () => {
+    for (const [roleId, changedPerms] of Object.entries(editingPermissions)) {
+      const role = roles.find(r => r.id === roleId);
+      const fullPermissions = { ...role?.permissions || {}, ...changedPerms };
+      
+      await base44.entities.Role.update(roleId, { permissions: fullPermissions });
+    }
+    
+    queryClient.invalidateQueries({ queryKey: ['roles'] });
+    toast.success('Permissions mises à jour');
+    setEditingPermissions({});
   };
 
   const hasChanges = Object.keys(editingPermissions).length > 0;
