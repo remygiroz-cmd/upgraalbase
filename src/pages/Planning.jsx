@@ -569,7 +569,10 @@ export default function Planning() {
   // Handle cell click
   const handleCellClick = (employeeId, dateStr, dayInfo) => {
     if (!canModifyPlanning) {
-      toast.error('Vous n\'avez pas la permission de modifier le planning');
+      toast.error('Lecture seule — vous n\'avez pas la permission de modifier le planning', {
+        duration: 3000,
+        icon: '🔒'
+      });
       return;
     }
     
