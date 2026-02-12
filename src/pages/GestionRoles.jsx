@@ -10,6 +10,7 @@ import { Shield, Plus, Pencil, Trash2, Copy } from 'lucide-react';
 import PageHeader from '@/components/ui/PageHeader';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import ConfirmDialog from '@/components/ui/ConfirmDialog';
+import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 
 const MODULES = [
