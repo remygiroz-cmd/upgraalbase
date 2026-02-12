@@ -130,9 +130,10 @@ export default function GestionRoles() {
                   className={cn(
                     "text-[10px] sm:text-xs px-2 py-1.5 rounded-lg font-medium text-center break-words",
                     role.permissions?.[module.key]
-                      ? "bg-green-100 text-green-700"
+                      ? module.special ? "bg-blue-100 text-blue-700" : "bg-green-100 text-green-700"
                       : "bg-gray-100 text-gray-500"
                   )}
+                  title={module.special ? "Permission spéciale pour modifier le planning" : ""}
                 >
                   {module.label}
                 </div>
