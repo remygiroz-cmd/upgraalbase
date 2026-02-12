@@ -2,7 +2,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { Plus, MessageCircle, Bell, RefreshCw, AtSign, Megaphone, Users, Circle, ArrowRight, ArchiveRestore } from 'lucide-react';
-import TodaySummary from '@/components/planning/TodaySummary';
+import TodaySummaryWrapper from '@/components/planning/TodaySummaryWrapper';
 import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
@@ -414,9 +414,7 @@ export default function Home() {
 
       <div className="max-w-4xl mx-auto px-4 py-6 space-y-6">
         {/* Today's Staff Summary */}
-        {currentEmployee && (
-          <TodaySummary currentEmployee={currentEmployee} />
-        )}
+        <TodaySummaryWrapper currentEmployee={currentEmployee} />
 
         {/* Manager/Admin Quick Actions */}
         {isManagerOrAdmin && (
