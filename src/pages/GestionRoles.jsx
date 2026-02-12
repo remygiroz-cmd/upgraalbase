@@ -20,6 +20,7 @@ const MODULES = [
   { key: 'recettes', label: 'Recettes' },
   { key: 'historique', label: 'Historique' },
   { key: 'equipe', label: 'Équipe & Shifts' },
+  { key: 'planning_modify', label: 'Modifier le planning', special: true },
   { key: 'pertes', label: 'Invendus & Pertes' },
   { key: 'stocks', label: 'Inventaires' },
   { key: 'parametres', label: 'Paramètres' },
