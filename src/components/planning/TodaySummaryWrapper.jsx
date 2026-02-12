@@ -61,13 +61,15 @@ export default function TodaySummaryWrapper({ currentEmployee }) {
 
   return (
     <div className="relative">
-      <button
-        onClick={handleRefresh}
-        className="absolute top-3 right-3 p-1.5 hover:bg-blue-100 rounded-full transition-colors z-10"
-        title="Actualiser"
-      >
-        <RefreshCw className="w-3.5 h-3.5 text-blue-600" />
-      </button>
+      <div className="absolute top-3 right-12 z-10">
+        <button
+          onClick={handleRefresh}
+          className="p-1.5 hover:bg-blue-100 rounded-full transition-colors"
+          title="Actualiser"
+        >
+          <RefreshCw className="w-3.5 h-3.5 text-blue-600" />
+        </button>
+      </div>
       
       <TodaySummary
         shifts={shifts}
