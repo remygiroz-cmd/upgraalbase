@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
-import { ArrowLeft, Send, Users, User, Pin, MoreVertical, X, Circle } from 'lucide-react';
+import { ArrowLeft, Send, Users, User, Pin, MoreVertical, X, Circle, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { useNavigate } from 'react-router-dom';
@@ -302,6 +302,22 @@ export default function Conversation() {
     }
   });
 
+  // Delete urgent message mutation
+  const deleteUrgentMessageMutation = useMutation({
+    mutationFn: async (messageId) => {
+      return await base44.entities.Message.update(messageId, {
+        is_deleted: true
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['messages'] });
+      toast.success('Annonce supprimée');
+    },
+    onError: () => {
+      toast.error('Erreur lors de la suppression');
+    }
+  });
+
   const canPinMessage = (msg) => {
     if (!currentEmployee) return false;
     // Admin can always pin
@@ -309,6 +325,17 @@ export default function Conversation() {
     // Message sender can pin their own message
     if (msg.sender_employee_id === currentEmployee.id) return true;
     // Manager can pin
+    if (currentEmployee.permission_level === 'manager') return true;
+    return false;
+  };
+
+  const canDeleteUrgentMessage = (msg) => {
+    if (!currentEmployee) return false;
+    // Admin can always delete
+    if (currentUser?.role === 'admin') return true;
+    // Message creator can delete
+    if (msg.sender_employee_id === currentEmployee.id) return true;
+    // Manager can delete
     if (currentEmployee.permission_level === 'manager') return true;
     return false;
   };
@@ -607,19 +634,34 @@ export default function Conversation() {
                 critique: 'bg-red-100 border-red-300'
               };
               return (
-                <button
-                  key={msg.id}
-                  onClick={() => scrollToMessage(msg.id)}
-                  className={cn(
-                    "w-full rounded-lg p-3 hover:opacity-80 transition-colors text-left border",
-                    levelColors[msg.urgent_level] || levelColors.info
+                <div key={msg.id} className="relative group/urgent">
+                  <button
+                    onClick={() => scrollToMessage(msg.id)}
+                    className={cn(
+                      "w-full rounded-lg p-3 hover:opacity-80 transition-colors text-left border",
+                      levelColors[msg.urgent_level] || levelColors.info
+                    )}
+                  >
+                    <p className="text-xs text-gray-500 mb-1">
+                      📣 {sender?.first_name} {sender?.last_name}
+                    </p>
+                    <p className="text-sm text-gray-900 line-clamp-2">{msg.text}</p>
+                  </button>
+                  {canDeleteUrgentMessage(msg) && (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (confirm('Supprimer cette annonce urgente ?')) {
+                          deleteUrgentMessageMutation.mutate(msg.id);
+                        }
+                      }}
+                      className="absolute top-2 right-2 p-1.5 bg-white rounded-full shadow-sm opacity-0 group-hover/urgent:opacity-100 transition-opacity hover:bg-red-50"
+                      title="Supprimer l'annonce"
+                    >
+                      <Trash2 className="w-3.5 h-3.5 text-red-600" />
+                    </button>
                   )}
-                >
-                  <p className="text-xs text-gray-500 mb-1">
-                    📣 {sender?.first_name} {sender?.last_name}
-                  </p>
-                  <p className="text-sm text-gray-900 line-clamp-2">{msg.text}</p>
-                </button>
+                </div>
               );
             })}
           </div>
