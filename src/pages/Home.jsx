@@ -1,15 +1,18 @@
-import React, { useState, useMemo } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import React, { useState, useMemo, useEffect } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
-import { Plus, MessageCircle, Bell } from 'lucide-react';
+import { Plus, MessageCircle, Bell, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import AnnouncementsList from '@/components/messaging/AnnouncementsList';
 import ConversationsList from '@/components/messaging/ConversationsList';
 import NewConversationModal from '@/components/messaging/NewConversationModal';
 import { cn } from '@/lib/utils';
+import { toast } from 'sonner';
 
 export default function Home() {
   const [showNewConversation, setShowNewConversation] = useState(false);
+  const [initializingConversations, setInitializingConversations] = useState(false);
+  const queryClient = useQueryClient();
 
   // Get current user
   const { data: currentUser } = useQuery({
@@ -116,6 +119,43 @@ export default function Home() {
     return Object.values(unreadCounts).reduce((sum, count) => sum + count, 0);
   }, [unreadCounts]);
 
+  // Auto-initialize system conversations on first load
+  useEffect(() => {
+    const initConversations = async () => {
+      if (!currentEmployee?.id) return;
+      
+      const hasInitialized = sessionStorage.getItem('conversations_initialized');
+      if (hasInitialized) return;
+
+      // Add employee to conversations
+      try {
+        await base44.functions.invoke('addEmployeeToConversations', {
+          employeeId: currentEmployee.id
+        });
+        sessionStorage.setItem('conversations_initialized', 'true');
+      } catch (error) {
+        console.error('Failed to initialize conversations:', error);
+      }
+    };
+
+    initConversations();
+  }, [currentEmployee?.id]);
+
+  const handleInitializeConversations = async () => {
+    setInitializingConversations(true);
+    try {
+      const { data } = await base44.functions.invoke('initializeSystemConversations', {});
+      toast.success('Conversations système créées');
+      
+      // Refetch conversations
+      await queryClient.invalidateQueries({ queryKey: ['myConversations'] });
+    } catch (error) {
+      toast.error('Erreur lors de l\'initialisation');
+    } finally {
+      setInitializingConversations(false);
+    }
+  };
+
   if (!currentEmployee) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -140,6 +180,18 @@ export default function Home() {
               </p>
             </div>
             <div className="flex items-center gap-2">
+              {currentUser?.role === 'admin' && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleInitializeConversations}
+                  disabled={initializingConversations}
+                  className="text-xs"
+                  title="Créer les conversations système"
+                >
+                  <RefreshCw className={cn("w-4 h-4", initializingConversations && "animate-spin")} />
+                </Button>
+              )}
               {totalUnread > 0 && (
                 <div className="relative">
                   <Bell className="w-6 h-6 text-gray-600" />
