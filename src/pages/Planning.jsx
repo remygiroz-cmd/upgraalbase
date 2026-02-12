@@ -568,6 +568,11 @@ export default function Planning() {
 
   // Handle cell click
   const handleCellClick = (employeeId, dateStr, dayInfo) => {
+    if (!canModifyPlanning) {
+      toast.error('Vous n\'avez pas la permission de modifier le planning');
+      return;
+    }
+    
     const employee = employees.find(e => e.id === employeeId);
     const date = parseLocalDate(dateStr);
     const cellAbove = getLastNonEmptyCellAbove(employeeId, dateStr);
