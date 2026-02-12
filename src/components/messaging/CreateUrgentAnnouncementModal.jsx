@@ -57,26 +57,46 @@ export default function CreateUrgentAnnouncementModal({
         ? new Date(form.customEndsAt) 
         : new Date(now.getTime() + form.quickDuration * 60 * 60 * 1000);
 
-      return await base44.entities.UrgentAnnouncement.create({
+      const announcementData = {
         title: data.title,
         content: data.content,
         severity: data.severity,
         starts_at: now.toISOString(),
         ends_at: endsAt.toISOString(),
         audience_mode: data.audienceMode,
-        audience_team_names: data.audienceTeamNames,
-        audience_employee_ids: data.audienceEmployeeIds,
         created_by_employee_id: currentEmployee.id,
         require_ack: data.requireAck
-      });
+      };
+
+      // Only add audience arrays if needed
+      if (data.audienceMode === 'equipes' && data.audienceTeamNames.length > 0) {
+        announcementData.audience_team_names = data.audienceTeamNames;
+      }
+      
+      if (data.audienceMode === 'personnes' && data.audienceEmployeeIds.length > 0) {
+        announcementData.audience_employee_ids = data.audienceEmployeeIds;
+      }
+
+      if (process.env.NODE_ENV === 'development') {
+        console.log('[UrgentAnnouncements] Creating announcement:', announcementData);
+      }
+
+      const created = await base44.entities.UrgentAnnouncement.create(announcementData);
+      
+      if (process.env.NODE_ENV === 'development') {
+        console.log('[UrgentAnnouncements] Announcement created:', created);
+      }
+      
+      return created;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['urgentAnnouncements'] });
-      toast.success('Annonce créée');
+      toast.success('Annonce créée avec succès');
       resetForm();
       onOpenChange(false);
     },
-    onError: () => {
+    onError: (error) => {
+      console.error('[UrgentAnnouncements] Error creating announcement:', error);
       toast.error('Erreur lors de la création');
     }
   });

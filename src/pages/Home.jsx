@@ -177,11 +177,48 @@ export default function Home() {
       const all = await base44.entities.UrgentAnnouncement.list();
       const now = new Date();
       
-      return all.filter(ann => {
+      const activeAnnouncements = all.filter(ann => {
+        // Check starts_at: if null or undefined, treat as active immediately
         const startsAt = ann.starts_at ? new Date(ann.starts_at) : new Date(0);
-        const endsAt = new Date(ann.ends_at);
-        return now >= startsAt && now <= endsAt;
+        const startsOk = now >= startsAt;
+        
+        // Check ends_at: if null or undefined, default to 24h from creation
+        let endsAt;
+        if (ann.ends_at) {
+          endsAt = new Date(ann.ends_at);
+        } else {
+          // Default: 24h from creation date
+          endsAt = new Date(new Date(ann.created_date).getTime() + 24 * 60 * 60 * 1000);
+        }
+        const endsOk = now <= endsAt;
+        
+        return startsOk && endsOk;
       });
+      
+      // Sort by severity DESC, then created_date DESC
+      const severityOrder = { critique: 3, important: 2, info: 1 };
+      activeAnnouncements.sort((a, b) => {
+        const severityDiff = (severityOrder[b.severity] || 0) - (severityOrder[a.severity] || 0);
+        if (severityDiff !== 0) return severityDiff;
+        return new Date(b.created_date) - new Date(a.created_date);
+      });
+      
+      // Debug logs (development only)
+      if (process.env.NODE_ENV === 'development') {
+        console.log('[UrgentAnnouncements] Total fetched:', all.length);
+        console.log('[UrgentAnnouncements] Active after filtering:', activeAnnouncements.length);
+        console.log('[UrgentAnnouncements] Active list:', activeAnnouncements.map(a => ({
+          id: a.id,
+          title: a.title,
+          severity: a.severity,
+          audience_mode: a.audience_mode,
+          require_ack: a.require_ack,
+          starts_at: a.starts_at,
+          ends_at: a.ends_at
+        })));
+      }
+      
+      return activeAnnouncements;
     },
     enabled: !!currentEmployee?.id,
     staleTime: 0,
@@ -200,39 +237,79 @@ export default function Home() {
 
   // Find unacknowledged urgent announcement for current employee
   const urgentAnnouncementToShow = useMemo(() => {
-    if (!currentEmployee || !urgentAnnouncements.length) return null;
+    if (!currentEmployee || !urgentAnnouncements.length) {
+      if (process.env.NODE_ENV === 'development') {
+        console.log('[UrgentAnnouncements] No announcement to show:', {
+          hasEmployee: !!currentEmployee,
+          announcementsCount: urgentAnnouncements.length
+        });
+      }
+      return null;
+    }
     
     const ackedIds = new Set(myAcks.map(ack => ack.announcement_id));
     
+    if (process.env.NODE_ENV === 'development') {
+      console.log('[UrgentAnnouncements] Current employee:', {
+        id: currentEmployee.id,
+        team: currentEmployee.team,
+        name: `${currentEmployee.first_name} ${currentEmployee.last_name}`
+      });
+      console.log('[UrgentAnnouncements] Already acked IDs:', Array.from(ackedIds));
+    }
+    
     const visibleAnnouncements = urgentAnnouncements.filter(ann => {
       // Already acked
-      if (ackedIds.has(ann.id)) return false;
-      
-      // Doesn't require ack
-      if (!ann.require_ack) return false;
-      
-      // Check audience
-      if (ann.audience_mode === 'tous') return true;
-      
-      if (ann.audience_mode === 'equipes') {
-        return ann.audience_team_names?.includes(currentEmployee.team);
+      if (ackedIds.has(ann.id)) {
+        if (process.env.NODE_ENV === 'development') {
+          console.log(`[UrgentAnnouncements] ${ann.id} - Already acked, skipping`);
+        }
+        return false;
       }
       
-      if (ann.audience_mode === 'personnes') {
-        return ann.audience_employee_ids?.includes(currentEmployee.id);
+      // Doesn't require ack (not blocking)
+      if (!ann.require_ack) {
+        if (process.env.NODE_ENV === 'development') {
+          console.log(`[UrgentAnnouncements] ${ann.id} - No ack required, skipping`);
+        }
+        return false;
       }
       
-      return false;
+      // Check audience targeting
+      let isTargeted = false;
+      
+      if (ann.audience_mode === 'tous') {
+        isTargeted = true;
+      } else if (ann.audience_mode === 'equipes') {
+        isTargeted = ann.audience_team_names?.includes(currentEmployee.team);
+      } else if (ann.audience_mode === 'personnes') {
+        isTargeted = ann.audience_employee_ids?.includes(currentEmployee.id);
+      }
+      
+      if (process.env.NODE_ENV === 'development') {
+        console.log(`[UrgentAnnouncements] ${ann.id} - Targeting check:`, {
+          mode: ann.audience_mode,
+          isTargeted,
+          teams: ann.audience_team_names,
+          employees: ann.audience_employee_ids
+        });
+      }
+      
+      return isTargeted;
     });
     
-    // Sort by severity then creation date
-    const severityOrder = { critique: 3, important: 2, info: 1 };
-    visibleAnnouncements.sort((a, b) => {
-      const severityDiff = (severityOrder[b.severity] || 0) - (severityOrder[a.severity] || 0);
-      if (severityDiff !== 0) return severityDiff;
-      return new Date(b.created_date) - new Date(a.created_date);
-    });
+    if (process.env.NODE_ENV === 'development') {
+      console.log('[UrgentAnnouncements] Visible announcements after filtering:', visibleAnnouncements.length);
+      if (visibleAnnouncements.length > 0) {
+        console.log('[UrgentAnnouncements] First to show:', {
+          id: visibleAnnouncements[0].id,
+          title: visibleAnnouncements[0].title,
+          severity: visibleAnnouncements[0].severity
+        });
+      }
+    }
     
+    // Already sorted in the query, just return the first one
     return visibleAnnouncements[0] || null;
   }, [currentEmployee, urgentAnnouncements, myAcks]);
 
