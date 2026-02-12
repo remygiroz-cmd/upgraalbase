@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
-import { ArrowLeft, Send, Users, User, Pin, MoreVertical, X, Circle, Trash2 } from 'lucide-react';
+import { ArrowLeft, Send, Users, User, Pin, MoreVertical, X, Circle, Trash2, AlertTriangle } from 'lucide-react';
+import ConversationActionsMenu from '@/components/messaging/ConversationActionsMenu';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { useNavigate } from 'react-router-dom';
@@ -558,6 +559,28 @@ export default function Conversation() {
     );
   }
 
+  // If conversation is deleted, show message
+  if (isConversationDeleted) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-center max-w-md mx-auto p-8">
+          <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <AlertTriangle className="w-8 h-8 text-red-600" />
+          </div>
+          <h2 className="text-xl font-bold text-gray-900 mb-2">
+            Conversation supprimée
+          </h2>
+          <p className="text-gray-600 mb-6">
+            Cette conversation a été supprimée par un administrateur le {new Date(conversation.deleted_at).toLocaleDateString('fr-FR')}.
+          </p>
+          <Button onClick={() => navigate(createPageUrl('Home'))}>
+            Retour à l'accueil
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
   if (!currentEmployee) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -616,6 +639,13 @@ export default function Conversation() {
             </p>
           )}
         </div>
+
+        <ConversationActionsMenu
+          conversation={conversation}
+          currentEmployee={currentEmployee}
+          currentUser={currentUser}
+          isInConversationPage={true}
+        />
       </div>
 
       {/* Urgent Messages */}

@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
-import { Plus, MessageCircle, Bell, RefreshCw, AtSign, Megaphone, Users, Circle, ArrowRight } from 'lucide-react';
+import { Plus, MessageCircle, Bell, RefreshCw, AtSign, Megaphone, Users, Circle, ArrowRight, ArchiveRestore } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
@@ -18,6 +18,7 @@ export default function Home() {
   const [showNewConversation, setShowNewConversation] = useState(false);
   const [initializingConversations, setInitializingConversations] = useState(false);
   const [showArchived, setShowArchived] = useState(false);
+  const [showHidden, setShowHidden] = useState(false);
   const [filterMode, setFilterMode] = useState('all'); // 'all' | 'mentions'
   const [showCreateUrgentAnnouncement, setShowCreateUrgentAnnouncement] = useState(false);
   const queryClient = useQueryClient();
@@ -64,6 +65,16 @@ export default function Home() {
     staleTime: 60 * 1000
   });
 
+  // Get conversation members for current employee
+  const { data: myConversationMembers = [] } = useQuery({
+    queryKey: ['myConversationMembers', currentEmployee?.id],
+    queryFn: () => base44.entities.ConversationMember.filter({ 
+      employee_id: currentEmployee.id 
+    }),
+    enabled: !!currentEmployee?.id,
+    staleTime: 0
+  });
+
   // Get conversations (active and archived separately)
   const { data: allConversations = [] } = useQuery({
     queryKey: ['myConversations', currentEmployee?.id],
@@ -72,7 +83,9 @@ export default function Home() {
       
       const all = await base44.entities.Conversation.list();
       
+      // Filter out deleted conversations
       return all
+        .filter(conv => conv.status !== 'deleted')
         .filter(conv => {
           if (conv.type === 'entreprise') return true;
           return conv.participant_employee_ids?.includes(currentEmployee.id);
@@ -88,18 +101,48 @@ export default function Home() {
     refetchOnMount: 'always'
   });
 
-  // Split into active and archived
+  // Split into active, archived, hidden (deleted for me), and left
   const conversations = useMemo(() => {
-    return allConversations.filter(conv => 
-      !conv.archived_by_employee_ids?.includes(currentEmployee?.id)
-    ).slice(0, 30);
-  }, [allConversations, currentEmployee?.id]);
+    return allConversations.filter(conv => {
+      const member = myConversationMembers.find(m => m.conversation_id === conv.id);
+      
+      // Hide if explicitly hidden (deleted for me)
+      if (member?.is_hidden) return false;
+      
+      // Hide if left
+      if (member?.left_at) return false;
+      
+      // Hide if archived (old system)
+      if (conv.archived_by_employee_ids?.includes(currentEmployee?.id)) return false;
+      
+      return true;
+    }).slice(0, 30);
+  }, [allConversations, currentEmployee?.id, myConversationMembers]);
 
   const archivedConversations = useMemo(() => {
-    return allConversations.filter(conv => 
-      conv.archived_by_employee_ids?.includes(currentEmployee?.id)
-    );
-  }, [allConversations, currentEmployee?.id]);
+    return allConversations.filter(conv => {
+      const member = myConversationMembers.find(m => m.conversation_id === conv.id);
+      
+      // Only show archived if not hidden and not left
+      if (member?.is_hidden || member?.left_at) return false;
+      
+      return conv.archived_by_employee_ids?.includes(currentEmployee?.id);
+    });
+  }, [allConversations, currentEmployee?.id, myConversationMembers]);
+
+  const hiddenConversations = useMemo(() => {
+    return allConversations.filter(conv => {
+      const member = myConversationMembers.find(m => m.conversation_id === conv.id);
+      return member?.is_hidden && conv.status === 'active';
+    });
+  }, [allConversations, myConversationMembers]);
+
+  const leftConversations = useMemo(() => {
+    return allConversations.filter(conv => {
+      const member = myConversationMembers.find(m => m.conversation_id === conv.id);
+      return member?.left_at && !member?.is_hidden;
+    });
+  }, [allConversations, myConversationMembers]);
 
   // Get all messages for unread count
   const { data: allMessages = [] } = useQuery({
@@ -512,6 +555,70 @@ export default function Home() {
             </div>
           )}
         </div>
+
+        {/* Hidden Conversations (Deleted for me) Section */}
+        {hiddenConversations.length > 0 && (
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200">
+            <button
+              onClick={() => setShowHidden(!showHidden)}
+              className="w-full px-4 py-3 border-b border-gray-200 flex items-center justify-between hover:bg-gray-50 transition-colors"
+            >
+              <div className="flex items-center gap-2">
+                <ArchiveRestore className="w-5 h-5 text-gray-400" />
+                <h2 className="text-sm font-medium text-gray-600">
+                  Conversations supprimées ({hiddenConversations.length})
+                </h2>
+              </div>
+              <div className={cn(
+                "transform transition-transform",
+                showHidden && "rotate-180"
+              )}>
+                ▼
+              </div>
+            </button>
+            
+            {showHidden && (
+              <div className="divide-y divide-gray-100">
+                {hiddenConversations.map(conv => {
+                  const member = myConversationMembers.find(m => m.conversation_id === conv.id);
+                  return (
+                    <div key={conv.id} className="px-4 py-3 flex items-center justify-between hover:bg-gray-50">
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-gray-700 truncate">
+                          {conv.title || 'Conversation'}
+                        </p>
+                        <p className="text-xs text-gray-500">
+                          Supprimé le {new Date(member.hidden_at).toLocaleDateString('fr-FR')}
+                        </p>
+                      </div>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={async () => {
+                          try {
+                            await base44.entities.ConversationMember.update(member.id, {
+                              is_hidden: false,
+                              hidden_at: null,
+                              left_at: null
+                            });
+                            queryClient.invalidateQueries({ queryKey: ['myConversationMembers'] });
+                            queryClient.invalidateQueries({ queryKey: ['myConversations'] });
+                            toast.success('Conversation restaurée');
+                          } catch (error) {
+                            toast.error('Erreur lors de la restauration');
+                          }
+                        }}
+                      >
+                        <ArchiveRestore className="w-4 h-4 mr-1" />
+                        Restaurer
+                      </Button>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Archived Conversations Section */}
         {archivedConversations.length > 0 && (
