@@ -76,7 +76,8 @@ export default function Home() {
         .slice(0, 30);
     },
     enabled: !!currentEmployee?.id,
-    staleTime: 30 * 1000
+    staleTime: 0,
+    refetchOnMount: 'always'
   });
 
   // Get all messages for unread count
@@ -84,7 +85,8 @@ export default function Home() {
     queryKey: ['allMessages'],
     queryFn: () => base44.entities.Message.list(),
     enabled: !!currentEmployee?.id,
-    staleTime: 30 * 1000
+    staleTime: 0,
+    refetchOnMount: 'always'
   });
 
   // Get message reads
@@ -92,7 +94,8 @@ export default function Home() {
     queryKey: ['myMessageReads', currentEmployee?.id],
     queryFn: () => base44.entities.MessageRead.filter({ employee_id: currentEmployee.id }),
     enabled: !!currentEmployee?.id,
-    staleTime: 30 * 1000
+    staleTime: 0,
+    refetchOnMount: 'always'
   });
 
   // Calculate unread counts

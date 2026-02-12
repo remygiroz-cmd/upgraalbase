@@ -64,34 +64,36 @@ export default function Conversation() {
   const { data: messageReads = [] } = useQuery({
     queryKey: ['messageReads', conversationId],
     queryFn: () => base44.entities.MessageRead.filter({ conversation_id: conversationId }),
-    enabled: !!conversationId && !!currentEmployee?.id
+    enabled: !!conversationId && !!currentEmployee?.id,
+    staleTime: 0
   });
 
   const markAsReadMutation = useMutation({
-    mutationFn: async (messageId) => {
-      // Check if already read
-      const alreadyRead = messageReads.some(mr => 
-        mr.message_id === messageId && mr.employee_id === currentEmployee.id
-      );
+    mutationFn: async (messagesToMark) => {
+      if (!messagesToMark.length) return;
       
-      if (!alreadyRead) {
-        return await base44.entities.MessageRead.create({
-          message_id: messageId,
-          employee_id: currentEmployee.id,
-          conversation_id: conversationId,
-          read_at: new Date().toISOString()
-        });
-      }
+      // Batch create all MessageReads
+      const readRecords = messagesToMark.map(msg => ({
+        message_id: msg.id,
+        employee_id: currentEmployee.id,
+        conversation_id: conversationId,
+        read_at: new Date().toISOString()
+      }));
+      
+      return await base44.entities.MessageRead.bulkCreate(readRecords);
     },
     onSuccess: () => {
+      // Invalidate all relevant queries immediately
       queryClient.invalidateQueries({ queryKey: ['messageReads'] });
       queryClient.invalidateQueries({ queryKey: ['myMessageReads'] });
+      queryClient.invalidateQueries({ queryKey: ['myConversations'] });
+      queryClient.invalidateQueries({ queryKey: ['allMessages'] });
     }
   });
 
-  // Mark unread messages as read
+  // Mark unread messages as read - batch creation
   useEffect(() => {
-    if (!currentEmployee?.id || !sortedMessages.length) return;
+    if (!currentEmployee?.id || !sortedMessages.length || !messageReads) return;
 
     const readMessageIds = new Set(messageReads.map(mr => mr.message_id));
     const unreadMessages = sortedMessages.filter(m => 
@@ -99,9 +101,9 @@ export default function Conversation() {
       !readMessageIds.has(m.id)
     );
 
-    unreadMessages.forEach(msg => {
-      markAsReadMutation.mutate(msg.id);
-    });
+    if (unreadMessages.length > 0) {
+      markAsReadMutation.mutate(unreadMessages);
+    }
   }, [sortedMessages, currentEmployee?.id, messageReads]);
 
   // Send message mutation
