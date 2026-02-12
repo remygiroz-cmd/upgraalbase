@@ -152,34 +152,50 @@ export default function Conversation() {
       return others.map(emp => emp.first_name).join(', ') || 'Conversation';
     }
 
+    // For team conversations: "👥 Équipe {name}"
+    if (conversation.type === 'equipe') {
+      return conversation.title ? `👥 Équipe ${conversation.title}` : '👥 Équipe';
+    }
+
     // For other types, use title or type
     if (conversation.title) return conversation.title;
     return conversation.type === 'entreprise' ? 'Entreprise' : 'Conversation';
   }, [conversation, currentEmployee, employees]);
 
   const avatarData = useMemo(() => {
-    if (!conversation || conversation.type !== 'privee') return null;
+    if (!conversation) return null;
     
-    const otherIds = conversation.participant_employee_ids?.filter(id => id !== currentEmployee?.id) || [];
-    const others = employees.filter(emp => otherIds.includes(emp.id));
+    // Private conversation
+    if (conversation.type === 'privee') {
+      const otherIds = conversation.participant_employee_ids?.filter(id => id !== currentEmployee?.id) || [];
+      const others = employees.filter(emp => otherIds.includes(emp.id));
+      
+      if (others.length === 0) return null;
+      
+      const initial = others[0].first_name?.charAt(0).toUpperCase() || '?';
+      const colors = [
+        'bg-blue-100 text-blue-700',
+        'bg-green-100 text-green-700',
+        'bg-purple-100 text-purple-700',
+        'bg-pink-100 text-pink-700',
+        'bg-orange-100 text-orange-700',
+        'bg-teal-100 text-teal-700',
+        'bg-indigo-100 text-indigo-700',
+        'bg-rose-100 text-rose-700'
+      ];
+      const hash = others[0].first_name?.charCodeAt(0) || 0;
+      const color = colors[hash % colors.length];
+      
+      return { initial, color, type: 'privee' };
+    }
     
-    if (others.length === 0) return null;
+    // Team conversation
+    if (conversation.type === 'equipe') {
+      return { initial: null, color: 'bg-gray-100 text-gray-600', type: 'equipe' };
+    }
     
-    const initial = others[0].first_name?.charAt(0).toUpperCase() || '?';
-    const colors = [
-      'bg-blue-100 text-blue-700',
-      'bg-green-100 text-green-700',
-      'bg-purple-100 text-purple-700',
-      'bg-pink-100 text-pink-700',
-      'bg-orange-100 text-orange-700',
-      'bg-teal-100 text-teal-700',
-      'bg-indigo-100 text-indigo-700',
-      'bg-rose-100 text-rose-700'
-    ];
-    const hash = others[0].first_name?.charCodeAt(0) || 0;
-    const color = colors[hash % colors.length];
-    
-    return { initial, color };
+    // Other types
+    return { initial: null, color: 'bg-purple-100', type: 'other' };
   }, [conversation, currentEmployee, employees]);
 
   if (!conversationId || !conversation) {
@@ -210,13 +226,14 @@ export default function Conversation() {
         </button>
 
         <div className={cn(
-          "w-10 h-10 rounded-full flex items-center justify-center font-semibold text-lg",
-          conversation.type === 'privee' 
-            ? avatarData?.color || "bg-blue-100 text-blue-700"
-            : "bg-purple-100"
+          "w-10 h-10 rounded-full flex items-center justify-center",
+          avatarData?.type === 'privee' && "font-semibold text-lg",
+          avatarData?.color || "bg-purple-100"
         )}>
-          {conversation.type === 'privee' ? (
-            avatarData?.initial || '?'
+          {avatarData?.type === 'privee' ? (
+            avatarData.initial || '?'
+          ) : avatarData?.type === 'equipe' ? (
+            <Users className="w-5 h-5" />
           ) : (
             <Users className="w-5 h-5 text-purple-600" />
           )}

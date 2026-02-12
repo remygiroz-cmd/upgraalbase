@@ -50,6 +50,12 @@ export default function ConversationsList({
           avatarColor = colors[hash % colors.length];
         }
       }
+      
+      // For team conversations: show "👥 Équipe {name}"
+      if (conv.type === 'equipe') {
+        displayTitle = conv.title ? `👥 Équipe ${conv.title}` : '👥 Équipe';
+        avatarColor = 'bg-gray-100 text-gray-600';
+      }
 
       const Icon = typeIcons[conv.type] || User;
       const unreadCount = unreadCounts[conv.id] || 0;
@@ -85,16 +91,13 @@ export default function ConversationsList({
         >
           {/* Avatar */}
           <div className={cn(
-            "w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0 font-semibold text-lg",
-            conv.type === 'privee' ? conv.avatarColor : (conv.unreadCount > 0 ? "bg-blue-100" : "bg-gray-100")
+            "w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0",
+            conv.type === 'privee' ? cn(conv.avatarColor, "font-semibold text-lg") : conv.avatarColor
           )}>
             {conv.type === 'privee' ? (
               conv.avatarInitial
             ) : (
-              <conv.Icon className={cn(
-                "w-6 h-6",
-                conv.unreadCount > 0 ? "text-blue-600" : "text-gray-600"
-              )} />
+              <conv.Icon className="w-6 h-6" />
             )}
           </div>
 
