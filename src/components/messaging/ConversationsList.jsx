@@ -1,8 +1,17 @@
 import React, { useMemo } from 'react';
-import { Users, User, Building2, Briefcase } from 'lucide-react';
+import { Users, User, Building2, Briefcase, Archive, ArchiveRestore, MoreVertical } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
+import { base44 } from '@/api/base44Client';
+import { useQueryClient, useMutation } from '@tanstack/react-query';
+import { toast } from 'sonner';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 
 const typeIcons = {
   privee: User,
@@ -15,9 +24,44 @@ export default function ConversationsList({
   conversations, 
   currentEmployee, 
   employees,
-  unreadCounts 
+  unreadCounts,
+  isArchived = false
 }) {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
+
+  // Archive/Unarchive mutation
+  const toggleArchiveMutation = useMutation({
+    mutationFn: async ({ conversationId, archive }) => {
+      const conv = conversations.find(c => c.id === conversationId);
+      if (!conv) return;
+
+      const currentArchived = conv.archived_by_employee_ids || [];
+      const updated = archive
+        ? [...currentArchived, currentEmployee.id]
+        : currentArchived.filter(id => id !== currentEmployee.id);
+
+      return await base44.entities.Conversation.update(conversationId, {
+        archived_by_employee_ids: updated
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['myConversations'] });
+      toast.success(isArchived ? 'Conversation désarchivée' : 'Conversation archivée');
+    },
+    onError: () => {
+      toast.error('Erreur');
+    }
+  });
+
+  const handleArchiveToggle = (e, conversationId) => {
+    e.preventDefault();
+    e.stopPropagation();
+    toggleArchiveMutation.mutate({ 
+      conversationId, 
+      archive: !isArchived 
+    });
+  };
 
   // Generate conversation display data
   const conversationsData = useMemo(() => {
@@ -84,11 +128,14 @@ export default function ConversationsList({
   return (
     <div className="divide-y divide-gray-100">
       {conversationsData.map(conv => (
-        <button
+        <div
           key={conv.id}
-          onClick={() => navigate(createPageUrl('Conversation') + '?id=' + conv.id)}
-          className="w-full px-4 py-3 hover:bg-gray-50 transition-colors text-left flex items-start gap-3"
+          className="relative group hover:bg-gray-50 transition-colors"
         >
+          <button
+            onClick={() => navigate(createPageUrl('Conversation') + '?id=' + conv.id)}
+            className="w-full px-4 py-3 text-left flex items-start gap-3"
+          >
           {/* Avatar */}
           <div className={cn(
             "w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0",
@@ -145,7 +192,42 @@ export default function ConversationsList({
               )}
             </div>
           </div>
-        </button>
+          </button>
+
+          {/* Archive/Unarchive Button */}
+          <div className="absolute right-2 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                  }}
+                  className="p-2 hover:bg-gray-100 rounded-full"
+                >
+                  <MoreVertical className="w-4 h-4 text-gray-600" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem
+                  onClick={(e) => handleArchiveToggle(e, conv.id)}
+                >
+                  {isArchived ? (
+                    <>
+                      <ArchiveRestore className="w-4 h-4 mr-2" />
+                      Désarchiver
+                    </>
+                  ) : (
+                    <>
+                      <Archive className="w-4 h-4 mr-2" />
+                      Archiver
+                    </>
+                  )}
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        </div>
       ))}
     </div>
   );

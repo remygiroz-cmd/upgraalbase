@@ -12,6 +12,7 @@ import { toast } from 'sonner';
 export default function Home() {
   const [showNewConversation, setShowNewConversation] = useState(false);
   const [initializingConversations, setInitializingConversations] = useState(false);
+  const [showArchived, setShowArchived] = useState(false);
   const queryClient = useQueryClient();
 
   // Get current user
@@ -55,8 +56,8 @@ export default function Home() {
     staleTime: 60 * 1000
   });
 
-  // Get conversations
-  const { data: conversations = [] } = useQuery({
+  // Get conversations (active and archived separately)
+  const { data: allConversations = [] } = useQuery({
     queryKey: ['myConversations', currentEmployee?.id],
     queryFn: async () => {
       if (!currentEmployee?.id) return [];
@@ -72,13 +73,25 @@ export default function Home() {
           const aTime = a.last_message_at ? new Date(a.last_message_at) : new Date(a.created_date);
           const bTime = b.last_message_at ? new Date(b.last_message_at) : new Date(b.created_date);
           return bTime - aTime;
-        })
-        .slice(0, 30);
+        });
     },
     enabled: !!currentEmployee?.id,
     staleTime: 0,
     refetchOnMount: 'always'
   });
+
+  // Split into active and archived
+  const conversations = useMemo(() => {
+    return allConversations.filter(conv => 
+      !conv.archived_by_employee_ids?.includes(currentEmployee?.id)
+    ).slice(0, 30);
+  }, [allConversations, currentEmployee?.id]);
+
+  const archivedConversations = useMemo(() => {
+    return allConversations.filter(conv => 
+      conv.archived_by_employee_ids?.includes(currentEmployee?.id)
+    );
+  }, [allConversations, currentEmployee?.id]);
 
   // Get all messages for unread count
   const { data: allMessages = [] } = useQuery({
@@ -240,6 +253,39 @@ export default function Home() {
             unreadCounts={unreadCounts}
           />
         </div>
+
+        {/* Archived Conversations Section */}
+        {archivedConversations.length > 0 && (
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200">
+            <button
+              onClick={() => setShowArchived(!showArchived)}
+              className="w-full px-4 py-3 border-b border-gray-200 flex items-center justify-between hover:bg-gray-50 transition-colors"
+            >
+              <div className="flex items-center gap-2">
+                <MessageCircle className="w-5 h-5 text-gray-400" />
+                <h2 className="text-sm font-medium text-gray-600">
+                  Conversations archivées ({archivedConversations.length})
+                </h2>
+              </div>
+              <div className={cn(
+                "transform transition-transform",
+                showArchived && "rotate-180"
+              )}>
+                ▼
+              </div>
+            </button>
+            
+            {showArchived && (
+              <ConversationsList
+                conversations={archivedConversations}
+                currentEmployee={currentEmployee}
+                employees={employees}
+                unreadCounts={unreadCounts}
+                isArchived
+              />
+            )}
+          </div>
+        )}
       </div>
 
       {/* Floating Action Button */}
