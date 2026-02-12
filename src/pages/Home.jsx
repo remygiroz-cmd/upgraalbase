@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
-import { Plus, MessageCircle, Bell, RefreshCw } from 'lucide-react';
+import { Plus, MessageCircle, Bell, RefreshCw, AtSign } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import AnnouncementsList from '@/components/messaging/AnnouncementsList';
 import ConversationsList from '@/components/messaging/ConversationsList';
@@ -145,6 +145,28 @@ export default function Home() {
     return Object.values(unreadCounts).reduce((sum, count) => sum + count, 0);
   }, [unreadCounts]);
 
+  // Calculate unread mentions count
+  const unreadMentionsCount = useMemo(() => {
+    if (!myMentions.length || !messageReads.length) return 0;
+    
+    const readMessageIds = new Set(messageReads.map(mr => mr.message_id));
+    return myMentions.filter(m => !readMessageIds.has(m.message_id)).length;
+  }, [myMentions, messageReads]);
+
+  // Filter conversations with unread mentions
+  const conversationsWithMentions = useMemo(() => {
+    if (!myMentions.length || filterMode !== 'mentions') return [];
+    
+    const readMessageIds = new Set(messageReads.map(mr => mr.message_id));
+    const unreadMentionConvIds = new Set(
+      myMentions
+        .filter(m => !readMessageIds.has(m.message_id))
+        .map(m => m.conversation_id)
+    );
+    
+    return conversations.filter(conv => unreadMentionConvIds.has(conv.id));
+  }, [myMentions, messageReads, conversations, filterMode]);
+
   // Auto-initialize system conversations on first load
   useEffect(() => {
     const initConversations = async () => {
@@ -247,21 +269,66 @@ export default function Home() {
               <div className="flex items-center gap-2">
                 <MessageCircle className="w-5 h-5 text-gray-600" />
                 <h2 className="text-lg font-semibold text-gray-900">Messages</h2>
+                {totalUnread > 0 && (
+                  <span className="bg-blue-100 text-blue-700 text-xs font-semibold px-2 py-1 rounded-full">
+                    {totalUnread}
+                  </span>
+                )}
+                {unreadMentionsCount > 0 && (
+                  <span className="bg-purple-600 text-white text-xs font-bold rounded-full px-2 py-1 flex items-center gap-1">
+                    <AtSign className="w-3 h-3" />
+                    {unreadMentionsCount}
+                  </span>
+                )}
               </div>
-              {totalUnread > 0 && (
-                <span className="bg-blue-100 text-blue-700 text-xs font-semibold px-2 py-1 rounded-full">
-                  {totalUnread} non lu{totalUnread > 1 ? 's' : ''}
-                </span>
-              )}
             </div>
           </div>
 
+          {/* Filter tabs */}
+          <div className="px-4 py-2 border-b border-gray-100 flex gap-2">
+            <button
+              onClick={() => setFilterMode('all')}
+              className={cn(
+                "px-3 py-1.5 rounded-lg text-xs font-medium transition-colors",
+                filterMode === 'all' 
+                  ? "bg-blue-100 text-blue-700" 
+                  : "text-gray-600 hover:bg-gray-100"
+              )}
+            >
+              Toutes
+            </button>
+            <button
+              onClick={() => setFilterMode('mentions')}
+              className={cn(
+                "px-3 py-1.5 rounded-lg text-xs font-medium transition-colors flex items-center gap-1",
+                filterMode === 'mentions' 
+                  ? "bg-purple-100 text-purple-700" 
+                  : "text-gray-600 hover:bg-gray-100"
+              )}
+            >
+              <AtSign className="w-3 h-3" />
+              Mentions
+              {unreadMentionsCount > 0 && (
+                <span className="bg-purple-600 text-white rounded-full px-1.5 text-[10px] font-bold">
+                  {unreadMentionsCount}
+                </span>
+              )}
+            </button>
+          </div>
+
           <ConversationsList
-            conversations={conversations}
+            conversations={filterMode === 'mentions' ? conversationsWithMentions : conversations}
             currentEmployee={currentEmployee}
             employees={employees}
             unreadCounts={unreadCounts}
           />
+
+          {filterMode === 'mentions' && conversationsWithMentions.length === 0 && (
+            <div className="p-8 text-center text-gray-500">
+              <AtSign className="w-12 h-12 mx-auto mb-3 opacity-30" />
+              <p className="text-sm">Aucune mention non lue</p>
+            </div>
+          )}
         </div>
 
         {/* Archived Conversations Section */}
