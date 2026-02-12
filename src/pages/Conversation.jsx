@@ -1,18 +1,25 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
-import { ArrowLeft, Send, Users, User } from 'lucide-react';
+import { ArrowLeft, Send, Users, User, Pin, MoreVertical, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 
 export default function Conversation() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const messagesEndRef = useRef(null);
+  const messageRefs = useRef({});
   const [messageText, setMessageText] = useState('');
 
   // Get conversation ID from URL
@@ -58,6 +65,12 @@ export default function Conversation() {
     return [...messages]
       .filter(m => !m.is_deleted)
       .sort((a, b) => new Date(a.created_date) - new Date(b.created_date));
+  }, [messages]);
+
+  const pinnedMessages = useMemo(() => {
+    return [...messages]
+      .filter(m => m.is_pinned && !m.is_deleted)
+      .sort((a, b) => new Date(b.pinned_at) - new Date(a.pinned_at));
   }, [messages]);
 
   // Mark messages as read
@@ -132,6 +145,50 @@ export default function Conversation() {
       toast.error('Erreur lors de l\'envoi');
     }
   });
+
+  // Pin/Unpin message mutation
+  const togglePinMutation = useMutation({
+    mutationFn: async ({ messageId, pin }) => {
+      return await base44.entities.Message.update(messageId, pin ? {
+        is_pinned: true,
+        pinned_at: new Date().toISOString(),
+        pinned_by_employee_id: currentEmployee.id
+      } : {
+        is_pinned: false,
+        pinned_at: null,
+        pinned_by_employee_id: null
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['messages'] });
+      toast.success('Message épinglé');
+    },
+    onError: () => {
+      toast.error('Erreur');
+    }
+  });
+
+  const canPinMessage = (msg) => {
+    if (!currentEmployee) return false;
+    // Admin can always pin
+    if (currentUser?.role === 'admin') return true;
+    // Message sender can pin their own message
+    if (msg.sender_employee_id === currentEmployee.id) return true;
+    // Manager can pin
+    if (currentEmployee.permission_level === 'manager') return true;
+    return false;
+  };
+
+  const scrollToMessage = (messageId) => {
+    const element = messageRefs.current[messageId];
+    if (element) {
+      element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      element.classList.add('bg-yellow-100');
+      setTimeout(() => {
+        element.classList.remove('bg-yellow-100');
+      }, 2000);
+    }
+  };
 
   const handleSend = () => {
     if (!messageText.trim()) return;
@@ -255,6 +312,33 @@ export default function Conversation() {
         </div>
       </div>
 
+      {/* Pinned Messages */}
+      {pinnedMessages.length > 0 && (
+        <div className="bg-yellow-50 border-b border-yellow-200 px-4 py-3">
+          <div className="flex items-center gap-2 mb-2">
+            <Pin className="w-4 h-4 text-yellow-700" />
+            <h3 className="text-sm font-semibold text-yellow-900">Messages importants</h3>
+          </div>
+          <div className="space-y-2">
+            {pinnedMessages.map(msg => {
+              const sender = employees.find(emp => emp.id === msg.sender_employee_id);
+              return (
+                <button
+                  key={msg.id}
+                  onClick={() => scrollToMessage(msg.id)}
+                  className="w-full bg-white rounded-lg p-3 hover:bg-yellow-100 transition-colors text-left border border-yellow-200"
+                >
+                  <p className="text-xs text-gray-500 mb-1">
+                    {sender?.first_name} {sender?.last_name}
+                  </p>
+                  <p className="text-sm text-gray-900 line-clamp-2">{msg.text}</p>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
       {/* Messages */}
       <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
         {sortedMessages.length === 0 ? (
@@ -282,8 +366,9 @@ export default function Conversation() {
             return (
               <div
                 key={msg.id}
+                ref={(el) => messageRefs.current[msg.id] = el}
                 className={cn(
-                  "flex gap-2",
+                  "flex gap-2 transition-colors duration-500",
                   isMe ? "justify-end" : "justify-start"
                 )}
               >
@@ -293,27 +378,66 @@ export default function Conversation() {
                   </div>
                 )}
 
-                <div className={cn(
-                  "max-w-[70%] rounded-2xl px-4 py-2",
-                  isMe 
-                    ? "bg-blue-600 text-white rounded-br-sm" 
-                    : "bg-white text-gray-900 rounded-bl-sm shadow-sm"
-                )}>
-                  {!isMe && (
-                    <p className="text-xs font-semibold mb-1 opacity-70">
-                      {sender?.first_name} {sender?.last_name}
-                    </p>
-                  )}
-                  <p className="text-sm whitespace-pre-wrap break-words">{msg.text}</p>
-                  <p className={cn(
-                    "text-[10px] mt-1",
-                    isMe ? "text-blue-100" : "text-gray-500"
+                <div className="relative group/message flex items-start gap-2">
+                  <div className={cn(
+                    "max-w-[70%] rounded-2xl px-4 py-2 relative",
+                    isMe 
+                      ? "bg-blue-600 text-white rounded-br-sm" 
+                      : "bg-white text-gray-900 rounded-bl-sm shadow-sm",
+                    msg.is_pinned && "ring-2 ring-yellow-400"
                   )}>
-                    {new Date(msg.created_date).toLocaleTimeString('fr-FR', {
-                      hour: '2-digit',
-                      minute: '2-digit'
-                    })}
-                  </p>
+                    {msg.is_pinned && (
+                      <Pin className={cn("w-3 h-3 absolute -top-1 -right-1", isMe ? "text-yellow-300" : "text-yellow-600")} />
+                    )}
+                    {!isMe && (
+                      <p className="text-xs font-semibold mb-1 opacity-70">
+                        {sender?.first_name} {sender?.last_name}
+                      </p>
+                    )}
+                    <p className="text-sm whitespace-pre-wrap break-words">{msg.text}</p>
+                    <p className={cn(
+                      "text-[10px] mt-1",
+                      isMe ? "text-blue-100" : "text-gray-500"
+                    )}>
+                      {new Date(msg.created_date).toLocaleTimeString('fr-FR', {
+                        hour: '2-digit',
+                        minute: '2-digit'
+                      })}
+                    </p>
+                  </div>
+
+                  {/* Message menu */}
+                  {canPinMessage(msg) && (
+                    <div className="opacity-0 group-hover/message:opacity-100 transition-opacity">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <button className="p-1 hover:bg-gray-100 rounded-full">
+                            <MoreVertical className="w-4 h-4 text-gray-400" />
+                          </button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem
+                            onClick={() => togglePinMutation.mutate({ 
+                              messageId: msg.id, 
+                              pin: !msg.is_pinned 
+                            })}
+                          >
+                            {msg.is_pinned ? (
+                              <>
+                                <X className="w-4 h-4 mr-2" />
+                                Retirer l'épingle
+                              </>
+                            ) : (
+                              <>
+                                <Pin className="w-4 h-4 mr-2" />
+                                Épingler
+                              </>
+                            )}
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
+                  )}
                 </div>
 
                 {isMe && (
