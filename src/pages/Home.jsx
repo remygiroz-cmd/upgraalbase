@@ -8,6 +8,7 @@ import ConversationsList from '@/components/messaging/ConversationsList';
 import NewConversationModal from '@/components/messaging/NewConversationModal';
 import UrgentAnnouncementModal from '@/components/messaging/UrgentAnnouncementModal';
 import CreateUrgentAnnouncementModal from '@/components/messaging/CreateUrgentAnnouncementModal';
+import DebugUrgentAnnouncements from '@/components/messaging/DebugUrgentAnnouncements';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 
@@ -565,6 +566,14 @@ export default function Home() {
         onOpenChange={setShowCreateUrgentAnnouncement}
         currentEmployee={currentEmployee}
       />
+
+      {/* Debug Panel - Visible for admin/manager */}
+      {(currentUser?.role === 'admin' || currentEmployee?.permission_level === 'manager') && (
+        <DebugUrgentAnnouncements
+          currentEmployee={currentEmployee}
+          urgentAnnouncementToShow={urgentAnnouncementToShow}
+        />
+      )}
     </div>
   );
 }
