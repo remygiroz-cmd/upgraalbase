@@ -1,11 +1,13 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
-import { Plus, MessageCircle, Bell, RefreshCw, AtSign } from 'lucide-react';
+import { Plus, MessageCircle, Bell, RefreshCw, AtSign, Megaphone } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import AnnouncementsList from '@/components/messaging/AnnouncementsList';
 import ConversationsList from '@/components/messaging/ConversationsList';
 import NewConversationModal from '@/components/messaging/NewConversationModal';
+import UrgentAnnouncementModal from '@/components/messaging/UrgentAnnouncementModal';
+import CreateUrgentAnnouncementModal from '@/components/messaging/CreateUrgentAnnouncementModal';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 
@@ -14,6 +16,7 @@ export default function Home() {
   const [initializingConversations, setInitializingConversations] = useState(false);
   const [showArchived, setShowArchived] = useState(false);
   const [filterMode, setFilterMode] = useState('all'); // 'all' | 'mentions'
+  const [showCreateUrgentAnnouncement, setShowCreateUrgentAnnouncement] = useState(false);
   const queryClient = useQueryClient();
 
   // Get current user
@@ -167,6 +170,77 @@ export default function Home() {
     return conversations.filter(conv => unreadMentionConvIds.has(conv.id));
   }, [myMentions, messageReads, conversations, filterMode]);
 
+  // Get urgent announcements
+  const { data: urgentAnnouncements = [] } = useQuery({
+    queryKey: ['urgentAnnouncements'],
+    queryFn: async () => {
+      const all = await base44.entities.UrgentAnnouncement.list();
+      const now = new Date();
+      
+      return all.filter(ann => {
+        const startsAt = ann.starts_at ? new Date(ann.starts_at) : new Date(0);
+        const endsAt = new Date(ann.ends_at);
+        return now >= startsAt && now <= endsAt;
+      });
+    },
+    enabled: !!currentEmployee?.id,
+    staleTime: 0,
+    refetchOnMount: 'always'
+  });
+
+  // Get acks for current employee
+  const { data: myAcks = [] } = useQuery({
+    queryKey: ['urgentAnnouncementAcks', currentEmployee?.id],
+    queryFn: () => base44.entities.UrgentAnnouncementAck.filter({ 
+      employee_id: currentEmployee.id 
+    }),
+    enabled: !!currentEmployee?.id,
+    staleTime: 0
+  });
+
+  // Find unacknowledged urgent announcement for current employee
+  const urgentAnnouncementToShow = useMemo(() => {
+    if (!currentEmployee || !urgentAnnouncements.length) return null;
+    
+    const ackedIds = new Set(myAcks.map(ack => ack.announcement_id));
+    
+    const visibleAnnouncements = urgentAnnouncements.filter(ann => {
+      // Already acked
+      if (ackedIds.has(ann.id)) return false;
+      
+      // Doesn't require ack
+      if (!ann.require_ack) return false;
+      
+      // Check audience
+      if (ann.audience_mode === 'tous') return true;
+      
+      if (ann.audience_mode === 'equipes') {
+        return ann.audience_team_names?.includes(currentEmployee.team);
+      }
+      
+      if (ann.audience_mode === 'personnes') {
+        return ann.audience_employee_ids?.includes(currentEmployee.id);
+      }
+      
+      return false;
+    });
+    
+    // Sort by severity then creation date
+    const severityOrder = { critique: 3, important: 2, info: 1 };
+    visibleAnnouncements.sort((a, b) => {
+      const severityDiff = (severityOrder[b.severity] || 0) - (severityOrder[a.severity] || 0);
+      if (severityDiff !== 0) return severityDiff;
+      return new Date(b.created_date) - new Date(a.created_date);
+    });
+    
+    return visibleAnnouncements[0] || null;
+  }, [currentEmployee, urgentAnnouncements, myAcks]);
+
+  const canCreateUrgentAnnouncement = useMemo(() => {
+    if (!currentEmployee) return false;
+    return currentUser?.role === 'admin' || currentEmployee.permission_level === 'manager';
+  }, [currentUser, currentEmployee]);
+
   // Auto-initialize system conversations on first load
   useEffect(() => {
     const initConversations = async () => {
@@ -228,6 +302,17 @@ export default function Home() {
               </p>
             </div>
             <div className="flex items-center gap-2">
+              {canCreateUrgentAnnouncement && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowCreateUrgentAnnouncement(true)}
+                  className="text-xs"
+                  title="Créer une annonce urgente"
+                >
+                  <Megaphone className="w-4 h-4" />
+                </Button>
+              )}
               {currentUser?.role === 'admin' && (
                 <Button
                   variant="outline"
@@ -384,6 +469,24 @@ export default function Home() {
         onOpenChange={setShowNewConversation}
         currentEmployee={currentEmployee}
         employees={employees}
+      />
+
+      {/* Urgent Announcement Modal (Blocking) */}
+      {urgentAnnouncementToShow && (
+        <UrgentAnnouncementModal
+          announcement={urgentAnnouncementToShow}
+          currentEmployee={currentEmployee}
+          onAcknowledge={() => {
+            queryClient.invalidateQueries({ queryKey: ['urgentAnnouncementAcks'] });
+          }}
+        />
+      )}
+
+      {/* Create Urgent Announcement Modal */}
+      <CreateUrgentAnnouncementModal
+        open={showCreateUrgentAnnouncement}
+        onOpenChange={setShowCreateUrgentAnnouncement}
+        currentEmployee={currentEmployee}
       />
     </div>
   );
