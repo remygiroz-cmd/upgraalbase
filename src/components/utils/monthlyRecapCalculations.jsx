@@ -382,7 +382,7 @@ function getFullWeekDates(dateStr) {
  * - For part-time: complementary hours calculated per week, then aggregated monthly
  * - Split 10%/25% calculated at MONTHLY level (not per week)
  */
-function calculateWeeklyOvertime(result, employee, shifts, nonShiftEvents, nonShiftTypes, year, month, contractHoursWeekly) {
+function calculateWeeklyOvertime(result, employee, shifts, nonShiftEvents, nonShiftTypes, year, month, contractHoursWeekly, weeklyRecaps = []) {
   const isPartTime = employee.work_time_type === 'part_time';
   
   // Calculate daily contract hours
