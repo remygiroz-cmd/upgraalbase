@@ -9,6 +9,7 @@ import { createPageUrl } from '@/utils';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { calculatePresenceStatus, getOnlineCount } from '@/components/utils/presenceUtils';
+import MessageReadStatus from '@/components/messaging/MessageReadStatus';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -123,12 +124,13 @@ export default function Conversation() {
     );
   }, [mentionableEmployees, mentionSearch]);
 
-  // Mark messages as read
+  // Mark messages as read - fetch ALL reads for this conversation for status calculation
   const { data: messageReads = [] } = useQuery({
     queryKey: ['messageReads', conversationId],
     queryFn: () => base44.entities.MessageRead.filter({ conversation_id: conversationId }),
     enabled: !!conversationId && !!currentEmployee?.id,
-    staleTime: 0
+    staleTime: 0,
+    refetchInterval: 10000 // Refetch every 10 seconds for real-time updates
   });
 
   const markAsReadMutation = useMutation({
@@ -632,15 +634,26 @@ export default function Conversation() {
                       </p>
                     )}
                     <p className="text-sm whitespace-pre-wrap break-words">{msg.text}</p>
-                    <p className={cn(
-                      "text-[10px] mt-1",
-                      isMe ? "text-blue-100" : "text-gray-500"
-                    )}>
-                      {new Date(msg.created_date).toLocaleTimeString('fr-FR', {
-                        hour: '2-digit',
-                        minute: '2-digit'
-                      })}
-                    </p>
+                    <div className="flex items-center justify-end gap-1 mt-1">
+                      <p className={cn(
+                        "text-[10px]",
+                        isMe ? "text-blue-100" : "text-gray-500"
+                      )}>
+                        {new Date(msg.created_date).toLocaleTimeString('fr-FR', {
+                          hour: '2-digit',
+                          minute: '2-digit'
+                        })}
+                      </p>
+                      {isMe && (
+                        <MessageReadStatus
+                          message={msg}
+                          allMessageReads={messageReads}
+                          conversation={conversation}
+                          employees={employees}
+                          currentEmployeeId={currentEmployee.id}
+                        />
+                      )}
+                    </div>
                   </div>
 
                   {/* Message menu */}
