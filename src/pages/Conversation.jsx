@@ -63,6 +63,9 @@ export default function Conversation() {
 
   const conversation = conversations.find(c => c.id === conversationId);
 
+  // Check if conversation is deleted
+  const isConversationDeleted = conversation?.status === 'deleted';
+
   // Get messages
   const { data: messages = [] } = useQuery({
     queryKey: ['messages', conversationId],
