@@ -1801,7 +1801,13 @@ export default function Planning() {
           )}
         </button>
         </div>
-      )}
-    </div>
-  );
-}
+        ) : (
+        <div className="fixed bottom-6 right-6 z-50">
+         <div className="w-14 h-14 bg-gray-300 rounded-full shadow-lg flex items-center justify-center opacity-40 cursor-not-allowed" title="Lecture seule — vous n'avez pas la permission de modifier le planning">
+           <Plus className="w-6 h-6 text-gray-500" />
+         </div>
+        </div>
+        )}
+        </div>
+        );
+        }
