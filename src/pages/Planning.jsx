@@ -1278,9 +1278,17 @@ export default function Planning() {
                                           nonShiftType={type}
                                           onClick={(e) => {
                                             e.stopPropagation();
+                                            if (!canModifyPlanning) {
+                                              toast.error('Vous n\'avez pas la permission de modifier le planning');
+                                              return;
+                                            }
                                             handleCellClick(employee.id, dateStr, dayInfo);
                                           }}
                                           onDelete={(ns) => {
+                                            if (!canModifyPlanning) {
+                                              toast.error('Vous n\'avez pas la permission de modifier le planning');
+                                              return;
+                                            }
                                             if (window.confirm('Supprimer cet événement ?')) {
                                               base44.entities.NonShiftEvent.delete(ns.id).then(() => {
                                                 queryClient.invalidateQueries({ queryKey: ['nonShiftEvents'] });
@@ -1288,6 +1296,7 @@ export default function Planning() {
                                               });
                                             }
                                           }}
+                                          disabled={!canModifyPlanning}
                                         />
                                       </div>
                                     );
