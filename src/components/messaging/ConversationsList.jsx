@@ -23,12 +23,32 @@ export default function ConversationsList({
   const conversationsData = useMemo(() => {
     return conversations.map(conv => {
       let displayTitle = conv.title;
+      let avatarInitial = '';
+      let avatarColor = 'bg-gray-100';
       
-      // Generate title for private conversations without title
-      if (conv.type === 'privee' && !conv.title) {
+      // For private conversations: always show other person's name
+      if (conv.type === 'privee') {
         const otherParticipantIds = conv.participant_employee_ids?.filter(id => id !== currentEmployee.id) || [];
         const otherParticipants = employees.filter(emp => otherParticipantIds.includes(emp.id));
         displayTitle = otherParticipants.map(emp => emp.first_name).join(', ') || 'Conversation';
+        
+        // Avatar initial and color for private
+        if (otherParticipants.length > 0) {
+          avatarInitial = otherParticipants[0].first_name?.charAt(0).toUpperCase() || '?';
+          // Generate soft color from name
+          const colors = [
+            'bg-blue-100 text-blue-700',
+            'bg-green-100 text-green-700',
+            'bg-purple-100 text-purple-700',
+            'bg-pink-100 text-pink-700',
+            'bg-orange-100 text-orange-700',
+            'bg-teal-100 text-teal-700',
+            'bg-indigo-100 text-indigo-700',
+            'bg-rose-100 text-rose-700'
+          ];
+          const hash = otherParticipants[0].first_name?.charCodeAt(0) || 0;
+          avatarColor = colors[hash % colors.length];
+        }
       }
 
       const Icon = typeIcons[conv.type] || User;
@@ -38,7 +58,9 @@ export default function ConversationsList({
         ...conv,
         displayTitle,
         Icon,
-        unreadCount
+        unreadCount,
+        avatarInitial,
+        avatarColor
       };
     });
   }, [conversations, currentEmployee, employees, unreadCounts]);
@@ -63,13 +85,17 @@ export default function ConversationsList({
         >
           {/* Avatar */}
           <div className={cn(
-            "w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0",
-            conv.unreadCount > 0 ? "bg-blue-100" : "bg-gray-100"
+            "w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0 font-semibold text-lg",
+            conv.type === 'privee' ? conv.avatarColor : (conv.unreadCount > 0 ? "bg-blue-100" : "bg-gray-100")
           )}>
-            <conv.Icon className={cn(
-              "w-6 h-6",
-              conv.unreadCount > 0 ? "text-blue-600" : "text-gray-600"
-            )} />
+            {conv.type === 'privee' ? (
+              conv.avatarInitial
+            ) : (
+              <conv.Icon className={cn(
+                "w-6 h-6",
+                conv.unreadCount > 0 ? "text-blue-600" : "text-gray-600"
+              )} />
+            )}
           </div>
 
           {/* Content */}

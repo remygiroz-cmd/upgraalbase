@@ -141,18 +141,45 @@ export default function Conversation() {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [sortedMessages]);
 
-  // Generate conversation title
+  // Generate conversation title and avatar
   const conversationTitle = useMemo(() => {
     if (!conversation) return '';
-    if (conversation.title) return conversation.title;
 
+    // For private conversations: always show other person's first name
     if (conversation.type === 'privee') {
       const otherIds = conversation.participant_employee_ids?.filter(id => id !== currentEmployee?.id) || [];
       const others = employees.filter(emp => otherIds.includes(emp.id));
-      return others.map(emp => `${emp.first_name} ${emp.last_name}`).join(', ') || 'Conversation';
+      return others.map(emp => emp.first_name).join(', ') || 'Conversation';
     }
 
+    // For other types, use title or type
+    if (conversation.title) return conversation.title;
     return conversation.type === 'entreprise' ? 'Entreprise' : 'Conversation';
+  }, [conversation, currentEmployee, employees]);
+
+  const avatarData = useMemo(() => {
+    if (!conversation || conversation.type !== 'privee') return null;
+    
+    const otherIds = conversation.participant_employee_ids?.filter(id => id !== currentEmployee?.id) || [];
+    const others = employees.filter(emp => otherIds.includes(emp.id));
+    
+    if (others.length === 0) return null;
+    
+    const initial = others[0].first_name?.charAt(0).toUpperCase() || '?';
+    const colors = [
+      'bg-blue-100 text-blue-700',
+      'bg-green-100 text-green-700',
+      'bg-purple-100 text-purple-700',
+      'bg-pink-100 text-pink-700',
+      'bg-orange-100 text-orange-700',
+      'bg-teal-100 text-teal-700',
+      'bg-indigo-100 text-indigo-700',
+      'bg-rose-100 text-rose-700'
+    ];
+    const hash = others[0].first_name?.charCodeAt(0) || 0;
+    const color = colors[hash % colors.length];
+    
+    return { initial, color };
   }, [conversation, currentEmployee, employees]);
 
   if (!conversationId || !conversation) {
@@ -183,11 +210,13 @@ export default function Conversation() {
         </button>
 
         <div className={cn(
-          "w-10 h-10 rounded-full flex items-center justify-center",
-          conversation.type === 'privee' ? "bg-blue-100" : "bg-purple-100"
+          "w-10 h-10 rounded-full flex items-center justify-center font-semibold text-lg",
+          conversation.type === 'privee' 
+            ? avatarData?.color || "bg-blue-100 text-blue-700"
+            : "bg-purple-100"
         )}>
           {conversation.type === 'privee' ? (
-            <User className="w-5 h-5 text-blue-600" />
+            avatarData?.initial || '?'
           ) : (
             <Users className="w-5 h-5 text-purple-600" />
           )}

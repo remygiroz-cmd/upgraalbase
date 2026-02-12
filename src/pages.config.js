@@ -48,6 +48,7 @@
  * The mainPage value must match a key in the PAGES object exactly.
  */
 import CoffreFactures from './pages/CoffreFactures';
+import Conversation from './pages/Conversation';
 import Equipe from './pages/Equipe';
 import GestionPostes from './pages/GestionPostes';
 import GestionRoles from './pages/GestionRoles';
@@ -65,12 +66,12 @@ import Stocks from './pages/Stocks';
 import Temperatures from './pages/Temperatures';
 import TemplatesRH from './pages/TemplatesRH';
 import TravailDuJour from './pages/TravailDuJour';
-import Conversation from './pages/Conversation';
 import __Layout from './Layout.jsx';
 
 
 export const PAGES = {
     "CoffreFactures": CoffreFactures,
+    "Conversation": Conversation,
     "Equipe": Equipe,
     "GestionPostes": GestionPostes,
     "GestionRoles": GestionRoles,
@@ -88,7 +89,6 @@ export const PAGES = {
     "Temperatures": Temperatures,
     "TemplatesRH": TemplatesRH,
     "TravailDuJour": TravailDuJour,
-    "Conversation": Conversation,
 }
 
 export const pagesConfig = {
