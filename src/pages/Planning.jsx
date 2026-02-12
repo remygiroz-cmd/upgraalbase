@@ -1207,15 +1207,25 @@ export default function Planning() {
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
+                              if (!canModifyPlanning) {
+                                toast.error('Lecture seule — vous n\'avez pas la permission de modifier le planning', {
+                                  duration: 3000,
+                                  icon: '🔒'
+                                });
+                                return;
+                              }
                               handleToggleHoliday(dateStr);
                             }}
+                            disabled={!canModifyPlanning}
                             className={cn(
                               "mt-1 text-[8px] lg:text-[9px] px-1 lg:px-1.5 py-0.5 rounded-full font-semibold transition-all",
-                              isHolidayDate(dateStr)
-                                ? "bg-purple-600 text-white hover:bg-purple-700"
-                                : "bg-gray-200 text-gray-600 hover:bg-purple-100 hover:text-purple-700"
+                              !canModifyPlanning
+                                ? "bg-gray-200 text-gray-400 cursor-not-allowed opacity-60"
+                                : isHolidayDate(dateStr)
+                                ? "bg-purple-600 text-white hover:bg-purple-700 cursor-pointer"
+                                : "bg-gray-200 text-gray-600 hover:bg-purple-100 hover:text-purple-700 cursor-pointer"
                             )}
-                            title={isHolidayDate(dateStr) ? "Retirer jour férié" : "Marquer jour férié"}
+                            title={!canModifyPlanning ? "Lecture seule" : (isHolidayDate(dateStr) ? "Retirer jour férié" : "Marquer jour férié")}
                           >
                             {isHolidayDate(dateStr) ? "🎉" : "+F"}
                           </button>
