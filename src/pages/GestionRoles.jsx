@@ -30,8 +30,7 @@ const MODULES = [
 
 export default function GestionRoles() {
   const queryClient = useQueryClient();
-  const [showModal, setShowModal] = useState(false);
-  const [editingRole, setEditingRole] = useState(null);
+  const [editingPermissions, setEditingPermissions] = useState({});
   const [confirmDelete, setConfirmDelete] = useState(null);
 
   const { data: roles = [], isLoading } = useQuery({
@@ -44,19 +43,42 @@ export default function GestionRoles() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['roles'] })
   });
 
-  const handleEdit = (role) => {
-    setEditingRole(role);
-    setShowModal(true);
+  const savePermissionsMutation = useMutation({
+    mutationFn: async ({ roleId, permissions }) => {
+      return base44.entities.Role.update(roleId, { permissions });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['roles'] });
+      toast.success('Permissions mises à jour');
+      setEditingPermissions({});
+    },
+    onError: () => {
+      toast.error('Erreur lors de la sauvegarde');
+    }
+  });
+
+  const togglePermission = (roleId, permissionKey) => {
+    const key = `${roleId}_${permissionKey}`;
+    const currentPerms = editingPermissions[roleId] || roles.find(r => r.id === roleId)?.permissions || {};
+    
+    setEditingPermissions(prev => ({
+      ...prev,
+      [roleId]: {
+        ...currentPerms,
+        [permissionKey]: !currentPerms[permissionKey]
+      }
+    }));
   };
 
-  const handleDuplicate = (role) => {
-    setEditingRole({
-      ...role,
-      id: null,
-      name: `${role.name} (copie)`
+  const handleSaveAll = () => {
+    Object.entries(editingPermissions).forEach(([roleId, permissions]) => {
+      if (Object.keys(permissions).length > 0) {
+        savePermissionsMutation.mutate({ roleId, permissions });
+      }
     });
-    setShowModal(true);
   };
+
+  const hasChanges = Object.keys(editingPermissions).length > 0;
 
   if (isLoading) return <LoadingSpinner />;
 
