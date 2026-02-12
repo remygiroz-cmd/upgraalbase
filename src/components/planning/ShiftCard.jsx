@@ -28,7 +28,8 @@ const ShiftCard = React.memo(function ShiftCard({
   onDelete, 
   hasRestWarning, 
   hasOvertimeWarning,
-  onSave
+  onSave,
+  disabled = false
 }) {
   const [editingField, setEditingField] = useState(null); // 'start' | 'end' | null
   const [tempValue, setTempValue] = useState('');
