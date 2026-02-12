@@ -45,20 +45,27 @@ export default function GestionRoles() {
 
   const savePermissionsMutation = useMutation({
     mutationFn: async () => {
-      for (const [roleId, changedPerms] of Object.entries(editingPermissions)) {
+      console.log('Starting to save permissions...', editingPermissions);
+      const updates = Object.entries(editingPermissions).map(([roleId, changedPerms]) => {
         const role = roles.find(r => r.id === roleId);
         const fullPermissions = { ...role?.permissions || {}, ...changedPerms };
-        await base44.entities.Role.update(roleId, { permissions: fullPermissions });
-      }
+        console.log(`Updating role ${roleId} with:`, fullPermissions);
+        return base44.entities.Role.update(roleId, { permissions: fullPermissions });
+      });
+      
+      const results = await Promise.all(updates);
+      console.log('Updates completed:', results);
+      return results;
     },
     onSuccess: () => {
+      console.log('Mutation successful, invalidating query');
       queryClient.invalidateQueries({ queryKey: ['roles'] });
       toast.success('Permissions mises à jour avec succès');
       setEditingPermissions({});
     },
     onError: (error) => {
-      toast.error('Erreur lors de la sauvegarde des permissions');
-      console.error(error);
+      console.error('Mutation error:', error);
+      toast.error(`Erreur: ${error?.message || 'Impossible de sauvegarder'}`);
     }
   });
 
