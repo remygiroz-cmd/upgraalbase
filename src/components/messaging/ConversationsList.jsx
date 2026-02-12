@@ -1,11 +1,12 @@
 import React, { useMemo } from 'react';
-import { Users, User, Building2, Briefcase, Archive, ArchiveRestore, MoreVertical } from 'lucide-react';
+import { Users, User, Building2, Briefcase, Archive, ArchiveRestore, MoreVertical, Circle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { base44 } from '@/api/base44Client';
 import { useQueryClient, useMutation } from '@tanstack/react-query';
 import { toast } from 'sonner';
+import { calculatePresenceStatus, getOnlineCount } from '@/components/utils/presenceUtils';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -69,6 +70,7 @@ export default function ConversationsList({
       let displayTitle = conv.title;
       let avatarInitial = '';
       let avatarColor = 'bg-gray-100';
+      let presenceInfo = null;
       
       // For private conversations: always show other person's name
       if (conv.type === 'privee') {
@@ -92,6 +94,12 @@ export default function ConversationsList({
           ];
           const hash = otherParticipants[0].first_name?.charCodeAt(0) || 0;
           avatarColor = colors[hash % colors.length];
+          
+          // Calculate presence for private conversations
+          presenceInfo = {
+            type: 'single',
+            presence: calculatePresenceStatus(otherParticipants[0].last_seen_at)
+          };
         }
       }
       
@@ -106,6 +114,22 @@ export default function ConversationsList({
           displayTitle = '👥 Équipe';
         }
         avatarColor = 'bg-gray-100 text-gray-600';
+        
+        // Calculate online count for team conversations
+        const onlineCount = getOnlineCount(conv.participant_employee_ids, employees);
+        presenceInfo = {
+          type: 'group',
+          onlineCount
+        };
+      }
+
+      // For entreprise conversations
+      if (conv.type === 'entreprise') {
+        const onlineCount = getOnlineCount(conv.participant_employee_ids, employees);
+        presenceInfo = {
+          type: 'group',
+          onlineCount
+        };
       }
 
       const Icon = typeIcons[conv.type] || User;
@@ -117,7 +141,8 @@ export default function ConversationsList({
         Icon,
         unreadCount,
         avatarInitial,
-        avatarColor
+        avatarColor,
+        presenceInfo
       };
     });
   }, [conversations, currentEmployee, employees, unreadCounts]);
@@ -143,15 +168,21 @@ export default function ConversationsList({
             onClick={() => navigate(createPageUrl('Conversation') + '?id=' + conv.id)}
             className="w-full px-4 py-3 text-left flex items-start gap-3"
           >
-          {/* Avatar */}
-          <div className={cn(
-            "w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0",
-            conv.type === 'privee' ? cn(conv.avatarColor, "font-semibold text-lg") : conv.avatarColor
-          )}>
-            {conv.type === 'privee' ? (
-              conv.avatarInitial
-            ) : (
-              <conv.Icon className="w-6 h-6" />
+          {/* Avatar with presence indicator */}
+          <div className="relative flex-shrink-0">
+            <div className={cn(
+              "w-12 h-12 rounded-full flex items-center justify-center",
+              conv.type === 'privee' ? cn(conv.avatarColor, "font-semibold text-lg") : conv.avatarColor
+            )}>
+              {conv.type === 'privee' ? (
+                conv.avatarInitial
+              ) : (
+                <conv.Icon className="w-6 h-6" />
+              )}
+            </div>
+            {/* Presence dot for online private conversations */}
+            {conv.presenceInfo?.type === 'single' && conv.presenceInfo.presence.status === 'online' && (
+              <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full border-2 border-white" />
             )}
           </div>
 
@@ -186,17 +217,27 @@ export default function ConversationsList({
 
             <div className="flex items-center justify-between gap-2">
               <p className={cn(
-                "text-xs truncate",
+                "text-xs truncate flex-1",
                 conv.unreadCount > 0 ? "text-gray-700 font-medium" : "text-gray-500"
               )}>
                 {conv.last_message_text || 'Aucun message'}
               </p>
               
-              {conv.unreadCount > 0 && (
-                <span className="bg-blue-600 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center flex-shrink-0">
-                  {conv.unreadCount > 9 ? '9+' : conv.unreadCount}
-                </span>
-              )}
+              <div className="flex items-center gap-2 flex-shrink-0">
+                {/* Online count for group conversations */}
+                {conv.presenceInfo?.type === 'group' && conv.presenceInfo.onlineCount > 0 && (
+                  <span className="text-xs text-green-600 font-medium flex items-center gap-1">
+                    <Circle className="w-2 h-2 fill-green-500 text-green-500" />
+                    {conv.presenceInfo.onlineCount}
+                  </span>
+                )}
+                
+                {conv.unreadCount > 0 && (
+                  <span className="bg-blue-600 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
+                    {conv.unreadCount > 9 ? '9+' : conv.unreadCount}
+                  </span>
+                )}
+              </div>
             </div>
           </div>
           </button>
