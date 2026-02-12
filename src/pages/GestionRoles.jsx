@@ -146,15 +146,25 @@ export default function GestionRoles() {
 
       {/* Save Button */}
       {hasChanges && (
-       <div className="fixed bottom-6 right-6 z-40">
-         <Button
-           onClick={handleSaveAll}
-           className="bg-orange-600 hover:bg-orange-700 shadow-lg min-h-[48px] px-6"
-         >
-           <Save className="w-4 h-4 mr-2" />
-           Enregistrer les paramètres
-         </Button>
-       </div>
+        <div className="fixed bottom-6 right-6 z-40">
+          <Button
+            onClick={handleSaveAll}
+            disabled={savePermissionsMutation.isPending}
+            className="bg-orange-600 hover:bg-orange-700 shadow-lg min-h-[48px] px-6 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {savePermissionsMutation.isPending ? (
+              <>
+                <span className="inline-block animate-spin mr-2">⏳</span>
+                Enregistrement...
+              </>
+            ) : (
+              <>
+                <Save className="w-4 h-4 mr-2" />
+                Enregistrer les paramètres
+              </>
+            )}
+          </Button>
+        </div>
       )}
 
       <ConfirmDialog
