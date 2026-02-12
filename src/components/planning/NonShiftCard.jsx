@@ -10,8 +10,9 @@ const NonShiftCard = React.memo(function NonShiftCard({ nonShift, nonShiftType, 
     <div
       onClick={onClick}
       className={cn(
-        "relative rounded-md p-2 text-xs cursor-pointer transition-all hover:shadow-md group border-2 h-full",
-        "flex items-center gap-2"
+        "relative rounded-md p-2 text-xs transition-all group border-2 h-full",
+        "flex items-center gap-2",
+        disabled ? "cursor-not-allowed opacity-60" : "cursor-pointer hover:shadow-md"
       )}
       style={{ 
         backgroundColor: nonShiftType.color + '20',
