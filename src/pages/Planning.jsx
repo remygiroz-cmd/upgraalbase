@@ -1681,9 +1681,10 @@ export default function Planning() {
         </DialogContent>
       </Dialog>
 
-      {/* Floating Action Button */}
-      <div className="fixed bottom-6 right-6 z-50">
-        {showFab && (
+      {/* Floating Action Button - Only for users with modify permission */}
+      {canModifyPlanning && (
+        <div className="fixed bottom-6 right-6 z-50">
+          {showFab && (
           <div className="absolute bottom-16 right-0 bg-white rounded-lg shadow-2xl border-2 border-gray-200 p-2 space-y-2 min-w-[240px] animate-in slide-in-from-bottom-2">
             <button
               onClick={() => {
