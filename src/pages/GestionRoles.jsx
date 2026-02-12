@@ -74,7 +74,7 @@ export default function GestionRoles() {
   if (isLoading) return <LoadingSpinner />;
 
   return (
-    <div>
+    <div className="relative pb-24">
       <PageHeader
         icon={Shield}
         title="Gestion des rôles"
