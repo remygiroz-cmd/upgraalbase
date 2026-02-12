@@ -155,7 +155,8 @@ export function calculateMonthlyRecap(
   nonShiftTypes,
   holidayDates,
   year,
-  month
+  month,
+  weeklyRecaps = [] // NOUVEAU: WeeklyRecap overrides par semaine
 ) {
   // Base result structure
   const result = {
