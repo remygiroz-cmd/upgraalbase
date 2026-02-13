@@ -926,11 +926,13 @@ export default function ExportComptaModal({ open, onOpenChange, monthStart, mont
   const handleDownloadPDF = async () => {
     setIsGenerating(true);
     setError(null);
+    
+    toast.info('⏳ Génération en cours...', { duration: 5000 });
 
     try {
       const doc = await generatePDF();
       doc.save(`Export_Compta_${monthName}_${year}.pdf`);
-      toast.success('PDF téléchargé avec succès');
+      toast.success('✅ PDF téléchargé');
     } catch (error) {
       setError(`Erreur : ${error.message}`);
       toast.error('Échec : ' + error.message);
@@ -949,9 +951,13 @@ export default function ExportComptaModal({ open, onOpenChange, monthStart, mont
     setIsSending(true);
     setError(null);
     
+    toast.info('📄 Génération PDF...', { duration: 5000 });
+    
     try {
       console.log('🔄 Génération PDF en cours...');
       const doc = await generatePDF();
+      
+      toast.info('📤 Upload en cours...', { duration: 5000 });
       
       console.log('✅ PDF généré, extraction blob...');
       const pdfBlob = doc.output('blob');
@@ -972,6 +978,8 @@ export default function ExportComptaModal({ open, onOpenChange, monthStart, mont
         throw new Error('Upload échoué: aucune URL retournée');
       }
 
+      toast.info('📧 Envoi email...', { duration: 5000 });
+      
       console.log('📧 Envoi de l\'email via backend function...');
       const response = await base44.functions.invoke('sendComptaExport', {
         pdfUrl: uploadResult.file_url,
@@ -994,7 +1002,7 @@ export default function ExportComptaModal({ open, onOpenChange, monthStart, mont
         throw new Error(response.data.error);
       }
 
-      toast.success('Email envoyé à la comptabilité avec PDF en pièce jointe');
+      toast.success('✅ Email envoyé avec succès');
       onOpenChange(false);
     } catch (error) {
       const errorMsg = error?.response?.data?.error || error.message;
