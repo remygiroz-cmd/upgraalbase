@@ -39,13 +39,6 @@ export default function LeaveRequestNotification({ request, onDismiss }) {
         
         if (!data) {
           console.error('❌ [UI MUTATION] No data in response!', response);
-          const noDataError = {
-            ok: false,
-            errorMessage: 'No data in response',
-            errorName: 'NoDataError',
-            rawResponse: response
-          };
-          setDebugResult(noDataError);
           throw new Error('Pas de données dans la réponse du serveur');
         }
         
@@ -54,14 +47,6 @@ export default function LeaveRequestNotification({ request, onDismiss }) {
         console.log('  - data.ok:', data.ok);
         console.log('  - data.traceId:', data.traceId);
         console.log('  - Full data:', JSON.stringify(data, null, 2));
-        
-        // Store debug result for UI display
-        setDebugResult(data);
-        
-        // Show raw result in toast
-        const rawResult = JSON.stringify(data).slice(0, 200);
-        console.log('🔷 [UI MUTATION] Toast raw result:', rawResult);
-        toast.info(`Result: ${rawResult}`, { duration: 10000 });
         
         if (data.ok === false) {
           console.error('❌ [UI MUTATION] Server returned ok:false:', data);
