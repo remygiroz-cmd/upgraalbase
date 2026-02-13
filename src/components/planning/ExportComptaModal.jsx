@@ -131,17 +131,15 @@ function buildExportRow(employee, calculatedRecap, nonShiftTypes, cpPeriods, non
   
   const autoNonShiftsStr = nonShiftsVisible.join('\n') || '';
 
-  // === CP DÉCOMPTÉS - CALCUL AUTO (format compact) ===
+  // === CP DÉCOMPTÉS - CALCUL AUTO ===
   const employeeCPPeriods = cpPeriods.filter(cp => cp.employee_id === employee.id);
   const cpLines = [];
   
   employeeCPPeriods.forEach(cp => {
     const cpDays = cp.cp_days_manual || cp.cp_days_auto || 0;
-    const startDate = new Date(cp.cp_start_date + 'T00:00:00');
-    const endDate = new Date(cp.end_cp + 'T00:00:00');
-    const startStr = `${startDate.getDate()} ${startDate.toLocaleDateString('fr-FR', { month: 'short' })}`;
-    const endStr = `${endDate.getDate()} ${endDate.toLocaleDateString('fr-FR', { month: 'short' })}`;
-    cpLines.push(`${cpDays} CP (${startStr}→${endStr})`);
+    const departDate = formatDateFR(cp.cp_start_date);
+    const repriseDate = formatDateFR(cp.return_date);
+    cpLines.push(`${cpDays} CP (départ le ${departDate}, reprise le ${repriseDate})`);
   });
   
   const autoCpStr = cpLines.join('\n') || '';
