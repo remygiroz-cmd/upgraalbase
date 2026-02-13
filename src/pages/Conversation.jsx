@@ -383,7 +383,110 @@ export default function Conversation() {
     }
   };
 
+  const handleImageSelect = async (e) => {
+    const files = Array.from(e.target.files || []);
+    
+    if (files.length === 0) return;
+    if (files.length > 10) {
+      toast.error('Maximum 10 images par message');
+      return;
+    }
+    
+    // Create preview URLs
+    const previews = files.map(file => ({
+      file,
+      preview: URL.createObjectURL(file)
+    }));
+    
+    setSelectedImages(previews);
+  };
+  
+  const handleRemoveImage = (index) => {
+    setSelectedImages(prev => {
+      const updated = [...prev];
+      URL.revokeObjectURL(updated[index].preview);
+      updated.splice(index, 1);
+      return updated;
+    });
+  };
+  
+  const handleSendImages = async () => {
+    if (selectedImages.length === 0) return;
+    
+    try {
+      setUploadProgress({ stage: 'processing', current: 0, total: selectedImages.length });
+      
+      // Process all images
+      const processed = await processImages(
+        selectedImages.map(img => img.file),
+        (progress) => {
+          setUploadProgress(progress);
+        }
+      );
+      
+      // Check for errors
+      const failed = processed.filter(p => !p.success);
+      if (failed.length > 0) {
+        toast.error(`${failed.length} image(s) n'ont pas pu être traitées`);
+        return;
+      }
+      
+      setUploadProgress({ stage: 'upload', current: 0, total: processed.length });
+      
+      // Upload all images to storage
+      const uploadedImages = [];
+      
+      for (let i = 0; i < processed.length; i++) {
+        const p = processed[i];
+        
+        setUploadProgress({ stage: 'upload', current: i + 1, total: processed.length });
+        
+        // Upload full image
+        const fullFile = new File([p.full.blob], `image-${Date.now()}-${i}.webp`, { type: 'image/webp' });
+        const { file_url: fullUrl } = await base44.integrations.Core.UploadFile({ file: fullFile });
+        
+        // Upload thumbnail
+        const thumbFile = new File([p.thumb.blob], `thumb-${Date.now()}-${i}.webp`, { type: 'image/webp' });
+        const { file_url: thumbUrl } = await base44.integrations.Core.UploadFile({ file: thumbFile });
+        
+        uploadedImages.push({
+          url: fullUrl,
+          thumbUrl: thumbUrl,
+          width: p.full.width,
+          height: p.full.height,
+          size: p.full.size,
+          mimeType: p.full.mimeType
+        });
+      }
+      
+      setUploadProgress({ stage: 'complete', current: processed.length, total: processed.length });
+      
+      // Send message with images
+      sendMessageMutation.mutate({
+        text: messageText.trim() || null,
+        mentions: [],
+        isUrgent,
+        urgentLevel: isUrgent ? urgentLevel : undefined,
+        images: uploadedImages
+      });
+      
+      setIsUrgent(false);
+      
+    } catch (error) {
+      console.error('Upload error:', error);
+      toast.error('Erreur lors de l\'envoi des images');
+      setUploadProgress(null);
+    }
+  };
+  
   const handleSend = () => {
+    // If images are selected, send them
+    if (selectedImages.length > 0) {
+      handleSendImages();
+      return;
+    }
+    
+    // Otherwise send text
     if (!messageText.trim()) return;
     
     // Clear typing indicator immediately
@@ -411,6 +514,12 @@ export default function Conversation() {
       urgentLevel: isUrgent ? urgentLevel : undefined
     });
     setIsUrgent(false);
+  };
+  
+  const openImageViewer = (images, index) => {
+    setViewerImages(images);
+    setViewerIndex(index);
+    setViewerOpen(true);
   };
 
   const canSendUrgent = useMemo(() => {
@@ -844,7 +953,9 @@ export default function Conversation() {
 
                 <div className="relative group/message flex items-start gap-2">
                   <div className={cn(
-                    "max-w-[70%] rounded-2xl px-4 py-2 relative",
+                    "max-w-[70%] rounded-2xl relative",
+                    msg.type !== 'image' && "px-4 py-2",
+                    msg.type === 'image' && "p-2",
                     msg.is_urgent && !isMe && (
                       msg.urgent_level === 'critique' ? "bg-red-50 text-gray-900 rounded-bl-sm shadow-sm ring-2 ring-red-300" :
                       msg.urgent_level === 'important' ? "bg-orange-50 text-gray-900 rounded-bl-sm shadow-sm ring-2 ring-orange-300" :
@@ -867,14 +978,40 @@ export default function Conversation() {
                     {msg.is_pinned && (
                       <Pin className={cn("w-3 h-3 absolute -top-1 -right-1", isMe ? "text-yellow-300" : "text-yellow-600")} />
                     )}
-                    {!isMe && (
+                    {!isMe && msg.type !== 'image' && (
                       <p className="text-xs font-semibold mb-1 opacity-70 flex items-center gap-1">
                         {msg.is_urgent && <span>📣</span>}
                         {sender?.first_name} {sender?.last_name}
                       </p>
                     )}
-                    <p className="text-sm whitespace-pre-wrap break-words">{msg.text}</p>
-                    <div className="flex items-center justify-end gap-1 mt-1">
+                    
+                    {/* Image message */}
+                    {msg.type === 'image' && msg.images && msg.images.length > 0 && (
+                      <div>
+                        {!isMe && (
+                          <p className="text-xs font-semibold mb-2 px-2 opacity-70">
+                            {sender?.first_name} {sender?.last_name}
+                          </p>
+                        )}
+                        <ImageMessageGrid
+                          images={msg.images}
+                          onImageClick={(index) => openImageViewer(msg.images, index)}
+                        />
+                        {msg.text && (
+                          <p className="text-sm whitespace-pre-wrap break-words mt-2 px-2">{msg.text}</p>
+                        )}
+                      </div>
+                    )}
+                    
+                    {/* Text message */}
+                    {msg.type !== 'image' && (
+                      <p className="text-sm whitespace-pre-wrap break-words">{msg.text}</p>
+                    )}
+                    
+                    <div className={cn(
+                      "flex items-center justify-end gap-1 mt-1",
+                      msg.type === 'image' && "px-2"
+                    )}>
                       <p className={cn(
                         "text-[10px]",
                         isMe ? "text-blue-100" : "text-gray-500"
@@ -946,6 +1083,21 @@ export default function Conversation() {
         <div ref={messagesEndRef} />
       </div>
 
+      {/* Image Viewer */}
+      <ImageViewer
+        images={viewerImages}
+        initialIndex={viewerIndex}
+        open={viewerOpen}
+        onOpenChange={setViewerOpen}
+      />
+
+      {/* Image Upload Preview */}
+      <ImageUploadPreview
+        images={selectedImages}
+        onRemove={handleRemoveImage}
+        uploadProgress={uploadProgress}
+      />
+
       {/* Input */}
       <div className="bg-white border-t border-gray-200 px-4 py-3 relative">
         {/* Urgent toggle for admin/managers */}
@@ -1002,9 +1154,30 @@ export default function Conversation() {
         )}
 
         <div className="flex gap-2 items-end">
+          {/* Image picker */}
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/jpeg,image/png,image/webp,image/heic"
+            multiple
+            max={10}
+            onChange={handleImageSelect}
+            className="hidden"
+          />
+          
+          <Button
+            onClick={() => fileInputRef.current?.click()}
+            disabled={uploadProgress !== null}
+            variant="outline"
+            className="h-11 px-3"
+            type="button"
+          >
+            <ImageIcon className="w-5 h-5 text-gray-600" />
+          </Button>
+          
           <Textarea
             ref={textareaRef}
-            placeholder="Écrivez votre message... (@ pour mentionner)"
+            placeholder={selectedImages.length > 0 ? "Légende (optionnel)..." : "Écrivez votre message... (@ pour mentionner)"}
             value={messageText}
             onChange={handleTextChange}
             onKeyDown={(e) => {
@@ -1016,12 +1189,13 @@ export default function Conversation() {
                 setShowMentions(false);
               }
             }}
+            disabled={uploadProgress !== null}
             className="flex-1 min-h-[44px] max-h-32 resize-none"
             rows={1}
           />
           <Button
             onClick={handleSend}
-            disabled={!messageText.trim() || sendMessageMutation.isPending}
+            disabled={(!messageText.trim() && selectedImages.length === 0) || uploadProgress !== null}
             className="bg-blue-600 hover:bg-blue-700 h-11 px-4"
           >
             <Send className="w-4 h-4" />
