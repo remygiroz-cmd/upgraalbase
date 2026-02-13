@@ -215,6 +215,25 @@ export default function ConversationsList({
               )}
             </div>
 
+            {/* Creator and participants info */}
+            <div className="flex items-center gap-2 mb-1.5">
+              {conv.created_by_employee_id && (() => {
+                const creator = employees.find(e => e.id === conv.created_by_employee_id);
+                if (creator) {
+                  return (
+                    <span className="text-xs text-gray-500 flex items-center gap-1">
+                      <span className="font-medium">Créée par {creator.first_name}</span>
+                    </span>
+                  );
+                }
+              })()}
+              {conv.participant_employee_ids?.length > 0 && (
+                <span className="text-xs text-gray-500">
+                  • {conv.participant_employee_ids.length} membre{conv.participant_employee_ids.length > 1 ? 's' : ''}
+                </span>
+              )}
+            </div>
+
             <div className="flex items-center justify-between gap-2">
               <p className={cn(
                 "text-xs truncate flex-1",
