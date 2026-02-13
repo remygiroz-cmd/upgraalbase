@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
-import { ArrowLeft, Send, Users, User, Pin, MoreVertical, X, Circle, Trash2, AlertTriangle } from 'lucide-react';
+import { ArrowLeft, Send, Users, User, Pin, MoreVertical, X, Circle, Trash2, AlertTriangle, Image as ImageIcon } from 'lucide-react';
 import ConversationActionsMenu from '@/components/messaging/ConversationActionsMenu';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -11,6 +11,9 @@ import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { calculatePresenceStatus, getOnlineCount } from '@/components/utils/presenceUtils';
 import MessageReadStatus from '@/components/messaging/MessageReadStatus';
+import ImageViewer, { ImageMessageGrid } from '@/components/messaging/ImageViewer';
+import ImageUploadPreview from '@/components/messaging/ImageUploadPreview';
+import { processImages } from '@/components/messaging/ImageOptimizer';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -32,6 +35,14 @@ export default function Conversation() {
   const textareaRef = useRef(null);
   const typingTimeoutRef = useRef(null);
   const lastTypingUpdateRef = useRef(0);
+  const fileInputRef = useRef(null);
+  
+  // Image upload states
+  const [selectedImages, setSelectedImages] = useState([]);
+  const [uploadProgress, setUploadProgress] = useState(null);
+  const [viewerOpen, setViewerOpen] = useState(false);
+  const [viewerImages, setViewerImages] = useState([]);
+  const [viewerIndex, setViewerIndex] = useState(0);
 
   // Get conversation ID from URL
   const urlParams = new URLSearchParams(window.location.search);
@@ -241,12 +252,22 @@ export default function Conversation() {
 
   // Send message mutation
   const sendMessageMutation = useMutation({
-    mutationFn: async ({ text, mentions, isUrgent, urgentLevel }) => {
+    mutationFn: async ({ text, mentions, isUrgent, urgentLevel, images }) => {
       const messageData = {
         conversation_id: conversationId,
         sender_employee_id: currentEmployee.id,
-        text: text.trim()
+        type: images && images.length > 0 ? 'image' : 'text'
       };
+
+      // Text content (optional for images)
+      if (text?.trim()) {
+        messageData.text = text.trim();
+      }
+
+      // Images
+      if (images && images.length > 0) {
+        messageData.images = images;
+      }
 
       if (isUrgent) {
         messageData.is_urgent = true;
@@ -256,7 +277,7 @@ export default function Conversation() {
       const message = await base44.entities.Message.create(messageData);
 
       // Create mentions
-      if (mentions.length > 0) {
+      if (mentions && mentions.length > 0) {
         const mentionRecords = mentions.map(empId => ({
           message_id: message.id,
           mentioned_employee_id: empId,
@@ -266,8 +287,12 @@ export default function Conversation() {
       }
 
       // Update conversation last message
+      const lastMessageText = images && images.length > 0 
+        ? `📷 ${images.length} image${images.length > 1 ? 's' : ''}`
+        : text.trim().substring(0, 100);
+        
       await base44.entities.Conversation.update(conversationId, {
-        last_message_text: text.trim().substring(0, 100),
+        last_message_text: lastMessageText,
         last_message_at: new Date().toISOString()
       });
 
@@ -278,9 +303,12 @@ export default function Conversation() {
       queryClient.invalidateQueries({ queryKey: ['myConversations'] });
       queryClient.invalidateQueries({ queryKey: ['messageMentions'] });
       setMessageText('');
+      setSelectedImages([]);
+      setUploadProgress(null);
     },
     onError: () => {
       toast.error('Erreur lors de l\'envoi');
+      setUploadProgress(null);
     }
   });
 
