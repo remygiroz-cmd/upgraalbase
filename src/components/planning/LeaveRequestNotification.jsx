@@ -16,133 +16,15 @@ export default function LeaveRequestNotification({ request, onDismiss }) {
 
   const approveMutation = useMutation({
     mutationFn: async () => {
-      console.log('🔷 [APPROVE CP] START', {
-        requestId: request.id,
-        employeeId: request.employee_id,
-        employeeName: request.employee_name,
-        startCP: request.start_cp,
-        endCP: request.end_cp,
-        cpDaysComputed: request.cp_days_computed
+      const { data } = await base44.functions.invoke('approveLeaveRequest', {
+        requestId: request.id
       });
-
-      const startDate = new Date(request.start_cp);
-      const endDate = new Date(request.end_cp);
       
-      // Determine all affected months
-      const affectedMonths = [];
-      let currentDate = new Date(startDate);
-      
-      while (currentDate <= endDate) {
-        const monthKey = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}`;
-        if (!affectedMonths.includes(monthKey)) {
-          affectedMonths.push(monthKey);
-        }
-        currentDate.setMonth(currentDate.getMonth() + 1);
-        currentDate.setDate(1);
+      if (data.error) {
+        throw new Error(data.error);
       }
-
-      console.log('🔷 [APPROVE CP] Affected months:', affectedMonths);
-
-      // Get or create PlanningMonth for each affected month
-      const createdPeriods = [];
       
-      for (const monthKey of affectedMonths) {
-        const [year, monthNum] = monthKey.split('-').map(Number);
-        
-        console.log(`🔷 [APPROVE CP] Processing month: ${monthKey}`);
-        
-        // Get or create planning month
-        let planningMonths = await base44.entities.PlanningMonth.filter({ month_key: monthKey });
-        let resetVersion = 0;
-        
-        if (planningMonths.length === 0) {
-          console.log(`🔷 [APPROVE CP] Creating new PlanningMonth for ${monthKey}`);
-          await base44.entities.PlanningMonth.create({
-            year: year,
-            month: monthNum - 1,
-            month_key: monthKey,
-            reset_version: 0
-          });
-          resetVersion = 0;
-        } else {
-          resetVersion = planningMonths[0].reset_version || 0;
-          console.log(`🔷 [APPROVE CP] Using existing PlanningMonth for ${monthKey}, reset_version: ${resetVersion}`);
-        }
-
-        // Determine the period boundaries for this specific month
-        const monthStart = new Date(year, monthNum - 1, 1);
-        const monthEnd = new Date(year, monthNum, 0);
-        
-        const periodStart = startDate > monthStart ? startDate : monthStart;
-        const periodEnd = endDate < monthEnd ? endDate : monthEnd;
-
-        // Create CP period for this month
-        const periodData = {
-          employee_id: request.employee_id,
-          employee_name: request.employee_name,
-          last_work_day: request.last_work_day,
-          first_work_day_after: request.first_work_day_after,
-          start_cp: periodStart.toISOString().split('T')[0],
-          end_cp: periodEnd.toISOString().split('T')[0],
-          cp_days_auto: request.cp_days_computed,
-          cp_days_manual: request.manual_override_days || null,
-          notes: request.notes || `Demande acceptée le ${new Date().toLocaleDateString('fr-FR')}`,
-          month_key: monthKey,
-          reset_version: resetVersion
-        };
-
-        console.log(`🔷 [APPROVE CP] Creating PaidLeavePeriod:`, periodData);
-
-        try {
-          const period = await base44.entities.PaidLeavePeriod.create(periodData);
-          console.log(`✅ [APPROVE CP] PaidLeavePeriod created for ${monthKey}:`, {
-            id: period.id,
-            start: period.start_cp,
-            end: period.end_cp,
-            monthKey: period.month_key,
-            resetVersion: period.reset_version
-          });
-          createdPeriods.push(period);
-        } catch (createError) {
-          console.error(`❌ [APPROVE CP] Failed to create PaidLeavePeriod for ${monthKey}:`, createError);
-          throw new Error(`Échec création CP sur ${monthKey}: ${createError.message}`);
-        }
-      }
-
-      console.log(`✅ [APPROVE CP] All periods created (${createdPeriods.length})`);
-
-      // Update request status ONLY if all periods created successfully
-      const currentUser = await base44.auth.me();
-      console.log('🔷 [APPROVE CP] Updating request status to APPROVED');
-      
-      await base44.entities.LeaveRequest.update(request.id, {
-        status: 'APPROVED',
-        decision_by_user_id: currentUser.id,
-        decision_by_user_email: currentUser.email,
-        decision_at: new Date().toISOString(),
-        created_period_id: createdPeriods[0].id
-      });
-
-      // Send notification to requester
-      if (request.requested_by_user_email) {
-        try {
-          await base44.integrations.Core.SendEmail({
-            to: request.requested_by_user_email,
-            subject: '✅ Votre demande de CP a été acceptée',
-            body: `
-              <h2>Votre demande de congés payés a été acceptée</h2>
-              <p><strong>Période:</strong> Du ${new Date(request.last_work_day).toLocaleDateString('fr-FR')} au ${new Date(request.first_work_day_after).toLocaleDateString('fr-FR')}</p>
-              <p><strong>Jours décomptés:</strong> ${request.cp_days_computed} jours</p>
-              <p><strong>Date de décision:</strong> ${new Date().toLocaleDateString('fr-FR')}</p>
-              <p>Cette période a été ajoutée à votre planning.</p>
-            `
-          });
-        } catch (emailError) {
-          console.error('Failed to send email notification:', emailError);
-        }
-      }
-
-      return { periods: createdPeriods, affectedMonths };
+      return data;
     },
     onSuccess: ({ periods, affectedMonths }) => {
       console.log('✅ [APPROVE CP] SUCCESS - Invalidating queries');
