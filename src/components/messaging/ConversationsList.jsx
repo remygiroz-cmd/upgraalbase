@@ -95,6 +95,9 @@ export default function ConversationsList({
           const hash = otherParticipants[0].first_name?.charCodeAt(0) || 0;
           avatarColor = colors[hash % colors.length];
           
+          // Store employee for avatar image
+          conv.avatarEmployee = otherParticipants[0];
+          
           // Calculate presence for private conversations
           presenceInfo = {
             type: 'single',
@@ -171,11 +174,15 @@ export default function ConversationsList({
           {/* Avatar with presence indicator */}
           <div className="relative flex-shrink-0">
             <div className={cn(
-              "w-12 h-12 rounded-full flex items-center justify-center",
+              "w-12 h-12 rounded-full flex items-center justify-center overflow-hidden",
               conv.type === 'privee' ? cn(conv.avatarColor, "font-semibold text-lg") : conv.avatarColor
             )}>
               {conv.type === 'privee' ? (
-                conv.avatarInitial
+                conv.avatarEmployee?.photo_url ? (
+                  <img src={conv.avatarEmployee.photo_url} alt={conv.avatarEmployee.first_name} className="w-full h-full object-cover" />
+                ) : (
+                  conv.avatarInitial
+                )
               ) : (
                 <conv.Icon className="w-6 h-6" />
               )}

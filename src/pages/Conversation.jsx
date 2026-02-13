@@ -604,12 +604,16 @@ export default function Conversation() {
         </button>
 
         <div className={cn(
-          "w-10 h-10 rounded-full flex items-center justify-center",
+          "w-10 h-10 rounded-full flex items-center justify-center overflow-hidden",
           avatarData?.type === 'privee' && "font-semibold text-lg",
           avatarData?.color || "bg-purple-100"
         )}>
           {avatarData?.type === 'privee' ? (
-            avatarData.initial || '?'
+            avatarData.employee?.photo_url ? (
+              <img src={avatarData.employee.photo_url} alt={avatarData.employee.first_name} className="w-full h-full object-cover" />
+            ) : (
+              avatarData.initial || '?'
+            )
           ) : avatarData?.type === 'equipe' ? (
             <Users className="w-5 h-5" />
           ) : (
@@ -801,8 +805,12 @@ export default function Conversation() {
                 )}
               >
                 {!isMe && (
-                  <div className="w-8 h-8 rounded-full bg-gray-300 flex-shrink-0 flex items-center justify-center text-white text-xs font-semibold">
-                    {sender?.first_name?.charAt(0)}{sender?.last_name?.charAt(0)}
+                  <div className="w-8 h-8 rounded-full bg-gray-300 flex-shrink-0 flex items-center justify-center text-white text-xs font-semibold overflow-hidden">
+                    {sender?.photo_url ? (
+                      <img src={sender.photo_url} alt={sender.first_name} className="w-full h-full object-cover" />
+                    ) : (
+                      <span>{sender?.first_name?.charAt(0)}{sender?.last_name?.charAt(0)}</span>
+                    )}
                   </div>
                 )}
 
@@ -895,8 +903,12 @@ export default function Conversation() {
                 </div>
 
                 {isMe && (
-                  <div className="w-8 h-8 rounded-full bg-blue-600 flex-shrink-0 flex items-center justify-center text-white text-xs font-semibold">
-                    {currentEmployee.first_name?.charAt(0)}{currentEmployee.last_name?.charAt(0)}
+                  <div className="w-8 h-8 rounded-full bg-blue-600 flex-shrink-0 flex items-center justify-center text-white text-xs font-semibold overflow-hidden">
+                    {currentEmployee.photo_url ? (
+                      <img src={currentEmployee.photo_url} alt={currentEmployee.first_name} className="w-full h-full object-cover" />
+                    ) : (
+                      <span>{currentEmployee.first_name?.charAt(0)}{currentEmployee.last_name?.charAt(0)}</span>
+                    )}
                   </div>
                 )}
               </div>
@@ -943,8 +955,12 @@ export default function Conversation() {
                 onClick={() => insertMention(emp)}
                 className="w-full px-4 py-2 hover:bg-gray-50 text-left flex items-center gap-2"
               >
-                <div className="w-8 h-8 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center text-xs font-semibold">
-                  {emp.first_name?.charAt(0)}{emp.last_name?.charAt(0)}
+                <div className="w-8 h-8 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center text-xs font-semibold overflow-hidden">
+                  {emp.photo_url ? (
+                    <img src={emp.photo_url} alt={emp.first_name} className="w-full h-full object-cover" />
+                  ) : (
+                    <span>{emp.first_name?.charAt(0)}{emp.last_name?.charAt(0)}</span>
+                  )}
                 </div>
                 <div>
                   <p className="text-sm font-medium text-gray-900">
