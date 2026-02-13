@@ -16,6 +16,26 @@ export default function LeaveRequestNotification({ request, onDismiss }) {
 
   const approveMutation = useMutation({
     mutationFn: async () => {
+      // Get month context for the CP period
+      const startDate = new Date(request.start_cp);
+      const monthKey = `${startDate.getFullYear()}-${String(startDate.getMonth() + 1).padStart(2, '0')}`;
+      
+      // Get or create PlanningMonth
+      const planningMonths = await base44.entities.PlanningMonth.filter({ month_key: monthKey });
+      let resetVersion = 0;
+      
+      if (planningMonths.length === 0) {
+        const newMonth = await base44.entities.PlanningMonth.create({
+          year: startDate.getFullYear(),
+          month: startDate.getMonth(),
+          month_key: monthKey,
+          reset_version: 0
+        });
+        resetVersion = 0;
+      } else {
+        resetVersion = planningMonths[0].reset_version || 0;
+      }
+
       // Create the CP period
       const periodData = {
         employee_id: request.employee_id,
@@ -26,7 +46,9 @@ export default function LeaveRequestNotification({ request, onDismiss }) {
         end_cp: request.end_cp,
         cp_days_auto: request.cp_days_computed,
         cp_days_manual: request.manual_override_days || null,
-        notes: request.notes
+        notes: request.notes,
+        month_key: monthKey,
+        reset_version: resetVersion
       };
 
       const period = await base44.entities.PaidLeavePeriod.create(periodData);
