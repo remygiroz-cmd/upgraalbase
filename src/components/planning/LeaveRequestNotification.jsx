@@ -126,8 +126,7 @@ export default function LeaveRequestNotification({ request, onDismiss }) {
       });
       console.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
       
-      setDebugResult({ ok: false, error: error.message, stack: error.stack });
-      toast.error(`❌ ERREUR: ${error.message}`, { duration: 10000 });
+      toast.error('❌ Erreur lors de la création des CP', { duration: 6000 });
     }
   });
 
