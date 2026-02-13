@@ -787,18 +787,28 @@ export default function ExportComptaModal({ open, onOpenChange, monthStart, mont
     
     if (planningElement) {
       try {
-        // Message de progression
-        toast.info('Capture du planning en cours...', { duration: 2000 });
+        console.log('📸 Début capture planning...');
+        toast.info('Capture du planning en cours...', { duration: 3000 });
         
-        // Créer un canvas du planning
-        const canvas = await html2canvas(planningElement, {
-          scale: 1.5, // Bonne résolution sans trop alourdir
+        // Créer un canvas avec timeout de 10 secondes
+        const capturePromise = html2canvas(planningElement, {
+          scale: 1, // Réduit pour performance
           useCORS: true,
           logging: false,
           backgroundColor: '#ffffff',
           windowWidth: planningElement.scrollWidth,
-          windowHeight: planningElement.scrollHeight
+          windowHeight: planningElement.scrollHeight,
+          onclone: (clonedDoc) => {
+            console.log('🔄 DOM cloné pour capture');
+          }
         });
+        
+        const timeoutPromise = new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Timeout capture (10s)')), 10000)
+        );
+        
+        const canvas = await Promise.race([capturePromise, timeoutPromise]);
+        console.log('✅ Canvas créé:', canvas.width, 'x', canvas.height);
         
         // Ajouter nouvelle page en paysage
         doc.addPage('a4', 'landscape');
@@ -815,9 +825,11 @@ export default function ExportComptaModal({ open, onOpenChange, monthStart, mont
         doc.text(settings.etablissement_name || '', pageWidth / 2, margin + 11, { align: 'center' });
         
         // Convertir canvas en image
-        const imgData = canvas.toDataURL('image/png', 0.9);
+        console.log('🖼️ Conversion canvas → image...');
+        const imgData = canvas.toDataURL('image/png', 0.7);
         const imgWidth = pageWidth - 2 * margin;
         const imgHeight = (canvas.height * imgWidth) / canvas.width;
+        console.log('✅ Image générée');
         
         // Positionner l'image du planning
         const yPosition = margin + 16;
@@ -834,25 +846,31 @@ export default function ExportComptaModal({ open, onOpenChange, monthStart, mont
           doc.addImage(imgData, 'PNG', margin, yPosition, imgWidth, imgHeight);
         }
         
+        console.log('✅ Planning ajouté au PDF');
+        
         // Pied de page 2
         doc.setFontSize(7);
         doc.setTextColor(128, 128, 128);
         doc.text('Page 2/2 - Planning mensuel complet', pageWidth / 2, pageHeight - 5, { align: 'center' });
         
       } catch (err) {
-        console.error('Erreur capture planning:', err);
-        toast.error('Impossible de capturer le planning visuel');
-        // Si échec, ajouter une page avec message d'erreur
+        console.error('❌ Erreur capture planning:', err);
+        toast.warning('Capture planning impossible, export sans visuel');
+        
+        // Fallback: page simplifiée sans capture
         doc.addPage();
         doc.setFontSize(12);
-        doc.setTextColor(220, 38, 38);
-        doc.text('⚠️ Erreur lors de la capture du planning', pageWidth / 2, pageHeight / 2 - 5, { align: 'center' });
-        doc.setFontSize(9);
+        doc.setFont('helvetica', 'bold');
+        doc.text(`Planning ${monthName} ${year}`, pageWidth / 2, margin + 10, { align: 'center' });
+        doc.setFontSize(10);
+        doc.setFont('helvetica', 'normal');
         doc.setTextColor(100, 100, 100);
-        doc.text('Veuillez consulter le planning sur UpGraal', pageWidth / 2, pageHeight / 2 + 5, { align: 'center' });
+        doc.text('Consultez le planning complet sur UpGraal', pageWidth / 2, margin + 20, { align: 'center' });
+        doc.setFontSize(8);
+        doc.text(`Raison: ${err.message}`, pageWidth / 2, margin + 30, { align: 'center' });
       }
     } else {
-      console.warn('Planning element not found for export');
+      console.warn('❌ Planning element introuvable dans le DOM');
       // Si planning non trouvé dans le DOM, page avec info
       doc.addPage();
       doc.setFontSize(12);
@@ -860,7 +878,7 @@ export default function ExportComptaModal({ open, onOpenChange, monthStart, mont
       doc.text('Planning non disponible', pageWidth / 2, pageHeight / 2 - 5, { align: 'center' });
       doc.setFontSize(10);
       doc.setTextColor(100, 100, 100);
-      doc.text('Le planning doit être ouvert pour être exporté', pageWidth / 2, pageHeight / 2 + 5, { align: 'center' });
+      doc.text('Ouvrez le planning avant d\'exporter', pageWidth / 2, pageHeight / 2 + 5, { align: 'center' });
     }
 
     return doc;

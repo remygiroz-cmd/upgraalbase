@@ -131,6 +131,10 @@ ${settings.responsableCoords || ''}`;
       </div>
     `;
 
+    console.log('[INFO] Sending email via Resend API...');
+    console.log(`[DEBUG] To: ${settings.emailCompta}, From: ${safeEtablissementName} <noreply@upgraal.com>`);
+    console.log(`[DEBUG] PDF base64 length: ${pdfBase64.length} chars`);
+    
     const emailResponse = await fetch('https://api.resend.com/emails', {
       method: 'POST',
       headers: {
@@ -154,7 +158,9 @@ ${settings.responsableCoords || ''}`;
       })
     });
 
+    console.log(`[INFO] Resend API response status: ${emailResponse.status}`);
     const result = await emailResponse.json();
+    console.log('[INFO] Resend API result:', JSON.stringify(result));
 
     if (!emailResponse.ok) {
       // Messages d'erreur clairs selon le code HTTP
