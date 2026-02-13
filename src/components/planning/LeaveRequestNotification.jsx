@@ -16,18 +16,47 @@ export default function LeaveRequestNotification({ request, onDismiss }) {
 
   const approveMutation = useMutation({
     mutationFn: async () => {
+      console.log('🔷 [UI] Calling approveLeaveRequest function', {
+        requestId: request.id,
+        employeeId: request.employee_id,
+        employeeName: request.employee_name
+      });
+
       const { data } = await base44.functions.invoke('approveLeaveRequest', {
         requestId: request.id
       });
       
-      if (data.error) {
-        throw new Error(data.error);
+      console.log('🔷 [UI] approveLeaveRequest result:', data);
+      
+      // Show raw result for debugging
+      toast.info(`Raw result: ${JSON.stringify(data).slice(0, 200)}`, { duration: 5000 });
+      
+      if (data.ok === false || data.error) {
+        console.error('❌ [UI] Function returned error:', data);
+        throw new Error(data.error || 'Erreur inconnue');
       }
+      
+      if (!data.createdPaidLeavePeriodIds || data.createdPaidLeavePeriodIds.length === 0) {
+        console.error('❌ [UI] No periods created!', data);
+        throw new Error('Aucune période créée (createdPaidLeavePeriodIds vide)');
+      }
+      
+      console.log('✅ [UI] Success - Periods created:', data.createdPaidLeavePeriodIds);
       
       return data;
     },
-    onSuccess: ({ periods, affectedMonths }) => {
-      console.log('✅ [APPROVE CP] SUCCESS - Invalidating queries');
+    onSuccess: (data) => {
+      console.log('✅ [UI APPROVE] SUCCESS - Data received:', {
+        ok: data.ok,
+        periodsCount: data.createdPaidLeavePeriodIds?.length,
+        periodIds: data.createdPaidLeavePeriodIds,
+        affectedMonths: data.affectedMonths || data.month_keys,
+        employeeId: data.employee_id,
+        employeeName: data.employee_name
+      });
+      
+      const affectedMonths = data.affectedMonths || data.month_keys || [];
+      const periodIds = data.createdPaidLeavePeriodIds || [];
       
       queryClient.invalidateQueries({ queryKey: ['pendingLeaveRequests'] });
       queryClient.invalidateQueries({ queryKey: ['myLeaveRequestDecisions'] });
@@ -44,21 +73,27 @@ export default function LeaveRequestNotification({ request, onDismiss }) {
       const currentMonth = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`;
       const isCurrentMonth = affectedMonths.includes(currentMonth);
       
-      if (periods.length > 1) {
+      if (periodIds.length > 1) {
         toast.success(
-          `✅ CP créé sur ${periods.length} mois: ${affectedMonths.join(', ')}${!isCurrentMonth ? ' (pas le mois actuel)' : ''}`
+          `✅ ${periodIds.length} périodes créées sur ${affectedMonths.join(', ')}. IDs: ${periodIds.map(id => id.substring(0, 8)).join(', ')}${!isCurrentMonth ? ' (pas mois actuel)' : ''}`,
+          { duration: 8000 }
         );
       } else {
         toast.success(
-          `✅ CP créé sur ${affectedMonths[0]} (ID: ${periods[0].id.substring(0, 8)}...)${!isCurrentMonth ? ' - Va sur ce mois pour le voir' : ''}`
+          `✅ CP créé: ${affectedMonths[0]} - ID: ${periodIds[0]?.substring(0, 8)}... (${data.employee_name})${!isCurrentMonth ? ' - Va sur ce mois pour le voir' : ''}`,
+          { duration: 8000 }
         );
       }
       
       onDismiss?.();
     },
     onError: (error) => {
-      console.error('Approval error:', error);
-      toast.error(`Erreur lors de l'approbation: ${error.message}`);
+      console.error('❌ [UI APPROVE] Error:', {
+        message: error.message,
+        stack: error.stack,
+        error
+      });
+      toast.error(`❌ ERREUR: ${error.message}`, { duration: 10000 });
     }
   });
 

@@ -6,15 +6,24 @@ Deno.serve(async (req) => {
     const user = await base44.auth.me();
 
     if (!user) {
-      return Response.json({ error: 'Unauthorized' }, { status: 401 });
+      console.error('❌ [APPROVE] Unauthorized - no user');
+      return Response.json({ ok: false, error: 'Unauthorized' }, { status: 401 });
     }
 
     const { requestId } = await req.json();
 
+    // Log environment info
+    const appId = Deno.env.get('BASE44_APP_ID');
+    const appUrl = Deno.env.get('BASE44_APP_URL');
+
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
     console.log('🔷 [APPROVE START] Request received', {
       requestId,
-      approvedBy: user.email,
+      currentUserEmail: user.email,
+      currentUserId: user.id,
+      currentUserRole: user.role,
+      appId,
+      appUrl,
       timestamp: new Date().toISOString()
     });
 
@@ -31,12 +40,15 @@ Deno.serve(async (req) => {
       requestId: request.id,
       employeeId: request.employee_id,
       employeeName: request.employee_name,
+      requestedByUserId: request.requested_by_user_id,
+      requestedByUserEmail: request.requested_by_user_email,
       lastWorkDay: request.last_work_day,
       firstWorkDayAfter: request.first_work_day_after,
       startCP: request.start_cp,
       endCP: request.end_cp,
       cpDaysComputed: request.cp_days_computed,
-      manualOverride: request.manual_override_days
+      manualOverride: request.manual_override_days,
+      status: request.status
     });
 
     // Validation: dates coherence
@@ -115,11 +127,13 @@ Deno.serve(async (req) => {
         reset_version: resetVersion
       };
 
-      console.log(`🔷 [APPROVE] Creating PaidLeavePeriod with data:`, periodData);
+      console.log(`🔷 [APPROVE] About to create PaidLeavePeriod with SERVICE ROLE`);
+      console.log(`🔷 [APPROVE] PaidLeavePeriod payload:`, JSON.stringify(periodData, null, 2));
 
       try {
         const period = await base44.asServiceRole.entities.PaidLeavePeriod.create(periodData);
-        console.log(`✅ [APPROVE] PaidLeavePeriod created for ${monthKey}:`, {
+        
+        console.log(`✅ [APPROVE] PaidLeavePeriod.create() returned:`, {
           id: period.id,
           employee_id: period.employee_id,
           employee_name: period.employee_name,
@@ -129,6 +143,23 @@ Deno.serve(async (req) => {
           resetVersion: period.reset_version,
           cpDaysAuto: period.cp_days_auto
         });
+
+        // IMMEDIATE VERIFICATION: Re-fetch to prove it exists in DB
+        console.log(`🔷 [APPROVE] Verifying creation by re-fetching ID: ${period.id}`);
+        const verification = await base44.asServiceRole.entities.PaidLeavePeriod.filter({ id: period.id });
+        
+        if (verification.length > 0) {
+          console.log(`✅ [APPROVE] VERIFICATION SUCCESS - Record FOUND in DB:`, {
+            id: verification[0].id,
+            employee_id: verification[0].employee_id,
+            start_cp: verification[0].start_cp,
+            end_cp: verification[0].end_cp
+          });
+        } else {
+          console.error(`❌ [APPROVE] VERIFICATION FAILED - Record NOT FOUND after create!`);
+          throw new Error(`Création réussie mais record introuvable (ID: ${period.id})`);
+        }
+
         createdPeriods.push(period);
       } catch (createError) {
         console.error(`❌ [APPROVE] Failed to create PaidLeavePeriod for ${monthKey}:`, {
@@ -176,16 +207,29 @@ Deno.serve(async (req) => {
     }
 
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-    console.log('✅ [APPROVE END] Success', {
+    console.log('✅ [APPROVE END] SUCCESS - All operations completed', {
       requestId,
+      employeeId: request.employee_id,
+      employeeName: request.employee_name,
       periodsCreated: createdPeriods.length,
-      periodIds: createdPeriods.map(p => p.id),
-      affectedMonths
+      createdPaidLeavePeriodIds: createdPeriods.map(p => p.id),
+      affectedMonths,
+      startCP: request.start_cp,
+      endCP: request.end_cp,
+      appId,
+      timestamp: new Date().toISOString()
     });
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
 
     return Response.json({
+      ok: true,
       success: true,
+      createdPaidLeavePeriodIds: createdPeriods.map(p => p.id),
+      month_keys: affectedMonths,
+      employee_id: request.employee_id,
+      employee_name: request.employee_name,
+      start_cp: request.start_cp,
+      end_cp: request.end_cp,
       periods: createdPeriods,
       affectedMonths
     });
@@ -194,13 +238,17 @@ Deno.serve(async (req) => {
     console.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
     console.error('❌ [APPROVE ERROR] Approval failed:', {
       error: error.message,
-      stack: error.stack
+      stack: error.stack,
+      name: error.name
     });
     console.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
     
     return Response.json({ 
+      ok: false,
+      success: false,
       error: error.message || 'Erreur lors de l\'approbation',
-      details: error.stack
+      stack: error.stack,
+      details: error.toString()
     }, { status: 500 });
   }
 });
