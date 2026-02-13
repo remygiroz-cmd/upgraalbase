@@ -1117,7 +1117,7 @@ export default function Planning() {
 
       {/* Calendar Grid - Direct scrolling, no zoom wrapper */}
       <div className="bg-white border-2 border-gray-200 rounded-xl shadow-xl overflow-auto" style={{ height: 'calc(100vh - 220px)' }}>
-        <div ref={tableContainerRef} className="min-w-full">
+        <div ref={tableContainerRef} className="min-w-full" data-planning-calendar>
           <div className="inline-block min-w-full">
             {/* Header - Sticky */}
             <DragDropContext onDragEnd={handleTeamDragEnd}>

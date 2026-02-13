@@ -787,42 +787,49 @@ export default function ExportComptaModal({ open, onOpenChange, monthStart, mont
     
     if (planningElement) {
       try {
+        // Message de progression
+        toast.info('Capture du planning en cours...', { duration: 2000 });
+        
         // Créer un canvas du planning
         const canvas = await html2canvas(planningElement, {
-          scale: 2, // Résolution haute pour meilleure qualité
+          scale: 1.5, // Bonne résolution sans trop alourdir
           useCORS: true,
           logging: false,
-          backgroundColor: '#ffffff'
+          backgroundColor: '#ffffff',
+          windowWidth: planningElement.scrollWidth,
+          windowHeight: planningElement.scrollHeight
         });
         
-        // Ajouter nouvelle page
-        doc.addPage();
+        // Ajouter nouvelle page en paysage
+        doc.addPage('a4', 'landscape');
         doc.setTextColor(0, 0, 0);
         
         // En-tête page 2
-        doc.setFontSize(14);
+        doc.setFontSize(12);
         doc.setFont('helvetica', 'bold');
-        doc.text(`Planning - ${monthName} ${year}`, pageWidth / 2, margin + 5, { align: 'center' });
+        doc.text(`Planning ${monthName} ${year}`, pageWidth / 2, margin + 5, { align: 'center' });
         
         doc.setFontSize(8);
         doc.setFont('helvetica', 'normal');
-        doc.setTextColor(100, 100, 100);
-        doc.text(settings.etablissement_name || 'Établissement', pageWidth / 2, margin + 11, { align: 'center' });
+        doc.setTextColor(80, 80, 80);
+        doc.text(settings.etablissement_name || '', pageWidth / 2, margin + 11, { align: 'center' });
         
         // Convertir canvas en image
-        const imgData = canvas.toDataURL('image/png');
+        const imgData = canvas.toDataURL('image/png', 0.9);
         const imgWidth = pageWidth - 2 * margin;
         const imgHeight = (canvas.height * imgWidth) / canvas.width;
         
         // Positionner l'image du planning
-        const yPosition = margin + 18;
-        const maxHeight = pageHeight - yPosition - 10;
+        const yPosition = margin + 16;
+        const maxHeight = pageHeight - yPosition - 8;
         
-        // Ajuster si nécessaire
+        // Ajuster si trop grand
         if (imgHeight > maxHeight) {
-          const scaledWidth = (maxHeight * imgWidth) / imgHeight;
+          const ratio = maxHeight / imgHeight;
+          const scaledWidth = imgWidth * ratio;
+          const scaledHeight = maxHeight;
           const xOffset = (pageWidth - scaledWidth) / 2;
-          doc.addImage(imgData, 'PNG', xOffset, yPosition, scaledWidth, maxHeight);
+          doc.addImage(imgData, 'PNG', xOffset, yPosition, scaledWidth, scaledHeight);
         } else {
           doc.addImage(imgData, 'PNG', margin, yPosition, imgWidth, imgHeight);
         }
@@ -834,25 +841,27 @@ export default function ExportComptaModal({ open, onOpenChange, monthStart, mont
         
       } catch (err) {
         console.error('Erreur capture planning:', err);
-        // Si échec, ajouter une page avec message
+        toast.error('Impossible de capturer le planning visuel');
+        // Si échec, ajouter une page avec message d'erreur
         doc.addPage();
         doc.setFontSize(12);
-        doc.text('⚠️ Erreur lors de la capture du planning', pageWidth / 2, pageHeight / 2, { align: 'center' });
+        doc.setTextColor(220, 38, 38);
+        doc.text('⚠️ Erreur lors de la capture du planning', pageWidth / 2, pageHeight / 2 - 5, { align: 'center' });
+        doc.setFontSize(9);
+        doc.setTextColor(100, 100, 100);
+        doc.text('Veuillez consulter le planning sur UpGraal', pageWidth / 2, pageHeight / 2 + 5, { align: 'center' });
       }
     } else {
-      // Si planning non trouvé, page avec info
+      console.warn('Planning element not found for export');
+      // Si planning non trouvé dans le DOM, page avec info
       doc.addPage();
       doc.setFontSize(12);
       doc.setTextColor(0, 0, 0);
-      doc.text('Planning mensuel', pageWidth / 2, margin + 10, { align: 'center' });
+      doc.text('Planning non disponible', pageWidth / 2, pageHeight / 2 - 5, { align: 'center' });
       doc.setFontSize(10);
-      doc.text('Consultez le planning complet sur UpGraal', pageWidth / 2, margin + 25, { align: 'center' });
+      doc.setTextColor(100, 100, 100);
+      doc.text('Le planning doit être ouvert pour être exporté', pageWidth / 2, pageHeight / 2 + 5, { align: 'center' });
     }
-
-    // Pied de page global
-    doc.setFontSize(7);
-    doc.setTextColor(128, 128, 128);
-    doc.text('Document généré automatiquement via UpGraal', pageWidth / 2, pageHeight - 5, { align: 'center' });
 
     return doc;
   };
