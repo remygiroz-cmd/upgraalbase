@@ -17,41 +17,88 @@ export default function LeaveRequestNotification({ request, onDismiss }) {
 
   const approveMutation = useMutation({
     mutationFn: async () => {
-      console.log('🔷 [UI] Calling approveLeaveRequest function', {
-        requestId: request.id,
-        employeeId: request.employee_id,
-        employeeName: request.employee_name
-      });
+      try {
+        console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+        console.log('🔷 [UI MUTATION] START - Calling approveLeaveRequest', {
+          requestId: request.id,
+          employeeId: request.employee_id,
+          employeeName: request.employee_name
+        });
 
-      const { data } = await base44.functions.invoke('approveLeaveRequest', {
-        requestId: request.id
-      });
-      
-      console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-      console.log('🔷 [UI] approveLeaveRequest FULL RESULT:', JSON.stringify(data, null, 2));
-      console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-      
-      // Store debug result for UI display
-      setDebugResult(data);
-      
-      // Show raw result for debugging
-      const rawResult = JSON.stringify(data).slice(0, 200);
-      console.log('🔷 [UI] Toast raw result:', rawResult);
-      toast.info(`Result: ${rawResult}`, { duration: 10000 });
-      
-      if (data.ok === false || data.error) {
-        console.error('❌ [UI] Function returned error:', data);
-        throw new Error(data.error || 'Erreur inconnue');
+        const response = await base44.functions.invoke('approveLeaveRequest', {
+          requestId: request.id
+        });
+        
+        console.log('🔷 [UI MUTATION] RAW RESPONSE received:');
+        console.log('  - typeof response:', typeof response);
+        console.log('  - response keys:', Object.keys(response || {}));
+        console.log('  - response.data exists:', !!response?.data);
+        console.log('  - Full response:', JSON.stringify(response, null, 2));
+        
+        // Extract data - base44.functions.invoke returns { data, status, headers }
+        const data = response?.data;
+        
+        if (!data) {
+          console.error('❌ [UI MUTATION] No data in response!', response);
+          const noDataError = {
+            ok: false,
+            errorMessage: 'No data in response',
+            errorName: 'NoDataError',
+            rawResponse: response
+          };
+          setDebugResult(noDataError);
+          throw new Error('Pas de données dans la réponse du serveur');
+        }
+        
+        console.log('🔷 [UI MUTATION] DATA extracted:');
+        console.log('  - typeof data:', typeof data);
+        console.log('  - data.ok:', data.ok);
+        console.log('  - data.traceId:', data.traceId);
+        console.log('  - Full data:', JSON.stringify(data, null, 2));
+        
+        // Store debug result for UI display
+        setDebugResult(data);
+        
+        // Show raw result in toast
+        const rawResult = JSON.stringify(data).slice(0, 200);
+        console.log('🔷 [UI MUTATION] Toast raw result:', rawResult);
+        toast.info(`Result: ${rawResult}`, { duration: 10000 });
+        
+        if (data.ok === false) {
+          console.error('❌ [UI MUTATION] Server returned ok:false:', data);
+          throw new Error(data.errorMessage || data.error || 'Erreur serveur (ok:false)');
+        }
+        
+        if (!data.createdPaidLeavePeriodIds || data.createdPaidLeavePeriodIds.length === 0) {
+          console.error('❌ [UI MUTATION] No periods created!', data);
+          throw new Error('Aucune période créée (createdPaidLeavePeriodIds vide)');
+        }
+        
+        console.log('✅ [UI MUTATION] SUCCESS - Periods created:', data.createdPaidLeavePeriodIds);
+        console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+        
+        return data;
+        
+      } catch (error) {
+        console.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+        console.error('❌ [UI MUTATION] CAUGHT ERROR:');
+        console.error('  - error.name:', error.name);
+        console.error('  - error.message:', error.message);
+        console.error('  - error.stack:', error.stack);
+        console.error('  - Full error:', error);
+        console.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+        
+        const errorDebug = {
+          ok: false,
+          errorMessage: error.message,
+          errorName: error.name,
+          stack: error.stack,
+          caughtInMutation: true
+        };
+        setDebugResult(errorDebug);
+        
+        throw error;
       }
-      
-      if (!data.createdPaidLeavePeriodIds || data.createdPaidLeavePeriodIds.length === 0) {
-        console.error('❌ [UI] No periods created!', data);
-        throw new Error('Aucune période créée (createdPaidLeavePeriodIds vide)');
-      }
-      
-      console.log('✅ [UI] Success - Periods created:', data.createdPaidLeavePeriodIds);
-      
-      return data;
     },
     onSuccess: (data) => {
       console.log('✅ [UI APPROVE] SUCCESS - Data received:', {
