@@ -1,35 +1,48 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
 
 Deno.serve(async (req) => {
+  // Generate traceId FIRST
+  const traceId = `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+  
+  // Log environment info FIRST
+  const appId = Deno.env.get('BASE44_APP_ID');
+  const appUrl = Deno.env.get('BASE44_APP_URL');
+  const deploymentMode = Deno.env.get('DENO_DEPLOYMENT_ID') ? 'PUBLISHED' : 'PREVIEW';
+  
   try {
-    const base44 = createClientFromRequest(req);
-    const user = await base44.auth.me();
-
-    if (!user) {
-      console.error('❌ [APPROVE] Unauthorized - no user');
-      return Response.json({ ok: false, error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const { requestId } = await req.json();
-
-    // Log environment info
-    const appId = Deno.env.get('BASE44_APP_ID');
-    const appUrl = Deno.env.get('BASE44_APP_URL');
-    const deploymentMode = Deno.env.get('DENO_DEPLOYMENT_ID') ? 'PUBLISHED' : 'PREVIEW';
-
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-    console.log('🔷 [APPROVE START] Request received');
+    console.log(`🔷 [${traceId}] APPROVE START`);
     console.log('📍 ENVIRONMENT:', {
       deploymentMode,
       appId,
       appUrl,
       denoDeploymentId: Deno.env.get('DENO_DEPLOYMENT_ID')?.substring(0, 8) || 'none'
     });
+    
+    const base44 = createClientFromRequest(req);
+    console.log(`✓ [${traceId}] STEP 0: base44 client created`);
+    
+    const user = await base44.auth.me();
+    if (!user) {
+      console.error(`❌ [${traceId}] Unauthorized - no user`);
+      return Response.json({ 
+        ok: false, 
+        error: 'Unauthorized',
+        errorMessage: 'No authenticated user',
+        traceId 
+      }, { status: 401 });
+    }
+    
+    console.log(`✓ [${traceId}] STEP 0.5: User authenticated:`, user.email);
+
+    const { requestId } = await req.json();
+
     console.log('👤 USER:', {
       requestId,
       currentUserEmail: user.email,
       currentUserId: user.id,
-      currentUserRole: user.role
+      currentUserRole: user.role,
+      traceId
     });
     console.log('⏰ TIMESTAMP:', new Date().toISOString());
 
@@ -135,50 +148,50 @@ Deno.serve(async (req) => {
       };
 
       console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-      console.log(`🔐 [APPROVE] USING SERVICE ROLE: true`);
-      console.log(`📦 [APPROVE] PaidLeavePeriod CREATE payload for ${monthKey}:`);
+      console.log(`🔐 [${traceId}] STEP 6.${monthKey}: USING SERVICE ROLE for PaidLeavePeriod.create()`);
+      console.log(`📦 [${traceId}] PaidLeavePeriod CREATE payload:`);
       console.log(JSON.stringify(periodData, null, 2));
       console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
 
       try {
-        console.log(`⏳ [APPROVE] Calling PaidLeavePeriod.create()...`);
+        console.log(`⏳ [${traceId}] STEP 6.${monthKey}: Calling PaidLeavePeriod.create()...`);
         const period = await base44.asServiceRole.entities.PaidLeavePeriod.create(periodData);
-        console.log(`✅ [APPROVE] PaidLeavePeriod.create() SUCCESS!`);
+        console.log(`✅ [${traceId}] STEP 6.${monthKey}: PaidLeavePeriod.create() SUCCESS!`);
         
-        console.log(`✅ [APPROVE] PaidLeavePeriod.create() returned:`, {
-          id: period.id,
-          employee_id: period.employee_id,
-          employee_name: period.employee_name,
-          start: period.start_cp,
-          end: period.end_cp,
-          monthKey: period.month_key,
-          resetVersion: period.reset_version,
-          cpDaysAuto: period.cp_days_auto
-        });
+        console.log(`   - Returned ID: ${period.id}`);
+        console.log(`   - employee_id: ${period.employee_id}`);
+        console.log(`   - employee_name: ${period.employee_name}`);
+        console.log(`   - start_cp: ${period.start_cp}`);
+        console.log(`   - end_cp: ${period.end_cp}`);
+        console.log(`   - month_key: ${period.month_key}`);
+        console.log(`   - reset_version: ${period.reset_version}`);
 
-        // IMMEDIATE VERIFICATION: Re-fetch to prove it exists in DB
-        console.log(`🔷 [APPROVE] Verifying creation by re-fetching ID: ${period.id}`);
+        // STEP 7: IMMEDIATE VERIFICATION
+        console.log(`⏳ [${traceId}] STEP 7.${monthKey}: Verifying by re-fetching ID: ${period.id}...`);
         const verification = await base44.asServiceRole.entities.PaidLeavePeriod.filter({ id: period.id });
         
         if (verification.length > 0) {
-          console.log(`✅ [APPROVE] VERIFICATION SUCCESS - Record FOUND in DB:`, {
-            id: verification[0].id,
-            employee_id: verification[0].employee_id,
-            start_cp: verification[0].start_cp,
-            end_cp: verification[0].end_cp
-          });
+          console.log(`✅ [${traceId}] STEP 7.${monthKey} OK: Record FOUND in DB after create!`);
+          console.log(`   - Verified ID: ${verification[0].id}`);
+          console.log(`   - Verified employee_id: ${verification[0].employee_id}`);
+          console.log(`   - Verified start_cp: ${verification[0].start_cp}`);
         } else {
-          console.error(`❌ [APPROVE] VERIFICATION FAILED - Record NOT FOUND after create!`);
+          console.error(`❌ [${traceId}] STEP 7.${monthKey} FAILED: Record NOT FOUND after create!`);
           throw new Error(`Création réussie mais record introuvable (ID: ${period.id})`);
         }
 
         createdPeriods.push(period);
+        console.log(`✅ [${traceId}] Period added to createdPeriods array (total: ${createdPeriods.length})`);
+        
       } catch (createError) {
-        console.error(`❌ [APPROVE] Failed to create PaidLeavePeriod for ${monthKey}:`, {
-          error: createError.message,
+        console.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+        console.error(`❌ [${traceId}] STEP 6/7 FAILED for ${monthKey}:`, {
+          errorName: createError.name,
+          errorMessage: createError.message,
           stack: createError.stack,
           periodData
         });
+        console.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
         throw new Error(`Échec création CP sur ${monthKey}: ${createError.message}`);
       }
     }
@@ -238,6 +251,7 @@ Deno.serve(async (req) => {
     const responsePayload = {
       ok: true,
       success: true,
+      traceId,
       createdPaidLeavePeriodIds: createdPeriods.map(p => p.id),
       month_keys: affectedMonths,
       employee_id: request.employee_id,
@@ -250,25 +264,44 @@ Deno.serve(async (req) => {
       affectedMonths
     };
 
-    console.log('📤 [APPROVE] Returning response:', JSON.stringify(responsePayload, null, 2));
+    console.log(`📤 [${traceId}] Returning SUCCESS response:`, JSON.stringify(responsePayload, null, 2));
 
     return Response.json(responsePayload);
 
   } catch (error) {
     console.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-    console.error('❌ [APPROVE ERROR] Approval failed:', {
-      error: error.message,
-      stack: error.stack,
-      name: error.name
+    console.error(`❌❌❌ [${traceId}] APPROVE FAILED ❌❌❌`);
+    console.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    console.error(`[${traceId}] Error details:`, {
+      errorName: error.name,
+      errorMessage: error.message,
+      stack: error.stack
+    });
+    console.error(`[${traceId}] Context:`, {
+      deploymentMode,
+      appId,
+      appUrl,
+      timestamp: new Date().toISOString()
     });
     console.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
     
-    return Response.json({ 
+    const errorResponse = { 
       ok: false,
       success: false,
-      error: error.message || 'Erreur lors de l\'approbation',
-      stack: error.stack,
-      details: error.toString()
-    }, { status: 500 });
+      traceId,
+      errorMessage: error.message || 'Erreur lors de l\'approbation',
+      errorName: error.name || 'Error',
+      stack: error.stack || '',
+      context: {
+        deploymentMode,
+        appId,
+        timestamp: new Date().toISOString()
+      }
+    };
+    
+    console.error(`📤 [${traceId}] Returning ERROR response (200 OK with ok:false):`, JSON.stringify(errorResponse, null, 2));
+    
+    // Return 200 with ok:false instead of 500 so frontend can read the JSON
+    return Response.json(errorResponse, { status: 200 });
   }
 });
