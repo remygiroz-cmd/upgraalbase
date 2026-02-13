@@ -13,7 +13,6 @@ export default function LeaveRequestNotification({ request, onDismiss }) {
   const queryClient = useQueryClient();
   const [showRejectModal, setShowRejectModal] = useState(false);
   const [rejectionReason, setRejectionReason] = useState('');
-  const [debugResult, setDebugResult] = useState(null);
 
   const approveMutation = useMutation({
     mutationFn: async () => {
