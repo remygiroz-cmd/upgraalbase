@@ -46,14 +46,21 @@ Deno.serve(async (req) => {
     });
     console.log('⏰ TIMESTAMP:', new Date().toISOString());
 
-    // Fetch the leave request
+    // STEP 1: Fetch the leave request
+    console.log(`⏳ [${traceId}] STEP 1: Fetching LeaveRequest ${requestId}...`);
     const requests = await base44.asServiceRole.entities.LeaveRequest.filter({ id: requestId });
     if (requests.length === 0) {
-      console.error('❌ [APPROVE] Request not found:', requestId);
-      return Response.json({ error: 'Request not found' }, { status: 404 });
+      console.error(`❌ [${traceId}] STEP 1 FAILED: LeaveRequest not found`);
+      return Response.json({ 
+        ok: false,
+        error: 'Request not found',
+        traceId
+      }, { status: 404 });
     }
 
     const request = requests[0];
+    console.log(`✅ [${traceId}] STEP 1 OK: LeaveRequest loaded`);
+    console.log(`   - Employee: ${request.employee_name} (${request.employee_id})`);
 
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
     console.log('📋 [APPROVE] REQUEST DETAILS:');
@@ -71,19 +78,29 @@ Deno.serve(async (req) => {
     console.log('  manualOverride:', request.manual_override_days);
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
 
-    // Validation: dates coherence
+    // STEP 2: Validation dates coherence
+    console.log(`⏳ [${traceId}] STEP 2: Validating dates...`);
     const startDate = new Date(request.start_cp);
     const endDate = new Date(request.end_cp);
     const returnDate = new Date(request.first_work_day_after);
 
+    console.log(`   - start_cp: ${request.start_cp} → ${startDate}`);
+    console.log(`   - end_cp: ${request.end_cp} → ${endDate}`);
+    console.log(`   - return: ${request.first_work_day_after} → ${returnDate}`);
+
     if (endDate < startDate) {
-      console.error('❌ [APPROVE] Invalid dates: end before start', { startDate, endDate });
+      console.error(`❌ [${traceId}] STEP 2 FAILED: end_cp < start_cp`);
       return Response.json({ 
-        error: 'Dates invalides: la date de fin est avant la date de début' 
+        ok: false,
+        error: 'Dates invalides: la date de fin est avant la date de début',
+        traceId
       }, { status: 400 });
     }
+    
+    console.log(`✅ [${traceId}] STEP 2 OK: Dates validated`);
 
-    // Determine all affected months
+    // STEP 3: Determine all affected months
+    console.log(`⏳ [${traceId}] STEP 3: Computing affected months...`);
     const affectedMonths = [];
     let currentDate = new Date(startDate);
     
@@ -96,7 +113,19 @@ Deno.serve(async (req) => {
       currentDate.setDate(1);
     }
 
-    console.log('🔷 [APPROVE] Affected months:', affectedMonths);
+    console.log(`✅ [${traceId}] STEP 3 OK: Affected months:`, affectedMonths);
+
+    // STEP 4: Check service role availability
+    console.log(`⏳ [${traceId}] STEP 4: Checking service role client...`);
+    const usingServiceRole = !!base44.asServiceRole;
+    console.log(`   - usingServiceRole: ${usingServiceRole}`);
+    
+    if (!usingServiceRole) {
+      console.error(`❌ [${traceId}] STEP 4 FAILED: asServiceRole not available!`);
+      throw new Error('Service role client non disponible - impossible de créer des PaidLeavePeriod');
+    }
+    
+    console.log(`✅ [${traceId}] STEP 4 OK: Service role available`);
 
     // Process each month
     const createdPeriods = [];
@@ -104,14 +133,14 @@ Deno.serve(async (req) => {
     for (const monthKey of affectedMonths) {
       const [year, monthNum] = monthKey.split('-').map(Number);
       
-      console.log(`🔷 [APPROVE] Processing month: ${monthKey}`);
+      console.log(`⏳ [${traceId}] STEP 5.${monthKey}: Processing month ${monthKey}...`);
       
       // Get or create planning month with service role
       let planningMonths = await base44.asServiceRole.entities.PlanningMonth.filter({ month_key: monthKey });
       let resetVersion = 0;
       
       if (planningMonths.length === 0) {
-        console.log(`🔷 [APPROVE] Creating new PlanningMonth for ${monthKey}`);
+        console.log(`   - Creating new PlanningMonth for ${monthKey}`);
         const newPlanningMonth = await base44.asServiceRole.entities.PlanningMonth.create({
           year: year,
           month: monthNum - 1,
@@ -119,11 +148,13 @@ Deno.serve(async (req) => {
           reset_version: 0
         });
         resetVersion = 0;
-        console.log(`✅ [APPROVE] PlanningMonth created: ${newPlanningMonth.id}`);
+        console.log(`   - Created PlanningMonth ID: ${newPlanningMonth.id}`);
       } else {
         resetVersion = planningMonths[0].reset_version || 0;
-        console.log(`🔷 [APPROVE] Using existing PlanningMonth for ${monthKey}, reset_version: ${resetVersion}`);
+        console.log(`   - Found existing PlanningMonth ID: ${planningMonths[0].id}, reset_version: ${resetVersion}`);
       }
+      
+      console.log(`✅ [${traceId}] STEP 5.${monthKey} OK: PlanningMonth ready`);
 
       // Determine the period boundaries for this specific month
       const monthStart = new Date(year, monthNum - 1, 1);
@@ -196,10 +227,10 @@ Deno.serve(async (req) => {
       }
     }
 
-    console.log(`✅ [APPROVE] All periods created successfully (${createdPeriods.length} periods)`);
+    console.log(`✅ [${traceId}] All periods created successfully (${createdPeriods.length} periods)`);
 
-    // Update request status ONLY if all periods created successfully
-    console.log('🔷 [APPROVE] Updating request status to APPROVED');
+    // STEP 8: Update request status ONLY if all periods created successfully
+    console.log(`⏳ [${traceId}] STEP 8: Updating LeaveRequest to APPROVED...`);
     
     await base44.asServiceRole.entities.LeaveRequest.update(requestId, {
       status: 'APPROVED',
@@ -209,9 +240,10 @@ Deno.serve(async (req) => {
       created_period_id: createdPeriods[0].id
     });
 
-    console.log('✅ [APPROVE] Request updated to APPROVED');
+    console.log(`✅ [${traceId}] STEP 8 OK: LeaveRequest updated to APPROVED`);
 
-    // Send notification to requester
+    // STEP 9: Send notification to requester
+    console.log(`⏳ [${traceId}] STEP 9: Sending email notification...`);
     if (request.requested_by_user_email) {
       try {
         await base44.integrations.Core.SendEmail({
@@ -225,10 +257,12 @@ Deno.serve(async (req) => {
             <p>Cette période a été ajoutée à votre planning.</p>
           `
         });
-        console.log('✅ [APPROVE] Email notification sent to requester');
+        console.log(`✅ [${traceId}] STEP 9 OK: Email sent to ${request.requested_by_user_email}`);
       } catch (emailError) {
-        console.error('⚠️ [APPROVE] Failed to send email notification:', emailError.message);
+        console.error(`⚠️ [${traceId}] STEP 9 WARNING: Email failed:`, emailError.message);
       }
+    } else {
+      console.log(`⚠️ [${traceId}] STEP 9 SKIPPED: No email address for requester`);
     }
 
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
