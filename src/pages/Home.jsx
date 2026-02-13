@@ -1,6 +1,9 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
+import { isCurrentUserPlanningManager } from '@/components/planning/utils/getPlanningManager';
+import LeaveRequestNotification from '@/components/planning/LeaveRequestNotification';
+import { Card } from '@/components/ui/card';
 import { Plus, MessageCircle, Bell, RefreshCw, AtSign, Megaphone, Users, Circle, ArrowRight, ArchiveRestore } from 'lucide-react';
 import TodaySummary from '@/components/planning/TodaySummary';
 import { formatLocalDate } from '@/components/planning/dateUtils';
@@ -330,6 +333,29 @@ export default function Home() {
     return conversations.filter(conv => unreadMentionConvIds.has(conv.id));
   }, [myMentions, messageReads, conversations, filterMode]);
 
+  // Get leave requests for manager
+  const { data: pendingLeaveRequests = [] } = useQuery({
+    queryKey: ['pendingLeaveRequests'],
+    queryFn: () => base44.entities.LeaveRequest.filter({ status: 'PENDING' }),
+    staleTime: 0
+  });
+
+  // Get my leave request decisions
+  const { data: myLeaveRequestDecisions = [] } = useQuery({
+    queryKey: ['myLeaveRequestDecisions', currentEmployee?.id],
+    queryFn: async () => {
+      if (!currentEmployee?.id) return [];
+      const requests = await base44.entities.LeaveRequest.list();
+      return requests.filter(req => 
+        req.employee_id === currentEmployee.id && 
+        req.status !== 'PENDING' &&
+        // Only show recent decisions (last 30 days)
+        new Date(req.decision_at) > new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
+      ).sort((a, b) => new Date(b.decision_at) - new Date(a.decision_at));
+    },
+    enabled: !!currentEmployee?.id
+  });
+
   // Get urgent announcements
   const { data: urgentAnnouncements = [] } = useQuery({
     queryKey: ['urgentAnnouncements'],
@@ -404,6 +430,16 @@ export default function Home() {
     if (!currentEmployee) return false;
     return currentUser?.role === 'admin' || currentEmployee.permission_level === 'manager';
   }, [currentUser, currentEmployee]);
+
+  // Check if current user is planning manager
+  const { data: isPlanningManager = false } = useQuery({
+    queryKey: ['isPlanningManager', currentUser?.email],
+    queryFn: () => isCurrentUserPlanningManager(currentUser),
+    enabled: !!currentUser
+  });
+
+  // Filter pending leave requests for current user if they are planning manager
+  const myPendingLeaveRequests = isPlanningManager ? pendingLeaveRequests : [];
 
   const isManagerOrAdmin = useMemo(() => {
     if (!currentEmployee) return false;
@@ -600,6 +636,84 @@ export default function Home() {
                 </div>
               </div>
             </button>
+          </div>
+        )}
+
+        {/* Leave Request Decisions for Employee */}
+        {myLeaveRequestDecisions.length > 0 && (
+          <div className="mb-6">
+            <h2 className="text-lg font-bold text-gray-900 mb-3 flex items-center gap-2">
+              📝 Mes demandes de CP
+            </h2>
+            <div className="space-y-3">
+              {myLeaveRequestDecisions.map(decision => (
+                <Card key={decision.id} className={cn(
+                  "p-4",
+                  decision.status === 'APPROVED' ? "bg-green-50 border-green-300" : "bg-red-50 border-red-300"
+                )}>
+                  <div className="flex items-start gap-3">
+                    <div className={cn(
+                      "w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0",
+                      decision.status === 'APPROVED' ? "bg-green-600" : "bg-red-600"
+                    )}>
+                      <span className="text-white text-xl">
+                        {decision.status === 'APPROVED' ? '✓' : '✗'}
+                      </span>
+                    </div>
+                    
+                    <div className="flex-1">
+                      <h3 className={cn(
+                        "font-bold text-sm mb-1",
+                        decision.status === 'APPROVED' ? "text-green-900" : "text-red-900"
+                      )}>
+                        {decision.status === 'APPROVED' ? 'Demande acceptée' : 'Demande refusée'}
+                      </h3>
+                      
+                      <p className="text-sm text-gray-700">
+                        Du {new Date(decision.start_cp).toLocaleDateString('fr-FR')} au {new Date(decision.end_cp).toLocaleDateString('fr-FR')}
+                      </p>
+                      
+                      {decision.status === 'APPROVED' && (
+                        <p className="text-sm font-semibold text-green-700 mt-1">
+                          {decision.cp_days_computed} jours de CP décomptés
+                        </p>
+                      )}
+                      
+                      {decision.status === 'REJECTED' && decision.rejection_reason && (
+                        <div className="mt-2 bg-white/50 rounded p-2 text-xs text-gray-700">
+                          <strong>Motif:</strong> {decision.rejection_reason}
+                        </div>
+                      )}
+                      
+                      <p className="text-xs text-gray-500 mt-2">
+                        Décision le {new Date(decision.decision_at).toLocaleDateString('fr-FR')}
+                      </p>
+                    </div>
+                  </div>
+                </Card>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Leave Requests for Manager */}
+        {myPendingLeaveRequests.length > 0 && (
+          <div className="mb-6">
+            <h2 className="text-lg font-bold text-gray-900 mb-3 flex items-center gap-2">
+              📋 Demandes de CP à valider
+            </h2>
+            <div className="space-y-3">
+              {myPendingLeaveRequests.map(request => (
+                <LeaveRequestNotification
+                  key={request.id}
+                  request={request}
+                  onDismiss={() => {
+                    queryClient.invalidateQueries({ queryKey: ['pendingLeaveRequests'] });
+                    queryClient.invalidateQueries({ queryKey: ['myLeaveRequestDecisions'] });
+                  }}
+                />
+              ))}
+            </div>
           </div>
         )}
 
