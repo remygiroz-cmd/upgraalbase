@@ -78,8 +78,8 @@ export default function Layout({ children, currentPageName }) {
   const gestionLinks = [
     { name: 'Equipe', label: 'Gestion du personnel', icon: Users, module: 'equipe' },
     { name: 'Planning', label: 'Planning', icon: Calendar, module: 'equipe' },
-    { name: 'GestionPostes', label: 'Postes & Templates RH', icon: File, module: 'equipe' },
-    { name: 'CoffreFactures', label: 'Coffre à factures', icon: Receipt, module: 'equipe' },
+    { name: 'GestionPostes', label: 'Postes & Templates RH', icon: File, module: 'postes_templates' },
+    { name: 'CoffreFactures', label: 'Coffre à factures', icon: Receipt, module: 'coffre_factures' },
   ].filter(link => hasPermission(link.module));
 
 
