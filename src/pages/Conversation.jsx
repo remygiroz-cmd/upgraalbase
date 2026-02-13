@@ -617,7 +617,29 @@ export default function Conversation() {
           )}
         </div>
 
-        <div className="flex-1 min-w-0">
+        <button 
+          onClick={() => {
+            // Show participants modal
+            const participants = employees.filter(emp => 
+              conversation.participant_employee_ids?.includes(emp.id)
+            );
+            const onlineParticipants = participants.filter(emp => {
+              const presence = calculatePresenceStatus(emp.last_seen_at);
+              return presence.status === 'online';
+            });
+            
+            const participantsText = participants
+              .map(emp => {
+                const presence = calculatePresenceStatus(emp.last_seen_at);
+                const status = presence.status === 'online' ? '🟢' : '⚫';
+                return `${status} ${emp.first_name} ${emp.last_name}`;
+              })
+              .join('\n');
+            
+            alert(`Participants (${onlineParticipants.length}/${participants.length} en ligne):\n\n${participantsText}`);
+          }}
+          className="flex-1 min-w-0 text-left hover:bg-gray-50 rounded px-2 py-1 -mx-2 transition-colors"
+        >
           <h1 className="font-semibold text-gray-900 truncate">{conversationTitle}</h1>
           {presenceInfo?.type === 'single' ? (
             <div className="flex items-center gap-1.5 text-xs">
@@ -641,7 +663,7 @@ export default function Conversation() {
               {conversation.participant_employee_ids?.length || 0} participant{(conversation.participant_employee_ids?.length || 0) > 1 ? 's' : ''}
             </p>
           )}
-        </div>
+        </button>
 
         <ConversationActionsMenu
           conversation={conversation}
