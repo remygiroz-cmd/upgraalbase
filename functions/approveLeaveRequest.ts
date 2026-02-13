@@ -387,6 +387,8 @@ Deno.serve(async (req) => {
     console.log('  affectedMonths:', affectedMonths);
     console.log('  startCP:', request.start_cp);
     console.log('  endCP:', request.end_cp);
+    console.log('  totalShiftsDeleted:', totalShiftsDeleted);
+    console.log('  totalNonShiftsCreated:', totalNonShiftsCreated);
     console.log('  appId:', appId);
     console.log('  deploymentMode:', deploymentMode);
     console.log('  timestamp:', new Date().toISOString());
@@ -402,6 +404,8 @@ Deno.serve(async (req) => {
       employee_name: request.employee_name,
       start_cp: request.start_cp,
       end_cp: request.end_cp,
+      totalShiftsDeleted,
+      totalNonShiftsCreated,
       appId,
       deploymentMode,
       periods: createdPeriods,
