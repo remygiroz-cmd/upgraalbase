@@ -16,42 +16,69 @@ export default function LeaveRequestNotification({ request, onDismiss }) {
 
   const approveMutation = useMutation({
     mutationFn: async () => {
-      // Get month context for the CP period
       const startDate = new Date(request.start_cp);
-      const monthKey = `${startDate.getFullYear()}-${String(startDate.getMonth() + 1).padStart(2, '0')}`;
+      const endDate = new Date(request.end_cp);
       
-      // Get or create PlanningMonth
-      const planningMonths = await base44.entities.PlanningMonth.filter({ month_key: monthKey });
-      let resetVersion = 0;
+      // Determine all affected months
+      const affectedMonths = [];
+      let currentDate = new Date(startDate);
       
-      if (planningMonths.length === 0) {
-        const newMonth = await base44.entities.PlanningMonth.create({
-          year: startDate.getFullYear(),
-          month: startDate.getMonth(),
-          month_key: monthKey,
-          reset_version: 0
-        });
-        resetVersion = 0;
-      } else {
-        resetVersion = planningMonths[0].reset_version || 0;
+      while (currentDate <= endDate) {
+        const monthKey = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}`;
+        if (!affectedMonths.includes(monthKey)) {
+          affectedMonths.push(monthKey);
+        }
+        currentDate.setMonth(currentDate.getMonth() + 1);
+        currentDate.setDate(1);
       }
 
-      // Create the CP period
-      const periodData = {
-        employee_id: request.employee_id,
-        employee_name: request.employee_name,
-        last_work_day: request.last_work_day,
-        first_work_day_after: request.first_work_day_after,
-        start_cp: request.start_cp,
-        end_cp: request.end_cp,
-        cp_days_auto: request.cp_days_computed,
-        cp_days_manual: request.manual_override_days || null,
-        notes: request.notes,
-        month_key: monthKey,
-        reset_version: resetVersion
-      };
+      // Get or create PlanningMonth for each affected month
+      const createdPeriods = [];
+      
+      for (const monthKey of affectedMonths) {
+        const [year, monthNum] = monthKey.split('-').map(Number);
+        
+        // Get or create planning month
+        let planningMonths = await base44.entities.PlanningMonth.filter({ month_key: monthKey });
+        let resetVersion = 0;
+        
+        if (planningMonths.length === 0) {
+          await base44.entities.PlanningMonth.create({
+            year: year,
+            month: monthNum - 1,
+            month_key: monthKey,
+            reset_version: 0
+          });
+          resetVersion = 0;
+        } else {
+          resetVersion = planningMonths[0].reset_version || 0;
+        }
 
-      const period = await base44.entities.PaidLeavePeriod.create(periodData);
+        // Determine the period boundaries for this specific month
+        const monthStart = new Date(year, monthNum - 1, 1);
+        const monthEnd = new Date(year, monthNum, 0);
+        
+        const periodStart = startDate > monthStart ? startDate : monthStart;
+        const periodEnd = endDate < monthEnd ? endDate : monthEnd;
+
+        // Create CP period for this month
+        const periodData = {
+          employee_id: request.employee_id,
+          employee_name: request.employee_name,
+          last_work_day: request.last_work_day,
+          first_work_day_after: request.first_work_day_after,
+          start_cp: periodStart.toISOString().split('T')[0],
+          end_cp: periodEnd.toISOString().split('T')[0],
+          cp_days_auto: request.cp_days_computed,
+          cp_days_manual: request.manual_override_days || null,
+          notes: request.notes || `Demande acceptée le ${new Date().toLocaleDateString('fr-FR')}`,
+          month_key: monthKey,
+          reset_version: resetVersion
+        };
+
+        const period = await base44.entities.PaidLeavePeriod.create(periodData);
+        createdPeriods.push(period);
+      }
 
       // Update request status
       const currentUser = await base44.auth.me();
@@ -60,41 +87,91 @@ export default function LeaveRequestNotification({ request, onDismiss }) {
         decision_by_user_id: currentUser.id,
         decision_by_user_email: currentUser.email,
         decision_at: new Date().toISOString(),
-        created_period_id: period.id
+        created_period_id: createdPeriods[0].id
       });
 
-      return period;
+      // Send notification to requester
+      if (request.requested_by_user_email) {
+        try {
+          await base44.integrations.Core.SendEmail({
+            to: request.requested_by_user_email,
+            subject: '✅ Votre demande de CP a été acceptée',
+            body: `
+              <h2>Votre demande de congés payés a été acceptée</h2>
+              <p><strong>Période:</strong> Du ${new Date(request.last_work_day).toLocaleDateString('fr-FR')} au ${new Date(request.first_work_day_after).toLocaleDateString('fr-FR')}</p>
+              <p><strong>Jours décomptés:</strong> ${request.cp_days_computed} jours</p>
+              <p><strong>Date de décision:</strong> ${new Date().toLocaleDateString('fr-FR')}</p>
+              <p>Cette période a été ajoutée à votre planning.</p>
+            `
+          });
+        } catch (emailError) {
+          console.error('Failed to send email notification:', emailError);
+        }
+      }
+
+      return createdPeriods;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['leaveRequests'] });
+    onSuccess: (periods) => {
+      queryClient.invalidateQueries({ queryKey: ['pendingLeaveRequests'] });
+      queryClient.invalidateQueries({ queryKey: ['myLeaveRequestDecisions'] });
       queryClient.invalidateQueries({ queryKey: ['paidLeavePeriods'] });
-      toast.success('Demande acceptée et période CP créée');
+      queryClient.invalidateQueries({ queryKey: ['shifts'] });
+      queryClient.invalidateQueries({ queryKey: ['nonShiftEvents'] });
+      
+      const monthsAffected = periods.length;
+      toast.success(
+        monthsAffected > 1 
+          ? `Demande acceptée - ${monthsAffected} périodes CP créées (multi-mois)` 
+          : 'Demande acceptée et période CP créée'
+      );
       onDismiss?.();
     },
     onError: (error) => {
-      toast.error('Erreur : ' + error.message);
+      console.error('Approval error:', error);
+      toast.error(`Erreur lors de l'approbation: ${error.message}`);
     }
   });
 
   const rejectMutation = useMutation({
     mutationFn: async (reason) => {
       const currentUser = await base44.auth.me();
-      return await base44.entities.LeaveRequest.update(request.id, {
+      await base44.entities.LeaveRequest.update(request.id, {
         status: 'REJECTED',
         decision_by_user_id: currentUser.id,
         decision_by_user_email: currentUser.email,
         decision_at: new Date().toISOString(),
         rejection_reason: reason || null
       });
+
+      // Send notification to requester
+      if (request.requested_by_user_email) {
+        try {
+          await base44.integrations.Core.SendEmail({
+            to: request.requested_by_user_email,
+            subject: '❌ Votre demande de CP a été refusée',
+            body: `
+              <h2>Votre demande de congés payés a été refusée</h2>
+              <p><strong>Période demandée:</strong> Du ${new Date(request.last_work_day).toLocaleDateString('fr-FR')} au ${new Date(request.first_work_day_after).toLocaleDateString('fr-FR')}</p>
+              ${reason ? `<p><strong>Motif:</strong> ${reason}</p>` : ''}
+              <p><strong>Date de décision:</strong> ${new Date().toLocaleDateString('fr-FR')}</p>
+              <p>N'hésitez pas à contacter votre responsable pour plus d'informations.</p>
+            `
+          });
+        } catch (emailError) {
+          console.error('Failed to send email notification:', emailError);
+        }
+      }
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['leaveRequests'] });
-      toast.success('Demande refusée');
+      queryClient.invalidateQueries({ queryKey: ['pendingLeaveRequests'] });
+      queryClient.invalidateQueries({ queryKey: ['myLeaveRequestDecisions'] });
+      toast.success('Demande refusée et employé notifié');
       setShowRejectModal(false);
       onDismiss?.();
     },
     onError: (error) => {
-      toast.error('Erreur : ' + error.message);
+      console.error('Rejection error:', error);
+      toast.error(`Erreur lors du refus: ${error.message}`);
     }
   });
 
@@ -146,8 +223,17 @@ export default function LeaveRequestNotification({ request, onDismiss }) {
                 size="sm"
                 className="bg-green-600 hover:bg-green-700 flex-1"
               >
-                <Check className="w-4 h-4 mr-1" />
-                Accepter
+                {approveMutation.isPending ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-1" />
+                    Création...
+                  </>
+                ) : (
+                  <>
+                    <Check className="w-4 h-4 mr-1" />
+                    Accepter
+                  </>
+                )}
               </Button>
               
               <Button
