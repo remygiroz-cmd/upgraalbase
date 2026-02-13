@@ -14,6 +14,10 @@ import MessageReadStatus from '@/components/messaging/MessageReadStatus';
 import ImageViewer, { ImageMessageGrid } from '@/components/messaging/ImageViewer';
 import ImageUploadPreview from '@/components/messaging/ImageUploadPreview';
 import { processImages } from '@/components/messaging/ImageOptimizer';
+import ScrollToBottom from '@/components/messaging/ScrollToBottom';
+import DateSeparator from '@/components/messaging/DateSeparator';
+import TypingIndicator from '@/components/messaging/TypingIndicator';
+import MessageSkeleton from '@/components/messaging/MessageSkeleton';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -43,6 +47,14 @@ export default function Conversation() {
   const [viewerOpen, setViewerOpen] = useState(false);
   const [viewerImages, setViewerImages] = useState([]);
   const [viewerIndex, setViewerIndex] = useState(0);
+  
+  // Scroll management
+  const messagesContainerRef = useRef(null);
+  const [isAtBottom, setIsAtBottom] = useState(true);
+  const [newMessagesCount, setNewMessagesCount] = useState(0);
+  
+  // Optimistic messages
+  const [optimisticMessages, setOptimisticMessages] = useState([]);
 
   // Get conversation ID from URL
   const urlParams = new URLSearchParams(window.location.search);
@@ -77,20 +89,49 @@ export default function Conversation() {
   // Check if conversation is deleted
   const isConversationDeleted = conversation?.status === 'deleted';
 
-  // Get messages
-  const { data: messages = [] } = useQuery({
+  // Get messages with real-time subscription
+  const { data: messages = [], isLoading: messagesLoading } = useQuery({
     queryKey: ['messages', conversationId],
     queryFn: () => base44.entities.Message.filter({ conversation_id: conversationId }),
     enabled: !!conversationId,
-    staleTime: 10 * 1000,
-    refetchInterval: 5000 // Poll every 5 seconds
+    staleTime: 0
   });
+  
+  // Real-time subscription for messages
+  useEffect(() => {
+    if (!conversationId) return;
+    
+    const unsubscribe = base44.entities.Message.subscribe((event) => {
+      // Only invalidate if it's for the current conversation
+      if (event.data?.conversation_id === conversationId) {
+        queryClient.invalidateQueries({ queryKey: ['messages', conversationId] });
+        queryClient.invalidateQueries({ queryKey: ['myConversations'] });
+        
+        // If we're not at bottom, increment new messages count
+        if (!isAtBottom && event.data.sender_employee_id !== currentEmployee?.id) {
+          setNewMessagesCount(prev => prev + 1);
+        }
+      }
+    });
+    
+    return unsubscribe;
+  }, [conversationId, queryClient, isAtBottom, currentEmployee?.id]);
 
+  // Merge server messages with optimistic messages
+  const allMessages = useMemo(() => {
+    const serverMessages = messages.filter(m => !m.is_deleted);
+    const serverIds = new Set(serverMessages.map(m => m.id));
+    
+    // Only include optimistic messages that haven't been confirmed by server yet
+    const pendingOptimistic = optimisticMessages.filter(om => !serverIds.has(om.tempId));
+    
+    return [...serverMessages, ...pendingOptimistic];
+  }, [messages, optimisticMessages]);
+  
   const sortedMessages = useMemo(() => {
-    return [...messages]
-      .filter(m => !m.is_deleted)
+    return [...allMessages]
       .sort((a, b) => new Date(a.created_date) - new Date(b.created_date));
-  }, [messages]);
+  }, [allMessages]);
 
   const pinnedMessages = useMemo(() => {
     return [...messages]
@@ -250,9 +291,9 @@ export default function Conversation() {
     }
   }, [sortedMessages, currentEmployee?.id, messageReads]);
 
-  // Send message mutation
+  // Send message mutation with optimistic UI
   const sendMessageMutation = useMutation({
-    mutationFn: async ({ text, mentions, isUrgent, urgentLevel, images }) => {
+    mutationFn: async ({ text, mentions, isUrgent, urgentLevel, images, tempId }) => {
       const messageData = {
         conversation_id: conversationId,
         sender_employee_id: currentEmployee.id,
@@ -296,9 +337,38 @@ export default function Conversation() {
         last_message_at: new Date().toISOString()
       });
 
-      return message;
+      return { message, tempId };
     },
-    onSuccess: () => {
+    onMutate: async ({ text, images, tempId }) => {
+      // Create optimistic message
+      const optimisticMessage = {
+        id: tempId,
+        tempId,
+        conversation_id: conversationId,
+        sender_employee_id: currentEmployee.id,
+        type: images && images.length > 0 ? 'image' : 'text',
+        text: text?.trim() || '',
+        images: images || [],
+        created_date: new Date().toISOString(),
+        status: 'sending',
+        is_deleted: false,
+        is_pinned: false,
+        is_urgent: false
+      };
+      
+      setOptimisticMessages(prev => [...prev, optimisticMessage]);
+      
+      // Scroll to bottom immediately
+      setTimeout(() => {
+        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+      }, 50);
+      
+      return { tempId };
+    },
+    onSuccess: ({ tempId }) => {
+      // Remove optimistic message
+      setOptimisticMessages(prev => prev.filter(m => m.tempId !== tempId));
+      
       queryClient.invalidateQueries({ queryKey: ['messages'] });
       queryClient.invalidateQueries({ queryKey: ['myConversations'] });
       queryClient.invalidateQueries({ queryKey: ['messageMentions'] });
@@ -306,7 +376,11 @@ export default function Conversation() {
       setSelectedImages([]);
       setUploadProgress(null);
     },
-    onError: () => {
+    onError: (error, { tempId }) => {
+      // Mark optimistic message as failed
+      setOptimisticMessages(prev => 
+        prev.map(m => m.tempId === tempId ? { ...m, status: 'failed' } : m)
+      );
       toast.error('Erreur lors de l\'envoi');
       setUploadProgress(null);
     }
@@ -413,6 +487,8 @@ export default function Conversation() {
   const handleSendImages = async () => {
     if (selectedImages.length === 0) return;
     
+    const tempId = `temp-${Date.now()}`;
+    
     try {
       setUploadProgress({ stage: 'processing', current: 0, total: selectedImages.length });
       
@@ -467,7 +543,8 @@ export default function Conversation() {
         mentions: [],
         isUrgent,
         urgentLevel: isUrgent ? urgentLevel : undefined,
-        images: uploadedImages
+        images: uploadedImages,
+        tempId
       });
       
       setIsUrgent(false);
@@ -488,6 +565,8 @@ export default function Conversation() {
     
     // Otherwise send text
     if (!messageText.trim()) return;
+    
+    const tempId = `temp-${Date.now()}`;
     
     // Clear typing indicator immediately
     clearTimeout(typingTimeoutRef.current);
@@ -511,7 +590,8 @@ export default function Conversation() {
       text: messageText, 
       mentions,
       isUrgent,
-      urgentLevel: isUrgent ? urgentLevel : undefined
+      urgentLevel: isUrgent ? urgentLevel : undefined,
+      tempId
     });
     setIsUrgent(false);
   };
@@ -588,10 +668,37 @@ export default function Conversation() {
     }, 0);
   };
 
-  // Auto-scroll to bottom
+  // Track scroll position
   useEffect(() => {
+    const container = messagesContainerRef.current;
+    if (!container) return;
+    
+    const handleScroll = () => {
+      const { scrollTop, scrollHeight, clientHeight } = container;
+      const atBottom = scrollHeight - scrollTop - clientHeight < 100;
+      setIsAtBottom(atBottom);
+      
+      if (atBottom) {
+        setNewMessagesCount(0);
+      }
+    };
+    
+    container.addEventListener('scroll', handleScroll);
+    return () => container.removeEventListener('scroll', handleScroll);
+  }, []);
+  
+  // Auto-scroll to bottom only if user is already at bottom
+  useEffect(() => {
+    if (isAtBottom) {
+      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [sortedMessages, isAtBottom]);
+  
+  // Scroll to bottom handler
+  const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [sortedMessages]);
+    setNewMessagesCount(0);
+  };
 
   // Cleanup typing indicator on unmount or conversation change
   useEffect(() => {
@@ -891,27 +998,32 @@ export default function Conversation() {
         </div>
       )}
 
-      {/* Messages */}
-      <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
-        {/* Typing indicator */}
-        {typingText && (
-          <div className="flex items-center gap-2 text-sm text-gray-500 italic px-2">
-            <div className="flex gap-1">
-              <span className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-              <span className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-              <span className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
-            </div>
-            <span>{typingText}</span>
-          </div>
-        )}
+      {/* Scroll to bottom button */}
+      <ScrollToBottom
+        visible={!isAtBottom}
+        count={newMessagesCount}
+        onClick={scrollToBottom}
+      />
 
-        {sortedMessages.length === 0 ? (
+      {/* Messages */}
+      <div 
+        ref={messagesContainerRef}
+        className="flex-1 overflow-y-auto px-4 py-4 space-y-4"
+      >
+        {/* Loading skeleton */}
+        {messagesLoading && <MessageSkeleton />}
+
+        {/* Messages with date separators */}
+        {!messagesLoading && sortedMessages.length === 0 ? (
           <div className="text-center text-gray-500 py-12">
             <p className="text-sm">Aucun message</p>
             <p className="text-xs mt-1">Envoyez le premier message</p>
           </div>
         ) : (
-          sortedMessages.map(msg => {
+          sortedMessages.map((msg, index) => {
+            // Check if we need a date separator
+            const showDateSeparator = index === 0 || 
+              new Date(sortedMessages[index - 1].created_date).toDateString() !== new Date(msg.created_date).toDateString();
             const sender = employees.find(emp => emp.id === msg.sender_employee_id);
             const isMe = msg.sender_employee_id === currentEmployee.id;
             const isSystem = !msg.sender_employee_id;
@@ -933,8 +1045,11 @@ export default function Conversation() {
             );
 
             return (
-              <div
-                key={msg.id}
+              <React.Fragment key={msg.id}>
+                {/* Date separator */}
+                {showDateSeparator && <DateSeparator date={msg.created_date} />}
+                
+                <div
                 ref={(el) => messageRefs.current[msg.id] = el}
                 className={cn(
                   "flex gap-2 transition-colors duration-500",
@@ -1021,7 +1136,22 @@ export default function Conversation() {
                           minute: '2-digit'
                         })}
                       </p>
-                      {isMe && (
+                      {isMe && msg.status === 'sending' && (
+                        <span className="text-[10px] text-blue-200">⏱</span>
+                      )}
+                      {isMe && msg.status === 'failed' && (
+                        <button 
+                          onClick={() => {
+                            // Retry sending
+                            setOptimisticMessages(prev => prev.filter(m => m.tempId !== msg.tempId));
+                            toast.error('Réessayez d\'envoyer');
+                          }}
+                          className="text-[10px] text-red-300 hover:text-red-100"
+                        >
+                          ⚠️ Réessayer
+                        </button>
+                      )}
+                      {isMe && !msg.status && (
                         <MessageReadStatus
                           message={msg}
                           allMessageReads={messageReads}
