@@ -779,81 +779,119 @@ export default function ExportComptaModal({ open, onOpenChange, monthStart, mont
     doc.text('Page 1/2 - Tableau récapitulatif de paie', pageWidth / 2, pageHeight - 5, { align: 'center' });
 
     // ============================================
-    // PAGE 2: PLANNING MENSUEL (CAPTURE VISUELLE)
+    // PAGES 2+: PLANNING PAR SEMAINE (HAUTE RÉSOLUTION)
     // ============================================
     
-    // Capturer l'élément planning du DOM
     const planningElement = document.querySelector('[data-planning-calendar]');
     
     if (planningElement) {
       try {
-        console.log('📸 Début capture planning...');
-        toast.info('Capture du planning...', { duration: 2000 });
+        console.log('📸 Capture planning par semaine...');
+        toast.info('Génération du planning hebdomadaire...', { duration: 3000 });
         
-        // Créer un canvas TRÈS COMPRESSÉ pour éviter les 40MB
-        const canvas = await html2canvas(planningElement, {
-          scale: 0.4, // Très réduit pour limiter la taille
-          useCORS: true,
-          logging: false,
-          backgroundColor: '#ffffff',
-          windowWidth: planningElement.scrollWidth,
-          windowHeight: planningElement.scrollHeight
-        });
+        // Sélectionner toutes les lignes de semaine (qui contiennent le récap)
+        const weekRows = planningElement.querySelectorAll('.bg-gradient-to-r.from-gray-200.to-gray-100');
+        console.log(`📅 ${weekRows.length} semaines détectées`);
         
-        console.log('✅ Canvas créé:', canvas.width, 'x', canvas.height);
-        
-        // Convertir avec compression maximale JPEG au lieu de PNG
-        const imgData = canvas.toDataURL('image/jpeg', 0.3); // JPEG + qualité très basse
-        const imgSizeKB = Math.round((imgData.length * 3) / 4 / 1024);
-        console.log('📦 Image size:', imgSizeKB, 'KB');
-        
-        // Vérifier si trop lourd (> 2MB)
-        if (imgSizeKB > 2048) {
-          console.warn('⚠️ Image trop lourde, skip page 2');
-          throw new Error('Image trop volumineuse');
+        // Pour chaque semaine, créer une page
+        for (let weekIndex = 0; weekIndex < weekRows.length; weekIndex++) {
+          const weekRow = weekRows[weekIndex];
+          
+          // Trouver tous les éléments de cette semaine (jours + récap)
+          let currentRow = weekRow;
+          const weekElements = [];
+          
+          // Remonter pour capturer les jours de la semaine
+          let sibling = weekRow.previousElementSibling;
+          while (sibling && !sibling.classList.contains('from-gray-200')) {
+            weekElements.unshift(sibling);
+            sibling = sibling.previousElementSibling;
+            
+            // Limite à 7 jours max
+            if (weekElements.length >= 7) break;
+          }
+          
+          // Ajouter le récap
+          weekElements.push(weekRow);
+          
+          if (weekElements.length === 0) continue;
+          
+          // Créer un conteneur temporaire pour capturer uniquement cette semaine
+          const tempContainer = document.createElement('div');
+          tempContainer.style.position = 'absolute';
+          tempContainer.style.left = '-9999px';
+          tempContainer.style.backgroundColor = '#ffffff';
+          
+          // Cloner l'en-tête (noms des employés)
+          const header = planningElement.querySelector('.sticky.top-0');
+          if (header) {
+            tempContainer.appendChild(header.cloneNode(true));
+          }
+          
+          // Ajouter les éléments de la semaine
+          weekElements.forEach(el => {
+            tempContainer.appendChild(el.cloneNode(true));
+          });
+          
+          document.body.appendChild(tempContainer);
+          
+          // Capturer avec haute résolution
+          const canvas = await html2canvas(tempContainer, {
+            scale: 2, // Haute résolution
+            useCORS: true,
+            logging: false,
+            backgroundColor: '#ffffff'
+          });
+          
+          // Nettoyer le DOM
+          document.body.removeChild(tempContainer);
+          
+          // Convertir en JPEG compressé
+          const imgData = canvas.toDataURL('image/jpeg', 0.6);
+          const imgSizeKB = Math.round((imgData.length * 3) / 4 / 1024);
+          console.log(`📦 Semaine ${weekIndex + 1} size: ${imgSizeKB} KB`);
+          
+          // Ajouter nouvelle page en paysage
+          doc.addPage('a4', 'landscape');
+          doc.setTextColor(0, 0, 0);
+          
+          // En-tête de page
+          doc.setFontSize(10);
+          doc.setFont('helvetica', 'bold');
+          doc.text(`Planning ${monthName} ${year} - Semaine ${weekIndex + 1}`, pageWidth / 2, margin + 5, { align: 'center' });
+          
+          doc.setFontSize(8);
+          doc.setFont('helvetica', 'normal');
+          doc.setTextColor(80, 80, 80);
+          doc.text(settings.etablissement_name || '', pageWidth / 2, margin + 10, { align: 'center' });
+          
+          // Calculer dimensions pour remplir la page
+          const imgWidth = pageWidth - 2 * margin;
+          const imgHeight = (canvas.height * imgWidth) / canvas.width;
+          const yPosition = margin + 14;
+          const maxHeight = pageHeight - yPosition - 8;
+          
+          if (imgHeight > maxHeight) {
+            const ratio = maxHeight / imgHeight;
+            const scaledWidth = imgWidth * ratio;
+            const scaledHeight = maxHeight;
+            const xOffset = (pageWidth - scaledWidth) / 2;
+            doc.addImage(imgData, 'JPEG', xOffset, yPosition, scaledWidth, scaledHeight);
+          } else {
+            doc.addImage(imgData, 'JPEG', margin, yPosition, imgWidth, imgHeight);
+          }
+          
+          // Pied de page
+          doc.setFontSize(7);
+          doc.setTextColor(128, 128, 128);
+          doc.text(`Page ${2 + weekIndex}/${2 + weekRows.length} - Semaine ${weekIndex + 1}`, pageWidth / 2, pageHeight - 5, { align: 'center' });
+          
+          console.log(`✅ Semaine ${weekIndex + 1} ajoutée`);
         }
-        
-        // Ajouter nouvelle page en paysage
-        doc.addPage('a4', 'landscape');
-        doc.setTextColor(0, 0, 0);
-        
-        // En-tête page 2
-        doc.setFontSize(12);
-        doc.setFont('helvetica', 'bold');
-        doc.text(`Planning ${monthName} ${year}`, pageWidth / 2, margin + 5, { align: 'center' });
-        
-        doc.setFontSize(8);
-        doc.setFont('helvetica', 'normal');
-        doc.setTextColor(80, 80, 80);
-        doc.text(settings.etablissement_name || '', pageWidth / 2, margin + 11, { align: 'center' });
-        
-        const imgWidth = pageWidth - 2 * margin;
-        const imgHeight = (canvas.height * imgWidth) / canvas.width;
-        
-        // Positionner l'image du planning
-        const yPosition = margin + 16;
-        const maxHeight = pageHeight - yPosition - 8;
-        
-        if (imgHeight > maxHeight) {
-          const ratio = maxHeight / imgHeight;
-          const scaledWidth = imgWidth * ratio;
-          const scaledHeight = maxHeight;
-          const xOffset = (pageWidth - scaledWidth) / 2;
-          doc.addImage(imgData, 'JPEG', xOffset, yPosition, scaledWidth, scaledHeight);
-        } else {
-          doc.addImage(imgData, 'JPEG', margin, yPosition, imgWidth, imgHeight);
-        }
-        
-        console.log('✅ Planning ajouté au PDF');
-        
-        // Pied de page 2
-        doc.setFontSize(7);
-        doc.setTextColor(128, 128, 128);
-        doc.text('Page 2/2 - Planning mensuel', pageWidth / 2, pageHeight - 5, { align: 'center' });
         
       } catch (err) {
-        console.warn('⚠️ Capture planning skipped:', err.message);
-        // NE PAS ajouter de page 2 si capture échoue pour éviter PDF trop lourd
+        console.error('❌ Erreur capture planning:', err);
+        toast.warning('Capture planning impossible');
       }
     }
 
