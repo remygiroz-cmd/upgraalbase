@@ -155,8 +155,12 @@ export default function Presence() {
                   <div className="flex items-center gap-3 flex-1 min-w-0">
                     {/* Avatar with presence indicator */}
                     <div className="relative flex-shrink-0">
-                      <div className="w-10 h-10 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center font-semibold text-sm">
-                        {emp.first_name?.charAt(0)}{emp.last_name?.charAt(0)}
+                      <div className="w-10 h-10 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center font-semibold text-sm overflow-hidden">
+                        {emp.photo_url ? (
+                          <img src={emp.photo_url} alt={emp.first_name} className="w-full h-full object-cover" />
+                        ) : (
+                          <span>{emp.first_name?.charAt(0)}{emp.last_name?.charAt(0)}</span>
+                        )}
                       </div>
                       <div className={cn(
                         "absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full border-2 border-white",

@@ -210,10 +210,14 @@ export default function NewConversationModal({
                     )}
                   >
                     <div className={cn(
-                      "w-10 h-10 rounded-full flex items-center justify-center text-white font-semibold",
+                      "w-10 h-10 rounded-full flex items-center justify-center text-white font-semibold overflow-hidden",
                       selectedEmployees.includes(emp.id) ? "bg-blue-600" : "bg-gray-400"
                     )}>
-                      {emp.first_name?.charAt(0)}{emp.last_name?.charAt(0)}
+                      {emp.photo_url ? (
+                        <img src={emp.photo_url} alt={emp.first_name} className="w-full h-full object-cover" />
+                      ) : (
+                        <span>{emp.first_name?.charAt(0)}{emp.last_name?.charAt(0)}</span>
+                      )}
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="font-medium text-sm">
