@@ -893,8 +893,12 @@ export default function ExportComptaModal({ open, onOpenChange, monthStart, mont
     setError(null);
     
     try {
+      console.log('🔄 Génération PDF en cours...');
       const doc = await generatePDF();
+      
+      console.log('✅ PDF généré, extraction blob...');
       const pdfBlob = doc.output('blob');
+      console.log('📦 PDF blob size:', pdfBlob.size, 'bytes');
 
       if (!pdfBlob || pdfBlob.size === 0) {
         throw new Error('PDF non généré ou vide');
@@ -903,13 +907,16 @@ export default function ExportComptaModal({ open, onOpenChange, monthStart, mont
       const pdfFilename = `Export_Compta_${monthName}_${year}.pdf`;
       const pdfFile = new File([pdfBlob], pdfFilename, { type: 'application/pdf' });
 
+      console.log('📤 Upload du PDF vers storage...');
       const uploadResult = await base44.integrations.Core.UploadFile({ file: pdfFile });
+      console.log('✅ Upload terminé, URL:', uploadResult?.file_url);
       
       if (!uploadResult || !uploadResult.file_url) {
         throw new Error('Upload échoué: aucune URL retournée');
       }
 
-      await base44.functions.invoke('sendComptaExport', {
+      console.log('📧 Envoi de l\'email via backend function...');
+      const response = await base44.functions.invoke('sendComptaExport', {
         pdfUrl: uploadResult.file_url,
         pdfFilename,
         monthName,
@@ -924,12 +931,19 @@ export default function ExportComptaModal({ open, onOpenChange, monthStart, mont
         customMessage
       });
 
+      console.log('✅ Réponse backend:', response);
+
+      if (response.data?.error) {
+        throw new Error(response.data.error);
+      }
+
       toast.success('Email envoyé à la comptabilité avec PDF en pièce jointe');
       onOpenChange(false);
     } catch (error) {
-      setError(`Erreur envoi : ${error.message}`);
-      toast.error('Erreur lors de l\'envoi : ' + error.message);
-      console.error('Send email error:', error);
+      const errorMsg = error?.response?.data?.error || error.message;
+      setError(`Erreur envoi : ${errorMsg}`);
+      toast.error('Erreur lors de l\'envoi : ' + errorMsg);
+      console.error('❌ Send email error:', error);
     } finally {
       setIsSending(false);
     }

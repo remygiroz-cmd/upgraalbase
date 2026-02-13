@@ -49,15 +49,23 @@ Deno.serve(async (req) => {
 
     // Log sécurisé (sans données sensibles)
     console.log(`[INFO] Sending compta export for ${monthName} ${year}`);
+    console.log(`[DEBUG] PDF URL: ${pdfUrl}`);
 
     // Télécharger le PDF depuis l'URL
+    console.log('[INFO] Fetching PDF from URL...');
     const pdfResponse = await fetch(pdfUrl);
+    console.log(`[INFO] Fetch response status: ${pdfResponse.status} ${pdfResponse.statusText}`);
+    
     if (!pdfResponse.ok) {
-      throw new Error('Impossible de récupérer le PDF');
+      const errorBody = await pdfResponse.text();
+      console.error('[ERROR] PDF fetch failed:', errorBody);
+      throw new Error(`Impossible de récupérer le PDF (HTTP ${pdfResponse.status})`);
     }
 
+    console.log('[INFO] Converting PDF to buffer...');
     const pdfBuffer = await pdfResponse.arrayBuffer();
     const pdfSize = pdfBuffer.byteLength;
+    console.log(`[INFO] PDF buffer size: ${pdfSize} bytes`);
 
     if (pdfSize === 0) {
       throw new Error('Le PDF téléchargé est vide');
