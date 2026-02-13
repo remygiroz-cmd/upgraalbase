@@ -9,6 +9,7 @@ import { FileText, Send, Download, Loader2, AlertCircle, Edit3 } from 'lucide-re
 import { toast } from 'sonner';
 import { jsPDF } from 'jspdf';
 import 'jspdf-autotable';
+import html2canvas from 'html2canvas';
 import { calculateMonthlyRecap } from '@/components/utils/monthlyRecapCalculations';
 import { getActiveMonthContext } from './monthContext';
 import ExportOverrideModal from './ExportOverrideModal';
@@ -778,97 +779,79 @@ export default function ExportComptaModal({ open, onOpenChange, monthStart, mont
     doc.text('Page 1/2 - Tableau récapitulatif de paie', pageWidth / 2, pageHeight - 5, { align: 'center' });
 
     // ============================================
-    // PAGE 2: PLANNING MENSUEL
+    // PAGE 2: PLANNING MENSUEL (CAPTURE VISUELLE)
     // ============================================
-    doc.addPage();
-    doc.setTextColor(0, 0, 0);
     
-    // En-tête planning
-    doc.setFontSize(16);
-    doc.setFont('helvetica', 'bold');
-    doc.text('Planning mensuel complet', pageWidth / 2, margin + 8, { align: 'center' });
+    // Capturer l'élément planning du DOM
+    const planningElement = document.querySelector('[data-planning-calendar]');
     
-    doc.setFontSize(12);
-    doc.setFont('helvetica', 'normal');
-    doc.text(`${monthName} ${year} - ${settings.etablissement_name || 'Établissement'}`, pageWidth / 2, margin + 15, { align: 'center' });
-    
-    doc.setFontSize(8);
-    doc.setTextColor(128, 128, 128);
-    doc.text(`Généré le ${new Date().toLocaleDateString('fr-FR')} à ${new Date().toLocaleTimeString('fr-FR')}`, pageWidth / 2, margin + 20, { align: 'center' });
-    
-    // Message informatif
-    doc.setFontSize(10);
-    doc.setTextColor(0, 0, 0);
-    const infoY = margin + 35;
-    doc.setFont('helvetica', 'bold');
-    doc.text('📋 Planning détaillé disponible sur UpGraal', margin, infoY);
-    
-    doc.setFontSize(9);
-    doc.setFont('helvetica', 'normal');
-    doc.setTextColor(60, 60, 60);
-    const infoLines = [
-      'Ce document accompagne le récapitulatif des éléments de paie ci-dessus.',
-      '',
-      'Pour consulter le planning complet avec tous les détails (horaires précis, pauses,',
-      'statuts des absences, congés payés, récapitulatifs hebdomadaires), veuillez',
-      'vous connecter à l\'application UpGraal.',
-      '',
-      'Le planning complet inclut :',
-      '  • Tous les employés avec leurs shifts quotidiens',
-      '  • Horaires de début et fin de service',
-      '  • Heures de pause et durées effectives',
-      '  • Statuts des absences (maladie, congés, etc.)',
-      '  • Récapitulatifs hebdomadaires et mensuels détaillés',
-      '  • Totaux d\'heures travaillées, complémentaires et supplémentaires'
-    ];
-    
-    let currentY = infoY + 8;
-    infoLines.forEach(line => {
-      doc.text(line, margin, currentY);
-      currentY += 5;
-    });
-
-    // Encadré récapitulatif des données
-    doc.setDrawColor(229, 231, 235);
-    doc.setFillColor(249, 250, 251);
-    const boxY = currentY + 10;
-    const boxHeight = 45;
-    doc.roundedRect(margin, boxY, pageWidth - 2 * margin, boxHeight, 3, 3, 'FD');
-    
-    doc.setFontSize(10);
-    doc.setFont('helvetica', 'bold');
-    doc.setTextColor(0, 0, 0);
-    doc.text('Résumé du mois', margin + 5, boxY + 8);
-    
-    doc.setFontSize(9);
-    doc.setFont('helvetica', 'normal');
-    doc.setTextColor(60, 60, 60);
-    
-    const summaryY = boxY + 16;
-    const col1X = margin + 5;
-    const col2X = pageWidth / 2 + 10;
-    
-    doc.text(`Nombre d'employés actifs : ${exportData.length}`, col1X, summaryY);
-    doc.text(`Jours travaillés (total) : ${totals.nbJoursTravailles} jours`, col1X, summaryY + 6);
-    doc.text(`Heures totales payées : ${totals.totalPaid.toFixed(1)}h`, col1X, summaryY + 12);
-    doc.text(`Heures de base : ${totals.payeesHorsSup.toFixed(1)}h`, col1X, summaryY + 18);
-    
-    if (totals.compl10 > 0 || totals.compl25 > 0) {
-      doc.text(`Heures complémentaires : ${(totals.compl10 + totals.compl25).toFixed(1)}h`, col2X, summaryY);
-    }
-    if (totals.supp25 > 0 || totals.supp50 > 0) {
-      doc.text(`Heures supplémentaires : ${(totals.supp25 + totals.supp50).toFixed(1)}h`, col2X, summaryY + 6);
-    }
-    
-    const cpCount = cpPeriods.length;
-    if (cpCount > 0) {
-      doc.text(`Périodes de congés payés : ${cpCount}`, col2X, summaryY + 12);
+    if (planningElement) {
+      try {
+        // Créer un canvas du planning
+        const canvas = await html2canvas(planningElement, {
+          scale: 2, // Résolution haute pour meilleure qualité
+          useCORS: true,
+          logging: false,
+          backgroundColor: '#ffffff'
+        });
+        
+        // Ajouter nouvelle page
+        doc.addPage();
+        doc.setTextColor(0, 0, 0);
+        
+        // En-tête page 2
+        doc.setFontSize(14);
+        doc.setFont('helvetica', 'bold');
+        doc.text(`Planning - ${monthName} ${year}`, pageWidth / 2, margin + 5, { align: 'center' });
+        
+        doc.setFontSize(8);
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(100, 100, 100);
+        doc.text(settings.etablissement_name || 'Établissement', pageWidth / 2, margin + 11, { align: 'center' });
+        
+        // Convertir canvas en image
+        const imgData = canvas.toDataURL('image/png');
+        const imgWidth = pageWidth - 2 * margin;
+        const imgHeight = (canvas.height * imgWidth) / canvas.width;
+        
+        // Positionner l'image du planning
+        const yPosition = margin + 18;
+        const maxHeight = pageHeight - yPosition - 10;
+        
+        // Ajuster si nécessaire
+        if (imgHeight > maxHeight) {
+          const scaledWidth = (maxHeight * imgWidth) / imgHeight;
+          const xOffset = (pageWidth - scaledWidth) / 2;
+          doc.addImage(imgData, 'PNG', xOffset, yPosition, scaledWidth, maxHeight);
+        } else {
+          doc.addImage(imgData, 'PNG', margin, yPosition, imgWidth, imgHeight);
+        }
+        
+        // Pied de page 2
+        doc.setFontSize(7);
+        doc.setTextColor(128, 128, 128);
+        doc.text('Page 2/2 - Planning mensuel complet', pageWidth / 2, pageHeight - 5, { align: 'center' });
+        
+      } catch (err) {
+        console.error('Erreur capture planning:', err);
+        // Si échec, ajouter une page avec message
+        doc.addPage();
+        doc.setFontSize(12);
+        doc.text('⚠️ Erreur lors de la capture du planning', pageWidth / 2, pageHeight / 2, { align: 'center' });
+      }
+    } else {
+      // Si planning non trouvé, page avec info
+      doc.addPage();
+      doc.setFontSize(12);
+      doc.setTextColor(0, 0, 0);
+      doc.text('Planning mensuel', pageWidth / 2, margin + 10, { align: 'center' });
+      doc.setFontSize(10);
+      doc.text('Consultez le planning complet sur UpGraal', pageWidth / 2, margin + 25, { align: 'center' });
     }
 
-    // Pied de page 2
+    // Pied de page global
     doc.setFontSize(7);
     doc.setTextColor(128, 128, 128);
-    doc.text('Page 2/2 - Planning mensuel', pageWidth / 2, pageHeight - 10, { align: 'center' });
     doc.text('Document généré automatiquement via UpGraal', pageWidth / 2, pageHeight - 5, { align: 'center' });
 
     return doc;
