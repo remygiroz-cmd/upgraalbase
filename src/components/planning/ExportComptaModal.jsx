@@ -787,76 +787,101 @@ export default function ExportComptaModal({ open, onOpenChange, monthStart, mont
     if (planningElement) {
       try {
         console.log('📸 Capture planning par semaine...');
-        toast.info('Génération du planning hebdomadaire...', { duration: 3000 });
         
-        // Sélectionner toutes les lignes de semaine (qui contiennent le récap)
-        const weekRows = planningElement.querySelectorAll('.bg-gradient-to-r.from-gray-200.to-gray-100');
-        console.log(`📅 ${weekRows.length} semaines détectées`);
+        // Sélectionner UNIQUEMENT les récaps hebdomadaires (pas le mensuel)
+        // Le récap mensuel a une classe différente (from-blue-100)
+        const allRows = Array.from(planningElement.children[0]?.children || []);
+        const weeklyRecapRows = allRows.filter(row => 
+          row.classList.contains('from-gray-200') && 
+          row.classList.contains('to-gray-100') &&
+          !row.classList.contains('from-blue-100') // Exclure le récap mensuel
+        );
         
-        // Pour chaque semaine, créer une page
-        for (let weekIndex = 0; weekIndex < weekRows.length; weekIndex++) {
-          const weekRow = weekRows[weekIndex];
-          
-          // Trouver tous les éléments de cette semaine (jours + récap)
-          let currentRow = weekRow;
+        console.log(`📅 ${weeklyRecapRows.length} semaines détectées`);
+        
+        if (weeklyRecapRows.length === 0) {
+          console.warn('Aucune semaine trouvée');
+          return doc;
+        }
+        
+        // Récupérer l'en-tête une seule fois
+        const headerRow = planningElement.querySelector('.sticky.top-0');
+        
+        // Pour chaque semaine
+        for (let weekIndex = 0; weekIndex < weeklyRecapRows.length; weekIndex++) {
+          const weekRecapRow = weeklyRecapRows[weekIndex];
           const weekElements = [];
           
-          // Remonter pour capturer les jours de la semaine
-          let sibling = weekRow.previousElementSibling;
-          while (sibling && !sibling.classList.contains('from-gray-200')) {
+          // Remonter jusqu'à 7 jours avant le récap
+          let sibling = weekRecapRow.previousElementSibling;
+          let daysCount = 0;
+          
+          while (sibling && daysCount < 7) {
+            // Stop si on atteint un autre récap
+            if (sibling.classList.contains('from-gray-200') || sibling.classList.contains('from-blue-100')) {
+              break;
+            }
             weekElements.unshift(sibling);
             sibling = sibling.previousElementSibling;
-            
-            // Limite à 7 jours max
-            if (weekElements.length >= 7) break;
+            daysCount++;
           }
           
-          // Ajouter le récap
-          weekElements.push(weekRow);
+          // Ajouter le récap à la fin
+          weekElements.push(weekRecapRow);
           
-          if (weekElements.length === 0) continue;
+          if (weekElements.length <= 1) continue; // Skip si pas de jours
           
-          // Créer un conteneur temporaire pour capturer uniquement cette semaine
+          // Créer conteneur temporaire
           const tempContainer = document.createElement('div');
-          tempContainer.style.position = 'absolute';
+          tempContainer.style.position = 'fixed';
           tempContainer.style.left = '-9999px';
+          tempContainer.style.top = '0';
           tempContainer.style.backgroundColor = '#ffffff';
+          tempContainer.style.padding = '10px';
           
-          // Cloner l'en-tête (noms des employés)
-          const header = planningElement.querySelector('.sticky.top-0');
-          if (header) {
-            tempContainer.appendChild(header.cloneNode(true));
+          // Cloner l'en-tête avec les noms
+          if (headerRow) {
+            const headerClone = headerRow.cloneNode(true);
+            headerClone.style.position = 'relative';
+            headerClone.style.fontSize = '16px'; // Grossir les noms
+            tempContainer.appendChild(headerClone);
           }
           
-          // Ajouter les éléments de la semaine
+          // Ajouter les lignes de la semaine
           weekElements.forEach(el => {
-            tempContainer.appendChild(el.cloneNode(true));
+            const clone = el.cloneNode(true);
+            clone.style.fontSize = '14px'; // Augmenter taille police
+            tempContainer.appendChild(clone);
           });
           
           document.body.appendChild(tempContainer);
           
-          // Capturer avec haute résolution
+          // Attendre que le DOM soit rendu
+          await new Promise(resolve => setTimeout(resolve, 100));
+          
+          // Capturer en haute résolution
           const canvas = await html2canvas(tempContainer, {
-            scale: 2, // Haute résolution
+            scale: 2.5, // Très haute résolution
             useCORS: true,
             logging: false,
-            backgroundColor: '#ffffff'
+            backgroundColor: '#ffffff',
+            width: tempContainer.scrollWidth,
+            height: tempContainer.scrollHeight
           });
           
-          // Nettoyer le DOM
           document.body.removeChild(tempContainer);
           
-          // Convertir en JPEG compressé
-          const imgData = canvas.toDataURL('image/jpeg', 0.6);
+          // Convertir en JPEG
+          const imgData = canvas.toDataURL('image/jpeg', 0.65);
           const imgSizeKB = Math.round((imgData.length * 3) / 4 / 1024);
-          console.log(`📦 Semaine ${weekIndex + 1} size: ${imgSizeKB} KB`);
+          console.log(`📦 Semaine ${weekIndex + 1}: ${imgSizeKB} KB`);
           
-          // Ajouter nouvelle page en paysage
+          // Nouvelle page en paysage
           doc.addPage('a4', 'landscape');
           doc.setTextColor(0, 0, 0);
           
-          // En-tête de page
-          doc.setFontSize(10);
+          // En-tête
+          doc.setFontSize(11);
           doc.setFont('helvetica', 'bold');
           doc.text(`Planning ${monthName} ${year} - Semaine ${weekIndex + 1}`, pageWidth / 2, margin + 5, { align: 'center' });
           
@@ -865,7 +890,7 @@ export default function ExportComptaModal({ open, onOpenChange, monthStart, mont
           doc.setTextColor(80, 80, 80);
           doc.text(settings.etablissement_name || '', pageWidth / 2, margin + 10, { align: 'center' });
           
-          // Calculer dimensions pour remplir la page
+          // Image
           const imgWidth = pageWidth - 2 * margin;
           const imgHeight = (canvas.height * imgWidth) / canvas.width;
           const yPosition = margin + 14;
@@ -884,14 +909,14 @@ export default function ExportComptaModal({ open, onOpenChange, monthStart, mont
           // Pied de page
           doc.setFontSize(7);
           doc.setTextColor(128, 128, 128);
-          doc.text(`Page ${2 + weekIndex}/${2 + weekRows.length} - Semaine ${weekIndex + 1}`, pageWidth / 2, pageHeight - 5, { align: 'center' });
+          doc.text(`Semaine ${weekIndex + 1}/${weeklyRecapRows.length}`, pageWidth / 2, pageHeight - 5, { align: 'center' });
           
-          console.log(`✅ Semaine ${weekIndex + 1} ajoutée`);
+          console.log(`✅ Semaine ${weekIndex + 1} OK`);
         }
         
       } catch (err) {
-        console.error('❌ Erreur capture planning:', err);
-        toast.warning('Capture planning impossible');
+        console.error('❌ Erreur capture:', err);
+        toast.error('Erreur capture planning: ' + err.message);
       }
     }
 
