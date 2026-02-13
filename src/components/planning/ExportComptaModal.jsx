@@ -131,15 +131,17 @@ function buildExportRow(employee, calculatedRecap, nonShiftTypes, cpPeriods, non
   
   const autoNonShiftsStr = nonShiftsVisible.join('\n') || '';
 
-  // === CP DÉCOMPTÉS - CALCUL AUTO ===
+  // === CP DÉCOMPTÉS - CALCUL AUTO (format compact) ===
   const employeeCPPeriods = cpPeriods.filter(cp => cp.employee_id === employee.id);
   const cpLines = [];
   
   employeeCPPeriods.forEach(cp => {
     const cpDays = cp.cp_days_manual || cp.cp_days_auto || 0;
-    const departDate = formatDateFR(cp.cp_start_date);
-    const repriseDate = formatDateFR(cp.return_date);
-    cpLines.push(`${cpDays} CP (départ le ${departDate}, reprise le ${repriseDate})`);
+    const startDate = new Date(cp.cp_start_date + 'T00:00:00');
+    const endDate = new Date(cp.end_cp + 'T00:00:00');
+    const startStr = `${startDate.getDate()} ${startDate.toLocaleDateString('fr-FR', { month: 'short' })}`;
+    const endStr = `${endDate.getDate()} ${endDate.toLocaleDateString('fr-FR', { month: 'short' })}`;
+    cpLines.push(`${cpDays} CP (${startStr}→${endStr})`);
   });
   
   const autoCpStr = cpLines.join('\n') || '';
@@ -678,6 +680,10 @@ export default function ExportComptaModal({ open, onOpenChange, monthStart, mont
     const pageHeight = doc.internal.pageSize.getHeight();
     const margin = 10;
     
+    // ============================================
+    // PAGE 1: TABLEAU ÉLÉMENTS DE PAIE
+    // ============================================
+    
     // En-tête
     doc.setFontSize(16);
     doc.setFont('helvetica', 'bold');
@@ -692,7 +698,7 @@ export default function ExportComptaModal({ open, onOpenChange, monthStart, mont
     doc.text(`Généré le ${new Date().toLocaleDateString('fr-FR')} à ${new Date().toLocaleTimeString('fr-FR')}`, margin, margin + 20);
     doc.setTextColor(0, 0, 0);
 
-    // Tableau - ORDRE EXACT DES COLONNES
+    // Tableau - COLONNES OPTIMISÉES
     const tableData = exportData.map(row => [
       row.employeeName,
       row.nbJoursTravailles || 0,
@@ -734,7 +740,7 @@ export default function ExportComptaModal({ open, onOpenChange, monthStart, mont
       body: tableData,
       styles: {
         fontSize: 7,
-        cellPadding: 2,
+        cellPadding: { top: 1.5, right: 1, bottom: 1.5, left: 1 },
         overflow: 'linebreak',
         halign: 'left'
       },
@@ -746,18 +752,18 @@ export default function ExportComptaModal({ open, onOpenChange, monthStart, mont
         minCellHeight: 8
       },
       columnStyles: {
-        0: { cellWidth: 32 },
-        1: { cellWidth: 12, halign: 'center' },
-        2: { cellWidth: 12, halign: 'center', fontSize: 6 },
-        3: { cellWidth: 18, halign: 'right', fillColor: [219, 234, 254], fontStyle: 'bold' },
-        4: { cellWidth: 18, halign: 'right' },
-        5: { cellWidth: 14, halign: 'right' },
-        6: { cellWidth: 14, halign: 'right' },
-        7: { cellWidth: 14, halign: 'right' },
-        8: { cellWidth: 14, halign: 'right' },
-        9: { cellWidth: 18, halign: 'center', fontSize: 6, textColor: [147, 51, 234] },
-        10: { cellWidth: 30, fontSize: 6 },
-        11: { cellWidth: 25, fontSize: 6 }
+        0: { cellWidth: 30 }, // Employé
+        1: { cellWidth: 10, halign: 'center' }, // Nb j. trav (réduit)
+        2: { cellWidth: 10, halign: 'center', fontSize: 6 }, // Jours supp (réduit)
+        3: { cellWidth: 18, halign: 'right', fillColor: [219, 234, 254], fontStyle: 'bold' }, // Total payé
+        4: { cellWidth: 17, halign: 'right' }, // Payées
+        5: { cellWidth: 12, halign: 'right' }, // Compl 10% (réduit)
+        6: { cellWidth: 12, halign: 'right' }, // Compl 25% (réduit)
+        7: { cellWidth: 12, halign: 'right' }, // Supp 25% (réduit)
+        8: { cellWidth: 12, halign: 'right' }, // Supp 50% (réduit)
+        9: { cellWidth: 15, halign: 'center', fontSize: 6, textColor: [147, 51, 234] }, // Férié (réduit)
+        10: { cellWidth: 38, fontSize: 5.5, cellPadding: { top: 1.5, right: 0.5, bottom: 1.5, left: 0.5 } }, // Non-shifts (augmenté)
+        11: { cellWidth: 32, fontSize: 5.5, cellPadding: { top: 1.5, right: 0.5, bottom: 1.5, left: 0.5 } } // CP (augmenté + compact)
       },
       didParseCell: (data) => {
         if (data.row.index === tableData.length - 1) {
@@ -768,8 +774,103 @@ export default function ExportComptaModal({ open, onOpenChange, monthStart, mont
       margin: { left: margin, right: margin }
     });
 
+    // Pied de page 1
     doc.setFontSize(7);
     doc.setTextColor(128, 128, 128);
+    doc.text('Page 1/2 - Tableau récapitulatif de paie', pageWidth / 2, pageHeight - 5, { align: 'center' });
+
+    // ============================================
+    // PAGE 2: PLANNING MENSUEL
+    // ============================================
+    doc.addPage();
+    doc.setTextColor(0, 0, 0);
+    
+    // En-tête planning
+    doc.setFontSize(16);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Planning mensuel complet', pageWidth / 2, margin + 8, { align: 'center' });
+    
+    doc.setFontSize(12);
+    doc.setFont('helvetica', 'normal');
+    doc.text(`${monthName} ${year} - ${settings.etablissement_name || 'Établissement'}`, pageWidth / 2, margin + 15, { align: 'center' });
+    
+    doc.setFontSize(8);
+    doc.setTextColor(128, 128, 128);
+    doc.text(`Généré le ${new Date().toLocaleDateString('fr-FR')} à ${new Date().toLocaleTimeString('fr-FR')}`, pageWidth / 2, margin + 20, { align: 'center' });
+    
+    // Message informatif
+    doc.setFontSize(10);
+    doc.setTextColor(0, 0, 0);
+    const infoY = margin + 35;
+    doc.setFont('helvetica', 'bold');
+    doc.text('📋 Planning détaillé disponible sur UpGraal', margin, infoY);
+    
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(60, 60, 60);
+    const infoLines = [
+      'Ce document accompagne le récapitulatif des éléments de paie ci-dessus.',
+      '',
+      'Pour consulter le planning complet avec tous les détails (horaires précis, pauses,',
+      'statuts des absences, congés payés, récapitulatifs hebdomadaires), veuillez',
+      'vous connecter à l\'application UpGraal.',
+      '',
+      'Le planning complet inclut :',
+      '  • Tous les employés avec leurs shifts quotidiens',
+      '  • Horaires de début et fin de service',
+      '  • Heures de pause et durées effectives',
+      '  • Statuts des absences (maladie, congés, etc.)',
+      '  • Récapitulatifs hebdomadaires et mensuels détaillés',
+      '  • Totaux d\'heures travaillées, complémentaires et supplémentaires'
+    ];
+    
+    let currentY = infoY + 8;
+    infoLines.forEach(line => {
+      doc.text(line, margin, currentY);
+      currentY += 5;
+    });
+
+    // Encadré récapitulatif des données
+    doc.setDrawColor(229, 231, 235);
+    doc.setFillColor(249, 250, 251);
+    const boxY = currentY + 10;
+    const boxHeight = 45;
+    doc.roundedRect(margin, boxY, pageWidth - 2 * margin, boxHeight, 3, 3, 'FD');
+    
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(0, 0, 0);
+    doc.text('Résumé du mois', margin + 5, boxY + 8);
+    
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(60, 60, 60);
+    
+    const summaryY = boxY + 16;
+    const col1X = margin + 5;
+    const col2X = pageWidth / 2 + 10;
+    
+    doc.text(`Nombre d'employés actifs : ${exportData.length}`, col1X, summaryY);
+    doc.text(`Jours travaillés (total) : ${totals.nbJoursTravailles} jours`, col1X, summaryY + 6);
+    doc.text(`Heures totales payées : ${totals.totalPaid.toFixed(1)}h`, col1X, summaryY + 12);
+    doc.text(`Heures de base : ${totals.payeesHorsSup.toFixed(1)}h`, col1X, summaryY + 18);
+    
+    if (totals.compl10 > 0 || totals.compl25 > 0) {
+      doc.text(`Heures complémentaires : ${(totals.compl10 + totals.compl25).toFixed(1)}h`, col2X, summaryY);
+    }
+    if (totals.supp25 > 0 || totals.supp50 > 0) {
+      doc.text(`Heures supplémentaires : ${(totals.supp25 + totals.supp50).toFixed(1)}h`, col2X, summaryY + 6);
+    }
+    
+    const cpCount = cpPeriods.length;
+    if (cpCount > 0) {
+      doc.text(`Périodes de congés payés : ${cpCount}`, col2X, summaryY + 12);
+    }
+
+    // Pied de page 2
+    doc.setFontSize(7);
+    doc.setTextColor(128, 128, 128);
+    doc.text('Page 2/2 - Planning mensuel', pageWidth / 2, pageHeight - 10, { align: 'center' });
     doc.text('Document généré automatiquement via UpGraal', pageWidth / 2, pageHeight - 5, { align: 'center' });
 
     return doc;
