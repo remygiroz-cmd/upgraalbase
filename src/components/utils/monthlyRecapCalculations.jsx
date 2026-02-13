@@ -542,9 +542,10 @@ Weeks to process: ${weeks.length}
     const referenceContractHoursForPeriod = weekDetails.reduce((sum, w) => sum + w.baseHours, 0);
     const threshold10 = referenceContractHoursForPeriod * 0.10;
     
-    result.complementaryHours10 = Math.min(totalComplementaryBeforeSplit, threshold10);
-    result.complementaryHours25 = Math.max(0, totalComplementaryBeforeSplit - threshold10);
-    result.totalComplementaryHours = totalComplementaryBeforeSplit;
+    // Round to 2 decimals to avoid micro-hours (0.001h → 0.00h)
+    result.complementaryHours10 = Math.round(Math.min(totalComplementaryBeforeSplit, threshold10) * 100) / 100;
+    result.complementaryHours25 = Math.round(Math.max(0, totalComplementaryBeforeSplit - threshold10) * 100) / 100;
+    result.totalComplementaryHours = result.complementaryHours10 + result.complementaryHours25;
 
     console.log(`
 ───────────────────────────────────────────────────────────
@@ -740,12 +741,10 @@ Weeks to process: ${weeks.length}
     const actualComplementary = Math.min(excess, maxComplementary);
     
     const limit10 = result.contractMonthlyHours * 0.10;
-    result.complementaryHours10 = Math.min(actualComplementary, limit10);
     
-    if (actualComplementary > limit10) {
-      result.complementaryHours25 = actualComplementary - limit10;
-    }
-    
+    // Round to 2 decimals to avoid micro-hours (0.001h → 0.00h)
+    result.complementaryHours10 = Math.round(Math.min(actualComplementary, limit10) * 100) / 100;
+    result.complementaryHours25 = Math.round(Math.max(0, actualComplementary - limit10) * 100) / 100;
     result.totalComplementaryHours = result.complementaryHours10 + result.complementaryHours25;
 
     console.log(`
