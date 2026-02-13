@@ -156,6 +156,15 @@ Deno.serve(async (req) => {
       
       console.log(`✅ [${traceId}] STEP 5.${monthKey} OK: PlanningMonth ready`);
 
+      // CRITICAL: Validate required fields before creating
+      if (!request.start_cp || !request.first_work_day_after) {
+        console.error(`❌ [${traceId}] Missing required fields in LeaveRequest:`, {
+          start_cp: request.start_cp,
+          first_work_day_after: request.first_work_day_after
+        });
+        throw new Error('Missing start_cp or first_work_day_after in LeaveRequest');
+      }
+
       // Determine the period boundaries for this specific month
       const monthStart = new Date(year, monthNum - 1, 1);
       const monthEnd = new Date(year, monthNum, 0);
@@ -164,19 +173,27 @@ Deno.serve(async (req) => {
       const periodEnd = endDate < monthEnd ? endDate : monthEnd;
 
       // Create CP period for this month with service role
+      // CRITICAL: PaidLeavePeriod requires cp_start_date and return_date (not start_cp/end_cp)
       const periodData = {
         employee_id: request.employee_id,
         employee_name: request.employee_name,
-        last_work_day: request.last_work_day,
-        first_work_day_after: request.first_work_day_after,
-        start_cp: periodStart.toISOString().split('T')[0],
-        end_cp: periodEnd.toISOString().split('T')[0],
+        
+        // REQUIRED FIELDS - mapped from LeaveRequest
+        cp_start_date: request.start_cp,               // Premier jour en CP (inclus)
+        return_date: request.first_work_day_after,     // Jour de reprise (premier jour travaillé)
+        
+        // OPTIONAL FIELDS
+        start_cp: periodStart.toISOString().split('T')[0],  // Début période pour ce mois
+        end_cp: periodEnd.toISOString().split('T')[0],      // Fin période pour ce mois
         cp_days_auto: request.cp_days_computed,
         cp_days_manual: request.manual_override_days || null,
         notes: request.notes || `Demande acceptée le ${new Date().toLocaleDateString('fr-FR')}`,
         month_key: monthKey,
         reset_version: resetVersion
       };
+      
+      console.log(`   - cp_start_date: ${periodData.cp_start_date}`);
+      console.log(`   - return_date: ${periodData.return_date}`);
 
       console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
       console.log(`🔐 [${traceId}] STEP 6.${monthKey}: USING SERVICE ROLE for PaidLeavePeriod.create()`);
