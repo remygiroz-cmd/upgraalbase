@@ -72,15 +72,6 @@ export default function LeaveRequestNotification({ request, onDismiss }) {
         console.error('  - Full error:', error);
         console.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
         
-        const errorDebug = {
-          ok: false,
-          errorMessage: error.message,
-          errorName: error.name,
-          stack: error.stack,
-          caughtInMutation: true
-        };
-        setDebugResult(errorDebug);
-        
         throw error;
       }
     },
