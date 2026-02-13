@@ -16,6 +16,15 @@ export default function LeaveRequestNotification({ request, onDismiss }) {
 
   const approveMutation = useMutation({
     mutationFn: async () => {
+      console.log('🔷 [APPROVE CP] START', {
+        requestId: request.id,
+        employeeId: request.employee_id,
+        employeeName: request.employee_name,
+        startCP: request.start_cp,
+        endCP: request.end_cp,
+        cpDaysComputed: request.cp_days_computed
+      });
+
       const startDate = new Date(request.start_cp);
       const endDate = new Date(request.end_cp);
       
@@ -32,17 +41,22 @@ export default function LeaveRequestNotification({ request, onDismiss }) {
         currentDate.setDate(1);
       }
 
+      console.log('🔷 [APPROVE CP] Affected months:', affectedMonths);
+
       // Get or create PlanningMonth for each affected month
       const createdPeriods = [];
       
       for (const monthKey of affectedMonths) {
         const [year, monthNum] = monthKey.split('-').map(Number);
         
+        console.log(`🔷 [APPROVE CP] Processing month: ${monthKey}`);
+        
         // Get or create planning month
         let planningMonths = await base44.entities.PlanningMonth.filter({ month_key: monthKey });
         let resetVersion = 0;
         
         if (planningMonths.length === 0) {
+          console.log(`🔷 [APPROVE CP] Creating new PlanningMonth for ${monthKey}`);
           await base44.entities.PlanningMonth.create({
             year: year,
             month: monthNum - 1,
@@ -52,6 +66,7 @@ export default function LeaveRequestNotification({ request, onDismiss }) {
           resetVersion = 0;
         } else {
           resetVersion = planningMonths[0].reset_version || 0;
+          console.log(`🔷 [APPROVE CP] Using existing PlanningMonth for ${monthKey}, reset_version: ${resetVersion}`);
         }
 
         // Determine the period boundaries for this specific month
@@ -76,12 +91,30 @@ export default function LeaveRequestNotification({ request, onDismiss }) {
           reset_version: resetVersion
         };
 
-        const period = await base44.entities.PaidLeavePeriod.create(periodData);
-        createdPeriods.push(period);
+        console.log(`🔷 [APPROVE CP] Creating PaidLeavePeriod:`, periodData);
+
+        try {
+          const period = await base44.entities.PaidLeavePeriod.create(periodData);
+          console.log(`✅ [APPROVE CP] PaidLeavePeriod created for ${monthKey}:`, {
+            id: period.id,
+            start: period.start_cp,
+            end: period.end_cp,
+            monthKey: period.month_key,
+            resetVersion: period.reset_version
+          });
+          createdPeriods.push(period);
+        } catch (createError) {
+          console.error(`❌ [APPROVE CP] Failed to create PaidLeavePeriod for ${monthKey}:`, createError);
+          throw new Error(`Échec création CP sur ${monthKey}: ${createError.message}`);
+        }
       }
 
-      // Update request status
+      console.log(`✅ [APPROVE CP] All periods created (${createdPeriods.length})`);
+
+      // Update request status ONLY if all periods created successfully
       const currentUser = await base44.auth.me();
+      console.log('🔷 [APPROVE CP] Updating request status to APPROVED');
+      
       await base44.entities.LeaveRequest.update(request.id, {
         status: 'APPROVED',
         decision_by_user_id: currentUser.id,
@@ -109,21 +142,36 @@ export default function LeaveRequestNotification({ request, onDismiss }) {
         }
       }
 
-      return createdPeriods;
+      return { periods: createdPeriods, affectedMonths };
     },
-    onSuccess: (periods) => {
+    onSuccess: ({ periods, affectedMonths }) => {
+      console.log('✅ [APPROVE CP] SUCCESS - Invalidating queries');
+      
       queryClient.invalidateQueries({ queryKey: ['pendingLeaveRequests'] });
       queryClient.invalidateQueries({ queryKey: ['myLeaveRequestDecisions'] });
       queryClient.invalidateQueries({ queryKey: ['paidLeavePeriods'] });
       queryClient.invalidateQueries({ queryKey: ['shifts'] });
       queryClient.invalidateQueries({ queryKey: ['nonShiftEvents'] });
       
-      const monthsAffected = periods.length;
-      toast.success(
-        monthsAffected > 1 
-          ? `Demande acceptée - ${monthsAffected} périodes CP créées (multi-mois)` 
-          : 'Demande acceptée et période CP créée'
-      );
+      // Invalidate specific months
+      affectedMonths.forEach(monthKey => {
+        queryClient.invalidateQueries({ queryKey: ['planning', monthKey] });
+        queryClient.invalidateQueries({ queryKey: ['monthlyRecap', monthKey] });
+      });
+
+      const currentMonth = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`;
+      const isCurrentMonth = affectedMonths.includes(currentMonth);
+      
+      if (periods.length > 1) {
+        toast.success(
+          `✅ CP créé sur ${periods.length} mois: ${affectedMonths.join(', ')}${!isCurrentMonth ? ' (pas le mois actuel)' : ''}`
+        );
+      } else {
+        toast.success(
+          `✅ CP créé sur ${affectedMonths[0]} (ID: ${periods[0].id.substring(0, 8)}...)${!isCurrentMonth ? ' - Va sur ce mois pour le voir' : ''}`
+        );
+      }
+      
       onDismiss?.();
     },
     onError: (error) => {

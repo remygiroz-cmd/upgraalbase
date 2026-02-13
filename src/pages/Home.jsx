@@ -1,9 +1,11 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { isCurrentUserPlanningManager } from '@/components/planning/utils/getPlanningManager';
 import LeaveRequestNotification from '@/components/planning/LeaveRequestNotification';
 import { Card } from '@/components/ui/card';
+import { Trash2 } from 'lucide-react';
+import { toast } from 'sonner';
 import { Plus, MessageCircle, Bell, RefreshCw, AtSign, Megaphone, Users, Circle, ArrowRight, ArchiveRestore } from 'lucide-react';
 import TodaySummary from '@/components/planning/TodaySummary';
 import { formatLocalDate } from '@/components/planning/dateUtils';
@@ -350,10 +352,40 @@ export default function Home() {
         req.employee_id === currentEmployee.id && 
         req.status !== 'PENDING' &&
         // Only show recent decisions (last 30 days)
-        new Date(req.decision_at) > new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
+        new Date(req.decision_at) > new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) &&
+        // Filter out dismissed notifications
+        !(req.dismissed_by_employee_ids || []).includes(currentEmployee.id)
       ).sort((a, b) => new Date(b.decision_at) - new Date(a.decision_at));
     },
     enabled: !!currentEmployee?.id
+  });
+
+  const dismissDecisionMutation = useMutation({
+    mutationFn: async (requestId) => {
+      const request = myLeaveRequestDecisions.find(r => r.id === requestId);
+      const dismissedIds = request.dismissed_by_employee_ids || [];
+      if (!dismissedIds.includes(currentEmployee.id)) {
+        dismissedIds.push(currentEmployee.id);
+      }
+      return await base44.entities.LeaveRequest.update(requestId, {
+        dismissed_by_employee_ids: dismissedIds
+      });
+    },
+    onMutate: async (requestId) => {
+      await queryClient.cancelQueries({ queryKey: ['myLeaveRequestDecisions'] });
+      const previousData = queryClient.getQueryData(['myLeaveRequestDecisions', currentEmployee?.id]);
+      queryClient.setQueryData(['myLeaveRequestDecisions', currentEmployee?.id], old => 
+        old?.filter(req => req.id !== requestId) || []
+      );
+      return { previousData };
+    },
+    onError: (err, requestId, context) => {
+      queryClient.setQueryData(['myLeaveRequestDecisions', currentEmployee?.id], context.previousData);
+      toast.error('Erreur lors du masquage');
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ['myLeaveRequestDecisions'] });
+    }
   });
 
   // Get urgent announcements
@@ -648,9 +680,17 @@ export default function Home() {
             <div className="space-y-3">
               {myLeaveRequestDecisions.map(decision => (
                 <Card key={decision.id} className={cn(
-                  "p-4",
+                  "p-4 relative group",
                   decision.status === 'APPROVED' ? "bg-green-50 border-green-300" : "bg-red-50 border-red-300"
                 )}>
+                  <button
+                    onClick={() => dismissDecisionMutation.mutate(decision.id)}
+                    className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity p-1.5 rounded hover:bg-gray-200/50"
+                    title="Masquer cette notification"
+                  >
+                    <Trash2 className="w-4 h-4 text-gray-500" />
+                  </button>
+                  
                   <div className="flex items-start gap-3">
                     <div className={cn(
                       "w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0",
