@@ -18,6 +18,9 @@ import ScrollToBottom from '@/components/messaging/ScrollToBottom';
 import DateSeparator from '@/components/messaging/DateSeparator';
 import TypingIndicator from '@/components/messaging/TypingIndicator';
 import MessageSkeleton from '@/components/messaging/MessageSkeleton';
+import ReplyPreview, { ReplyBlock } from '@/components/messaging/ReplyPreview';
+import { ReactionsDisplay, ReactionsDetailModal } from '@/components/messaging/MessageReactions';
+import { CornerUpLeft } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -55,6 +58,12 @@ export default function Conversation() {
   
   // Optimistic messages
   const [optimisticMessages, setOptimisticMessages] = useState([]);
+  
+  // Reply state
+  const [replyingTo, setReplyingTo] = useState(null);
+  
+  // Reactions modal
+  const [reactionsModal, setReactionsModal] = useState({ open: false, messageId: null });
 
   // Get conversation ID from URL
   const urlParams = new URLSearchParams(window.location.search);
@@ -152,6 +161,27 @@ export default function Conversation() {
     queryFn: () => base44.entities.MessageMention.filter({ conversation_id: conversationId }),
     enabled: !!conversationId
   });
+  
+  // Get message reactions
+  const { data: messageReactions = [] } = useQuery({
+    queryKey: ['messageReactions', conversationId],
+    queryFn: () => base44.entities.MessageReaction.filter({ conversation_id: conversationId }),
+    enabled: !!conversationId,
+    staleTime: 0
+  });
+  
+  // Real-time subscription for reactions
+  useEffect(() => {
+    if (!conversationId) return;
+    
+    const unsubscribe = base44.entities.MessageReaction.subscribe((event) => {
+      if (event.data?.conversation_id === conversationId) {
+        queryClient.invalidateQueries({ queryKey: ['messageReactions', conversationId] });
+      }
+    });
+    
+    return unsubscribe;
+  }, [conversationId, queryClient]);
 
   // Mentionable employees
   const mentionableEmployees = useMemo(() => {
@@ -293,7 +323,7 @@ export default function Conversation() {
 
   // Send message mutation with optimistic UI
   const sendMessageMutation = useMutation({
-    mutationFn: async ({ text, mentions, isUrgent, urgentLevel, images, tempId }) => {
+    mutationFn: async ({ text, mentions, isUrgent, urgentLevel, images, tempId, replyTo }) => {
       const messageData = {
         conversation_id: conversationId,
         sender_employee_id: currentEmployee.id,
@@ -308,6 +338,15 @@ export default function Conversation() {
       // Images
       if (images && images.length > 0) {
         messageData.images = images;
+      }
+      
+      // Reply data
+      if (replyTo) {
+        messageData.reply_to_message_id = replyTo.messageId;
+        messageData.reply_preview_author_name = replyTo.authorName;
+        messageData.reply_preview_type = replyTo.type;
+        messageData.reply_preview_text = replyTo.text?.substring(0, 100) || '';
+        messageData.reply_preview_thumb_url = replyTo.thumbUrl || null;
       }
 
       if (isUrgent) {
@@ -421,6 +460,37 @@ export default function Conversation() {
     },
     onError: () => {
       toast.error('Erreur lors de la suppression');
+    }
+  });
+  
+  // Toggle reaction mutation
+  const toggleReactionMutation = useMutation({
+    mutationFn: async ({ messageId, emoji }) => {
+      // Check if reaction exists
+      const existing = messageReactions.find(r => 
+        r.message_id === messageId && 
+        r.employee_id === currentEmployee.id && 
+        r.emoji === emoji
+      );
+      
+      if (existing) {
+        // Remove reaction
+        return await base44.entities.MessageReaction.delete(existing.id);
+      } else {
+        // Add reaction
+        return await base44.entities.MessageReaction.create({
+          message_id: messageId,
+          employee_id: currentEmployee.id,
+          conversation_id: conversationId,
+          emoji
+        });
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['messageReactions'] });
+    },
+    onError: () => {
+      toast.error('Erreur lors de la réaction');
     }
   });
 
@@ -556,6 +626,25 @@ export default function Conversation() {
     }
   };
   
+  const handleReply = (message) => {
+    const sender = employees.find(emp => emp.id === message.sender_employee_id);
+    
+    setReplyingTo({
+      messageId: message.id,
+      authorName: `${sender?.first_name} ${sender?.last_name}`,
+      type: message.type || 'text',
+      text: message.text || '',
+      thumbUrl: message.images?.[0]?.thumbUrl || null
+    });
+    
+    // Focus textarea
+    setTimeout(() => textareaRef.current?.focus(), 100);
+  };
+  
+  const cancelReply = () => {
+    setReplyingTo(null);
+  };
+  
   const handleSend = () => {
     // If images are selected, send them
     if (selectedImages.length > 0) {
@@ -586,14 +675,28 @@ export default function Conversation() {
       }
     }
     
-    sendMessageMutation.mutate({ 
+    // Build message data with reply if set
+    const messageData = { 
       text: messageText, 
       mentions,
       isUrgent,
       urgentLevel: isUrgent ? urgentLevel : undefined,
       tempId
-    });
+    };
+    
+    if (replyingTo) {
+      messageData.replyTo = {
+        messageId: replyingTo.messageId,
+        authorName: replyingTo.authorName,
+        type: replyingTo.type,
+        text: replyingTo.text,
+        thumbUrl: replyingTo.thumbUrl
+      };
+    }
+    
+    sendMessageMutation.mutate(messageData);
     setIsUrgent(false);
+    setReplyingTo(null);
   };
   
   const openImageViewer = (images, index) => {
@@ -1100,6 +1203,14 @@ export default function Conversation() {
                       </p>
                     )}
                     
+                    {/* Reply block */}
+                    {msg.reply_to_message_id && (
+                      <ReplyBlock
+                        replyData={msg}
+                        onClick={() => scrollToMessage(msg.reply_to_message_id)}
+                      />
+                    )}
+                    
                     {/* Image message */}
                     {msg.type === 'image' && msg.images && msg.images.length > 0 && (
                       <div>
@@ -1161,6 +1272,17 @@ export default function Conversation() {
                         />
                       )}
                     </div>
+                    
+                    {/* Reactions */}
+                    {!msg.status && (
+                      <ReactionsDisplay
+                        reactions={messageReactions.filter(r => r.message_id === msg.id)}
+                        currentEmployeeId={currentEmployee.id}
+                        employees={employees}
+                        onToggle={(emoji) => toggleReactionMutation.mutate({ messageId: msg.id, emoji })}
+                        onShowDetails={() => setReactionsModal({ open: true, messageId: msg.id })}
+                      />
+                    )}
                   </div>
 
                   {/* Message menu */}
@@ -1173,6 +1295,10 @@ export default function Conversation() {
                           </button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={() => handleReply(msg)}>
+                            <CornerUpLeft className="w-4 h-4 mr-2" />
+                            Répondre
+                          </DropdownMenuItem>
                           <DropdownMenuItem
                             onClick={() => togglePinMutation.mutate({ 
                               messageId: msg.id, 
@@ -1234,6 +1360,22 @@ export default function Conversation() {
         onRemove={handleRemoveImage}
         uploadProgress={uploadProgress}
       />
+      
+      {/* Reply Preview */}
+      <ReplyPreview
+        replyTo={replyingTo}
+        onCancel={cancelReply}
+      />
+      
+      {/* Reactions Detail Modal */}
+      {reactionsModal.messageId && (
+        <ReactionsDetailModal
+          open={reactionsModal.open}
+          onOpenChange={(open) => setReactionsModal({ open, messageId: reactionsModal.messageId })}
+          reactions={messageReactions.filter(r => r.message_id === reactionsModal.messageId)}
+          employees={employees}
+        />
+      )}
 
       {/* Input */}
       <div className="bg-white border-t border-gray-200 px-4 py-3 relative">
