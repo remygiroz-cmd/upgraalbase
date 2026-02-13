@@ -4,9 +4,8 @@ import { base44 } from '@/api/base44Client';
 import { isCurrentUserPlanningManager } from '@/components/planning/utils/getPlanningManager';
 import LeaveRequestNotification from '@/components/planning/LeaveRequestNotification';
 import { Card } from '@/components/ui/card';
-import { Trash2 } from 'lucide-react';
+import { Trash2, Plus, MessageCircle, Bell, RefreshCw, AtSign, Megaphone, Users, Circle, ArrowRight, ArchiveRestore } from 'lucide-react';
 import { toast } from 'sonner';
-import { Plus, MessageCircle, Bell, RefreshCw, AtSign, Megaphone, Users, Circle, ArrowRight, ArchiveRestore } from 'lucide-react';
 import TodaySummary from '@/components/planning/TodaySummary';
 import { formatLocalDate } from '@/components/planning/dateUtils';
 import { Button } from '@/components/ui/button';
@@ -18,7 +17,6 @@ import NewConversationModal from '@/components/messaging/NewConversationModal';
 import UrgentAnnouncementModal from '@/components/messaging/UrgentAnnouncementModal';
 import CreateUrgentAnnouncementModal from '@/components/messaging/CreateUrgentAnnouncementModal';
 import { cn } from '@/lib/utils';
-import { toast } from 'sonner';
 import { calculatePresenceStatus } from '@/components/utils/presenceUtils';
 
 export default function Home() {
