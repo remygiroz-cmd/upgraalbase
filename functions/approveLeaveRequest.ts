@@ -127,15 +127,44 @@ Deno.serve(async (req) => {
     
     console.log(`✅ [${traceId}] STEP 4 OK: Service role available`);
 
-    // Process each month
+    // ============================================================
+    // STEP 5: Fetch CP non-shift type (needed for shift conversion)
+    // ============================================================
+    console.log(`\n🔍 [${traceId}] STEP 5: Fetching CP non-shift type...`);
+    const nonShiftTypes = await base44.asServiceRole.entities.NonShiftType.filter({ is_active: true });
+    const cpNonShiftType = nonShiftTypes.find(t => t.key === 'conges_payes' || t.code === 'CP');
+
+    if (!cpNonShiftType) {
+      console.error(`❌ [${traceId}] STEP 5 FAILED: CP non-shift type not found`);
+      return Response.json({
+        ok: false,
+        error: 'CP non-shift type not found. Configure a type with key="conges_payes" or code="CP".',
+        traceId
+      }, { status: 500 });
+    }
+
+    console.log(`✅ [${traceId}] STEP 5 OK: CP type found:`, {
+      id: cpNonShiftType.id,
+      label: cpNonShiftType.label,
+      code: cpNonShiftType.code
+    });
+
+    // ============================================================
+    // STEP 6: Process each month (create period + convert shifts)
+    // ============================================================
     const createdPeriods = [];
+    let totalShiftsDeleted = 0;
+    let totalNonShiftsCreated = 0;
     
     for (const monthKey of affectedMonths) {
       const [year, monthNum] = monthKey.split('-').map(Number);
       
-      console.log(`⏳ [${traceId}] STEP 5.${monthKey}: Processing month ${monthKey}...`);
+      console.log(`\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
+      console.log(`📆 [${traceId}] PROCESSING MONTH: ${monthKey}`);
+      console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
       
-      // Get or create planning month with service role
+      // Get or create planning month
+      console.log(`🔍 [${traceId}] Fetching PlanningMonth for ${monthKey}...`);
       let planningMonths = await base44.asServiceRole.entities.PlanningMonth.filter({ month_key: monthKey });
       let resetVersion = 0;
       
@@ -151,97 +180,161 @@ Deno.serve(async (req) => {
         console.log(`   - Created PlanningMonth ID: ${newPlanningMonth.id}`);
       } else {
         resetVersion = planningMonths[0].reset_version || 0;
-        console.log(`   - Found existing PlanningMonth ID: ${planningMonths[0].id}, reset_version: ${resetVersion}`);
-      }
-      
-      console.log(`✅ [${traceId}] STEP 5.${monthKey} OK: PlanningMonth ready`);
-
-      // CRITICAL: Validate required fields before creating
-      if (!request.start_cp || !request.first_work_day_after) {
-        console.error(`❌ [${traceId}] Missing required fields in LeaveRequest:`, {
-          start_cp: request.start_cp,
-          first_work_day_after: request.first_work_day_after
-        });
-        throw new Error('Missing start_cp or first_work_day_after in LeaveRequest');
+        console.log(`   - Found PlanningMonth ID: ${planningMonths[0].id}, reset_version: ${resetVersion}`);
       }
 
-      // Determine the period boundaries for this specific month
+      // Calculate period boundaries for this month
       const monthStart = new Date(year, monthNum - 1, 1);
       const monthEnd = new Date(year, monthNum, 0);
       
       const periodStart = startDate > monthStart ? startDate : monthStart;
       const periodEnd = endDate < monthEnd ? endDate : monthEnd;
 
-      // Create CP period for this month with service role
-      // CRITICAL: PaidLeavePeriod requires cp_start_date and return_date (not start_cp/end_cp)
+      const startCPStr = periodStart.toISOString().split('T')[0];
+      const endCPStr = periodEnd.toISOString().split('T')[0];
+
+      console.log(`📊 [${traceId}] Period boundaries for ${monthKey}:`, {
+        monthStart: monthStart.toISOString().split('T')[0],
+        monthEnd: monthEnd.toISOString().split('T')[0],
+        periodStart: startCPStr,
+        periodEnd: endCPStr
+      });
+
+      // Create PaidLeavePeriod
       const periodData = {
         employee_id: request.employee_id,
         employee_name: request.employee_name,
-        
-        // REQUIRED FIELDS - mapped from LeaveRequest
-        cp_start_date: request.start_cp,               // Premier jour en CP (inclus)
-        return_date: request.first_work_day_after,     // Jour de reprise (premier jour travaillé)
-        
-        // OPTIONAL FIELDS
-        start_cp: periodStart.toISOString().split('T')[0],  // Début période pour ce mois
-        end_cp: periodEnd.toISOString().split('T')[0],      // Fin période pour ce mois
+        cp_start_date: request.start_cp,
+        return_date: request.first_work_day_after,
+        start_cp: startCPStr,
+        end_cp: endCPStr,
         cp_days_auto: request.cp_days_computed,
         cp_days_manual: request.manual_override_days || null,
         notes: request.notes || `Demande acceptée le ${new Date().toLocaleDateString('fr-FR')}`,
         month_key: monthKey,
         reset_version: resetVersion
       };
+
+      console.log(`\n📝 [${traceId}] Creating PaidLeavePeriod...`);
+      const period = await base44.asServiceRole.entities.PaidLeavePeriod.create(periodData);
+      createdPeriods.push(period);
+      console.log(`✓ [${traceId}] PaidLeavePeriod created: ${period.id}`);
+
+      // ============================================================
+      // CONVERT SHIFTS TO CP NON-SHIFTS (same logic as AddCPGlobalModal)
+      // ============================================================
+      console.log(`\n🔄 [${traceId}] CONVERTING SHIFTS TO CP...`);
       
-      console.log(`   - cp_start_date: ${periodData.cp_start_date}`);
-      console.log(`   - return_date: ${periodData.return_date}`);
+      // Fetch ALL shifts for employee in this month
+      const allShifts = await base44.asServiceRole.entities.Shift.filter({
+        employee_id: request.employee_id,
+        reset_version: resetVersion
+      });
+      
+      console.log(`   Total shifts for employee: ${allShifts.length}`);
+      
+      // Filter shifts in CP period
+      const shiftsInPeriod = allShifts.filter(shift => 
+        shift.date >= startCPStr && shift.date <= endCPStr
+      );
+      
+      console.log(`   Shifts in CP period: ${shiftsInPeriod.length}`);
+      if (shiftsInPeriod.length > 0) {
+        console.log(`   Dates: ${shiftsInPeriod.map(s => s.date).join(', ')}`);
+      }
 
-      console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-      console.log(`🔐 [${traceId}] STEP 6.${monthKey}: USING SERVICE ROLE for PaidLeavePeriod.create()`);
-      console.log(`📦 [${traceId}] PaidLeavePeriod CREATE payload:`);
-      console.log(JSON.stringify(periodData, null, 2));
-      console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      // Extract impacted days
+      const impactedDays = [...new Set(shiftsInPeriod.map(s => s.date))].sort();
+      console.log(`   Impacted days: ${impactedDays.length}`);
 
-      try {
-        console.log(`⏳ [${traceId}] STEP 6.${monthKey}: Calling PaidLeavePeriod.create()...`);
-        const period = await base44.asServiceRole.entities.PaidLeavePeriod.create(periodData);
-        console.log(`✅ [${traceId}] STEP 6.${monthKey}: PaidLeavePeriod.create() SUCCESS!`);
-        
-        console.log(`   - Returned ID: ${period.id}`);
-        console.log(`   - employee_id: ${period.employee_id}`);
-        console.log(`   - employee_name: ${period.employee_name}`);
-        console.log(`   - start_cp: ${period.start_cp}`);
-        console.log(`   - end_cp: ${period.end_cp}`);
-        console.log(`   - month_key: ${period.month_key}`);
-        console.log(`   - reset_version: ${period.reset_version}`);
+      if (impactedDays.length === 0) {
+        console.log(`⚠️ [${traceId}] No shifts found in period (expected if no work scheduled)`);
+        continue;
+      }
 
-        // STEP 7: IMMEDIATE VERIFICATION
-        console.log(`⏳ [${traceId}] STEP 7.${monthKey}: Verifying by re-fetching ID: ${period.id}...`);
-        const verification = await base44.asServiceRole.entities.PaidLeavePeriod.filter({ id: period.id });
-        
-        if (verification.length > 0) {
-          console.log(`✅ [${traceId}] STEP 7.${monthKey} OK: Record FOUND in DB after create!`);
-          console.log(`   - Verified ID: ${verification[0].id}`);
-          console.log(`   - Verified employee_id: ${verification[0].employee_id}`);
-          console.log(`   - Verified start_cp: ${verification[0].start_cp}`);
-        } else {
-          console.error(`❌ [${traceId}] STEP 7.${monthKey} FAILED: Record NOT FOUND after create!`);
-          throw new Error(`Création réussie mais record introuvable (ID: ${period.id})`);
+      // Delete all shifts in period
+      console.log(`\n🗑️ [${traceId}] Deleting ${shiftsInPeriod.length} shifts...`);
+      const deleteResults = await Promise.allSettled(
+        shiftsInPeriod.map(shift => {
+          console.log(`   → Deleting shift ${shift.id} on ${shift.date}`);
+          return base44.asServiceRole.entities.Shift.delete(shift.id);
+        })
+      );
+
+      const deleted = deleteResults.filter(r => r.status === 'fulfilled').length;
+      const deleteFailed = deleteResults.filter(r => r.status === 'rejected');
+
+      if (deleteFailed.length > 0) {
+        console.error(`❌ [${traceId}] Deletion failures: ${deleteFailed.length}`);
+        deleteFailed.forEach((f, idx) => {
+          console.error(`   Failure ${idx + 1}:`, f.reason);
+        });
+        throw new Error(`Failed to delete ${deleteFailed.length} shift(s)`);
+      }
+
+      console.log(`✓ [${traceId}] Deleted ${deleted} shifts`);
+      totalShiftsDeleted += deleted;
+
+      // Check existing CP non-shifts (idempotence)
+      console.log(`\n🔎 [${traceId}] Checking existing CP non-shifts...`);
+      const existingNonShifts = await base44.asServiceRole.entities.NonShiftEvent.filter({
+        employee_id: request.employee_id,
+        non_shift_type_id: cpNonShiftType.id,
+        month_key: monthKey,
+        reset_version: resetVersion
+      });
+      
+      const existingCPDates = new Set(existingNonShifts.map(ns => ns.date));
+      console.log(`   Existing CP non-shifts: ${existingCPDates.size}`);
+
+      // Create CP non-shifts for impacted days
+      const nonShiftsToCreate = impactedDays.filter(date => !existingCPDates.has(date));
+      console.log(`\n➕ [${traceId}] Creating CP non-shifts...`);
+      console.log(`   Days to create: ${nonShiftsToCreate.length} / ${impactedDays.length}`);
+
+      let created = 0;
+
+      if (nonShiftsToCreate.length > 0) {
+        const createResults = await Promise.allSettled(
+          nonShiftsToCreate.map(date => {
+            const cpData = {
+              employee_id: request.employee_id,
+              employee_name: request.employee_name,
+              date,
+              non_shift_type_id: cpNonShiftType.id,
+              non_shift_type_label: cpNonShiftType.label,
+              notes: `CP (période du ${request.start_cp} au ${request.end_cp})`,
+              month_key: monthKey,
+              reset_version: resetVersion
+            };
+            return base44.asServiceRole.entities.NonShiftEvent.create(cpData);
+          })
+        );
+
+        created = createResults.filter(r => r.status === 'fulfilled').length;
+        const createFailed = createResults.filter(r => r.status === 'rejected');
+
+        if (createFailed.length > 0) {
+          console.error(`❌ [${traceId}] Creation failures: ${createFailed.length}`);
+          createFailed.forEach((f, idx) => {
+            console.error(`   Failure ${idx + 1}:`, f.reason);
+          });
+          throw new Error(`Failed to create ${createFailed.length} CP non-shift(s)`);
         }
 
-        createdPeriods.push(period);
-        console.log(`✅ [${traceId}] Period added to createdPeriods array (total: ${createdPeriods.length})`);
-        
-      } catch (createError) {
-        console.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-        console.error(`❌ [${traceId}] STEP 6/7 FAILED for ${monthKey}:`, {
-          errorName: createError.name,
-          errorMessage: createError.message,
-          stack: createError.stack,
-          periodData
-        });
-        console.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-        throw new Error(`Échec création CP sur ${monthKey}: ${createError.message}`);
+        console.log(`✓ [${traceId}] Created ${created} CP non-shifts`);
+      } else {
+        console.log(`✓ [${traceId}] All CP non-shifts already exist`);
       }
+
+      totalNonShiftsCreated += created;
+
+      console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
+      console.log(`✅ [${traceId}] MONTH ${monthKey} COMPLETED`);
+      console.log(`   Period ID: ${period.id}`);
+      console.log(`   Shifts deleted: ${deleted}`);
+      console.log(`   CP non-shifts created: ${created}`);
+      console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
     }
 
     console.log(`✅ [${traceId}] All periods created successfully (${createdPeriods.length} periods)`);
