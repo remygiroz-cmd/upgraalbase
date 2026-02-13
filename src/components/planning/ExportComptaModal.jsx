@@ -825,6 +825,8 @@ export default function ExportComptaModal({ open, onOpenChange, monthStart, mont
         
         // Pour chaque semaine
         for (let weekIndex = 0; weekIndex < weeklyRecapRows.length; weekIndex++) {
+          toast.info(`📸 Semaine ${weekIndex + 1}/${weeklyRecapRows.length}...`, { duration: 2000 });
+          
           const weekRecapRow = weeklyRecapRows[weekIndex];
           const weekElements = [];
           
@@ -859,25 +861,22 @@ export default function ExportComptaModal({ open, onOpenChange, monthStart, mont
           if (headerRow) {
             const headerClone = headerRow.cloneNode(true);
             headerClone.style.position = 'relative';
-            headerClone.style.fontSize = '16px'; // Grossir les noms
+            headerClone.style.fontSize = '12px'; // Optimisé
             tempContainer.appendChild(headerClone);
           }
           
           // Ajouter les lignes de la semaine
           weekElements.forEach(el => {
             const clone = el.cloneNode(true);
-            clone.style.fontSize = '14px'; // Augmenter taille police
+            clone.style.fontSize = '11px'; // Optimisé
             tempContainer.appendChild(clone);
           });
           
           document.body.appendChild(tempContainer);
           
-          // Attendre que le DOM soit rendu
-          await new Promise(resolve => setTimeout(resolve, 100));
-          
-          // Capturer en haute résolution
+          // Capturer RAPIDEMENT (optimisé pour performance)
           const canvas = await html2canvas(tempContainer, {
-            scale: 2.5, // Très haute résolution
+            scale: 1.2, // Balance qualité/vitesse
             useCORS: true,
             logging: false,
             backgroundColor: '#ffffff',
@@ -887,8 +886,8 @@ export default function ExportComptaModal({ open, onOpenChange, monthStart, mont
           
           document.body.removeChild(tempContainer);
           
-          // Convertir en JPEG
-          const imgData = canvas.toDataURL('image/jpeg', 0.65);
+          // Convertir en JPEG léger
+          const imgData = canvas.toDataURL('image/jpeg', 0.5);
           const imgSizeKB = Math.round((imgData.length * 3) / 4 / 1024);
           console.log(`📦 Semaine ${weekIndex + 1}: ${imgSizeKB} KB`);
           
