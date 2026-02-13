@@ -33,8 +33,7 @@ export default function NewConversationModal({
     return employees
       .filter(emp => 
         emp.id !== currentEmployee.id && 
-        emp.is_active !== false &&
-        emp.user_id // Only show employees with linked accounts
+        emp.is_active !== false
       )
       .filter(emp => {
         if (!searchTerm) return true;
