@@ -1828,7 +1828,16 @@ export default function Planning() {
           </button>
         </div>
       ) : (
-        <div className="fixed bottom-6 right-6 z-50">
+        <div className="fixed bottom-6 right-6 z-50 flex flex-col gap-3">
+          {/* Demande CP accessible à tous */}
+          <button
+            onClick={() => setShowLeaveRequestModal(true)}
+            className="w-14 h-14 bg-blue-600 hover:bg-blue-700 rounded-full shadow-xl flex items-center justify-center transition-all hover:scale-110 active:scale-95"
+            title="Demande de CP"
+          >
+            <span className="text-2xl">📝</span>
+          </button>
+          
           <div className="w-14 h-14 bg-gray-300 rounded-full shadow-lg flex items-center justify-center opacity-40 cursor-not-allowed" title="Lecture seule — vous n'avez pas la permission de modifier le planning">
             <Plus className="w-6 h-6 text-gray-500" />
           </div>
