@@ -15,17 +15,23 @@ Deno.serve(async (req) => {
     // Log environment info
     const appId = Deno.env.get('BASE44_APP_ID');
     const appUrl = Deno.env.get('BASE44_APP_URL');
+    const deploymentMode = Deno.env.get('DENO_DEPLOYMENT_ID') ? 'PUBLISHED' : 'PREVIEW';
 
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-    console.log('🔷 [APPROVE START] Request received', {
+    console.log('🔷 [APPROVE START] Request received');
+    console.log('📍 ENVIRONMENT:', {
+      deploymentMode,
+      appId,
+      appUrl,
+      denoDeploymentId: Deno.env.get('DENO_DEPLOYMENT_ID')?.substring(0, 8) || 'none'
+    });
+    console.log('👤 USER:', {
       requestId,
       currentUserEmail: user.email,
       currentUserId: user.id,
-      currentUserRole: user.role,
-      appId,
-      appUrl,
-      timestamp: new Date().toISOString()
+      currentUserRole: user.role
     });
+    console.log('⏰ TIMESTAMP:', new Date().toISOString());
 
     // Fetch the leave request
     const requests = await base44.asServiceRole.entities.LeaveRequest.filter({ id: requestId });
@@ -36,20 +42,21 @@ Deno.serve(async (req) => {
 
     const request = requests[0];
 
-    console.log('🔷 [APPROVE] Request details:', {
-      requestId: request.id,
-      employeeId: request.employee_id,
-      employeeName: request.employee_name,
-      requestedByUserId: request.requested_by_user_id,
-      requestedByUserEmail: request.requested_by_user_email,
-      lastWorkDay: request.last_work_day,
-      firstWorkDayAfter: request.first_work_day_after,
-      startCP: request.start_cp,
-      endCP: request.end_cp,
-      cpDaysComputed: request.cp_days_computed,
-      manualOverride: request.manual_override_days,
-      status: request.status
-    });
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    console.log('📋 [APPROVE] REQUEST DETAILS:');
+    console.log('  requestId:', request.id);
+    console.log('  status:', request.status);
+    console.log('  employeeId:', request.employee_id);
+    console.log('  employeeName:', request.employee_name);
+    console.log('  requestedByUserId:', request.requested_by_user_id);
+    console.log('  requestedByUserEmail:', request.requested_by_user_email);
+    console.log('  lastWorkDay:', request.last_work_day);
+    console.log('  firstWorkDayAfter:', request.first_work_day_after);
+    console.log('  startCP:', request.start_cp);
+    console.log('  endCP:', request.end_cp);
+    console.log('  cpDaysComputed:', request.cp_days_computed);
+    console.log('  manualOverride:', request.manual_override_days);
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
 
     // Validation: dates coherence
     const startDate = new Date(request.start_cp);
@@ -127,11 +134,16 @@ Deno.serve(async (req) => {
         reset_version: resetVersion
       };
 
-      console.log(`🔷 [APPROVE] About to create PaidLeavePeriod with SERVICE ROLE`);
-      console.log(`🔷 [APPROVE] PaidLeavePeriod payload:`, JSON.stringify(periodData, null, 2));
+      console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      console.log(`🔐 [APPROVE] USING SERVICE ROLE: true`);
+      console.log(`📦 [APPROVE] PaidLeavePeriod CREATE payload for ${monthKey}:`);
+      console.log(JSON.stringify(periodData, null, 2));
+      console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
 
       try {
+        console.log(`⏳ [APPROVE] Calling PaidLeavePeriod.create()...`);
         const period = await base44.asServiceRole.entities.PaidLeavePeriod.create(periodData);
+        console.log(`✅ [APPROVE] PaidLeavePeriod.create() SUCCESS!`);
         
         console.log(`✅ [APPROVE] PaidLeavePeriod.create() returned:`, {
           id: period.id,
@@ -207,21 +219,23 @@ Deno.serve(async (req) => {
     }
 
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-    console.log('✅ [APPROVE END] SUCCESS - All operations completed', {
-      requestId,
-      employeeId: request.employee_id,
-      employeeName: request.employee_name,
-      periodsCreated: createdPeriods.length,
-      createdPaidLeavePeriodIds: createdPeriods.map(p => p.id),
-      affectedMonths,
-      startCP: request.start_cp,
-      endCP: request.end_cp,
-      appId,
-      timestamp: new Date().toISOString()
-    });
+    console.log('✅✅✅ [APPROVE END] SUCCESS ✅✅✅');
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    console.log('📊 FINAL RESULT:');
+    console.log('  requestId:', requestId);
+    console.log('  employeeId:', request.employee_id);
+    console.log('  employeeName:', request.employee_name);
+    console.log('  periodsCreated:', createdPeriods.length);
+    console.log('  createdPaidLeavePeriodIds:', createdPeriods.map(p => p.id));
+    console.log('  affectedMonths:', affectedMonths);
+    console.log('  startCP:', request.start_cp);
+    console.log('  endCP:', request.end_cp);
+    console.log('  appId:', appId);
+    console.log('  deploymentMode:', deploymentMode);
+    console.log('  timestamp:', new Date().toISOString());
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
 
-    return Response.json({
+    const responsePayload = {
       ok: true,
       success: true,
       createdPaidLeavePeriodIds: createdPeriods.map(p => p.id),
@@ -230,9 +244,15 @@ Deno.serve(async (req) => {
       employee_name: request.employee_name,
       start_cp: request.start_cp,
       end_cp: request.end_cp,
+      appId,
+      deploymentMode,
       periods: createdPeriods,
       affectedMonths
-    });
+    };
+
+    console.log('📤 [APPROVE] Returning response:', JSON.stringify(responsePayload, null, 2));
+
+    return Response.json(responsePayload);
 
   } catch (error) {
     console.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');

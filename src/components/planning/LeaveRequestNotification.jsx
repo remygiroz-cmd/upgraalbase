@@ -13,6 +13,7 @@ export default function LeaveRequestNotification({ request, onDismiss }) {
   const queryClient = useQueryClient();
   const [showRejectModal, setShowRejectModal] = useState(false);
   const [rejectionReason, setRejectionReason] = useState('');
+  const [debugResult, setDebugResult] = useState(null);
 
   const approveMutation = useMutation({
     mutationFn: async () => {
@@ -26,10 +27,17 @@ export default function LeaveRequestNotification({ request, onDismiss }) {
         requestId: request.id
       });
       
-      console.log('🔷 [UI] approveLeaveRequest result:', data);
+      console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      console.log('🔷 [UI] approveLeaveRequest FULL RESULT:', JSON.stringify(data, null, 2));
+      console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      
+      // Store debug result for UI display
+      setDebugResult(data);
       
       // Show raw result for debugging
-      toast.info(`Raw result: ${JSON.stringify(data).slice(0, 200)}`, { duration: 5000 });
+      const rawResult = JSON.stringify(data).slice(0, 200);
+      console.log('🔷 [UI] Toast raw result:', rawResult);
+      toast.info(`Result: ${rawResult}`, { duration: 10000 });
       
       if (data.ok === false || data.error) {
         console.error('❌ [UI] Function returned error:', data);
@@ -88,11 +96,15 @@ export default function LeaveRequestNotification({ request, onDismiss }) {
       onDismiss?.();
     },
     onError: (error) => {
-      console.error('❌ [UI APPROVE] Error:', {
+      console.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      console.error('❌ [UI APPROVE] ERROR:', {
         message: error.message,
         stack: error.stack,
         error
       });
+      console.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      
+      setDebugResult({ ok: false, error: error.message, stack: error.stack });
       toast.error(`❌ ERREUR: ${error.message}`, { duration: 10000 });
     }
   });
@@ -212,6 +224,34 @@ export default function LeaveRequestNotification({ request, onDismiss }) {
                 Refuser
               </Button>
             </div>
+            
+            {/* DEBUG RESULT */}
+            {debugResult && (
+              <div className="mt-3 p-3 bg-yellow-50 border-2 border-yellow-400 rounded text-xs font-mono">
+                <div className="font-bold text-yellow-900 mb-2">🔍 DEBUG RESULT:</div>
+                <div className="space-y-1 text-yellow-900">
+                  <div><strong>ok:</strong> {JSON.stringify(debugResult.ok)}</div>
+                  {debugResult.createdPaidLeavePeriodIds && (
+                    <div><strong>createdIds:</strong> {JSON.stringify(debugResult.createdPaidLeavePeriodIds)}</div>
+                  )}
+                  {debugResult.month_keys && (
+                    <div><strong>month_keys:</strong> {JSON.stringify(debugResult.month_keys)}</div>
+                  )}
+                  {debugResult.appId && (
+                    <div><strong>appId:</strong> {debugResult.appId}</div>
+                  )}
+                  {debugResult.employee_id && (
+                    <div><strong>employee_id:</strong> {debugResult.employee_id}</div>
+                  )}
+                  {debugResult.error && (
+                    <div className="text-red-700"><strong>error:</strong> {debugResult.error}</div>
+                  )}
+                  <div className="mt-2 max-h-32 overflow-auto">
+                    <strong>full:</strong> {JSON.stringify(debugResult, null, 2)}
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </Card>
