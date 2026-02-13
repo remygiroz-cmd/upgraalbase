@@ -246,58 +246,7 @@ export default function LeaveRequestNotification({ request, onDismiss }) {
               </Button>
             </div>
             
-            {/* DEBUG RESULT */}
-            {debugResult && (
-              <div className={`mt-3 p-3 border-2 rounded text-xs font-mono ${
-                debugResult.ok ? 'bg-green-50 border-green-400' : 'bg-red-50 border-red-500'
-              }`}>
-                <div className={`font-bold mb-2 ${debugResult.ok ? 'text-green-900' : 'text-red-900'}`}>
-                  {debugResult.ok ? '✅ SUCCESS' : '❌ ERROR'} - DEBUG RESULT
-                </div>
-                <div className={`space-y-1 ${debugResult.ok ? 'text-green-900' : 'text-red-900'}`}>
-                  <div><strong>traceId:</strong> {debugResult.traceId || 'N/A'}</div>
-                  <div><strong>ok:</strong> {JSON.stringify(debugResult.ok)}</div>
-                  
-                  {debugResult.ok ? (
-                    <>
-                      {debugResult.createdPaidLeavePeriodIds && (
-                        <div><strong>createdIds:</strong> {JSON.stringify(debugResult.createdPaidLeavePeriodIds)}</div>
-                      )}
-                      {debugResult.month_keys && (
-                        <div><strong>month_keys:</strong> {JSON.stringify(debugResult.month_keys)}</div>
-                      )}
-                      {debugResult.employee_id && (
-                        <div><strong>employee_id:</strong> {debugResult.employee_id}</div>
-                      )}
-                      {debugResult.deploymentMode && (
-                        <div><strong>deploymentMode:</strong> {debugResult.deploymentMode}</div>
-                      )}
-                    </>
-                  ) : (
-                    <>
-                      {debugResult.errorMessage && (
-                        <div className="text-red-700 font-bold"><strong>errorMessage:</strong> {debugResult.errorMessage}</div>
-                      )}
-                      {debugResult.errorName && (
-                        <div className="text-red-700"><strong>errorName:</strong> {debugResult.errorName}</div>
-                      )}
-                      {debugResult.context && (
-                        <div><strong>context:</strong> {JSON.stringify(debugResult.context)}</div>
-                      )}
-                      {debugResult.stack && (
-                        <div className="mt-2 text-xs bg-red-100 p-2 rounded overflow-auto max-h-24">
-                          <strong>stack:</strong><pre className="whitespace-pre-wrap">{debugResult.stack}</pre>
-                        </div>
-                      )}
-                    </>
-                  )}
-                  
-                  <div className="mt-2 max-h-32 overflow-auto bg-white/50 p-2 rounded">
-                    <strong>full:</strong> {JSON.stringify(debugResult, null, 2)}
-                  </div>
-                </div>
-              </div>
-            )}
+
           </div>
         </div>
       </Card>
