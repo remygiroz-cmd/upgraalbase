@@ -10,12 +10,10 @@ import { cn } from '@/lib/utils';
 export default function ImageViewer({ images, initialIndex = 0, open, onOpenChange }) {
   const [currentIndex, setCurrentIndex] = useState(initialIndex);
   
-  if (!images || images.length === 0) return null;
-  
-  const currentImage = images[currentIndex];
+  const currentImage = images?.[currentIndex];
   
   const goNext = () => {
-    if (currentIndex < images.length - 1) {
+    if (images && currentIndex < images.length - 1) {
       setCurrentIndex(currentIndex + 1);
     }
   };
@@ -27,6 +25,7 @@ export default function ImageViewer({ images, initialIndex = 0, open, onOpenChan
   };
   
   const handleDownload = () => {
+    if (!currentImage) return;
     const link = document.createElement('a');
     link.href = currentImage.url;
     link.download = `image-${Date.now()}.webp`;
@@ -37,9 +36,9 @@ export default function ImageViewer({ images, initialIndex = 0, open, onOpenChan
   
   // Keyboard navigation
   React.useEffect(() => {
+    if (!open || !images || images.length === 0) return;
+    
     const handleKeyDown = (e) => {
-      if (!open) return;
-      
       if (e.key === 'ArrowLeft') goPrev();
       if (e.key === 'ArrowRight') goNext();
       if (e.key === 'Escape') onOpenChange(false);
@@ -47,7 +46,9 @@ export default function ImageViewer({ images, initialIndex = 0, open, onOpenChan
     
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [open, currentIndex]);
+  }, [open, currentIndex, images]);
+  
+  if (!images || images.length === 0) return null;
   
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
