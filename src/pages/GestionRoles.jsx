@@ -5,8 +5,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Shield, Trash2, Save } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Shield, Trash2, Save, Plus } from 'lucide-react';
 import PageHeader from '@/components/ui/PageHeader';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import ConfirmDialog from '@/components/ui/ConfirmDialog';
@@ -32,6 +32,8 @@ export default function GestionRoles() {
   const queryClient = useQueryClient();
   const [editingPermissions, setEditingPermissions] = useState({});
   const [confirmDelete, setConfirmDelete] = useState(null);
+  const [createModalOpen, setCreateModalOpen] = useState(false);
+  const [newRole, setNewRole] = useState({ name: '', description: '' });
 
   const { data: roles = [], isLoading } = useQuery({
     queryKey: ['roles'],
@@ -41,6 +43,29 @@ export default function GestionRoles() {
   const deleteMutation = useMutation({
     mutationFn: (id) => base44.entities.Role.delete(id),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['roles'] })
+  });
+
+  const createMutation = useMutation({
+    mutationFn: async (data) => {
+      const permissions = {};
+      MODULES.forEach(module => {
+        permissions[module.key] = module.key === 'home';
+      });
+      return base44.entities.Role.create({
+        ...data,
+        permissions,
+        is_active: true
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['roles'] });
+      toast.success('Rôle créé avec succès');
+      setCreateModalOpen(false);
+      setNewRole({ name: '', description: '' });
+    },
+    onError: (error) => {
+      toast.error(`Erreur: ${error?.message || 'Impossible de créer le rôle'}`);
+    }
   });
 
   const savePermissionsMutation = useMutation({
@@ -96,6 +121,15 @@ export default function GestionRoles() {
         icon={Shield}
         title="Gestion des rôles"
         subtitle="Cliquez sur les permissions pour les modifier"
+        actions={
+          <Button
+            onClick={() => setCreateModalOpen(true)}
+            className="bg-orange-600 hover:bg-orange-700"
+          >
+            <Plus className="w-4 h-4 mr-2" />
+            Créer un rôle
+          </Button>
+        }
       />
 
       <div className="grid gap-3 sm:gap-4">
@@ -186,6 +220,57 @@ export default function GestionRoles() {
         variant="danger"
         confirmText="Supprimer"
       />
+
+      <Dialog open={createModalOpen} onOpenChange={setCreateModalOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Créer un nouveau rôle</DialogTitle>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <div>
+              <Label>Nom du rôle</Label>
+              <Input
+                value={newRole.name}
+                onChange={(e) => setNewRole({ ...newRole, name: e.target.value })}
+                placeholder="Ex: Manager, Serveur..."
+                className="mt-1"
+              />
+            </div>
+
+            <div>
+              <Label>Description (optionnel)</Label>
+              <Textarea
+                value={newRole.description}
+                onChange={(e) => setNewRole({ ...newRole, description: e.target.value })}
+                placeholder="Décrivez les responsabilités de ce rôle..."
+                className="mt-1"
+                rows={3}
+              />
+            </div>
+
+            <p className="text-sm text-gray-600">
+              Par défaut, seul l'accueil sera accessible. Vous pourrez ensuite personnaliser les permissions.
+            </p>
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setCreateModalOpen(false)}
+            >
+              Annuler
+            </Button>
+            <Button
+              onClick={() => createMutation.mutate(newRole)}
+              disabled={!newRole.name.trim() || createMutation.isPending}
+              className="bg-orange-600 hover:bg-orange-700"
+            >
+              {createMutation.isPending ? 'Création...' : 'Créer'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
