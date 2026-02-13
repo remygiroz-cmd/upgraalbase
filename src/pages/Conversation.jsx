@@ -1207,9 +1207,16 @@ export default function Conversation() {
                   </div>
                 )}
               </div>
+              </React.Fragment>
             );
           })
         )}
+        
+        {/* Typing indicator */}
+        {whoIsTyping.length > 0 && (
+          <TypingIndicator employees={whoIsTyping} />
+        )}
+        
         <div ref={messagesEndRef} />
       </div>
 
