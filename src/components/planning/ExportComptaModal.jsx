@@ -751,17 +751,17 @@ export default function ExportComptaModal({ open, onOpenChange, monthStart, mont
       },
       columnStyles: {
         0: { cellWidth: 30 }, // Employé
-        1: { cellWidth: 10, halign: 'center' }, // Nb j. trav (réduit)
-        2: { cellWidth: 10, halign: 'center', fontSize: 6 }, // Jours supp (réduit)
+        1: { cellWidth: 9, halign: 'center' }, // Nb j. trav (réduit)
+        2: { cellWidth: 9, halign: 'center', fontSize: 6 }, // Jours supp (réduit)
         3: { cellWidth: 18, halign: 'right', fillColor: [219, 234, 254], fontStyle: 'bold' }, // Total payé
         4: { cellWidth: 17, halign: 'right' }, // Payées
-        5: { cellWidth: 12, halign: 'right' }, // Compl 10% (réduit)
-        6: { cellWidth: 12, halign: 'right' }, // Compl 25% (réduit)
-        7: { cellWidth: 12, halign: 'right' }, // Supp 25% (réduit)
-        8: { cellWidth: 12, halign: 'right' }, // Supp 50% (réduit)
-        9: { cellWidth: 15, halign: 'center', fontSize: 6, textColor: [147, 51, 234] }, // Férié (réduit)
-        10: { cellWidth: 38, fontSize: 5.5, cellPadding: { top: 1.5, right: 0.5, bottom: 1.5, left: 0.5 } }, // Non-shifts (augmenté)
-        11: { cellWidth: 32, fontSize: 5.5, cellPadding: { top: 1.5, right: 0.5, bottom: 1.5, left: 0.5 } } // CP (augmenté + compact)
+        5: { cellWidth: 12, halign: 'right' }, // Compl 10%
+        6: { cellWidth: 12, halign: 'right' }, // Compl 25%
+        7: { cellWidth: 11, halign: 'right' }, // Supp 25% (réduit)
+        8: { cellWidth: 11, halign: 'right' }, // Supp 50% (réduit)
+        9: { cellWidth: 13, halign: 'center', fontSize: 6, textColor: [147, 51, 234] }, // Férié (réduit)
+        10: { cellWidth: 40, fontSize: 6, cellPadding: { top: 1.5, right: 1, bottom: 1.5, left: 1 } }, // Non-shifts (augmenté)
+        11: { cellWidth: 38, fontSize: 6, cellPadding: { top: 1.5, right: 1, bottom: 1.5, left: 1 } } // CP (très augmenté)
       },
       didParseCell: (data) => {
         if (data.row.index === tableData.length - 1) {
