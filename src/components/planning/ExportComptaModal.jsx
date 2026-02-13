@@ -788,27 +788,30 @@ export default function ExportComptaModal({ open, onOpenChange, monthStart, mont
     if (planningElement) {
       try {
         console.log('📸 Début capture planning...');
-        toast.info('Capture du planning en cours...', { duration: 3000 });
+        toast.info('Capture du planning...', { duration: 2000 });
         
-        // Créer un canvas avec timeout de 10 secondes
-        const capturePromise = html2canvas(planningElement, {
-          scale: 1, // Réduit pour performance
+        // Créer un canvas TRÈS COMPRESSÉ pour éviter les 40MB
+        const canvas = await html2canvas(planningElement, {
+          scale: 0.4, // Très réduit pour limiter la taille
           useCORS: true,
           logging: false,
           backgroundColor: '#ffffff',
           windowWidth: planningElement.scrollWidth,
-          windowHeight: planningElement.scrollHeight,
-          onclone: (clonedDoc) => {
-            console.log('🔄 DOM cloné pour capture');
-          }
+          windowHeight: planningElement.scrollHeight
         });
         
-        const timeoutPromise = new Promise((_, reject) => 
-          setTimeout(() => reject(new Error('Timeout capture (10s)')), 10000)
-        );
-        
-        const canvas = await Promise.race([capturePromise, timeoutPromise]);
         console.log('✅ Canvas créé:', canvas.width, 'x', canvas.height);
+        
+        // Convertir avec compression maximale JPEG au lieu de PNG
+        const imgData = canvas.toDataURL('image/jpeg', 0.3); // JPEG + qualité très basse
+        const imgSizeKB = Math.round((imgData.length * 3) / 4 / 1024);
+        console.log('📦 Image size:', imgSizeKB, 'KB');
+        
+        // Vérifier si trop lourd (> 2MB)
+        if (imgSizeKB > 2048) {
+          console.warn('⚠️ Image trop lourde, skip page 2');
+          throw new Error('Image trop volumineuse');
+        }
         
         // Ajouter nouvelle page en paysage
         doc.addPage('a4', 'landscape');
@@ -824,26 +827,21 @@ export default function ExportComptaModal({ open, onOpenChange, monthStart, mont
         doc.setTextColor(80, 80, 80);
         doc.text(settings.etablissement_name || '', pageWidth / 2, margin + 11, { align: 'center' });
         
-        // Convertir canvas en image
-        console.log('🖼️ Conversion canvas → image...');
-        const imgData = canvas.toDataURL('image/png', 0.7);
         const imgWidth = pageWidth - 2 * margin;
         const imgHeight = (canvas.height * imgWidth) / canvas.width;
-        console.log('✅ Image générée');
         
         // Positionner l'image du planning
         const yPosition = margin + 16;
         const maxHeight = pageHeight - yPosition - 8;
         
-        // Ajuster si trop grand
         if (imgHeight > maxHeight) {
           const ratio = maxHeight / imgHeight;
           const scaledWidth = imgWidth * ratio;
           const scaledHeight = maxHeight;
           const xOffset = (pageWidth - scaledWidth) / 2;
-          doc.addImage(imgData, 'PNG', xOffset, yPosition, scaledWidth, scaledHeight);
+          doc.addImage(imgData, 'JPEG', xOffset, yPosition, scaledWidth, scaledHeight);
         } else {
-          doc.addImage(imgData, 'PNG', margin, yPosition, imgWidth, imgHeight);
+          doc.addImage(imgData, 'JPEG', margin, yPosition, imgWidth, imgHeight);
         }
         
         console.log('✅ Planning ajouté au PDF');
@@ -851,34 +849,12 @@ export default function ExportComptaModal({ open, onOpenChange, monthStart, mont
         // Pied de page 2
         doc.setFontSize(7);
         doc.setTextColor(128, 128, 128);
-        doc.text('Page 2/2 - Planning mensuel complet', pageWidth / 2, pageHeight - 5, { align: 'center' });
+        doc.text('Page 2/2 - Planning mensuel', pageWidth / 2, pageHeight - 5, { align: 'center' });
         
       } catch (err) {
-        console.error('❌ Erreur capture planning:', err);
-        toast.warning('Capture planning impossible, export sans visuel');
-        
-        // Fallback: page simplifiée sans capture
-        doc.addPage();
-        doc.setFontSize(12);
-        doc.setFont('helvetica', 'bold');
-        doc.text(`Planning ${monthName} ${year}`, pageWidth / 2, margin + 10, { align: 'center' });
-        doc.setFontSize(10);
-        doc.setFont('helvetica', 'normal');
-        doc.setTextColor(100, 100, 100);
-        doc.text('Consultez le planning complet sur UpGraal', pageWidth / 2, margin + 20, { align: 'center' });
-        doc.setFontSize(8);
-        doc.text(`Raison: ${err.message}`, pageWidth / 2, margin + 30, { align: 'center' });
+        console.warn('⚠️ Capture planning skipped:', err.message);
+        // NE PAS ajouter de page 2 si capture échoue pour éviter PDF trop lourd
       }
-    } else {
-      console.warn('❌ Planning element introuvable dans le DOM');
-      // Si planning non trouvé dans le DOM, page avec info
-      doc.addPage();
-      doc.setFontSize(12);
-      doc.setTextColor(0, 0, 0);
-      doc.text('Planning non disponible', pageWidth / 2, pageHeight / 2 - 5, { align: 'center' });
-      doc.setFontSize(10);
-      doc.setTextColor(100, 100, 100);
-      doc.text('Ouvrez le planning avant d\'exporter', pageWidth / 2, pageHeight / 2 + 5, { align: 'center' });
     }
 
     return doc;
