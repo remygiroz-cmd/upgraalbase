@@ -788,24 +788,40 @@ export default function ExportComptaModal({ open, onOpenChange, monthStart, mont
       try {
         console.log('📸 Capture planning par semaine...');
         
-        // Sélectionner UNIQUEMENT les récaps hebdomadaires (pas le mensuel)
-        // Le récap mensuel a une classe différente (from-blue-100)
-        const allRows = Array.from(planningElement.children[0]?.children || []);
+        // Structure DOM: planningElement > div.inline-block > (header sticky + div body)
+        const container = planningElement.querySelector('.inline-block');
+        if (!container) {
+          console.error('Container inline-block introuvable');
+          return doc;
+        }
+        
+        // Body = 2ème enfant du container (après le header)
+        const bodyDiv = container.children[1];
+        if (!bodyDiv) {
+          console.error('Body div introuvable');
+          return doc;
+        }
+        
+        // Tous les enfants du body (jours + récaps)
+        const allRows = Array.from(bodyDiv.children);
+        console.log(`📦 ${allRows.length} éléments trouvés dans le body`);
+        
+        // Filtrer les récaps hebdomadaires (pas le mensuel)
         const weeklyRecapRows = allRows.filter(row => 
           row.classList.contains('from-gray-200') && 
           row.classList.contains('to-gray-100') &&
-          !row.classList.contains('from-blue-100') // Exclure le récap mensuel
+          !row.classList.contains('from-blue-100') // Exclure récap mensuel
         );
         
         console.log(`📅 ${weeklyRecapRows.length} semaines détectées`);
         
         if (weeklyRecapRows.length === 0) {
-          console.warn('Aucune semaine trouvée');
+          console.warn('⚠️ Aucune semaine trouvée - vérifier structure DOM');
           return doc;
         }
         
-        // Récupérer l'en-tête une seule fois
-        const headerRow = planningElement.querySelector('.sticky.top-0');
+        // En-tête avec noms des employés
+        const headerRow = container.children[0];
         
         // Pour chaque semaine
         for (let weekIndex = 0; weekIndex < weeklyRecapRows.length; weekIndex++) {
