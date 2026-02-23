@@ -162,9 +162,12 @@ export default function ShiftSwapModal({ open, onOpenChange, currentYear, curren
       const monthA = selectedShiftA.date?.substring(0, 7);
       const monthB = selectedShiftB.date?.substring(0, 7);
       if (monthA !== monthB) return 'Les deux shifts doivent appartenir au même mois.';
+      if (swapHasConflict(selectedShiftA, selectedShiftB, allMonthShifts)) {
+        return 'Échange impossible : conflit d\'horaires détecté.';
+      }
     }
     return null;
-  }, [shiftAId, shiftBId, selectedShiftA, selectedShiftB, pendingShiftIds]);
+  }, [shiftAId, shiftBId, selectedShiftA, selectedShiftB, pendingShiftIds, allMonthShifts]);
 
   const isValid = shiftAId && shiftBId && !validationError && currentEmployee;
 
