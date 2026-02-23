@@ -135,11 +135,19 @@ export default function ShiftSwapModal({ open, onOpenChange, currentYear, curren
     return allMonthShifts.filter(s => s.employee_id === currentEmployee.id);
   }, [allMonthShifts, currentEmployee]);
 
-  // Shifts for employee B
-  const shiftsB = useMemo(() => {
+  // All shifts for employee B (raw)
+  const allShiftsB = useMemo(() => {
     if (!employeeBId) return [];
     return allMonthShifts.filter(s => s.employee_id === employeeBId);
   }, [allMonthShifts, employeeBId]);
+
+  // Shifts for employee B filtered by conflict check with selected shift A
+  const shiftsB = useMemo(() => {
+    if (!shiftAId) return allShiftsB;
+    const shiftA = allMonthShifts.find(s => s.id === shiftAId);
+    if (!shiftA) return allShiftsB;
+    return allShiftsB.filter(sB => !swapHasConflict(shiftA, sB, allMonthShifts));
+  }, [allShiftsB, shiftAId, allMonthShifts]);
 
   const selectedShiftA = shiftsA.find(s => s.id === shiftAId);
   const selectedShiftB = shiftsB.find(s => s.id === shiftBId);
