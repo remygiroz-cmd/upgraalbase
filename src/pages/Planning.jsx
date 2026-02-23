@@ -1569,7 +1569,7 @@ export default function Planning() {
                     currentUser={currentUser}
                     />
 
-      {/* Planning Settings Modal */}
+                    {/* Planning Settings Modal */}
       <PlanningSettingsModal
         open={showPlanningSettings}
         onOpenChange={setShowPlanningSettings}
