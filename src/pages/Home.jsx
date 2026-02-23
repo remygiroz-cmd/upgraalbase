@@ -75,30 +75,48 @@ export default function Home() {
   const currentMonth = today.getMonth();
   const currentYear = today.getFullYear();
 
-  // Fetch shifts for CURRENT MONTH (SAME as Planning)
+  // Fetch current planning version (same as Planning page)
+  const { data: planningMonth } = useQuery({
+    queryKey: ['planningMonth', currentYear, currentMonth],
+    queryFn: async () => {
+      const monthKey = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}`;
+      const months = await base44.entities.PlanningMonth.filter({ month_key: monthKey });
+      return months[0] || null;
+    },
+    enabled: !!currentEmployee,
+    staleTime: 5 * 60 * 1000
+  });
+
+  const resetVersion = planningMonth?.reset_version ?? 0;
+
+  // Fetch shifts for CURRENT MONTH with version filtering (SAME as Planning)
   const { data: currentMonthShifts = [] } = useQuery({
-    queryKey: ['shifts', currentYear, currentMonth],
+    queryKey: ['shifts', currentYear, currentMonth, resetVersion],
     queryFn: async () => {
       const firstDay = formatLocalDate(new Date(currentYear, currentMonth, 1));
       const lastDay = formatLocalDate(new Date(currentYear, currentMonth + 1, 0));
       
       const allShifts = await base44.entities.Shift.list();
-      return allShifts.filter(s => s.date >= firstDay && s.date <= lastDay);
+      const monthShifts = allShifts.filter(s => s.date >= firstDay && s.date <= lastDay);
+      // Filter by reset_version (same as Planning's filterByVersion)
+      return monthShifts.filter(s => (s.reset_version ?? 0) >= resetVersion);
     },
     enabled: !!currentEmployee,
     staleTime: 5 * 60 * 1000,
     refetchInterval: 5 * 60 * 1000
   });
 
-  // Fetch non-shift events for CURRENT MONTH (SAME as Planning)
+  // Fetch non-shift events for CURRENT MONTH with version filtering (SAME as Planning)
   const { data: currentMonthNonShiftEvents = [] } = useQuery({
-    queryKey: ['nonShiftEvents', currentYear, currentMonth],
+    queryKey: ['nonShiftEvents', currentYear, currentMonth, resetVersion],
     queryFn: async () => {
       const firstDay = formatLocalDate(new Date(currentYear, currentMonth, 1));
       const lastDay = formatLocalDate(new Date(currentYear, currentMonth + 1, 0));
       
       const allEvents = await base44.entities.NonShiftEvent.list();
-      return allEvents.filter(e => e.date >= firstDay && e.date <= lastDay);
+      const monthEvents = allEvents.filter(e => e.date >= firstDay && e.date <= lastDay);
+      // Filter by reset_version
+      return monthEvents.filter(e => (e.reset_version ?? 0) >= resetVersion);
     },
     enabled: !!currentEmployee,
     staleTime: 5 * 60 * 1000,
