@@ -1558,7 +1558,6 @@ export default function Planning() {
                     </div>
                     </div>
 
-                    {/* Shift Modal */}
                     <ShiftFormModal
                     open={showShiftModal}
                     onOpenChange={(open) => { setShowShiftModal(open); if (!open) setSelectedCell(null); }}
