@@ -1759,6 +1759,15 @@ export default function Planning() {
         onOpenChange={setShowLeaveRequestModal}
       />
 
+      {/* Shift Swap Modal */}
+      <ShiftSwapModal
+        open={showShiftSwapModal}
+        onOpenChange={setShowShiftSwapModal}
+        currentYear={currentYear}
+        currentMonth={currentMonth}
+        monthKey={monthKey}
+      />
+
       {/* Floating Action Button - Only for users with modify permission */}
       {canModifyPlanning ? (
         <div className="fixed bottom-6 right-6 z-50">
