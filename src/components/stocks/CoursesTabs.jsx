@@ -107,6 +107,21 @@ export default function CoursesTabs({ order }) {
     } catch (e) { /* ignore */ }
   }, [itemInstances, storageKey]);
 
+  // Sync new items added to the order after the courses list was initialized
+  useEffect(() => {
+    setItemInstances(prev => {
+      const savedProductIds = new Set(prev.map(i => i.product_id));
+      const newItems = (order.items || []).filter(item => !savedProductIds.has(item.product_id));
+      if (newItems.length === 0) return prev;
+      const newInstances = newItems.map((item, index) => ({
+        instanceId: `${item.product_id}-new-${Date.now()}-${index}`,
+        ...item,
+        state: 'a_prendre'
+      }));
+      return [...prev, ...newInstances];
+    });
+  }, [order.items]);
+
   const getItemsByState = (state) => {
     const items = itemInstances.filter(item => item.state === state);
     // Trier par ordre de parcours magasin
