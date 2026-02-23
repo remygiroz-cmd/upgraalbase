@@ -1892,6 +1892,15 @@ export default function Planning() {
           >
             <span className="text-2xl">📝</span>
           </button>
+
+          {/* Demande d'échange accessible à tous */}
+          <button
+            onClick={() => setShowShiftSwapModal(true)}
+            className="w-14 h-14 bg-purple-600 hover:bg-purple-700 rounded-full shadow-xl flex items-center justify-center transition-all hover:scale-110 active:scale-95"
+            title="Demande d'échange de shift"
+          >
+            <span className="text-2xl">🔄</span>
+          </button>
           
           <div className="w-14 h-14 bg-gray-300 rounded-full shadow-lg flex items-center justify-center opacity-40 cursor-not-allowed" title="Lecture seule — vous n'avez pas la permission de modifier le planning">
             <Plus className="w-6 h-6 text-gray-500" />
