@@ -10,7 +10,6 @@ import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { toast } from 'sonner';
 import { AlertTriangle } from 'lucide-react';
-import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import ShiftCard from '@/components/planning/ShiftCard';
 import ShiftFormModal from '@/components/planning/ShiftFormModal';
 import WeeklySummary from '@/components/planning/WeeklySummary';
