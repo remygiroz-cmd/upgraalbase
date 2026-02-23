@@ -176,6 +176,11 @@ export default function ShiftSwapModal({ open, onOpenChange, currentYear, curren
       const shiftA = allMonthShifts.find(s => s.id === shiftAId);
       const shiftB = allMonthShifts.find(s => s.id === shiftBId);
 
+      // Backend validation: conflict check
+      if (swapHasConflict(shiftA, shiftB, allMonthShifts)) {
+        throw new Error('Échange impossible : conflit d\'horaires détecté.');
+      }
+
       const requestData = {
         status: 'PENDING',
         requester_employee_id: currentEmployee.id,
