@@ -14,16 +14,26 @@ export default function ShiftSwapNotification({ request, currentEmployee, mode =
   const [showRejectInput, setShowRejectInput] = useState(false);
   const [rejectReason, setRejectReason] = useState('');
 
+  function timeToMins(t) {
+    if (!t) return 0;
+    const [h, m] = t.split(':').map(Number);
+    return h * 60 + m;
+  }
+
+  function shiftsOverlap(s1, e1, s2, e2) {
+    return timeToMins(s1) < timeToMins(e2) && timeToMins(s2) < timeToMins(e1);
+  }
+
   const approveMutation = useMutation({
     mutationFn: async () => {
       // Re-fetch shifts to verify they still exist and haven't changed
-      const [shiftA, shiftB] = await Promise.all([
+      const [shiftAArr, shiftBArr] = await Promise.all([
         base44.entities.Shift.filter({ id: request.shift_a_id }),
         base44.entities.Shift.filter({ id: request.shift_b_id })
       ]);
 
-      const sA = shiftA[0];
-      const sB = shiftB[0];
+      const sA = shiftAArr[0];
+      const sB = shiftBArr[0];
 
       if (!sA || !sB) {
         throw new Error('Un ou plusieurs shifts sont introuvables. Ils ont peut-être été supprimés.');
@@ -40,6 +50,36 @@ export default function ShiftSwapNotification({ request, currentEmployee, mode =
       // Verify same month
       if (sA.date?.substring(0, 7) !== sB.date?.substring(0, 7)) {
         throw new Error('Les shifts ne sont plus dans le même mois.');
+      }
+
+      // Conflict check: fetch all shifts for both employees on the concerned dates
+      const [aShiftsOnBDay, bShiftsOnADay] = await Promise.all([
+        base44.entities.Shift.filter({ employee_id: sA.employee_id, date: sB.date }),
+        base44.entities.Shift.filter({ employee_id: sB.employee_id, date: sA.date })
+      ]);
+
+      // Check A's other shifts on sB.date
+      const conflictA = aShiftsOnBDay.filter(s => s.id !== sA.id && s.id !== sB.id)
+        .some(s => shiftsOverlap(sB.start_time, sB.end_time, s.start_time, s.end_time));
+      if (conflictA) {
+        await base44.entities.ShiftSwapRequest.update(request.id, {
+          status: 'REJECTED',
+          decided_at: new Date().toISOString(),
+          rejection_reason: 'Échange impossible : conflit d\'horaires suite à modification du planning.'
+        });
+        throw new Error('Échange impossible : conflit d\'horaires suite à modification du planning. La demande a été automatiquement refusée.');
+      }
+
+      // Check B's other shifts on sA.date
+      const conflictB = bShiftsOnADay.filter(s => s.id !== sA.id && s.id !== sB.id)
+        .some(s => shiftsOverlap(sA.start_time, sA.end_time, s.start_time, s.end_time));
+      if (conflictB) {
+        await base44.entities.ShiftSwapRequest.update(request.id, {
+          status: 'REJECTED',
+          decided_at: new Date().toISOString(),
+          rejection_reason: 'Échange impossible : conflit d\'horaires suite à modification du planning.'
+        });
+        throw new Error('Échange impossible : conflit d\'horaires suite à modification du planning. La demande a été automatiquement refusée.');
       }
 
       // Swap ONLY employee_id on both shifts
