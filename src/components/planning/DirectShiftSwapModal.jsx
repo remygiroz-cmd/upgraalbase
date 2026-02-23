@@ -383,6 +383,22 @@ export default function DirectShiftSwapModal({ open, onOpenChange, currentYear, 
             </div>
           )}
 
+          {/* Checkbox: informer les employés */}
+          <div className="bg-gray-50 border border-gray-200 rounded-lg p-3">
+            <label className="flex items-start gap-3 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={informEmployees}
+                onChange={(e) => setInformEmployees(e.target.checked)}
+                className="mt-0.5 w-4 h-4 rounded border-gray-300 text-orange-600 cursor-pointer"
+              />
+              <div>
+                <span className="text-sm font-medium text-gray-900">Informer les employés de l'échange</span>
+                <p className="text-xs text-gray-500 mt-0.5">Si activé, chaque employé recevra une notification sur sa page d'accueil.</p>
+              </div>
+            </label>
+          </div>
+
           {/* Actions */}
           <div className="flex gap-3 pt-4 border-t">
             <Button
