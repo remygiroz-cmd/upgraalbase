@@ -23,44 +23,10 @@ export default function CoursesTabs({ order }) {
     queryFn: () => base44.auth.me()
   });
 
-  const completeOrderMutation = useMutation({
-    mutationFn: async () => {
-      // Calculate statistics
-      const aPrendreCount = aPrendreItems.length;
-      const checkDetails = checkItems.map(item => `${item.product_name} (${item.quantity} ${item.unit})`).join(' | ');
-      const ruptureDetails = ruptureItems.map(item => `${item.product_name} (${item.quantity} ${item.unit})`).join(' | ');
-
-      // Create history entry
-      const historyEntry = {
-        timestamp: new Date().toISOString(),
-        action: 'Courses terminées',
-        details: `À prendre: ${aPrendreCount} articles | Check: ${checkDetails || 'Aucun'} | Rupture: ${ruptureDetails || 'Aucune'}`,
-        user_email: currentUser?.email,
-        user_name: currentUser?.full_name
-      };
-
-      // Update order
-      const updatedOrder = {
-        ...order,
-        status: 'terminee',
-        history: [...(order.history || []), historyEntry]
-      };
-
-      await base44.entities.Order.update(order.id, updatedOrder);
-    },
-    onSuccess: () => {
-      try { localStorage.removeItem(storageKey); } catch (e) { /* ignore */ }
-      queryClient.invalidateQueries({ queryKey: ['orders'] });
-    }
-  });
-
   const { data: articles = [] } = useQuery({
     queryKey: ['articles'],
     queryFn: () => base44.entities.Article.filter({ is_active: true })
   });
-
-  // Initialize items with state tracking - persisted in localStorage
-  const storageKey = `courses_state_${order.id}`;
 
   const buildInstances = (orderItems, savedStates = {}) => {
     const sortedItems = [...(orderItems || [])].sort((a, b) => {
@@ -71,40 +37,64 @@ export default function CoursesTabs({ order }) {
     return sortedItems.map((item, index) => ({
       instanceId: `${item.product_id}-${index}`,
       ...item,
-      state: savedStates[item.product_id] || 'a_prendre'
+      state: savedStates[`${item.product_id}-${index}`] || savedStates[item.product_id] || 'a_prendre'
     }));
   };
 
+  // Initialiser depuis order.courses_state (partagé entre tous les utilisateurs)
   const [itemInstances, setItemInstances] = useState(() => {
-    try {
-      const saved = localStorage.getItem(storageKey);
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        // Build a map of product_id -> state from saved data
-        const savedStates = {};
-        parsed.forEach(i => { savedStates[i.product_id] = i.state; });
-        // Always rebuild from current order.items, preserving saved states
-        return buildInstances(order.items, savedStates);
-      }
-    } catch (e) { /* ignore */ }
-    return buildInstances(order.items);
+    const savedStates = order.courses_state || {};
+    return buildInstances(order.items, savedStates);
   });
 
-  // Re-sync whenever order.items changes (add/remove articles)
+  // Re-sync quand order change (notamment courses_state mis à jour par un autre utilisateur)
   useEffect(() => {
     setItemInstances(prev => {
-      const savedStates = {};
-      prev.forEach(i => { savedStates[i.product_id] = i.state; });
+      // Reconstruire en priorité depuis order.courses_state (base de données)
+      const savedStates = order.courses_state || {};
       return buildInstances(order.items, savedStates);
     });
-  }, [JSON.stringify((order.items || []).map(i => i.product_id).sort())]);
+  }, [JSON.stringify(order.courses_state), JSON.stringify((order.items || []).map(i => i.product_id).sort())]);
 
-  // Persist itemInstances to localStorage on every change
-  useEffect(() => {
-    try {
-      localStorage.setItem(storageKey, JSON.stringify(itemInstances));
-    } catch (e) { /* ignore */ }
-  }, [itemInstances, storageKey]);
+  // Sauvegarder l'état dans la commande (partagé entre tous les utilisateurs)
+  const persistStateMutation = useMutation({
+    mutationFn: (instances) => {
+      const statesToSave = {};
+      instances.forEach((item, index) => {
+        statesToSave[`${item.product_id}-${index}`] = item.state;
+      });
+      return base44.entities.Order.update(order.id, { courses_state: statesToSave });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['orders'] });
+    }
+  });
+
+  const completeOrderMutation = useMutation({
+    mutationFn: async () => {
+      const aPrendreCount = aPrendreItems.length;
+      const checkDetails = checkItems.map(item => `${item.product_name} (${item.quantity} ${item.unit})`).join(' | ');
+      const ruptureDetails = ruptureItems.map(item => `${item.product_name} (${item.quantity} ${item.unit})`).join(' | ');
+
+      const historyEntry = {
+        timestamp: new Date().toISOString(),
+        action: 'Courses terminées',
+        details: `À prendre: ${aPrendreCount} articles | Check: ${checkDetails || 'Aucun'} | Rupture: ${ruptureDetails || 'Aucune'}`,
+        user_email: currentUser?.email,
+        user_name: currentUser?.full_name
+      };
+
+      await base44.entities.Order.update(order.id, {
+        ...order,
+        status: 'terminee',
+        courses_state: null,
+        history: [...(order.history || []), historyEntry]
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['orders'] });
+    }
+  });
 
   const getItemsByState = (state) => {
     const items = itemInstances.filter(item => item.state === state);
