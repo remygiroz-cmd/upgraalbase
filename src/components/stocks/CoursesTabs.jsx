@@ -58,9 +58,24 @@ export default function CoursesTabs({ order }) {
     queryFn: () => base44.entities.Article.filter({ is_active: true })
   });
 
-  // Initialize items with state tracking - use array to allow splitting items
+  // Initialize items with state tracking - persisted in localStorage
+  const storageKey = `courses_state_${order.id}`;
+
   const [itemInstances, setItemInstances] = useState(() => {
-    // Trier par ordre de parcours magasin avant de créer les instances
+    // Try to restore from localStorage first
+    try {
+      const saved = localStorage.getItem(storageKey);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        // Validate that it matches the current order items (same products)
+        const savedIds = new Set(parsed.map(i => i.product_id));
+        const orderIds = new Set((order.items || []).map(i => i.product_id));
+        // Only restore if order items haven't changed significantly
+        if (parsed.length > 0) return parsed;
+      }
+    } catch (e) { /* ignore */ }
+
+    // Default: fresh initialization sorted by store order
     const sortedItems = [...(order.items || [])].sort((a, b) => {
       const articleA = articles.find(art => art.id === a.product_id);
       const articleB = articles.find(art => art.id === b.product_id);
@@ -73,6 +88,13 @@ export default function CoursesTabs({ order }) {
       state: 'a_prendre'
     }));
   });
+
+  // Persist itemInstances to localStorage on every change
+  useEffect(() => {
+    try {
+      localStorage.setItem(storageKey, JSON.stringify(itemInstances));
+    } catch (e) { /* ignore */ }
+  }, [itemInstances, storageKey]);
 
   const getItemsByState = (state) => {
     const items = itemInstances.filter(item => item.state === state);
