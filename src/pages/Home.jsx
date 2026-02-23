@@ -712,6 +712,44 @@ export default function Home() {
           </div>
         )}
 
+        {/* Shift Swap Decisions for Employee */}
+        {mySwapDecisions.length > 0 && (
+          <div className="mb-6">
+            <h2 className="text-lg font-bold text-gray-900 mb-3 flex items-center gap-2">
+              🔄 Mes échanges de shift
+            </h2>
+            <div className="space-y-3">
+              {mySwapDecisions.map(req => (
+                <ShiftSwapNotification
+                  key={req.id}
+                  request={req}
+                  currentEmployee={currentEmployee}
+                  mode="employee"
+                />
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Shift Swap Requests for Manager */}
+        {myPendingSwapRequests.length > 0 && (
+          <div className="mb-6">
+            <h2 className="text-lg font-bold text-gray-900 mb-3 flex items-center gap-2">
+              🔄 Demandes d'échange à valider
+            </h2>
+            <div className="space-y-3">
+              {myPendingSwapRequests.map(req => (
+                <ShiftSwapNotification
+                  key={req.id}
+                  request={req}
+                  currentEmployee={currentEmployee}
+                  mode="manager"
+                />
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* Leave Requests for Manager */}
         {myPendingLeaveRequests.length > 0 && (
           <div className="mb-6">
