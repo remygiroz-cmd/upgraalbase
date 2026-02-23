@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import confetti from 'canvas-confetti';
 import CourseItemCard from './CourseItemCard';
 import ImageZoomModal from './ImageZoomModal';
-import RuptureOrderModal from './RuptureOrderModal';
+import RuptureOrderModal from './RuptureOrderModal.jsx';
 
 export default function CoursesTabs({ order }) {
   const [activeTab, setActiveTab] = useState('a_prendre');
