@@ -76,6 +76,7 @@ export default function DirectShiftSwapModal({ open, onOpenChange, currentYear, 
   const [shiftAId, setShiftAId] = useState('');
   const [employeeBId, setEmployeeBId] = useState('');
   const [shiftBId, setShiftBId] = useState('');
+  const [informEmployees, setInformEmployees] = useState(false);
 
   useEffect(() => {
     if (open) {
@@ -83,6 +84,7 @@ export default function DirectShiftSwapModal({ open, onOpenChange, currentYear, 
       setShiftAId('');
       setEmployeeBId('');
       setShiftBId('');
+      setInformEmployees(false);
     }
   }, [open]);
 
