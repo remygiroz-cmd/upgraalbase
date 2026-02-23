@@ -1129,9 +1129,45 @@ export default function Planning() {
         }}
       />
 
+      {/* Scrollbar miroir en haut - toujours visible */}
+      <div
+        className="overflow-x-auto overflow-y-hidden border border-gray-200 rounded-t-lg bg-gray-50"
+        style={{ height: '12px' }}
+        ref={(el) => {
+          if (!el) return;
+          el._mirror = true;
+          el.addEventListener('scroll', () => {
+            const grid = tableContainerRef.current?.closest('.planning-scroll-container');
+            if (grid && !grid._scrolling) {
+              grid._scrolling = true;
+              grid.scrollLeft = el.scrollLeft;
+              grid._scrolling = false;
+            }
+          });
+        }}
+        id="planning-top-scrollbar"
+      >
+        <div style={{ height: '1px', width: `${(employees.length * 180) + 120}px` }} />
+      </div>
+
       {/* Calendar Grid - Direct scrolling, no zoom wrapper */}
-      <div className="bg-white border-2 border-gray-200 rounded-xl shadow-xl overflow-auto" style={{ height: 'calc(100vh - 220px)' }}>
-        <div ref={tableContainerRef} className="min-w-full" data-planning-calendar>
+      <div
+        className="planning-scroll-container bg-white border-2 border-gray-200 rounded-b-xl shadow-xl overflow-auto"
+        style={{ height: 'calc(100vh - 240px)' }}
+        ref={(el) => {
+          tableContainerRef.current = el;
+          if (!el) return;
+          el.addEventListener('scroll', () => {
+            const topBar = document.getElementById('planning-top-scrollbar');
+            if (topBar && !el._scrolling) {
+              el._scrolling = true;
+              topBar.scrollLeft = el.scrollLeft;
+              el._scrolling = false;
+            }
+          });
+        }}
+      >
+        <div className="min-w-full" data-planning-calendar>
           <div className="inline-block min-w-full">
             {/* Header - Sticky */}
               <div className="bg-gradient-to-r from-gray-100 to-gray-50 flex border-b-2 border-gray-300 sticky top-0 z-40 shadow-md">
