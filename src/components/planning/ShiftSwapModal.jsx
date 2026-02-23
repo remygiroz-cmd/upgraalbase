@@ -18,6 +18,45 @@ function formatShiftLabel(shift) {
   return `${date} — ${shift.start_time}→${shift.end_time}${shift.position ? ` (${shift.position})` : ''}${duration ? ` · ${duration}` : ''}`;
 }
 
+function timeToMins(t) {
+  if (!t) return 0;
+  const [h, m] = t.split(':').map(Number);
+  return h * 60 + m;
+}
+
+function shiftsOverlap(start1, end1, start2, end2) {
+  const s1 = timeToMins(start1), e1 = timeToMins(end1);
+  const s2 = timeToMins(start2), e2 = timeToMins(end2);
+  return s1 < e2 && s2 < e1;
+}
+
+// Returns true if swapping shiftA and shiftB would create a schedule conflict
+// allShifts: all shifts in the month
+function swapHasConflict(shiftA, shiftB, allShifts) {
+  // After swap: shiftA goes to employee B (on shiftA.date), shiftB goes to employee A (on shiftB.date)
+  // Check: does employee A have any other shift on shiftB.date that overlaps shiftB's time?
+  const aShiftsOnBDay = allShifts.filter(s =>
+    s.employee_id === shiftA.employee_id &&
+    s.date === shiftB.date &&
+    s.id !== shiftA.id &&
+    s.id !== shiftB.id
+  );
+  for (const s of aShiftsOnBDay) {
+    if (shiftsOverlap(shiftB.start_time, shiftB.end_time, s.start_time, s.end_time)) return true;
+  }
+  // Check: does employee B have any other shift on shiftA.date that overlaps shiftA's time?
+  const bShiftsOnADay = allShifts.filter(s =>
+    s.employee_id === shiftB.employee_id &&
+    s.date === shiftA.date &&
+    s.id !== shiftA.id &&
+    s.id !== shiftB.id
+  );
+  for (const s of bShiftsOnADay) {
+    if (shiftsOverlap(shiftA.start_time, shiftA.end_time, s.start_time, s.end_time)) return true;
+  }
+  return false;
+}
+
 function calcDuration(start, end) {
   if (!start || !end) return '';
   const [sh, sm] = start.split(':').map(Number);
