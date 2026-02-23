@@ -489,15 +489,27 @@ export default function Planning() {
     setCurrentDate(new Date(currentYear, currentMonth + 1, 1));
   };
 
-  // Handle column reordering via drag & drop
-  const handleTeamDragEnd = (result) => {
-    if (!result.destination) return;
-    if (result.source.index === result.destination.index) return;
-
-    const newOrder = Array.from(employees);
-    const [moved] = newOrder.splice(result.source.index, 1);
-    newOrder.splice(result.destination.index, 0, moved);
-    setColumnOrder(newOrder.map(e => e.id));
+  // Handle column reordering via native HTML5 drag & drop
+  const handleColumnDragStart = (id) => setDraggingId(id);
+  const handleColumnDragOver = (id) => setDragOverId(id);
+  const handleColumnDrop = (sourceId, targetId) => {
+    if (!sourceId || !targetId || sourceId === targetId) return;
+    const current = [...employees];
+    const fromIdx = current.findIndex(e => e.id === sourceId);
+    const toIdx = current.findIndex(e => e.id === targetId);
+    if (fromIdx === -1 || toIdx === -1) return;
+    const newOrder = [...current];
+    const [moved] = newOrder.splice(fromIdx, 1);
+    newOrder.splice(toIdx, 0, moved);
+    const newIds = newOrder.map(e => e.id);
+    setColumnOrder(newIds);
+    localStorage.setItem('planning_column_order', JSON.stringify(newIds));
+    setDraggingId(null);
+    setDragOverId(null);
+  };
+  const handleColumnDragEnd = () => {
+    setDraggingId(null);
+    setDragOverId(null);
   };
 
 
