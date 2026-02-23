@@ -293,7 +293,12 @@ export default function ShiftSwapModal({ open, onOpenChange, currentYear, curren
             </Label>
             <Select value={shiftBId} onValueChange={setShiftBId} disabled={!employeeBId || shiftsB.length === 0}>
               <SelectTrigger className="mt-1">
-                <SelectValue placeholder={!employeeBId ? 'Sélectionner d\'abord un collègue' : shiftsB.length === 0 ? 'Aucun shift ce mois-ci' : 'Choisir le shift...'} />
+                <SelectValue placeholder={
+                  !employeeBId ? 'Sélectionner d\'abord un collègue'
+                  : !shiftAId ? 'Sélectionner d\'abord votre shift'
+                  : shiftsB.length === 0 ? 'Aucun échange possible (conflit horaire potentiel)'
+                  : 'Choisir le shift...'
+                } />
               </SelectTrigger>
               <SelectContent>
                 {shiftsB.map(s => (
@@ -305,6 +310,12 @@ export default function ShiftSwapModal({ open, onOpenChange, currentYear, curren
                 ))}
               </SelectContent>
             </Select>
+            {employeeBId && shiftAId && allShiftsB.length > 0 && shiftsB.length === 0 && (
+              <p className="mt-1.5 text-xs text-orange-700 flex items-center gap-1">
+                <AlertTriangle className="w-3 h-3" />
+                Aucun échange possible : conflit d'horaires potentiel avec tous les shifts disponibles.
+              </p>
+            )}
           </div>
 
           {/* Summary of swap */}
