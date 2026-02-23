@@ -117,8 +117,17 @@ export default function CourseItemCard({ item, itemNumber, onStateChange, isChec
             </>
           )}
           {(isChecked || isRupture) && (
-            <div className="py-3 text-center text-gray-500 text-sm">
-              {isChecked ? '✓ Article checké' : '✕ En rupture'}
+            <div className="space-y-2">
+              <div className="py-2 text-center text-gray-500 text-sm">
+                {isChecked ? '✓ Article checké' : '✕ En rupture'}
+              </div>
+              <Button
+                onClick={() => onStateChange('a_prendre')}
+                variant="outline"
+                className="w-full border-2 border-gray-400 text-gray-600 hover:bg-gray-50 font-semibold py-2 text-sm h-auto min-h-[40px] rounded-lg"
+              >
+                ↩ Remettre dans la liste
+              </Button>
             </div>
           )}
         </div>
