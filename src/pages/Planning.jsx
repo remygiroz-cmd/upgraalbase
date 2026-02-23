@@ -1563,9 +1563,7 @@ export default function Planning() {
                     open={showShiftModal}
                     onOpenChange={(open) => {
                     setShowShiftModal(open);
-                    if (!open) {
-                    setSelectedCell(null);
-                    }
+                    if (!open) setSelectedCell(null);
                     }}
                     selectedCell={selectedCell}
                     existingShifts={selectedCell ? getShiftsForEmployeeAndDate(selectedCell.employeeId, selectedCell.date) : []}
