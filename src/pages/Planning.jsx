@@ -180,7 +180,7 @@ export default function Planning() {
   }, [allTeams]);
 
   // Filter employees based on selection
-  const employees = React.useMemo(() => {
+  const filteredEmployees = React.useMemo(() => {
     if (filterType === 'employee' && selectedEmployee) {
       return sortedEmployees.filter(e => e.id === selectedEmployee);
     }
@@ -189,6 +189,21 @@ export default function Planning() {
     }
     return sortedEmployees;
   }, [sortedEmployees, filterType, selectedEmployee, selectedTeam]);
+
+  // Apply column order on top of filtered employees
+  const employees = React.useMemo(() => {
+    if (columnOrder.length === 0) return filteredEmployees;
+    const ordered = [];
+    const rest = [...filteredEmployees];
+    for (const id of columnOrder) {
+      const idx = rest.findIndex(e => e.id === id);
+      if (idx !== -1) {
+        ordered.push(rest[idx]);
+        rest.splice(idx, 1);
+      }
+    }
+    return [...ordered, ...rest];
+  }, [filteredEmployees, columnOrder]);
 
   // Fetch non-shift events for current month (filtered by reset_version)
   const { data: nonShiftEvents = [] } = useQuery({
