@@ -1782,6 +1782,22 @@ export default function Planning() {
 
               <button
                 onClick={() => {
+                  setShowShiftSwapModal(true);
+                  setShowFab(false);
+                }}
+                className="w-full flex items-center gap-3 px-4 py-3 hover:bg-purple-50 rounded-lg transition-colors group"
+              >
+                <div className="w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center group-hover:bg-purple-200 transition-colors">
+                  <span className="text-lg">🔄</span>
+                </div>
+                <div className="text-left flex-1">
+                  <div className="font-semibold text-sm text-gray-900">Demande d'échange</div>
+                  <div className="text-xs text-gray-500">Échanger un shift</div>
+                </div>
+              </button>
+
+              <button
+                onClick={() => {
                   setModalState({ isOpen: true, actionType: 'ADD_CP', selectedEmployee: null });
                   setShowFab(false);
                 }}
