@@ -63,6 +63,7 @@ export default function Planning() {
   const [showFab, setShowFab] = useState(false); // Floating Action Button
   const [isUndoing, setIsUndoing] = useState(false);
   const [isRedoing, setIsRedoing] = useState(false);
+  const [columnOrder, setColumnOrder] = useState([]);
   const queryClient = useQueryClient();
 
   // Undo/Redo system
