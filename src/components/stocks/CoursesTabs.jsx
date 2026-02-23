@@ -114,16 +114,13 @@ export default function CoursesTabs({ order }) {
       const item = prev[itemIndex];
       const result = [...prev];
 
-      // Si c'est une rupture partielle (partialQuantity est fourni)
       if (partialQuantity !== null && partialQuantity > 0 && partialQuantity < item.quantity) {
-        // Créer une instance en check avec la quantité trouvée
         result[itemIndex] = {
           ...item,
           instanceId: `${item.product_id}-check-${Date.now()}`,
           quantity: partialQuantity,
           state: 'check'
         };
-        // Ajouter une instance en rupture avec le reste
         result.push({
           ...item,
           instanceId: `${item.product_id}-rupture-${Date.now()}`,
@@ -131,12 +128,11 @@ export default function CoursesTabs({ order }) {
           state: 'rupture'
         });
       } else {
-        // Cas normal : tout l'article change d'état
-        result[itemIndex] = {
-          ...item,
-          state: newState
-        };
+        result[itemIndex] = { ...item, state: newState };
       }
+
+      // Persister en base de données (partagé entre utilisateurs)
+      persistStateMutation.mutate(result);
       return result;
     });
   };
