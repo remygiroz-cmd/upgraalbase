@@ -1,43 +1,48 @@
 import React, { useState } from 'react';
 import { cn } from '@/lib/utils';
 
-const EmployeeHeaderCell = React.memo(React.forwardRef(({
+const EmployeeHeaderCell = React.memo(({
   employee,
   team,
   isDragging,
-  dragHandleProps,
+  isDragOver,
+  onDragStart,
+  onDragOver,
+  onDrop,
+  onDragEnd,
   displayMode,
-  style,
-  ...props
-}, ref) => {
+}) => {
   const [showTooltip, setShowTooltip] = useState(false);
   const fullName = `${employee.first_name} ${employee.last_name}`;
-  
   const isNameTruncated = fullName.length > 20;
 
   return (
     <div
-      ref={ref}
-      {...props}
-      style={{
-        ...style,
-        transition: isDragging ? 'none' : 'transform 200ms ease, box-shadow 200ms ease',
+      draggable
+      onDragStart={(e) => {
+        e.dataTransfer.effectAllowed = 'move';
+        e.dataTransfer.setData('text/plain', employee.id);
+        onDragStart?.(employee.id);
       }}
+      onDragOver={(e) => {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+        onDragOver?.(employee.id);
+      }}
+      onDrop={(e) => {
+        e.preventDefault();
+        const sourceId = e.dataTransfer.getData('text/plain');
+        onDrop?.(sourceId, employee.id);
+      }}
+      onDragEnd={() => onDragEnd?.()}
       className={cn(
-        "border-r border-gray-200 px-2 text-center min-w-[150px] w-[150px] lg:min-w-[180px] lg:w-[180px] relative group flex-shrink-0 select-none",
+        "border-r border-gray-200 px-2 text-center min-w-[150px] w-[150px] lg:min-w-[180px] lg:w-[180px] relative group flex-shrink-0 select-none cursor-grab active:cursor-grabbing transition-all duration-100",
         displayMode === 'compact' ? 'py-1' : 'py-3',
-        isDragging
-          ? "bg-orange-50 shadow-2xl ring-2 ring-orange-400 ring-offset-1 rounded z-50 opacity-95 scale-105"
-          : "hover:bg-gray-50 transition-colors"
+        isDragging && "opacity-30 bg-orange-50",
+        isDragOver && !isDragging && "bg-orange-100 border-l-4 border-l-orange-500 scale-[1.02]"
       )}
     >
-      {/* Drag handle - full header is draggable, just show indicator */}
-      <div
-        {...dragHandleProps}
-        className="absolute inset-0 cursor-grab active:cursor-grabbing"
-        title="Glisser pour réorganiser"
-      />
-      {/* Grip icon visible on hover */}
+      {/* Grip icon */}
       <div className="pointer-events-none hidden group-hover:flex absolute top-1 left-1 text-gray-400">
         <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
           <path d="M8 5a2 2 0 11-4 0 2 2 0 014 0zM12 5a2 2 0 11-4 0 2 2 0 014 0zM8 13a2 2 0 11-4 0 2 2 0 014 0zM12 13a2 2 0 11-4 0 2 2 0 014 0z" />
