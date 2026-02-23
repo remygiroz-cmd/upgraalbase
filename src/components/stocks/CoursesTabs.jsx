@@ -49,6 +49,7 @@ export default function CoursesTabs({ order }) {
       await base44.entities.Order.update(order.id, updatedOrder);
     },
     onSuccess: () => {
+      try { localStorage.removeItem(storageKey); } catch (e) { /* ignore */ }
       queryClient.invalidateQueries({ queryKey: ['orders'] });
     }
   });
