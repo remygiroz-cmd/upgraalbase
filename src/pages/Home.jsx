@@ -783,6 +783,73 @@ export default function Home() {
           )}
         </div>
 
+        {/* Manager/Admin Quick Actions */}
+        {isManagerOrAdmin && (
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {/* Annonces urgentes card */}
+            <button
+              onClick={() => navigate(createPageUrl('AnnoncesUrgentes'))}
+              className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 hover:shadow-md transition-all text-left group"
+            >
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-orange-100 flex items-center justify-center">
+                    <Megaphone className="w-5 h-5 text-orange-600" />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-gray-900">Annonces urgentes</h3>
+                    <p className="text-xs text-gray-500">Gérer les alertes</p>
+                  </div>
+                </div>
+                <ArrowRight className="w-5 h-5 text-gray-400 group-hover:text-gray-600 group-hover:translate-x-1 transition-all" />
+              </div>
+              <div className="flex items-center gap-4 text-sm">
+                <div className="flex items-center gap-1">
+                  <Circle className="w-2 h-2 text-red-500 fill-red-500" />
+                  <span className="text-gray-600">
+                    {urgentAnnouncements.length} active{urgentAnnouncements.length > 1 ? 's' : ''}
+                  </span>
+                </div>
+                <div className="text-gray-400">•</div>
+                <div className="text-gray-600">
+                  {allUrgentAnnouncements.length} total
+                </div>
+              </div>
+            </button>
+
+            {/* Présence card */}
+            <button
+              onClick={() => navigate(createPageUrl('Presence'))}
+              className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 hover:shadow-md transition-all text-left group"
+            >
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center">
+                    <Users className="w-5 h-5 text-green-600" />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-gray-900">Présence</h3>
+                    <p className="text-xs text-gray-500">Statuts en temps réel</p>
+                  </div>
+                </div>
+                <ArrowRight className="w-5 h-5 text-gray-400 group-hover:text-gray-600 group-hover:translate-x-1 transition-all" />
+              </div>
+              <div className="flex items-center gap-4 text-sm">
+                <div className="flex items-center gap-1">
+                  <Circle className="w-2 h-2 text-green-500 fill-green-500" />
+                  <span className="text-gray-600">
+                    {onlineEmployeesCount} en ligne
+                  </span>
+                </div>
+                <div className="text-gray-400">•</div>
+                <div className="text-gray-600">
+                  {employees.filter(e => e.is_active !== false).length} employés
+                </div>
+              </div>
+            </button>
+          </div>
+        )}
+
         {/* Hidden Conversations (Deleted for me) Section */}
         {hiddenConversations.length > 0 && (
           <div className="bg-white rounded-lg shadow-sm border border-gray-200">
