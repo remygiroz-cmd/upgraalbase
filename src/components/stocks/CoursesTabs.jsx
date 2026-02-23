@@ -62,43 +62,42 @@ export default function CoursesTabs({ order }) {
   // Initialize items with state tracking - persisted in localStorage
   const storageKey = `courses_state_${order.id}`;
 
-  const [itemInstances, setItemInstances] = useState(() => {
-    // Try to restore from localStorage first
-    try {
-      const saved = localStorage.getItem(storageKey);
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (parsed.length > 0) {
-          // Check for new items in the order that are not yet in saved state
-          const savedProductIds = new Set(parsed.map(i => i.product_id));
-          const newItems = (order.items || []).filter(item => !savedProductIds.has(item.product_id));
-          if (newItems.length > 0) {
-            // Append new items as 'a_prendre'
-            const newInstances = newItems.map((item, index) => ({
-              instanceId: `${item.product_id}-new-${Date.now()}-${index}`,
-              ...item,
-              state: 'a_prendre'
-            }));
-            return [...parsed, ...newInstances];
-          }
-          return parsed;
-        }
-      }
-    } catch (e) { /* ignore */ }
-
-    // Default: fresh initialization sorted by store order
-    const sortedItems = [...(order.items || [])].sort((a, b) => {
+  const buildInstances = (orderItems, savedStates = {}) => {
+    const sortedItems = [...(orderItems || [])].sort((a, b) => {
       const articleA = articles.find(art => art.id === a.product_id);
       const articleB = articles.find(art => art.id === b.product_id);
       return (articleA?.order || 0) - (articleB?.order || 0);
     });
-    
     return sortedItems.map((item, index) => ({
       instanceId: `${item.product_id}-${index}`,
       ...item,
-      state: 'a_prendre'
+      state: savedStates[item.product_id] || 'a_prendre'
     }));
+  };
+
+  const [itemInstances, setItemInstances] = useState(() => {
+    try {
+      const saved = localStorage.getItem(storageKey);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        // Build a map of product_id -> state from saved data
+        const savedStates = {};
+        parsed.forEach(i => { savedStates[i.product_id] = i.state; });
+        // Always rebuild from current order.items, preserving saved states
+        return buildInstances(order.items, savedStates);
+      }
+    } catch (e) { /* ignore */ }
+    return buildInstances(order.items);
   });
+
+  // Re-sync whenever order.items changes (add/remove articles)
+  useEffect(() => {
+    setItemInstances(prev => {
+      const savedStates = {};
+      prev.forEach(i => { savedStates[i.product_id] = i.state; });
+      return buildInstances(order.items, savedStates);
+    });
+  }, [JSON.stringify((order.items || []).map(i => i.product_id).sort())]);
 
   // Persist itemInstances to localStorage on every change
   useEffect(() => {
@@ -106,21 +105,6 @@ export default function CoursesTabs({ order }) {
       localStorage.setItem(storageKey, JSON.stringify(itemInstances));
     } catch (e) { /* ignore */ }
   }, [itemInstances, storageKey]);
-
-  // Sync new items added to the order after the courses list was initialized
-  useEffect(() => {
-    setItemInstances(prev => {
-      const savedProductIds = new Set(prev.map(i => i.product_id));
-      const newItems = (order.items || []).filter(item => !savedProductIds.has(item.product_id));
-      if (newItems.length === 0) return prev;
-      const newInstances = newItems.map((item, index) => ({
-        instanceId: `${item.product_id}-new-${Date.now()}-${index}`,
-        ...item,
-        state: 'a_prendre'
-      }));
-      return [...prev, ...newInstances];
-    });
-  }, [order.items]);
 
   const getItemsByState = (state) => {
     const items = itemInstances.filter(item => item.state === state);
