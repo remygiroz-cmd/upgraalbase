@@ -35,23 +35,23 @@ export default function RuptureOrderModal({ open, ruptureItems, supplierName, is
           </p>
         </div>
 
-        <DialogFooter className="flex-col sm:flex-row gap-2">
+        <DialogFooter className="flex-col gap-2 pt-2">
+          <Button
+            onClick={() => onConfirm(true)}
+            disabled={isLoading}
+            className="w-full bg-orange-600 hover:bg-orange-700 text-white"
+          >
+            <ShoppingCart className="w-4 h-4 mr-2" />
+            Oui, créer une nouvelle commande
+          </Button>
           <Button
             variant="outline"
             onClick={() => onConfirm(false)}
             disabled={isLoading}
-            className="flex-1 border-gray-300 text-gray-700 hover:bg-gray-50"
+            className="w-full border-gray-300 text-gray-700 hover:bg-gray-50"
           >
             <X className="w-4 h-4 mr-2" />
             Non, clôturer sans recommander
-          </Button>
-          <Button
-            onClick={() => onConfirm(true)}
-            disabled={isLoading}
-            className="flex-1 bg-orange-600 hover:bg-orange-700 text-white"
-          >
-            <ShoppingCart className="w-4 h-4 mr-2" />
-            Oui, créer une nouvelle commande
           </Button>
         </DialogFooter>
       </DialogContent>
