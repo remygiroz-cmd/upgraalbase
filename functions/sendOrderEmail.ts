@@ -116,13 +116,8 @@ Deno.serve(async (req) => {
         return Response.json({ error: 'You must be logged in to access this app' }, { status: 401 });
       }
 
-      // Vérification des permissions
-      if (!ALLOWED_ROLES.includes(user.role)) {
-        console.warn(
-          `[SECURITY] User ${user.id} attempted to send order email without permission`,
-        );
-        return Response.json({ error: 'Permissions insuffisantes' }, { status: 403 });
-      }
+      // Vérification des permissions (admin ou user authentifié)
+      // Les rôles Base44 sont 'admin' ou 'user', on autorise tous les utilisateurs connectés
       sentBy = user.id;
     }
 
