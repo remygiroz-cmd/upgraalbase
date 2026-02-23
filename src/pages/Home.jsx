@@ -3,6 +3,7 @@ import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { isCurrentUserPlanningManager } from '@/components/planning/utils/getPlanningManager';
 import LeaveRequestNotification from '@/components/planning/LeaveRequestNotification';
+import ShiftSwapNotification from '@/components/planning/ShiftSwapNotification';
 import { Card } from '@/components/ui/card';
 import { Trash2, Plus, MessageCircle, Bell, RefreshCw, AtSign, Megaphone, Users, Circle, ArrowRight, ArchiveRestore } from 'lucide-react';
 import { toast } from 'sonner';
