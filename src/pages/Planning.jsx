@@ -1772,6 +1772,14 @@ export default function Planning() {
         monthKey={monthKey}
       />
 
+      {/* Direct Shift Swap Modal */}
+      <DirectShiftSwapModal
+        open={showDirectSwapModal}
+        onOpenChange={setShowDirectSwapModal}
+        currentYear={currentYear}
+        currentMonth={currentMonth}
+      />
+
       {/* Floating Action Button - Only for users with modify permission */}
       {canModifyPlanning ? (
         <div className="fixed bottom-6 right-6 z-50">
