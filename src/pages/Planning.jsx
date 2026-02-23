@@ -1135,44 +1135,31 @@ export default function Planning() {
         <div ref={tableContainerRef} className="min-w-full" data-planning-calendar>
           <div className="inline-block min-w-full">
             {/* Header - Sticky */}
-            <DragDropContext onDragEnd={handleTeamDragEnd}>
               <div className="bg-gradient-to-r from-gray-100 to-gray-50 flex border-b-2 border-gray-300 sticky top-0 z-40 shadow-md">
                 <div className="sticky left-0 z-50 bg-gradient-to-r from-gray-100 to-gray-50 border-r-2 border-gray-300 px-2 lg:px-4 py-2 lg:py-3 text-left text-xs lg:text-sm font-bold text-gray-900 w-[80px] lg:w-[120px] shadow-md flex items-center gap-1 lg:gap-2">
                   <Calendar className="w-3.5 h-3.5 lg:w-4 lg:h-4 text-orange-600" />
                   <span className="hidden sm:inline">Jour</span>
                 </div>
-                <Droppable droppableId="employees" direction="horizontal">
-                  {(provided) => (
-                    <div 
-                      ref={provided.innerRef} 
-                      {...provided.droppableProps}
-                      className="flex overflow-x-auto"
-                    >
-                      {employees.map((employee, index) => {
-                        const team = allTeams.find(t => t.id === employee.team_id);
-                        return (
-                          <Draggable key={employee.id} draggableId={employee.id} index={index}>
-                            {(provided, snapshot) => (
-                              <EmployeeHeaderCell
-                              ref={provided.innerRef}
-                              employee={employee}
-                              team={team}
-                              isDragging={snapshot.isDragging}
-                              dragHandleProps={provided.dragHandleProps}
-                              displayMode={displayMode}
-                              style={provided.draggableProps.style}
-                              {...provided.draggableProps}
-                              />
-                            )}
-                          </Draggable>
-                        );
-                      })}
-                      {provided.placeholder}
-                    </div>
-                  )}
-                </Droppable>
+                <div className="flex overflow-x-auto">
+                  {employees.map((employee) => {
+                    const team = allTeams.find(t => t.id === employee.team_id);
+                    return (
+                      <EmployeeHeaderCell
+                        key={employee.id}
+                        employee={employee}
+                        team={team}
+                        isDragging={draggingId === employee.id}
+                        isDragOver={dragOverId === employee.id}
+                        onDragStart={handleColumnDragStart}
+                        onDragOver={handleColumnDragOver}
+                        onDrop={handleColumnDrop}
+                        onDragEnd={handleColumnDragEnd}
+                        displayMode={displayMode}
+                      />
+                    );
+                  })}
+                </div>
               </div>
-            </DragDropContext>
 
             {/* Body */}
             <div>
