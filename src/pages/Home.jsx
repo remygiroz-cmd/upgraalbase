@@ -490,6 +490,32 @@ export default function Home() {
   // Filter pending leave requests for current user if they are planning manager
   const myPendingLeaveRequests = isPlanningManager ? pendingLeaveRequests : [];
 
+  // Pending shift swap requests for manager
+  const { data: pendingSwapRequests = [] } = useQuery({
+    queryKey: ['shiftSwapRequests', 'PENDING'],
+    queryFn: () => base44.entities.ShiftSwapRequest.filter({ status: 'PENDING' }),
+    enabled: !!isPlanningManager,
+    staleTime: 0
+  });
+  const myPendingSwapRequests = isPlanningManager ? pendingSwapRequests : [];
+
+  // My swap decisions (as employee A or B)
+  const { data: mySwapDecisions = [] } = useQuery({
+    queryKey: ['mySwapDecisions', currentEmployee?.id],
+    queryFn: async () => {
+      if (!currentEmployee?.id) return [];
+      const all = await base44.entities.ShiftSwapRequest.list();
+      return all.filter(r =>
+        (r.employee_a_id === currentEmployee.id || r.employee_b_id === currentEmployee.id) &&
+        r.status !== 'PENDING' &&
+        r.status !== 'CANCELED' &&
+        new Date(r.decided_at) > new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) &&
+        !(r.dismissed_by_employee_ids || []).includes(currentEmployee.id)
+      ).sort((a, b) => new Date(b.decided_at) - new Date(a.decided_at));
+    },
+    enabled: !!currentEmployee?.id
+  });
+
   const isManagerOrAdmin = useMemo(() => {
     if (!currentEmployee) return false;
     return currentUser?.role === 'admin' || currentEmployee.permission_level === 'manager';
