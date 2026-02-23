@@ -6,16 +6,12 @@ import { Button } from '@/components/ui/button';
 import confetti from 'canvas-confetti';
 import CourseItemCard from './CourseItemCard';
 import ImageZoomModal from './ImageZoomModal';
-
-const TAB_CONFIG = [
-  { id: 'a_prendre', label: 'À PRENDRE', icon: Package, color: 'text-red-600', bgColor: 'bg-white' },
-  { id: 'check', label: 'CHECK', icon: CheckCircle2, color: 'text-gray-400', bgColor: 'bg-gray-100' },
-  { id: 'rupture', label: 'RUPTURE', icon: AlertCircle, color: 'text-gray-400', bgColor: 'bg-gray-100' }
-];
+import RuptureOrderModal from './RuptureOrderModal';
 
 export default function CoursesTabs({ order }) {
   const [activeTab, setActiveTab] = useState('a_prendre');
   const [zoomImage, setZoomImage] = useState(null);
+  const [showRuptureModal, setShowRuptureModal] = useState(false);
   const queryClient = useQueryClient();
 
   const { data: currentUser } = useQuery({
@@ -41,22 +37,18 @@ export default function CoursesTabs({ order }) {
     }));
   };
 
-  // Initialiser depuis order.courses_state (partagé entre tous les utilisateurs)
   const [itemInstances, setItemInstances] = useState(() => {
     const savedStates = order.courses_state || {};
     return buildInstances(order.items, savedStates);
   });
 
-  // Re-sync quand order change (notamment courses_state mis à jour par un autre utilisateur)
   useEffect(() => {
-    setItemInstances(prev => {
-      // Reconstruire en priorité depuis order.courses_state (base de données)
+    setItemInstances(() => {
       const savedStates = order.courses_state || {};
       return buildInstances(order.items, savedStates);
     });
   }, [JSON.stringify(order.courses_state), JSON.stringify((order.items || []).map(i => i.product_id).sort())]);
 
-  // Sauvegarder l'état dans la commande (partagé entre tous les utilisateurs)
   const persistStateMutation = useMutation({
     mutationFn: (instances) => {
       const statesToSave = {};
@@ -71,15 +63,14 @@ export default function CoursesTabs({ order }) {
   });
 
   const completeOrderMutation = useMutation({
-    mutationFn: async () => {
-      const aPrendreCount = aPrendreItems.length;
+    mutationFn: async ({ createNewOrder }) => {
       const checkDetails = checkItems.map(item => `${item.product_name} (${item.quantity} ${item.unit})`).join(' | ');
       const ruptureDetails = ruptureItems.map(item => `${item.product_name} (${item.quantity} ${item.unit})`).join(' | ');
 
       const historyEntry = {
         timestamp: new Date().toISOString(),
         action: 'Courses terminées',
-        details: `À prendre: ${aPrendreCount} articles | Check: ${checkDetails || 'Aucun'} | Rupture: ${ruptureDetails || 'Aucune'}`,
+        details: `Check: ${checkDetails || 'Aucun'} | Rupture: ${ruptureDetails || 'Aucune'}`,
         user_email: currentUser?.email,
         user_name: currentUser?.full_name
       };
@@ -90,6 +81,32 @@ export default function CoursesTabs({ order }) {
         courses_state: null,
         history: [...(order.history || []), historyEntry]
       });
+
+      if (createNewOrder && ruptureItems.length > 0) {
+        const newItems = ruptureItems.map(item => ({
+          product_id: item.product_id,
+          product_name: item.product_name,
+          quantity: item.quantity,
+          unit: item.unit,
+          unit_price: item.unit_price,
+          supplier_reference: item.supplier_reference
+        }));
+
+        await base44.entities.Order.create({
+          supplier_id: order.supplier_id,
+          supplier_name: order.supplier_name,
+          date: new Date().toISOString().split('T')[0],
+          items: newItems,
+          status: 'en_cours',
+          history: [{
+            timestamp: new Date().toISOString(),
+            action: 'Commande créée (articles en rupture)',
+            details: `Créée automatiquement depuis la commande #${order.id.slice(-6)} suite aux ruptures`,
+            user_email: currentUser?.email,
+            user_name: currentUser?.full_name
+          }]
+        });
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['orders'] });
@@ -97,9 +114,7 @@ export default function CoursesTabs({ order }) {
   });
 
   const getItemsByState = (state) => {
-    const items = itemInstances.filter(item => item.state === state);
-    // Trier par ordre de parcours magasin
-    return items.sort((a, b) => {
+    return itemInstances.filter(item => item.state === state).sort((a, b) => {
       const articleA = articles.find(art => art.id === a.product_id);
       const articleB = articles.find(art => art.id === b.product_id);
       return (articleA?.order || 0) - (articleB?.order || 0);
@@ -131,7 +146,6 @@ export default function CoursesTabs({ order }) {
         result[itemIndex] = { ...item, state: newState };
       }
 
-      // Persister en base de données (partagé entre utilisateurs)
       persistStateMutation.mutate(result);
       return result;
     });
@@ -141,37 +155,38 @@ export default function CoursesTabs({ order }) {
   const checkItems = getItemsByState('check');
   const ruptureItems = getItemsByState('rupture');
 
+  const handleTerminer = () => {
+    if (ruptureItems.length > 0) {
+      setShowRuptureModal(true);
+    } else {
+      confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
+      completeOrderMutation.mutate({ createNewOrder: false });
+    }
+  };
+
   // Auto-complete when all items are taken from "À prendre"
   useEffect(() => {
     if (aPrendreItems.length === 0 && itemInstances.length > 0) {
-      // Delay to ensure smooth UI transition
       const timer = setTimeout(() => {
-        // Trigger confetti animation
-        confetti({
-          particleCount: 100,
-          spread: 70,
-          origin: { y: 0.6 }
-        });
-        
-        // Auto-complete order
-        completeOrderMutation.mutate();
+        confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
+        if (ruptureItems.length > 0) {
+          setShowRuptureModal(true);
+        } else {
+          completeOrderMutation.mutate({ createNewOrder: false });
+        }
       }, 500);
-      
       return () => clearTimeout(timer);
     }
   }, [aPrendreItems.length, itemInstances.length]);
 
   return (
     <div className="space-y-4 sm:space-y-6">
-      {/* Tab Navigation - Styled like screenshot */}
+      {/* Tab Navigation */}
       <div className="space-y-2 sm:space-y-3">
-        {/* À PRENDRE Tab */}
         <button
           onClick={() => setActiveTab('a_prendre')}
           className={`w-full sm:w-auto px-4 sm:px-6 py-3 sm:py-4 rounded-lg transition-all flex items-center gap-3 font-bold text-sm sm:text-base ${
-            activeTab === 'a_prendre'
-              ? 'bg-white shadow-md'
-              : 'bg-gray-100 text-gray-600'
+            activeTab === 'a_prendre' ? 'bg-white shadow-md' : 'bg-gray-100 text-gray-600'
           }`}
         >
           <Package className="w-5 h-5 sm:w-6 sm:h-6" />
@@ -183,14 +198,11 @@ export default function CoursesTabs({ order }) {
           )}
         </button>
 
-        {/* CHECK & RUPTURE - Same row */}
         <div className="grid grid-cols-2 gap-2 sm:gap-3">
           <button
             onClick={() => setActiveTab('check')}
             className={`px-3 sm:px-4 py-2 sm:py-3 rounded-lg transition-all flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 font-bold text-xs sm:text-sm ${
-              activeTab === 'check'
-                ? 'bg-white shadow-md'
-                : 'bg-gray-100 text-gray-400'
+              activeTab === 'check' ? 'bg-white shadow-md' : 'bg-gray-100 text-gray-400'
             }`}
           >
             <CheckCircle2 className="w-5 h-5 sm:w-6 sm:h-6" />
@@ -205,15 +217,13 @@ export default function CoursesTabs({ order }) {
           <button
             onClick={() => setActiveTab('rupture')}
             className={`px-3 sm:px-4 py-2 sm:py-3 rounded-lg transition-all flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 font-bold text-xs sm:text-sm ${
-              activeTab === 'rupture'
-                ? 'bg-white shadow-md'
-                : 'bg-gray-100 text-gray-400'
+              activeTab === 'rupture' ? 'bg-white shadow-md' : 'bg-gray-100 text-gray-400'
             }`}
           >
             <AlertCircle className="w-5 h-5 sm:w-6 sm:h-6" />
             <span>RUPTURE</span>
             {ruptureItems.length > 0 && (
-              <span className="bg-gray-400 text-white w-5 h-5 sm:w-6 sm:h-6 rounded-full flex items-center justify-center font-bold text-[10px] sm:text-xs">
+              <span className="bg-orange-500 text-white w-5 h-5 sm:w-6 sm:h-6 rounded-full flex items-center justify-center font-bold text-[10px] sm:text-xs">
                 {ruptureItems.length}
               </span>
             )}
@@ -235,9 +245,7 @@ export default function CoursesTabs({ order }) {
                   key={item.instanceId}
                   item={item}
                   itemNumber={index + 1}
-                  onStateChange={(newState, quantity) => 
-                    updateItemState(item.instanceId, newState, quantity)
-                  }
+                  onStateChange={(newState, quantity) => updateItemState(item.instanceId, newState, quantity)}
                   onImageClick={(url) => setZoomImage(url)}
                 />
               ))}
@@ -258,9 +266,7 @@ export default function CoursesTabs({ order }) {
                   item={item}
                   itemNumber={index + 1}
                   isChecked={true}
-                  onStateChange={(newState, quantity) => 
-                    updateItemState(item.instanceId, newState, quantity)
-                  }
+                  onStateChange={(newState, quantity) => updateItemState(item.instanceId, newState, quantity)}
                   onImageClick={(url) => setZoomImage(url)}
                 />
               ))}
@@ -281,9 +287,7 @@ export default function CoursesTabs({ order }) {
                   item={item}
                   itemNumber={index + 1}
                   isRupture={true}
-                  onStateChange={(newState, quantity) => 
-                    updateItemState(item.instanceId, newState, quantity)
-                  }
+                  onStateChange={(newState, quantity) => updateItemState(item.instanceId, newState, quantity)}
                   onImageClick={(url) => setZoomImage(url)}
                 />
               ))}
@@ -295,7 +299,7 @@ export default function CoursesTabs({ order }) {
       {/* Complete Order Button */}
       <div className="flex gap-2 sm:gap-3 pt-4">
         <Button
-          onClick={() => completeOrderMutation.mutate()}
+          onClick={handleTerminer}
           disabled={completeOrderMutation.isPending}
           className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 text-base h-auto min-h-[48px] rounded-lg"
         >
@@ -304,9 +308,19 @@ export default function CoursesTabs({ order }) {
       </div>
 
       {/* Image Zoom Modal */}
-      <ImageZoomModal 
-        imageUrl={zoomImage} 
-        onClose={() => setZoomImage(null)} 
+      <ImageZoomModal imageUrl={zoomImage} onClose={() => setZoomImage(null)} />
+
+      {/* Rupture Order Modal */}
+      <RuptureOrderModal
+        open={showRuptureModal}
+        ruptureItems={ruptureItems}
+        supplierName={order.supplier_name}
+        isLoading={completeOrderMutation.isPending}
+        onConfirm={(createNew) => {
+          setShowRuptureModal(false);
+          completeOrderMutation.mutate({ createNewOrder: createNew });
+        }}
+        onClose={() => setShowRuptureModal(false)}
       />
     </div>
   );
