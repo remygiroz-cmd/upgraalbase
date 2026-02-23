@@ -14,7 +14,9 @@ export default function CoursesMode() {
     queryFn: async () => {
       const allOrders = await base44.entities.Order.filter({ status: 'en_cours' });
       return allOrders.sort((a, b) => new Date(b.date) - new Date(a.date));
-    }
+    },
+    staleTime: 0,
+    refetchInterval: 5000
   });
 
   const selectedOrder = orders.find(o => o.id === selectedOrderId);
