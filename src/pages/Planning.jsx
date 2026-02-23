@@ -1561,10 +1561,7 @@ export default function Planning() {
                     {/* Shift Modal */}
                     <ShiftFormModal
                     open={showShiftModal}
-                    onOpenChange={(open) => {
-                    setShowShiftModal(open);
-                    if (!open) setSelectedCell(null);
-                    }}
+                    onOpenChange={(open) => { setShowShiftModal(open); if (!open) setSelectedCell(null); }}
                     selectedCell={selectedCell}
                     existingShifts={selectedCell ? getShiftsForEmployeeAndDate(selectedCell.employeeId, selectedCell.date) : []}
                     existingNonShifts={selectedCell ? getNonShiftsForEmployeeAndDate(selectedCell.employeeId, selectedCell.date) : []}
