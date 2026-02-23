@@ -85,7 +85,7 @@ const EmployeeHeaderCell = React.memo(({
       )}
     </div>
   );
-}));
+});
 
 EmployeeHeaderCell.displayName = 'EmployeeHeaderCell';
 
