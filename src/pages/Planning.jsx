@@ -1561,19 +1561,19 @@ export default function Planning() {
                     {/* Shift Modal */}
                     <ShiftFormModal
                     open={showShiftModal}
-        onOpenChange={(open) => {
-          setShowShiftModal(open);
-          if (!open) {
-            setSelectedCell(null);
-          }
-        }}
-        selectedCell={selectedCell}
-        existingShifts={selectedCell ? getShiftsForEmployeeAndDate(selectedCell.employeeId, selectedCell.date) : []}
-        existingNonShifts={selectedCell ? getNonShiftsForEmployeeAndDate(selectedCell.employeeId, selectedCell.date) : []}
-        allShifts={shifts}
-        onSave={(id, data) => saveShiftMutation.mutate({ id, data, captureForUndo: true })}
-        currentUser={currentUser}
-      />
+                    onOpenChange={(open) => {
+                    setShowShiftModal(open);
+                    if (!open) {
+                    setSelectedCell(null);
+                    }
+                    }}
+                    selectedCell={selectedCell}
+                    existingShifts={selectedCell ? getShiftsForEmployeeAndDate(selectedCell.employeeId, selectedCell.date) : []}
+                    existingNonShifts={selectedCell ? getNonShiftsForEmployeeAndDate(selectedCell.employeeId, selectedCell.date) : []}
+                    allShifts={shifts}
+                    onSave={(id, data) => saveShiftMutation.mutate({ id, data, captureForUndo: true })}
+                    currentUser={currentUser}
+                    />
 
       {/* Planning Settings Modal */}
       <PlanningSettingsModal
