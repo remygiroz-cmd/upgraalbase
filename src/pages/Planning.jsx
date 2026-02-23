@@ -482,37 +482,15 @@ export default function Planning() {
     setCurrentDate(new Date(currentYear, currentMonth + 1, 1));
   };
 
-  // Handle team reordering
-  const handleTeamDragEnd = async (result) => {
+  // Handle column reordering via drag & drop
+  const handleTeamDragEnd = (result) => {
     if (!result.destination) return;
+    if (result.source.index === result.destination.index) return;
 
-    const items = Array.from(employees);
-    const [reorderedItem] = items.splice(result.source.index, 1);
-    items.splice(result.destination.index, 0, reorderedItem);
-
-    // Group by teams to update their order
-    const teamOrderMap = new Map();
-    items.forEach((emp, index) => {
-      if (emp.team_id) {
-        if (!teamOrderMap.has(emp.team_id)) {
-          teamOrderMap.set(emp.team_id, index);
-        }
-      }
-    });
-
-    // Update team orders
-    const updatePromises = [];
-    teamOrderMap.forEach((order, teamId) => {
-      const team = allTeams.find(t => t.id === teamId);
-      if (team && team.order !== order) {
-        updatePromises.push(
-          updateTeamMutation.mutateAsync({ id: teamId, data: { order } })
-        );
-      }
-    });
-
-    await Promise.all(updatePromises);
-    toast.success('Ordre des équipes mis à jour');
+    const newOrder = Array.from(employees);
+    const [moved] = newOrder.splice(result.source.index, 1);
+    newOrder.splice(result.destination.index, 0, moved);
+    setColumnOrder(newOrder.map(e => e.id));
   };
 
 
