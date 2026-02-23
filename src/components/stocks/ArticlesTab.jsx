@@ -101,24 +101,23 @@ export default function ArticlesTab() {
     const [draggedArticle] = updatedList.splice(source.index, 1);
     updatedList.splice(destination.index, 0, draggedArticle);
 
-    // Réassigner les ordres séquentiellement (0, 1, 2, 3...)
+    // Calculer le nouvel ordre pour l'article déplacé seulement
+    // En utilisant une valeur entre ses voisins (ordre flottant)
     const orderField = viewMode === 'shopping' ? 'order' : 'storage_order';
-    const updates = [];
-    
-    updatedList.forEach((article, index) => {
-      if (article[orderField] !== index) {
-        updates.push({ id: article.id, [orderField]: index });
-      }
-    });
+    const prev = updatedList[destination.index - 1];
+    const next = updatedList[destination.index + 1];
 
-    // Faire les updates séquentiellement avec délai pour éviter le rate limit
-    if (updates.length > 0) {
-      for (const update of updates) {
-        await base44.entities.Article.update(update.id, { [orderField]: update[orderField] });
-        await new Promise(resolve => setTimeout(resolve, 150));
-      }
-      queryClient.invalidateQueries({ queryKey: ['articles'] });
+    let newOrder;
+    if (!prev) {
+      newOrder = (next?.[orderField] ?? 0) - 1;
+    } else if (!next) {
+      newOrder = (prev[orderField] ?? 0) + 1;
+    } else {
+      newOrder = ((prev[orderField] ?? 0) + (next[orderField] ?? 0)) / 2;
     }
+
+    await base44.entities.Article.update(draggedArticle.id, { [orderField]: newOrder });
+    queryClient.invalidateQueries({ queryKey: ['articles'] });
   };
 
   const handleSave = (data) => {
