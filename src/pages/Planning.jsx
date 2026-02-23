@@ -63,7 +63,14 @@ export default function Planning() {
   const [showFab, setShowFab] = useState(false); // Floating Action Button
   const [isUndoing, setIsUndoing] = useState(false);
   const [isRedoing, setIsRedoing] = useState(false);
-  const [columnOrder, setColumnOrder] = useState([]);
+  const [columnOrder, setColumnOrder] = useState(() => {
+    try {
+      const saved = localStorage.getItem('planning_column_order');
+      return saved ? JSON.parse(saved) : [];
+    } catch { return []; }
+  });
+  const [draggingId, setDraggingId] = useState(null);
+  const [dragOverId, setDragOverId] = useState(null);
   const queryClient = useQueryClient();
 
   // Undo/Redo system
