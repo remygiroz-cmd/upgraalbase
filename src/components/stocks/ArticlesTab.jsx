@@ -111,10 +111,11 @@ export default function ArticlesTab() {
       }
     });
 
-    // Faire les updates séquentiellement pour éviter le rate limit
+    // Faire les updates séquentiellement avec délai pour éviter le rate limit
     if (updates.length > 0) {
       for (const update of updates) {
         await base44.entities.Article.update(update.id, { [orderField]: update[orderField] });
+        await new Promise(resolve => setTimeout(resolve, 150));
       }
       queryClient.invalidateQueries({ queryKey: ['articles'] });
     }
