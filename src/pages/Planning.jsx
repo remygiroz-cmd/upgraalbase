@@ -46,6 +46,7 @@ export default function Planning() {
   const [showClearMonthModal, setShowClearMonthModal] = useState(false);
   const [selectedCPPeriod, setSelectedCPPeriod] = useState(null);
   const [showLeaveRequestModal, setShowLeaveRequestModal] = useState(false);
+  const [showShiftSwapModal, setShowShiftSwapModal] = useState(false);
   
   // État centralisé pour les actions depuis le dropdown
   const [modalState, setModalState] = useState({
