@@ -124,20 +124,20 @@ Deno.serve(async (req) => {
 
     const { orderId } = await req.json();
 
-    // Récupérer la commande
-    const order = await base44.entities.Order.get(orderId);
+    // Récupérer la commande (service role pour éviter les restrictions de droits)
+    const order = await base44Client.asServiceRole.entities.Order.get(orderId);
     if (!order) {
       return Response.json({ error: 'Commande non trouvée' }, { status: 404 });
     }
 
-    // Récupérer le fournisseur
-    const supplier = await base44.entities.Supplier.get(order.supplier_id);
+    // Récupérer le fournisseur (service role)
+    const supplier = await base44Client.asServiceRole.entities.Supplier.get(order.supplier_id);
     if (!supplier || !supplier.email) {
       return Response.json({ error: 'Email du fournisseur non configuré' }, { status: 400 });
     }
 
     // Récupérer les informations de l'établissement
-    const establishments = await base44.entities.Establishment.list();
+    const establishments = await base44Client.asServiceRole.entities.Establishment.list();
     const establishment = establishments[0] || {};
 
     // Générer le PDF
