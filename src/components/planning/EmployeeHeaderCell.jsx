@@ -19,19 +19,27 @@ const EmployeeHeaderCell = React.memo(React.forwardRef(({
     <div
       ref={ref}
       {...props}
-      style={style}
+      style={{
+        ...style,
+        transition: isDragging ? 'none' : 'transform 200ms ease, box-shadow 200ms ease',
+      }}
       className={cn(
-        "border-r border-gray-200 px-2 py-2 text-center min-w-[150px] w-[150px] lg:min-w-[180px] lg:w-[180px] relative group flex-shrink-0",
+        "border-r border-gray-200 px-2 text-center min-w-[150px] w-[150px] lg:min-w-[180px] lg:w-[180px] relative group flex-shrink-0 select-none",
         displayMode === 'compact' ? 'py-1' : 'py-3',
-        isDragging && "bg-orange-100 shadow-2xl opacity-90"
+        isDragging
+          ? "bg-orange-50 shadow-2xl ring-2 ring-orange-400 ring-offset-1 rounded z-50 opacity-95 scale-105"
+          : "hover:bg-gray-50 transition-colors"
       )}
     >
-      {/* Drag handle - only on hover */}
+      {/* Drag handle - full header is draggable, just show indicator */}
       <div
         {...dragHandleProps}
-        className="hidden group-hover:block absolute left-1 top-1/2 -translate-y-1/2 cursor-grab active:cursor-grabbing text-gray-400 hover:text-orange-600 transition-colors"
-      >
-        <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+        className="absolute inset-0 cursor-grab active:cursor-grabbing"
+        title="Glisser pour réorganiser"
+      />
+      {/* Grip icon visible on hover */}
+      <div className="pointer-events-none hidden group-hover:flex absolute top-1 left-1 text-gray-400">
+        <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
           <path d="M8 5a2 2 0 11-4 0 2 2 0 014 0zM12 5a2 2 0 11-4 0 2 2 0 014 0zM8 13a2 2 0 11-4 0 2 2 0 014 0zM12 13a2 2 0 11-4 0 2 2 0 014 0z" />
         </svg>
       </div>
