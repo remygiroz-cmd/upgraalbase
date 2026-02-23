@@ -68,11 +68,21 @@ export default function CoursesTabs({ order }) {
       const saved = localStorage.getItem(storageKey);
       if (saved) {
         const parsed = JSON.parse(saved);
-        // Validate that it matches the current order items (same products)
-        const savedIds = new Set(parsed.map(i => i.product_id));
-        const orderIds = new Set((order.items || []).map(i => i.product_id));
-        // Only restore if order items haven't changed significantly
-        if (parsed.length > 0) return parsed;
+        if (parsed.length > 0) {
+          // Check for new items in the order that are not yet in saved state
+          const savedProductIds = new Set(parsed.map(i => i.product_id));
+          const newItems = (order.items || []).filter(item => !savedProductIds.has(item.product_id));
+          if (newItems.length > 0) {
+            // Append new items as 'a_prendre'
+            const newInstances = newItems.map((item, index) => ({
+              instanceId: `${item.product_id}-new-${Date.now()}-${index}`,
+              ...item,
+              state: 'a_prendre'
+            }));
+            return [...parsed, ...newInstances];
+          }
+          return parsed;
+        }
       }
     } catch (e) { /* ignore */ }
 
