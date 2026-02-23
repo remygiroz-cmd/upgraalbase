@@ -97,6 +97,7 @@ export default function ShiftSwapNotification({ request, currentEmployee, mode =
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['shiftSwapRequests'] });
+      queryClient.invalidateQueries({ queryKey: ['mySwapDecisions'] });
     }
   });
 
