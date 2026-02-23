@@ -100,6 +100,8 @@ export default function Planning() {
 
   // Check if user can modify planning (admin or has planning_modify permission)
   const canModifyPlanning = currentUser?.role === 'admin' || userRole?.permissions?.planning_modify || false;
+  // Check if user can do direct swap (manager/admin roles)
+  const canDoDirectSwap = canDirectSwap(currentUser, userRole);
 
   const currentMonth = currentDate.getMonth();
   const currentYear = currentDate.getFullYear();
