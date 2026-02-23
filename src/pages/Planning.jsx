@@ -1557,9 +1557,8 @@ export default function Planning() {
                     </div>
                     </div>
                     </div>
-                    </div>
 
-      {/* Shift Modal */}
+                    {/* Shift Modal */}
       <ShiftFormModal
         open={showShiftModal}
         onOpenChange={(open) => {
