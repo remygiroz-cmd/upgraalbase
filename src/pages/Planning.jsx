@@ -24,6 +24,7 @@ import ExportComptaModal from '@/components/planning/ExportComptaModal';
 import ApplyTemplatesModal from '@/components/planning/ApplyTemplatesModal';
 import ClearMonthModal from '@/components/planning/ClearMonthModal';
 import DeleteCPModal from '@/components/planning/DeleteCPModal';
+import ShiftSwapModal from '@/components/planning/ShiftSwapModal';
 import { calculateShiftDuration, checkMinimumRest } from '@/components/planning/LegalChecks';
 import { parseLocalDate, formatLocalDate } from '@/components/planning/dateUtils';
 import { isDateInCPPeriod } from '@/components/planning/paidLeaveCalculations';
