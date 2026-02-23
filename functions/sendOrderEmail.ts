@@ -100,15 +100,16 @@ Deno.serve(async (req) => {
     let user = null;
     let sentBy = 'unknown';
 
+    const base44Client = createClientFromRequest(req);
+
     if (isAutomation) {
       // Appel automation: utiliser service role, pas besoin d'utilisateur
       console.log('[INFO] Automation call detected - using service role');
-      const base44Client = createClientFromRequest(req);
       base44 = base44Client.asServiceRole;
       sentBy = 'automation';
     } else {
       // Appel frontend: vérifier l'authentification utilisateur
-      base44 = createClientFromRequest(req);
+      base44 = base44Client;
       user = await base44.auth.me();
 
       // Vérification authentification
