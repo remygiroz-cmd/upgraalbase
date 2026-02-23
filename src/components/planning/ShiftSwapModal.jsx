@@ -150,7 +150,7 @@ export default function ShiftSwapModal({ open, onOpenChange, currentYear, curren
   }, [allShiftsB, shiftAId, allMonthShifts]);
 
   const selectedShiftA = shiftsA.find(s => s.id === shiftAId);
-  const selectedShiftB = shiftsB.find(s => s.id === shiftBId);
+  const selectedShiftB = allShiftsB.find(s => s.id === shiftBId);
   const employeeB = allEmployees.find(e => e.id === employeeBId);
 
   // Validation
