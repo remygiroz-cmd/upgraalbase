@@ -111,13 +111,11 @@ export default function ArticlesTab() {
       }
     });
 
-    // Faire tous les updates en même temps
+    // Faire les updates séquentiellement pour éviter le rate limit
     if (updates.length > 0) {
-      await Promise.all(
-        updates.map(update => 
-          base44.entities.Article.update(update.id, { [orderField]: update[orderField] })
-        )
-      );
+      for (const update of updates) {
+        await base44.entities.Article.update(update.id, { [orderField]: update[orderField] });
+      }
       queryClient.invalidateQueries({ queryKey: ['articles'] });
     }
   };
