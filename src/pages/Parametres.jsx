@@ -406,12 +406,7 @@ export default function Parametres() {
             </TabsContent>
           )}
 
-          {/* Optimisation Tab */}
-          {isAdmin && (
-            <TabsContent value="optimisation">
-              <OptimisationMasseSalariale />
-            </TabsContent>
-          )}
+
         </Tabs>
 
         {/* Save Button - Only for user preference tabs */}
