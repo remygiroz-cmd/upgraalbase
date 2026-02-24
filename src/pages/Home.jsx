@@ -637,6 +637,9 @@ export default function Home() {
       </div>
 
       <div className="max-w-4xl mx-auto px-4 py-6 space-y-6">
+        {/* Departure Order Home Block */}
+        <DepartureOrderHomeBlock currentUser={currentUser} currentEmployee={currentEmployee} />
+
         {/* Today's Staff Summary - EXACT same as Planning */}
         {currentEmployee && sortedEmployees.length > 0 && (
           <TodaySummary
