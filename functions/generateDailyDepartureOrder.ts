@@ -125,24 +125,21 @@ Deno.serve(async (req) => {
       });
       const totalWorkedHours = totalWorkedMinutes / 60;
 
-      // Get contract hours
-      let contractHoursWeekly = 0;
-      if (emp.contract_hours_weekly) {
-        const parts = String(emp.contract_hours_weekly).split(':');
-        contractHoursWeekly = parseInt(parts[0] || 0) + (parseInt(parts[1] || 0) / 60);
-      } else if (emp.contract_hours) {
-        const parts = String(emp.contract_hours).split(':');
-        contractHoursWeekly = (parseInt(parts[0] || 0) + (parseInt(parts[1] || 0) / 60)) / (52 / 12);
-      }
+      // Get contract monthly hours directly from contract_hours field (most accurate)
+      const parseHours = (val) => {
+        if (!val) return 0;
+        const str = String(val).trim();
+        if (str.includes(':')) {
+          const [h, m] = str.split(':').map(Number);
+          return h + (m || 0) / 60;
+        }
+        return parseFloat(str.replace(',', '.')) || 0;
+      };
 
-      // Calculate contract monthly hours
-      // month from monthKey is 1-indexed (e.g. 2 for February)
-      // new Date(year, month, 0) gives last day of month-1, so we need month directly
-      const daysInMonth = new Date(year, month, 0).getDate(); // month=2 → Feb last day ✓ (JS month is 0-indexed, so month=2 means March, day=0 = last day of Feb)
-      const weeksInMonth = daysInMonth / 7;
-      const contractMonthlyHours = contractHoursWeekly * weeksInMonth;
+      // Use monthly contract hours directly
+      const contractMonthlyHours = parseHours(emp.contract_hours);
 
-      console.log(`  Contract calc ${emp.first_name}: weekly=${contractHoursWeekly.toFixed(2)}h, daysInMonth=${daysInMonth}, weeksInMonth=${weeksInMonth.toFixed(2)}, contractMonthly=${contractMonthlyHours.toFixed(2)}h`);
+      console.log(`  Contract calc ${emp.first_name}: contract_hours=${emp.contract_hours}, contractMonthly=${contractMonthlyHours.toFixed(2)}h, workedHours=${totalWorkedHours.toFixed(2)}h`);
 
       // Calculate extra hours (complementary for part-time, overtime for full-time)
       const extraHours = Math.max(0, totalWorkedHours - contractMonthlyHours);
