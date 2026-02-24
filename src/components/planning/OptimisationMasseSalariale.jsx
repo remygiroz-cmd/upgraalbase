@@ -26,9 +26,9 @@ export default function OptimisationMasseSalariale() {
     queryFn: () => base44.entities.AppSettings.filter({ setting_key: 'optimisation_masse_salariale' })
   });
 
-  const { data: positions = [] } = useQuery({
-    queryKey: ['positions'],
-    queryFn: () => base44.entities.Position.filter({ is_active: true })
+  const { data: teams = [] } = useQuery({
+    queryKey: ['teams'],
+    queryFn: () => base44.entities.Team.filter({ is_active: true })
   });
 
   const { data: roles = [] } = useQuery({
