@@ -166,11 +166,13 @@ export default function VehiclesSettings() {
 
   return (
     <div className="space-y-6 pb-20">
-      <PageHeader
-        title="Paramètres Parc Véhicules"
-        description="Configuration complète du module, assignation, dashboard et conformité"
-        icon={<Zap className="w-6 h-6" />}
-      />
+      <div className="mb-6">
+        <div className="flex items-center gap-3 mb-2">
+          <Zap className="w-6 h-6 text-purple-600" />
+          <h1 className="text-3xl font-bold text-gray-900">Paramètres Parc Véhicules</h1>
+        </div>
+        <p className="text-gray-600">Configuration complète du module, assignation, dashboard et conformité</p>
+      </div>
 
       <Tabs defaultValue="assignation" className="w-full">
         <TabsList className="grid w-full grid-cols-4 lg:grid-cols-8">
