@@ -111,10 +111,7 @@ Deno.serve(async (req) => {
       const emp = allEmployees.find(e => e.id === empId);
       if (!emp) return null;
 
-      // Filter this employee's shifts for the month
-      const empMonthShifts = allMonthShifts.filter(s => s.employee_id === empId);
-
-      const { comp, ot } = computeScore(emp, empMonthShifts, hoursType);
+      const { comp, ot } = getScoreFromPersisted(empId, hoursType);
       const isPartTime = emp.work_time_type === 'part_time';
 
       let score = 0;
