@@ -186,7 +186,7 @@ export default function ShiftSwapModal({ open, onOpenChange, currentYear, curren
     return null;
   }, [shiftAId, shiftBId, selectedShiftA, selectedShiftB, pendingShiftIds, allMonthShifts]);
 
-  const isValid = shiftAId && shiftBId && !validationError && currentEmployee;
+  const isValid = shiftAId && shiftBId && !validationError && employeeA;
 
   const submitMutation = useMutation({
     mutationFn: async () => {
