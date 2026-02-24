@@ -104,20 +104,58 @@ Deno.serve(async (req) => {
       const emp = allEmployees.find(e => e.id === empId);
       if (!emp) return null;
 
-      const recap = allRecaps.find(r => r.employee_id === empId);
+      // Calculate score directly from shifts for the month - no reliance on stored recaps
+      // Get all employee shifts for the current month
+      const empMonthShifts = allMonthShifts.filter(s =>
+        s.employee_id === empId &&
+        s.status !== 'absent' && s.status !== 'leave' && s.status !== 'cancelled'
+      );
 
-      // Calculate score based on hours type
-      // Use stored calculated values from MonthlyRecap (complementaryHours10/25, overtimeHours25/50)
-      // These are populated by the frontend calculation engine and saved to DB
-      let score = 0;
-      if (recap) {
-        const comp = (recap.complementaryHours10 || 0) + (recap.complementaryHours25 || 0);
-        const ot = (recap.overtimeHours25 || 0) + (recap.overtimeHours50 || 0);
+      // Calculate total worked hours for the month
+      let totalWorkedMinutes = 0;
+      empMonthShifts.forEach(s => {
+        if (s.start_time && s.end_time) {
+          const [sh, sm] = s.start_time.split(':').map(Number);
+          const [eh, em] = s.end_time.split(':').map(Number);
+          let mins = (eh * 60 + em) - (sh * 60 + sm);
+          if (mins < 0) mins += 24 * 60;
+          mins -= (s.break_minutes || 0);
+          totalWorkedMinutes += Math.max(0, mins);
+        }
+      });
+      const totalWorkedHours = totalWorkedMinutes / 60;
 
-        if (hoursType === 'complementary') score = comp;
-        else if (hoursType === 'overtime') score = ot;
-        else score = comp + ot;
+      // Get contract hours
+      let contractHoursWeekly = 0;
+      if (emp.contract_hours_weekly) {
+        const parts = String(emp.contract_hours_weekly).split(':');
+        contractHoursWeekly = parseInt(parts[0] || 0) + (parseInt(parts[1] || 0) / 60);
+      } else if (emp.contract_hours) {
+        const parts = String(emp.contract_hours).split(':');
+        contractHoursWeekly = (parseInt(parts[0] || 0) + (parseInt(parts[1] || 0) / 60)) / (52 / 12);
       }
+
+      // Calculate contract monthly hours (approximate: weeks in month × weekly hours)
+      const daysInMonth = new Date(year, month, 0).getDate();
+      const weeksInMonth = daysInMonth / 7;
+      const contractMonthlyHours = contractHoursWeekly * weeksInMonth;
+
+      // Calculate extra hours (complementary for part-time, overtime for full-time)
+      const extraHours = Math.max(0, totalWorkedHours - contractMonthlyHours);
+
+      let score = 0;
+      const isPartTime = emp.work_time_type === 'part_time';
+
+      if (isPartTime) {
+        // Complementary hours
+        if (hoursType === 'complementary' || hoursType === 'both') score += extraHours;
+      } else {
+        // Overtime hours
+        if (hoursType === 'overtime' || hoursType === 'both') score += extraHours;
+        if (hoursType === 'complementary') score = 0; // full-time has no complementary
+      }
+
+      console.log(`  Score ${emp.first_name} ${emp.last_name}: worked=${totalWorkedHours.toFixed(2)}h, contract=${contractMonthlyHours.toFixed(2)}h, extra=${extraHours.toFixed(2)}h, score=${score.toFixed(2)}, partTime=${isPartTime}`);
 
       // Calculate today's total shift duration
       const todayShifts = serviceShifts.filter(s => s.employee_id === empId);
