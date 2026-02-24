@@ -1,8 +1,9 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
-import { TrendingDown, Clock } from 'lucide-react';
+import { TrendingDown, Clock, AlertCircle, RefreshCw } from 'lucide-react';
 import { formatLocalDate } from '@/components/planning/dateUtils';
+import { Button } from '@/components/ui/button';
 
 export default function DepartureOrderBlock({ date, currentUser }) {
   const today = date || formatLocalDate(new Date());
