@@ -93,7 +93,7 @@ export default function ShiftSwapModal({ open, onOpenChange, currentYear, curren
 
   // All active employees
   const { data: allEmployees = [] } = useQuery({
-    queryKey: ['employees'],
+    queryKey: ['activeEmployees'],
     queryFn: () => base44.entities.Employee.filter({ is_active: true })
   });
 
