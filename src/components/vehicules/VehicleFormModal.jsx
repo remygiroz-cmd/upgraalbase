@@ -37,9 +37,20 @@ export default function VehicleFormModal({ open, onOpenChange, vehicle = null })
       if (!data.marque || !data.modele || !data.immatriculation) {
         throw new Error('Marque, modèle et immatriculation sont obligatoires.');
       }
+      // Convert numeric fields: empty string → remove key, otherwise parse as number
       ['km_initial', 'km_actuel', 'loa_km_total_autorises', 'loa_cout_km_supp',
         'batterie_capacite_kwh', 'km_montage_pneus', 'seuil_alerte_km_pneus', 'annee']
-        .forEach(k => { if (data[k] !== '' && data[k] !== undefined) data[k] = Number(data[k]); });
+        .forEach(k => {
+          if (data[k] === '' || data[k] === null || data[k] === undefined) {
+            delete data[k];
+          } else {
+            data[k] = Number(data[k]);
+          }
+        });
+      // Remove empty string date/string fields
+      ['loa_date_debut', 'loa_date_fin', 'date_mise_en_service', 'date_montage_pneus',
+        'couleur', 'photo_url', 'notes', 'type_prise', 'carburant_type']
+        .forEach(k => { if (data[k] === '') delete data[k]; });
 
       if (vehicle?.id) {
         return base44.entities.Vehicle.update(vehicle.id, data);
