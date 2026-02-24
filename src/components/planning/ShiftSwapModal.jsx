@@ -70,6 +70,7 @@ function calcDuration(start, end) {
 
 export default function ShiftSwapModal({ open, onOpenChange, currentYear, currentMonth, monthKey }) {
   const queryClient = useQueryClient();
+  const [employeeAId, setEmployeeAId] = useState('');
   const [employeeBId, setEmployeeBId] = useState('');
   const [shiftAId, setShiftAId] = useState('');
   const [shiftBId, setShiftBId] = useState('');
@@ -78,6 +79,7 @@ export default function ShiftSwapModal({ open, onOpenChange, currentYear, curren
   // Reset on open
   useEffect(() => {
     if (open) {
+      setEmployeeAId('');
       setEmployeeBId('');
       setShiftAId('');
       setShiftBId('');
@@ -90,6 +92,13 @@ export default function ShiftSwapModal({ open, onOpenChange, currentYear, curren
     queryKey: ['currentUser'],
     queryFn: () => base44.auth.me()
   });
+
+  // Check if user has permission to submit swaps for others
+  const canSubmitForOthers = useMemo(() => {
+    if (!currentUser) return false;
+    const role = currentUser.role?.toLowerCase() || '';
+    return ['admin', 'gérant', 'manager', 'bureau'].some(r => role.includes(r));
+  }, [currentUser]);
 
   // All active employees
   const { data: allEmployees = [] } = useQuery({
