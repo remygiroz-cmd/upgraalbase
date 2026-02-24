@@ -193,39 +193,35 @@ export default function DirectShiftSwapModal({ open, onOpenChange, currentYear, 
         })
       ]);
 
-      // Notifications conditionnelles
-      if (informEmployees) {
-        const dateA = moment(sA.date).format('DD/MM/YYYY');
-        const dateB = moment(sB.date).format('DD/MM/YYYY');
-        const nameA = sA.employee_name || employeeA?.first_name || 'Employé A';
-        const nameB = sB.employee_name || employeeB?.first_name || 'Employé B';
-        const managerName = currentUser?.full_name || 'le responsable';
+      // Toujours créer le ShiftSwapRequest pour tracer l'échange (notifications conditionnelles selon informEmployees)
+      const dateA = moment(sA.date).format('DD/MM/YYYY');
+      const dateB = moment(sB.date).format('DD/MM/YYYY');
+      const nameA = sA.employee_name || employeeA?.first_name || 'Employé A';
+      const nameB = sB.employee_name || employeeB?.first_name || 'Employé B';
+      const managerName = currentUser?.full_name || 'le responsable';
 
-        await Promise.all([
-          base44.entities.ShiftSwapRequest.create({
-            status: 'APPROVED',
-            employee_a_id: sA.employee_id,
-            employee_a_name: nameA,
-            shift_a_id: sA.id,
-            shift_a_date: sA.date,
-            shift_a_start_time: sA.start_time,
-            shift_a_end_time: sA.end_time,
-            shift_a_position: sA.position || '',
-            employee_b_id: sB.employee_id,
-            employee_b_name: nameB,
-            shift_b_id: sB.id,
-            shift_b_date: sB.date,
-            shift_b_start_time: sB.start_time,
-            shift_b_end_time: sB.end_time,
-            shift_b_position: sB.position || '',
-            month_key: `${sA.date?.substring(0, 7)}`,
-            message: `Échange direct effectué par ${managerName}. ${nameA} : le ${dateB} à la place du ${dateA}. ${nameB} : le ${dateA} à la place du ${dateB}.`,
-            decided_at: new Date().toISOString(),
-            decided_by_user_email: currentUser?.email || '',
-            rejection_reason: ''
-          })
-        ]);
-      }
+      await base44.entities.ShiftSwapRequest.create({
+        status: 'APPROVED',
+        employee_a_id: sA.employee_id,
+        employee_a_name: nameA,
+        shift_a_id: sA.id,
+        shift_a_date: sA.date,
+        shift_a_start_time: sA.start_time,
+        shift_a_end_time: sA.end_time,
+        shift_a_position: sA.position || '',
+        employee_b_id: sB.employee_id,
+        employee_b_name: nameB,
+        shift_b_id: sB.id,
+        shift_b_date: sB.date,
+        shift_b_start_time: sB.start_time,
+        shift_b_end_time: sB.end_time,
+        shift_b_position: sB.position || '',
+        month_key: `${sA.date?.substring(0, 7)}`,
+        message: `Échange direct effectué par ${managerName}. ${nameA} : le ${dateB} à la place du ${dateA}. ${nameB} : le ${dateA} à la place du ${dateB}.`,
+        decided_at: new Date().toISOString(),
+        decided_by_user_email: currentUser?.email || '',
+        rejection_reason: ''
+      });
 
       return { informEmployees };
     },
