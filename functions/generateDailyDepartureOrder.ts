@@ -56,6 +56,9 @@ Deno.serve(async (req) => {
   // Load all employees
   const allEmployees = await b.entities.Employee.filter({ is_active: true });
 
+  // Load all teams (to match team name → team id → employees)
+  const allTeams = await b.entities.Team.filter({ is_active: true });
+
   const results = [];
 
   for (const service of services) {
