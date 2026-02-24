@@ -4,7 +4,7 @@ import { base44 } from '@/api/base44Client';
 import { TrendingDown, Clock } from 'lucide-react';
 import { formatLocalDate } from '@/components/planning/dateUtils';
 
-export default function DepartureOrderBlock({ date }) {
+export default function DepartureOrderBlock({ date, currentUser }) {
   const today = date || formatLocalDate(new Date());
 
   const { data: settingsArr = [] } = useQuery({
@@ -15,6 +15,13 @@ export default function DepartureOrderBlock({ date }) {
 
   const settings = settingsArr[0];
 
+  const { data: userRoles = [] } = useQuery({
+    queryKey: ['roles'],
+    queryFn: () => base44.entities.Role.list(),
+    staleTime: 10 * 60 * 1000,
+    enabled: !!(settings?.enabled)
+  });
+
   const { data: orders = [] } = useQuery({
     queryKey: ['departureOrders', today],
     queryFn: () => base44.entities.DepartureOrder.filter({ date: today }),
@@ -22,7 +29,17 @@ export default function DepartureOrderBlock({ date }) {
     staleTime: 5 * 60 * 1000
   });
 
-  if (!settings?.enabled || !settings?.show_in_planning) return null;
+  if (!settings?.enabled) return null;
+
+  // Check role visibility (same logic as Home block)
+  const allowedRoleIds = settings.home_roles || [];
+  const isAdmin = currentUser?.role === 'admin';
+  if (!isAdmin && allowedRoleIds.length > 0) {
+    const userRoleRecord = userRoles.find(r => r.id === currentUser?.role_id);
+    if (!userRoleRecord || !allowedRoleIds.includes(userRoleRecord.id)) return null;
+  } else if (!isAdmin && allowedRoleIds.length === 0) {
+    return null;
+  }
 
   const successOrders = orders.filter(o => o.status === 'success' && o.ordered_employees?.length > 0);
   if (successOrders.length === 0) return null;
