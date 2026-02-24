@@ -43,13 +43,14 @@ Deno.serve(async (req) => {
   const lastDay = new Date(year, month + 1, 0).getDate();
   const monthEnd = `${monthKey}-${String(lastDay).padStart(2, '0')}`;
 
-  // Load shifts for current month — fetch last 31 days worth which covers exactly the month
-  // We fetch all shifts and filter strictly to [monthStart, monthEnd]
-  const allShiftsRaw = await b.entities.Shift.filter({ month_key: monthKey });
-  const allMonthShifts = allShiftsRaw.length > 0
-    ? allShiftsRaw
-    : (await b.entities.Shift.list('-date', 1000)).filter(s => s.date >= monthStart && s.date <= monthEnd);
-  console.log(`📅 Month shifts: ${allMonthShifts.length} (${monthStart}→${monthEnd})`);
+  // Load the active reset version for this month
+  const planningMonths = await b.entities.PlanningMonth.filter({ month_key: monthKey });
+  const activeResetVersion = planningMonths[0]?.reset_version ?? 0;
+
+  // Load shifts for current month using month_key + active reset_version (to avoid counting old versions)
+  const allShiftsRaw = await b.entities.Shift.filter({ month_key: monthKey, reset_version: activeResetVersion });
+  const allMonthShifts = allShiftsRaw;
+  console.log(`📅 Month shifts: ${allMonthShifts.length} (month_key=${monthKey}, reset_version=${activeResetVersion})`);
 
   // Load non-shift events for today (to exclude absent/leave employees)
   const allNonShifts = await b.entities.NonShiftEvent.filter({ date: todayStr });
