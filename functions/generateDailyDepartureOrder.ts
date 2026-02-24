@@ -50,9 +50,11 @@ Deno.serve(async (req) => {
   const allNonShifts = await b.entities.NonShiftEvent.filter({ date: todayStr });
   const employeeIdsOnNonShift = new Set(allNonShifts.map(ns => ns.employee_id));
 
-  // Load monthly recaps for current month - filter by month_key and take the most recent per employee
+  // Load monthly recaps for current month using month_key (YYYY-MM)
   const allRecapsRaw = await b.entities.MonthlyRecap.filter({ month_key: monthKey });
   
+  console.log(`📊 MonthlyRecap query: month_key=${monthKey}, found ${allRecapsRaw.length} records`);
+
   // Deduplicate: keep the most recently updated recap per employee
   const recapsByEmployee = {};
   for (const recap of allRecapsRaw) {
@@ -62,11 +64,45 @@ Deno.serve(async (req) => {
     }
   }
   const allRecaps = Object.values(recapsByEmployee);
-  
-  console.log(`📊 Recaps found: ${allRecapsRaw.length} raw, ${allRecaps.length} after dedup`);
-  allRecaps.forEach(r => {
-    console.log(`  - ${r.employee_id}: comp10=${r.complementaryHours10} comp25=${r.complementaryHours25} ot25=${r.overtimeHours25} ot50=${r.overtimeHours50} | month_key=${r.month_key}`);
-  });
+
+  // Helper: parse a value that might be "3.6h", "3,6", or a number
+  function parseHours(val) {
+    if (val === null || val === undefined) return null;
+    if (typeof val === 'number') return val;
+    const str = String(val).replace(',', '.').replace(/[^0-9.]/g, '');
+    const n = parseFloat(str);
+    return isNaN(n) ? null : n;
+  }
+
+  // Helper: get complementary hours from a recap record with full fallback chain
+  function getComplementaryHours(recap) {
+    if (!recap) return { value: 0, source: 'no_recap' };
+
+    // Fallback chain
+    const v1 = parseHours(recap.complementaryHours);
+    if (v1 !== null) return { value: v1, source: 'complementaryHours', raw: recap.complementaryHours };
+
+    const v2 = parseHours(recap.complementaryHoursTotal);
+    if (v2 !== null) return { value: v2, source: 'complementaryHoursTotal', raw: recap.complementaryHoursTotal };
+
+    const a = parseHours(recap.complementaryHours10);
+    const b2 = parseHours(recap.complementaryHours25);
+    if (a !== null || b2 !== null) {
+      return { value: (a || 0) + (b2 || 0), source: 'complementaryHours10+25', raw: `${recap.complementaryHours10}+${recap.complementaryHours25}` };
+    }
+
+    const c = parseHours(recap.complementary_10);
+    const d = parseHours(recap.complementary_25);
+    if (c !== null || d !== null) {
+      return { value: (c || 0) + (d || 0), source: 'complementary_10+25', raw: `${recap.complementary_10}+${recap.complementary_25}` };
+    }
+
+    const v5 = parseHours(recap.hComplementaires);
+    if (v5 !== null) return { value: v5, source: 'hComplementaires', raw: recap.hComplementaires };
+
+    console.warn(`⚠️ No complementary hours field found for employee ${recap.employee_id}`);
+    return { value: 0, source: 'not_found' };
+  }
 
   // Load all employees
   const allEmployees = await b.entities.Employee.filter({ is_active: true });
