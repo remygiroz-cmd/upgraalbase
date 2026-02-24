@@ -282,13 +282,15 @@ export default function Planning() {
       const keyB = `${swap.employee_b_id}_${swap.shift_a_date}`;
       map.set(keyA, {
         otherName: swap.employee_b_name,
-        originalDate: swap.shift_a_date, // A's original date
-        otherDate: swap.shift_b_date
+        originalDate: swap.shift_a_date,
+        otherDate: swap.shift_b_date,
+        swapRequestId: swap.id
       });
       map.set(keyB, {
         otherName: swap.employee_a_name,
-        originalDate: swap.shift_b_date, // B's original date
-        otherDate: swap.shift_a_date
+        originalDate: swap.shift_b_date,
+        otherDate: swap.shift_a_date,
+        swapRequestId: swap.id
       });
     }
     return map;
