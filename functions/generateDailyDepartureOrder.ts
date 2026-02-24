@@ -142,8 +142,11 @@ Deno.serve(async (req) => {
         return parseFloat(str.replace(',', '.')) || 0;
       };
 
-      // Use monthly contract hours directly
-      const contractMonthlyHours = parseHours(emp.contract_hours);
+      // Pro-rate contract hours to elapsed days (same as frontend recap logic)
+      const daysInMonth = new Date(year, month, 0).getDate(); // month is 1-indexed
+      const todayDayNum = parseInt(todayStr.split('-')[2]);
+      const elapsedFraction = todayDayNum / daysInMonth;
+      const contractMonthlyHours = parseHours(emp.contract_hours) * elapsedFraction;
 
       // Calculate extra hours (complementary for part-time, overtime for full-time)
       const extraHours = Math.max(0, totalWorkedHours - contractMonthlyHours);
