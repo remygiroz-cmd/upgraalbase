@@ -91,151 +91,82 @@ Deno.serve(async (req) => {
     return Math.max(0, mins / 60);
   }
 
-  // ─── Compute complementary hours for a part-time employee this month ─────
-  // Logic mirrors the weekly calc: sum complementary per week, then aggregate
-  function computeComplementaryHours(employee, monthShifts) {
-    const contractHoursWeekly = parseContractHours(employee.contract_hours_weekly) || 0;
-    if (contractHoursWeekly <= 0) return 0;
-
-    // Build the set of contractual worked days-of-week
-    const weeklySchedule = employee.weekly_schedule || {};
-    const dayMap = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
-    const workedDaysOfWeek = new Set();
-    dayMap.forEach((dayName, dayIndex) => {
-      if (weeklySchedule[dayName]?.worked) workedDaysOfWeek.add(dayIndex);
-    });
-    const workDaysPerWeek = employee.work_days_per_week || workedDaysOfWeek.size || 5;
-    if (workedDaysOfWeek.size === 0) {
-      for (let i = 0; i < workDaysPerWeek; i++) workedDaysOfWeek.add((i + 1) % 7);
-    }
-    const dailyContractHours = contractHoursWeekly / workDaysPerWeek;
-
-    // Group shifts by ISO week (Monday date as key)
-    const weekMap = {};
-    for (const shift of monthShifts) {
-      if (shift.employee_id !== employee.id) continue;
-      if (shift.status === 'absent' || shift.status === 'leave') continue;
-      // Get Monday of this shift's week
-      const d = new Date(shift.date);
-      const dow = d.getDay();
-      const diff = dow === 0 ? -6 : 1 - dow;
-      const monday = new Date(d);
-      monday.setDate(monday.getDate() + diff);
-      const weekKey2 = `${monday.getFullYear()}-${String(monday.getMonth()+1).padStart(2,'0')}-${String(monday.getDate()).padStart(2,'0')}`;
-      if (!weekMap[weekKey2]) weekMap[weekKey2] = { workedHours: 0, base: 0, counted: false };
-    }
-
-    // For each week touching the month, calculate base and worked hours
-    // Build full week list from month boundaries
+  // ─── Build all week-start dates (Mondays) that touch the current month ───
+  function getWeeksOfMonth() {
     const weeksSet = new Set();
     for (let day = 1; day <= lastDay; day++) {
       const d = new Date(year, month, day);
       const dow = d.getDay();
       const diff = dow === 0 ? -6 : 1 - dow;
-      const monday = new Date(d);
-      monday.setDate(monday.getDate() + diff);
-      const wk = `${monday.getFullYear()}-${String(monday.getMonth()+1).padStart(2,'0')}-${String(monday.getDate()).padStart(2,'0')}`;
-      weeksSet.add(wk);
+      const mon = new Date(d);
+      mon.setDate(mon.getDate() + diff);
+      weeksSet.add(`${mon.getFullYear()}-${String(mon.getMonth()+1).padStart(2,'0')}-${String(mon.getDate()).padStart(2,'0')}`);
     }
-
-    let totalComp = 0;
-    let totalBase = 0;
-
-    for (const weekMondayStr of weeksSet) {
-      // Get all 7 days of this week
-      const weekDates = [];
-      for (let i = 0; i < 7; i++) {
-        const d = new Date(weekMondayStr);
-        d.setDate(d.getDate() + i);
-        weekDates.push(`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`);
-      }
-      // Only count days visible in the month
-      const visibleDates = weekDates.filter(d => d >= monthStart && d <= monthEnd);
-
-      // Count contractual days visible
-      let contractDaysVisible = 0;
-      for (const dateStr of visibleDates) {
-        const dow = new Date(dateStr).getDay();
-        if (workedDaysOfWeek.has(dow)) contractDaysVisible++;
-      }
-      const weekBase = contractDaysVisible * dailyContractHours;
-      totalBase += weekBase;
-
-      // Sum worked hours for this week (visible dates only)
-      let weekHours = 0;
-      for (const dateStr of visibleDates) {
-        const dayShifts = monthShifts.filter(s =>
-          s.employee_id === employee.id &&
-          s.date === dateStr &&
-          s.status !== 'absent' && s.status !== 'leave'
-        );
-        weekHours += dayShifts.reduce((sum, s) => sum + shiftDuration(s), 0);
-      }
-
-      const weekComp = Math.max(0, weekHours - weekBase);
-      totalComp += weekComp;
-    }
-
-    // Monthly 10%/25% split (but we only need total for ranking)
-    const totalComplementaryHours = totalComp;
-    console.log(`  [CALC] ${employee.first_name} ${employee.last_name}: contractWeekly=${contractHoursWeekly}h isPartTime=${employee.work_time_type} totalBase=${totalBase.toFixed(2)}h totalComp=${totalComplementaryHours.toFixed(2)}h`);
-    return totalComplementaryHours;
+    return [...weeksSet];
   }
 
-  // ─── Compute overtime hours for a full-time employee this month ───────────
-  function computeOvertimeHours(employee, monthShifts) {
-    const contractHoursWeekly = parseContractHours(employee.contract_hours_weekly) || 35;
-    const workDaysPerWeek = employee.work_days_per_week || 5;
-    const weeklySchedule = employee.weekly_schedule || {};
+  function getWeekDates(mondayStr) {
+    const dates = [];
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(mondayStr);
+      d.setDate(d.getDate() + i);
+      dates.push(`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`);
+    }
+    return dates;
+  }
+
+  // ─── Compute score (complementary or overtime hours) for one employee ─────
+  function computeScore(emp, empMonthShifts, hoursTypeParam) {
+    const contractHoursWeekly = parseContractHours(emp.contract_hours_weekly) || 0;
+    const isPartTime = emp.work_time_type === 'part_time';
+
+    // For part-time with no contract, score = 0
+    if (isPartTime && contractHoursWeekly <= 0) return { comp: 0, ot: 0 };
+
+    const workDaysPerWeek = emp.work_days_per_week || 5;
+    const weeklySchedule = emp.weekly_schedule || {};
     const dayMap = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
     const workedDaysOfWeek = new Set();
-    dayMap.forEach((dayName, dayIndex) => {
-      if (weeklySchedule[dayName]?.worked) workedDaysOfWeek.add(dayIndex);
-    });
+    dayMap.forEach((name, idx) => { if (weeklySchedule[name]?.worked) workedDaysOfWeek.add(idx); });
     if (workedDaysOfWeek.size === 0) {
       for (let i = 0; i < workDaysPerWeek; i++) workedDaysOfWeek.add((i + 1) % 7);
     }
-    const dailyContractHours = contractHoursWeekly / workDaysPerWeek;
+    const dailyContractHours = contractHoursWeekly / (workedDaysOfWeek.size || workDaysPerWeek);
 
-    const weeksSet = new Set();
-    for (let day = 1; day <= lastDay; day++) {
-      const d = new Date(year, month, day);
-      const dow = d.getDay();
-      const diff = dow === 0 ? -6 : 1 - dow;
-      const monday = new Date(d);
-      monday.setDate(monday.getDate() + diff);
-      const wk = `${monday.getFullYear()}-${String(monday.getMonth()+1).padStart(2,'0')}-${String(monday.getDate()).padStart(2,'0')}`;
-      weeksSet.add(wk);
-    }
+    const weeks = getWeeksOfMonth();
+    let totalComp = 0;
+    let totalOt = 0;
 
-    let totalOvertime = 0;
-    for (const weekMondayStr of weeksSet) {
-      const weekDates = [];
-      for (let i = 0; i < 7; i++) {
-        const d = new Date(weekMondayStr);
-        d.setDate(d.getDate() + i);
-        weekDates.push(`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`);
-      }
-      const visibleDates = weekDates.filter(d => d >= monthStart && d <= monthEnd);
+    for (const mondayStr of weeks) {
+      const allWeekDates = getWeekDates(mondayStr);
+      const visibleDates = allWeekDates.filter(d => d >= monthStart && d <= monthEnd);
+
+      // Count contractual days visible in the month for this week
       let contractDaysVisible = 0;
       for (const dateStr of visibleDates) {
-        const dow = new Date(dateStr).getDay();
-        if (workedDaysOfWeek.has(dow)) contractDaysVisible++;
+        if (workedDaysOfWeek.has(new Date(dateStr).getDay())) contractDaysVisible++;
       }
       const weekBase = contractDaysVisible * dailyContractHours;
+
+      // Sum worked hours (only this employee's shifts)
       let weekHours = 0;
       for (const dateStr of visibleDates) {
-        const dayShifts = monthShifts.filter(s =>
-          s.employee_id === employee.id &&
-          s.date === dateStr &&
-          s.status !== 'absent' && s.status !== 'leave'
+        const dayShifts = empMonthShifts.filter(s =>
+          s.date === dateStr && s.status !== 'absent' && s.status !== 'leave'
         );
         weekHours += dayShifts.reduce((sum, s) => sum + shiftDuration(s), 0);
       }
-      totalOvertime += Math.max(0, weekHours - weekBase);
+
+      const diff = weekHours - weekBase;
+      if (isPartTime) {
+        totalComp += Math.max(0, diff);
+      } else {
+        totalOt += Math.max(0, diff);
+      }
     }
-    console.log(`  [CALC] ${employee.first_name} ${employee.last_name}: contractWeekly=${contractHoursWeekly}h isFullTime totalOvertime=${totalOvertime.toFixed(2)}h`);
-    return totalOvertime;
+
+    console.log(`  [CALC] ${emp.first_name} ${emp.last_name}: isPartTime=${isPartTime} contract=${contractHoursWeekly}h/wk dailyBase=${dailyContractHours.toFixed(2)}h comp=${totalComp.toFixed(2)}h ot=${totalOt.toFixed(2)}h`);
+    return { comp: totalComp, ot: totalOt };
   }
 
   const results = [];
