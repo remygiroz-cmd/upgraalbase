@@ -270,12 +270,26 @@ export default function Planning() {
     enabled: !!monthKey
   });
 
-  // Build a lookup: shiftId → swap info
+  // Build a lookup: "employeeId_date" → swap info
+  // After a swap, employee A now works on shift_b_date (originally employee B's date)
+  // and employee B now works on shift_a_date (originally employee A's date)
   const swapLookup = React.useMemo(() => {
     const map = new Map();
     for (const swap of approvedSwaps) {
-      map.set(swap.shift_a_id, { otherName: swap.employee_b_name, otherDate: swap.shift_b_date, otherTime: `${swap.shift_b_start_time}-${swap.shift_b_end_time}`, myDate: swap.shift_a_date, myTime: `${swap.shift_a_start_time}-${swap.shift_a_end_time}` });
-      map.set(swap.shift_b_id, { otherName: swap.employee_a_name, otherDate: swap.shift_a_date, otherTime: `${swap.shift_a_start_time}-${swap.shift_a_end_time}`, myDate: swap.shift_b_date, myTime: `${swap.shift_b_start_time}-${swap.shift_b_end_time}` });
+      // Employee A now has shift_b_date (they got B's date)
+      const keyA = `${swap.employee_a_id}_${swap.shift_b_date}`;
+      // Employee B now has shift_a_date (they got A's date)
+      const keyB = `${swap.employee_b_id}_${swap.shift_a_date}`;
+      map.set(keyA, {
+        otherName: swap.employee_b_name,
+        originalDate: swap.shift_a_date, // A's original date
+        otherDate: swap.shift_b_date
+      });
+      map.set(keyB, {
+        otherName: swap.employee_a_name,
+        originalDate: swap.shift_b_date, // B's original date
+        otherDate: swap.shift_a_date
+      });
     }
     return map;
   }, [approvedSwaps]);
