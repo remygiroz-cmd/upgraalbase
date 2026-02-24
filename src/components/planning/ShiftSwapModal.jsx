@@ -113,6 +113,14 @@ export default function ShiftSwapModal({ open, onOpenChange, currentYear, curren
     return allEmployees.find(e => norm(e.email) === norm(currentUser.email));
   }, [currentUser, allEmployees]);
 
+  // Employee A (could be different from currentUser if canSubmitForOthers)
+  const employeeA = useMemo(() => {
+    if (canSubmitForOthers && employeeAId) {
+      return allEmployees.find(e => e.id === employeeAId);
+    }
+    return currentEmployee;
+  }, [canSubmitForOthers, employeeAId, currentEmployee, allEmployees]);
+
   // All shifts for the current month
   const { data: allMonthShifts = [] } = useQuery({
     queryKey: ['shifts', currentYear, currentMonth],
