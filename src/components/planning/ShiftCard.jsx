@@ -36,6 +36,7 @@ const ShiftCard = React.memo(function ShiftCard({
   const [tempValue, setTempValue] = useState('');
   const [isSettingEndNow, setIsSettingEndNow] = useState(false);
   const inputRef = useRef(null);
+  const queryClient = useQueryClient();
 
   const calculateDuration = () => {
     const [startH, startM] = shift.start_time.split(':').map(Number);
