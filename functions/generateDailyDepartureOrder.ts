@@ -50,8 +50,23 @@ Deno.serve(async (req) => {
   const allNonShifts = await b.entities.NonShiftEvent.filter({ date: todayStr });
   const employeeIdsOnNonShift = new Set(allNonShifts.map(ns => ns.employee_id));
 
-  // Load monthly recaps for current month
-  const allRecaps = await b.entities.MonthlyRecap.filter({ year, month });
+  // Load monthly recaps for current month - filter by month_key and take the most recent per employee
+  const allRecapsRaw = await b.entities.MonthlyRecap.filter({ month_key: monthKey });
+  
+  // Deduplicate: keep the most recently updated recap per employee
+  const recapsByEmployee = {};
+  for (const recap of allRecapsRaw) {
+    const existing = recapsByEmployee[recap.employee_id];
+    if (!existing || (recap.updated_date > existing.updated_date)) {
+      recapsByEmployee[recap.employee_id] = recap;
+    }
+  }
+  const allRecaps = Object.values(recapsByEmployee);
+  
+  console.log(`📊 Recaps found: ${allRecapsRaw.length} raw, ${allRecaps.length} after dedup`);
+  allRecaps.forEach(r => {
+    console.log(`  - ${r.employee_id}: comp10=${r.complementaryHours10} comp25=${r.complementaryHours25} ot25=${r.overtimeHours25} ot50=${r.overtimeHours50} | month_key=${r.month_key}`);
+  });
 
   // Load all employees
   const allEmployees = await b.entities.Employee.filter({ is_active: true });
