@@ -41,7 +41,12 @@ export default function DepartureOrderBlock({ date, currentUser }) {
     return null;
   }
 
-  const successOrders = orders.filter(o => o.status === 'success' && o.ordered_employees?.length > 0);
+  const activeServices = (settings?.services || []).map(s => s.toLowerCase());
+  const successOrders = orders.filter(o =>
+    o.status === 'success' &&
+    o.ordered_employees?.length > 0 &&
+    (activeServices.length === 0 || activeServices.includes((o.service || '').toLowerCase()))
+  );
   if (successOrders.length === 0) return null;
 
   return (
