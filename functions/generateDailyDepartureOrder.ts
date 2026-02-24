@@ -103,15 +103,12 @@ Deno.serve(async (req) => {
       const recap = allRecaps.find(r => r.employee_id === empId);
 
       // Calculate score based on hours type
+      // Use stored calculated values from MonthlyRecap (complementaryHours10/25, overtimeHours25/50)
+      // These are populated by the frontend calculation engine and saved to DB
       let score = 0;
       if (recap) {
-        const compHours = (recap.complementaryHours10 || 0) + (recap.complementaryHours25 || 0);
-        const otHours = (recap.overtimeHours25 || 0) + (recap.overtimeHours50 || 0);
-
-        // Note: MonthlyRecap stores manual overrides; calculated values come from the calculation engine
-        // Use manual overrides if present, else 0 (live calc not available in backend)
-        const comp = recap.manual_complementary_10 !== undefined ? (recap.manual_complementary_10 || 0) + (recap.manual_complementary_25 || 0) : 0;
-        const ot = recap.manual_overtime_25 !== undefined ? (recap.manual_overtime_25 || 0) + (recap.manual_overtime_50 || 0) : 0;
+        const comp = (recap.complementaryHours10 || 0) + (recap.complementaryHours25 || 0);
+        const ot = (recap.overtimeHours25 || 0) + (recap.overtimeHours50 || 0);
 
         if (hoursType === 'complementary') score = comp;
         else if (hoursType === 'overtime') score = ot;
