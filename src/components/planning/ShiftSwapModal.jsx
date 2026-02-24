@@ -249,20 +249,39 @@ export default function ShiftSwapModal({ open, onOpenChange, currentYear, curren
           {/* Info banner */}
           <div className="bg-purple-50 border border-purple-200 rounded-lg p-3 text-sm text-purple-900">
             <p className="font-semibold mb-1">📋 Principe :</p>
-            <p>Sélectionnez votre shift et le shift d'un collègue à échanger. La demande sera soumise au responsable planning pour validation.</p>
+            <p>Sélectionnez {canSubmitForOthers ? 'le shift à échanger et le shift d\'un collègue' : 'votre shift et le shift d\'un collègue'} à échanger. La demande sera soumise au responsable planning pour validation.</p>
           </div>
 
-          {/* Shift A — Employé connecté */}
+          {/* Employé A selector (only for admin/manager/bureau) */}
+          {canSubmitForOthers && (
+            <div>
+              <Label className="text-sm font-semibold text-gray-900">Employé A *</Label>
+              <Select value={employeeAId} onValueChange={(val) => { setEmployeeAId(val); setShiftAId(''); }}>
+                <SelectTrigger className="mt-1">
+                  <SelectValue placeholder="Choisir un employé..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {allEmployees.map(emp => (
+                    <SelectItem key={emp.id} value={emp.id}>
+                      {emp.first_name} {emp.last_name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+
+          {/* Shift A — Employé A */}
           <div>
             <Label className="text-sm font-semibold text-gray-900">
-              Votre shift (Employé A)
+              {canSubmitForOthers ? 'Shift de l\'employé A' : 'Votre shift'} (Employé A)
             </Label>
             <div className="mt-1 p-2 bg-gray-50 border border-gray-200 rounded text-sm text-gray-700 font-medium">
-              {currentEmployee ? `${currentEmployee.first_name} ${currentEmployee.last_name}` : 'Chargement...'}
+              {employeeA ? `${employeeA.first_name} ${employeeA.last_name}` : 'Chargement...'}
             </div>
-            <Select value={shiftAId} onValueChange={setShiftAId} disabled={!currentEmployee || shiftsA.length === 0}>
+            <Select value={shiftAId} onValueChange={setShiftAId} disabled={!employeeA || shiftsA.length === 0}>
               <SelectTrigger className="mt-2">
-                <SelectValue placeholder={shiftsA.length === 0 ? 'Aucun shift ce mois-ci' : 'Choisir votre shift...'} />
+                <SelectValue placeholder={shiftsA.length === 0 ? 'Aucun shift ce mois-ci' : 'Choisir le shift...'} />
               </SelectTrigger>
               <SelectContent>
                 {shiftsA.map(s => (
