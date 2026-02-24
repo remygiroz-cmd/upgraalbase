@@ -51,10 +51,17 @@ export default function OptimisationMasseSalariale() {
 
   const saveMutation = useMutation({
     mutationFn: async (data) => {
+      const payload = {
+        enabled: data.enabled,
+        services: data.services,
+        hours_type: data.hours_type,
+        home_roles: data.home_roles,
+        show_in_planning: data.show_in_planning,
+      };
       if (settingsArr[0]?.id) {
-        return base44.entities.AppSettings.update(settingsArr[0].id, data);
+        return base44.entities.AppSettings.update(settingsArr[0].id, payload);
       }
-      return base44.entities.AppSettings.create({ setting_key: 'optimisation_masse_salariale', ...data });
+      return base44.entities.AppSettings.create({ setting_key: 'optimisation_masse_salariale', ...payload });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['optimisationSettings'] });
