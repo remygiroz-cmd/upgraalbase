@@ -1454,18 +1454,70 @@ Cordialement"
           </div>
         </div>
 
-        {/* Modal d'override */}
-        {selectedEmployee && selectedAutoValues && (
-          <ExportOverrideModal
-            open={overrideModalOpen}
-            onOpenChange={setOverrideModalOpen}
-            employee={selectedEmployee}
-            monthKey={monthKey}
-            autoValues={selectedAutoValues}
-            existingOverride={overrides.find(o => o.employee_id === selectedEmployee.id)}
-          />
+        {/* Contrôle de cohérence (Admin/Manager only) */}
+        {(currentUser?.role === 'admin' || currentUser?.role_id) && (
+          <div className="mt-6 pt-6 border-t">
+            <h3 className="text-sm font-semibold mb-3 text-gray-900">🔍 Contrôle de cohérence (Admin)</h3>
+
+            {recapsPersisted.length > 0 && (
+              <div className="bg-gray-50 rounded-lg p-3 text-xs space-y-2">
+                <div className="text-gray-700">
+                  <strong>Dernière sync recaps :</strong> {
+                    recapsPersisted.length > 0 && recapsPersisted[0]?.updated_at
+                      ? new Date(recapsPersisted[0].updated_at).toLocaleString('fr-FR')
+                      : 'N/A'
+                  }
+                </div>
+
+                {/* Afficher 3 employés avec le plus de HC */}
+                <div className="mt-2 pt-2 border-t border-gray-200 space-y-1">
+                  {recapsPersisted
+                    .filter(r => r.complementary_hours_10 > 0 || r.complementary_hours_25 > 0)
+                    .sort((a, b) => (b.complementary_hours_ui || 0) - (a.complementary_hours_ui || 0))
+                    .slice(0, 3)
+                    .map((recap, idx) => {
+                      const emp = employees.find(e => e.id === recap.employee_id);
+                      const total = (recap.complementary_hours_10 || 0) + (recap.complementary_hours_25 || 0);
+                      const diff = Math.abs(((recap.complementary_hours_10 || 0) + (recap.complementary_hours_25 || 0)) - (recap.complementary_hours_ui || 0));
+                      const isOK = diff < 0.01;
+
+                      return (
+                        <div key={idx} className={cn(
+                          "px-2 py-1 rounded text-[10px]",
+                          isOK ? "bg-green-100 text-green-900" : "bg-red-100 text-red-900"
+                        )}>
+                          <strong>{emp?.first_name} {emp?.last_name}</strong>: 
+                          hc10={recap.complementary_hours_10?.toFixed(1)}h, 
+                          hc25={recap.complementary_hours_25?.toFixed(1)}h, 
+                          total={recap.complementary_hours_ui?.toFixed(1)}h 
+                          {!isOK && " ⚠️ INCOHÉRENCE"}
+                        </div>
+                      );
+                    })}
+                </div>
+              </div>
+            )}
+
+            {exportData.filter(r => !r.hasPersistedRecap).length > 0 && (
+              <div className="bg-yellow-50 border border-yellow-200 rounded p-2 mt-2 text-xs text-yellow-900">
+                ⚡ {exportData.filter(r => !r.hasPersistedRecap).length} employé(s) sans recap persisté
+              </div>
+            )}
+          </div>
         )}
-      </DialogContent>
-    </Dialog>
-  );
-}
+
+         {/* Modal d'override */}
+        {selectedEmployee && selectedAutoValues && (
+         <ExportOverrideModal
+           open={overrideModalOpen}
+           onOpenChange={setOverrideModalOpen}
+           employee={selectedEmployee}
+           monthKey={monthKey}
+           autoValues={selectedAutoValues}
+           existingOverride={overrides.find(o => o.employee_id === selectedEmployee.id)}
+         />
+        )}
+        </DialogContent>
+        </Dialog>
+        );
+        }
