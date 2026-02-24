@@ -3,13 +3,9 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
 Deno.serve(async (req) => {
   const base44 = createClientFromRequest(req);
 
-  // Allow both authenticated calls (manual recalculate) and scheduled job
-  // For scheduled calls, we use service role directly
-  let isScheduled = false;
   try {
     const user = await base44.auth.me();
     if (user && user.role !== 'admin') {
-      // Check if employee has manager permission
       const employees = await base44.asServiceRole.entities.Employee.filter({ email: user.email });
       const emp = employees[0];
       if (!emp || emp.permission_level !== 'manager') {
@@ -18,12 +14,10 @@ Deno.serve(async (req) => {
     }
   } catch {
     // No user = scheduled job context
-    isScheduled = true;
   }
 
   const b = base44.asServiceRole;
 
-  // Load settings
   const settingsArr = await b.entities.AppSettings.filter({ setting_key: 'optimisation_masse_salariale' });
   const settings = settingsArr[0];
 
@@ -32,7 +26,7 @@ Deno.serve(async (req) => {
   }
 
   const services = settings.services || [];
-  const hoursType = settings.hours_type || 'complementary'; // 'complementary' | 'overtime' | 'both'
+  const hoursType = settings.hours_type || 'complementary';
 
   if (services.length === 0) {
     return Response.json({ skipped: true, reason: 'Aucun service configuré' });
@@ -40,193 +34,296 @@ Deno.serve(async (req) => {
 
   const today = new Date();
   const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
-  const monthKey = todayStr.substring(0, 7);
-  const [year, month] = monthKey.split('-').map(Number);
+  const monthKey = todayStr.substring(0, 7); // YYYY-MM
+  const year = today.getFullYear();
+  const month = today.getMonth(); // 0-indexed
 
-  // Load all shifts for today
-  const allShifts = await b.entities.Shift.filter({ date: todayStr });
+  // Month boundaries for filtering shifts
+  const monthStart = `${monthKey}-01`;
+  const lastDay = new Date(year, month + 1, 0).getDate();
+  const monthEnd = `${monthKey}-${String(lastDay).padStart(2, '0')}`;
 
-  // Load non-shift events for today (employees on leave, CP, etc.)
+  // Load all shifts for current month (to compute complementary hours)
+  const allMonthShifts = await b.entities.Shift.filter({ month_key: monthKey });
+  console.log(`📅 Month shifts loaded: ${allMonthShifts.length} (month_key=${monthKey})`);
+
+  // Load non-shift events for today (to exclude absent/leave employees)
   const allNonShifts = await b.entities.NonShiftEvent.filter({ date: todayStr });
   const employeeIdsOnNonShift = new Set(allNonShifts.map(ns => ns.employee_id));
 
-  // Load monthly recaps for current month using month_key (YYYY-MM)
-  const allRecapsRaw = await b.entities.MonthlyRecap.filter({ month_key: monthKey });
-  
-  console.log(`📊 MonthlyRecap query: month_key=${monthKey}, found ${allRecapsRaw.length} records`);
+  // Load today's shifts
+  const allTodayShifts = await b.entities.Shift.filter({ date: todayStr });
 
-  // Deduplicate: keep the most recently updated recap per employee
-  const recapsByEmployee = {};
-  for (const recap of allRecapsRaw) {
-    const existing = recapsByEmployee[recap.employee_id];
-    if (!existing || (recap.updated_date > existing.updated_date)) {
-      recapsByEmployee[recap.employee_id] = recap;
-    }
-  }
-  const allRecaps = Object.values(recapsByEmployee);
-
-  // Helper: parse a value that might be "3.6h", "3,6", or a number
-  function parseHours(val) {
-    if (val === null || val === undefined) return null;
-    if (typeof val === 'number') return val;
-    const str = String(val).replace(',', '.').replace(/[^0-9.]/g, '');
-    const n = parseFloat(str);
-    return isNaN(n) ? null : n;
-  }
-
-  // Helper: get complementary hours from a recap record with full fallback chain
-  function getComplementaryHours(recap) {
-    if (!recap) return { value: 0, source: 'no_recap' };
-
-    // Fallback chain
-    const v1 = parseHours(recap.complementaryHours);
-    if (v1 !== null) return { value: v1, source: 'complementaryHours', raw: recap.complementaryHours };
-
-    const v2 = parseHours(recap.complementaryHoursTotal);
-    if (v2 !== null) return { value: v2, source: 'complementaryHoursTotal', raw: recap.complementaryHoursTotal };
-
-    const a = parseHours(recap.complementaryHours10);
-    const b2 = parseHours(recap.complementaryHours25);
-    if (a !== null || b2 !== null) {
-      return { value: (a || 0) + (b2 || 0), source: 'complementaryHours10+25', raw: `${recap.complementaryHours10}+${recap.complementaryHours25}` };
-    }
-
-    const c = parseHours(recap.complementary_10);
-    const d = parseHours(recap.complementary_25);
-    if (c !== null || d !== null) {
-      return { value: (c || 0) + (d || 0), source: 'complementary_10+25', raw: `${recap.complementary_10}+${recap.complementary_25}` };
-    }
-
-    const v5 = parseHours(recap.hComplementaires);
-    if (v5 !== null) return { value: v5, source: 'hComplementaires', raw: recap.hComplementaires };
-
-    console.warn(`⚠️ No complementary hours field found for employee ${recap.employee_id}`);
-    return { value: 0, source: 'not_found' };
-  }
-
-  // Load all employees
+  // Load all active employees
   const allEmployees = await b.entities.Employee.filter({ is_active: true });
 
-  // Load all teams (to match team name → team id → employees)
+  // Load all teams
   const allTeams = await b.entities.Team.filter({ is_active: true });
+
+  // ─── Helper: parse contract hours (HH:MM or decimal string) ─────────────
+  function parseContractHours(val) {
+    if (typeof val === 'number') return val;
+    if (!val) return 0;
+    const str = String(val).trim();
+    if (str.includes(':')) {
+      const [h, m] = str.split(':').map(s => parseInt(s, 10) || 0);
+      return h + m / 60;
+    }
+    const n = parseFloat(str.replace(',', '.'));
+    return isNaN(n) ? 0 : n;
+  }
+
+  // ─── Helper: shift duration in hours ─────────────────────────────────────
+  function shiftDuration(shift) {
+    if (!shift.start_time || !shift.end_time) return 0;
+    if (shift.base_hours_override !== null && shift.base_hours_override !== undefined) {
+      return shift.base_hours_override;
+    }
+    const [sh, sm] = shift.start_time.split(':').map(Number);
+    const [eh, em] = shift.end_time.split(':').map(Number);
+    let mins = (eh * 60 + em) - (sh * 60 + sm);
+    if (mins < 0) mins += 24 * 60;
+    mins -= (shift.break_minutes || 0);
+    return Math.max(0, mins / 60);
+  }
+
+  // ─── Compute complementary hours for a part-time employee this month ─────
+  // Logic mirrors the weekly calc: sum complementary per week, then aggregate
+  function computeComplementaryHours(employee, monthShifts) {
+    const contractHoursWeekly = parseContractHours(employee.contract_hours_weekly) || 0;
+    if (contractHoursWeekly <= 0) return 0;
+
+    // Build the set of contractual worked days-of-week
+    const weeklySchedule = employee.weekly_schedule || {};
+    const dayMap = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+    const workedDaysOfWeek = new Set();
+    dayMap.forEach((dayName, dayIndex) => {
+      if (weeklySchedule[dayName]?.worked) workedDaysOfWeek.add(dayIndex);
+    });
+    const workDaysPerWeek = employee.work_days_per_week || workedDaysOfWeek.size || 5;
+    if (workedDaysOfWeek.size === 0) {
+      for (let i = 0; i < workDaysPerWeek; i++) workedDaysOfWeek.add((i + 1) % 7);
+    }
+    const dailyContractHours = contractHoursWeekly / workDaysPerWeek;
+
+    // Group shifts by ISO week (Monday date as key)
+    const weekMap = {};
+    for (const shift of monthShifts) {
+      if (shift.employee_id !== employee.id) continue;
+      if (shift.status === 'absent' || shift.status === 'leave') continue;
+      // Get Monday of this shift's week
+      const d = new Date(shift.date);
+      const dow = d.getDay();
+      const diff = dow === 0 ? -6 : 1 - dow;
+      const monday = new Date(d);
+      monday.setDate(monday.getDate() + diff);
+      const weekKey2 = `${monday.getFullYear()}-${String(monday.getMonth()+1).padStart(2,'0')}-${String(monday.getDate()).padStart(2,'0')}`;
+      if (!weekMap[weekKey2]) weekMap[weekKey2] = { workedHours: 0, base: 0, counted: false };
+    }
+
+    // For each week touching the month, calculate base and worked hours
+    // Build full week list from month boundaries
+    const weeksSet = new Set();
+    for (let day = 1; day <= lastDay; day++) {
+      const d = new Date(year, month, day);
+      const dow = d.getDay();
+      const diff = dow === 0 ? -6 : 1 - dow;
+      const monday = new Date(d);
+      monday.setDate(monday.getDate() + diff);
+      const wk = `${monday.getFullYear()}-${String(monday.getMonth()+1).padStart(2,'0')}-${String(monday.getDate()).padStart(2,'0')}`;
+      weeksSet.add(wk);
+    }
+
+    let totalComp = 0;
+    let totalBase = 0;
+
+    for (const weekMondayStr of weeksSet) {
+      // Get all 7 days of this week
+      const weekDates = [];
+      for (let i = 0; i < 7; i++) {
+        const d = new Date(weekMondayStr);
+        d.setDate(d.getDate() + i);
+        weekDates.push(`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`);
+      }
+      // Only count days visible in the month
+      const visibleDates = weekDates.filter(d => d >= monthStart && d <= monthEnd);
+
+      // Count contractual days visible
+      let contractDaysVisible = 0;
+      for (const dateStr of visibleDates) {
+        const dow = new Date(dateStr).getDay();
+        if (workedDaysOfWeek.has(dow)) contractDaysVisible++;
+      }
+      const weekBase = contractDaysVisible * dailyContractHours;
+      totalBase += weekBase;
+
+      // Sum worked hours for this week (visible dates only)
+      let weekHours = 0;
+      for (const dateStr of visibleDates) {
+        const dayShifts = monthShifts.filter(s =>
+          s.employee_id === employee.id &&
+          s.date === dateStr &&
+          s.status !== 'absent' && s.status !== 'leave'
+        );
+        weekHours += dayShifts.reduce((sum, s) => sum + shiftDuration(s), 0);
+      }
+
+      const weekComp = Math.max(0, weekHours - weekBase);
+      totalComp += weekComp;
+    }
+
+    // Monthly 10%/25% split (but we only need total for ranking)
+    const totalComplementaryHours = totalComp;
+    console.log(`  [CALC] ${employee.first_name} ${employee.last_name}: contractWeekly=${contractHoursWeekly}h isPartTime=${employee.work_time_type} totalBase=${totalBase.toFixed(2)}h totalComp=${totalComplementaryHours.toFixed(2)}h`);
+    return totalComplementaryHours;
+  }
+
+  // ─── Compute overtime hours for a full-time employee this month ───────────
+  function computeOvertimeHours(employee, monthShifts) {
+    const contractHoursWeekly = parseContractHours(employee.contract_hours_weekly) || 35;
+    const workDaysPerWeek = employee.work_days_per_week || 5;
+    const weeklySchedule = employee.weekly_schedule || {};
+    const dayMap = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+    const workedDaysOfWeek = new Set();
+    dayMap.forEach((dayName, dayIndex) => {
+      if (weeklySchedule[dayName]?.worked) workedDaysOfWeek.add(dayIndex);
+    });
+    if (workedDaysOfWeek.size === 0) {
+      for (let i = 0; i < workDaysPerWeek; i++) workedDaysOfWeek.add((i + 1) % 7);
+    }
+    const dailyContractHours = contractHoursWeekly / workDaysPerWeek;
+
+    const weeksSet = new Set();
+    for (let day = 1; day <= lastDay; day++) {
+      const d = new Date(year, month, day);
+      const dow = d.getDay();
+      const diff = dow === 0 ? -6 : 1 - dow;
+      const monday = new Date(d);
+      monday.setDate(monday.getDate() + diff);
+      const wk = `${monday.getFullYear()}-${String(monday.getMonth()+1).padStart(2,'0')}-${String(monday.getDate()).padStart(2,'0')}`;
+      weeksSet.add(wk);
+    }
+
+    let totalOvertime = 0;
+    for (const weekMondayStr of weeksSet) {
+      const weekDates = [];
+      for (let i = 0; i < 7; i++) {
+        const d = new Date(weekMondayStr);
+        d.setDate(d.getDate() + i);
+        weekDates.push(`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`);
+      }
+      const visibleDates = weekDates.filter(d => d >= monthStart && d <= monthEnd);
+      let contractDaysVisible = 0;
+      for (const dateStr of visibleDates) {
+        const dow = new Date(dateStr).getDay();
+        if (workedDaysOfWeek.has(dow)) contractDaysVisible++;
+      }
+      const weekBase = contractDaysVisible * dailyContractHours;
+      let weekHours = 0;
+      for (const dateStr of visibleDates) {
+        const dayShifts = monthShifts.filter(s =>
+          s.employee_id === employee.id &&
+          s.date === dateStr &&
+          s.status !== 'absent' && s.status !== 'leave'
+        );
+        weekHours += dayShifts.reduce((sum, s) => sum + shiftDuration(s), 0);
+      }
+      totalOvertime += Math.max(0, weekHours - weekBase);
+    }
+    console.log(`  [CALC] ${employee.first_name} ${employee.last_name}: contractWeekly=${contractHoursWeekly}h isFullTime totalOvertime=${totalOvertime.toFixed(2)}h`);
+    return totalOvertime;
+  }
 
   const results = [];
 
   for (const service of services) {
-    // Find the team matching this service name
     const team = allTeams.find(t => t.name.toLowerCase() === service.toLowerCase());
     const teamEmployeeIds = team
       ? new Set(allEmployees.filter(e => e.team_id === team.id).map(e => e.id))
       : new Set();
 
-    // Shifts for employees of this team today — exclude employees with a non-shift event (CP, absences, etc.)
-    const serviceShifts = allShifts.filter(s =>
+    const serviceShifts = allTodayShifts.filter(s =>
       teamEmployeeIds.has(s.employee_id) &&
       s.status !== 'absent' && s.status !== 'leave' &&
       !employeeIdsOnNonShift.has(s.employee_id)
     );
 
     if (serviceShifts.length === 0) {
-      // Delete any existing entry and save empty
       const existing = await b.entities.DepartureOrder.filter({ date: todayStr, service });
-      for (const e of existing) {
-        await b.entities.DepartureOrder.delete(e.id);
-      }
-      await b.entities.DepartureOrder.create({
-        date: todayStr,
-        service,
-        ordered_employees: [],
-        message: '',
-        generated_at: new Date().toISOString(),
-        status: 'empty'
-      });
+      for (const e of existing) await b.entities.DepartureOrder.delete(e.id);
+      await b.entities.DepartureOrder.create({ date: todayStr, service, ordered_employees: [], message: '', generated_at: new Date().toISOString(), status: 'empty' });
       results.push({ service, status: 'empty' });
       continue;
     }
 
-    // Get unique employees for this service today
     const employeeIds = [...new Set(serviceShifts.map(s => s.employee_id))];
+
+    console.log(`\n🏷️  Service: ${service} | ${employeeIds.length} employees on shift today`);
 
     const employeeData = employeeIds.map(empId => {
       const emp = allEmployees.find(e => e.id === empId);
       if (!emp) return null;
 
-      const recap = allRecaps.find(r => r.employee_id === empId);
+      const isPartTime = emp.work_time_type === 'part_time';
 
-      // Calculate score based on hours type
-      // Use stored calculated values from MonthlyRecap (complementaryHours10/25, overtimeHours25/50)
-      // These are populated by the frontend calculation engine and saved to DB
-      const compResult = getComplementaryHours(recap);
-      const compScore = compResult.value;
+      // Compute score directly from shifts (no DB recap needed)
+      let comp = 0;
+      let ot = 0;
 
-      const ot = recap
-        ? ((recap.overtimeHours25 || recap.overtime_25 || 0) + (recap.overtimeHours50 || recap.overtime_50 || 0))
-        : 0;
+      if (isPartTime) {
+        comp = computeComplementaryHours(emp, allMonthShifts);
+      } else {
+        ot = computeOvertimeHours(emp, allMonthShifts);
+      }
 
       let score = 0;
-      if (hoursType === 'complementary') score = compScore;
+      if (hoursType === 'complementary') score = isPartTime ? comp : 0;
       else if (hoursType === 'overtime') score = ot;
-      else score = compScore + ot;
+      else score = comp + ot;
 
-      console.log(`  [DEBUG] ${emp.first_name} ${emp.last_name} | recap_id=${recap?.id ?? 'NONE'} | month_key=${recap?.month_key ?? 'N/A'} | source=${compResult.source} | raw=${compResult.raw ?? 'N/A'} | comp=${compScore} ot=${ot} → score=${score}`);
-
-      // Calculate today's total shift duration
-      const todayShifts = serviceShifts.filter(s => s.employee_id === empId);
-      let shiftDuration = 0;
-      todayShifts.forEach(s => {
-        if (s.start_time && s.end_time) {
-          const [sh, sm] = s.start_time.split(':').map(Number);
-          const [eh, em] = s.end_time.split(':').map(Number);
-          let mins = (eh * 60 + em) - (sh * 60 + sm);
-          if (mins < 0) mins += 24 * 60;
-          shiftDuration += mins / 60;
-        }
-      });
+      console.log(`  → ${emp.first_name} ${emp.last_name}: comp=${comp.toFixed(2)}h ot=${ot.toFixed(2)}h score=${score.toFixed(2)} (hoursType=${hoursType}, partTime=${isPartTime})`);
 
       return {
         employee_id: empId,
-        employee_name: `${emp.first_name} ${emp.last_name}`,
         first_name: emp.first_name,
         last_name: emp.last_name,
         score,
-        shift_duration: shiftDuration,
-        priority_optimisation: emp.priority_optimisation || 9999
+        comp,
+        ot
       };
     }).filter(Boolean);
 
-    // Sort: score (complementary hours) DESC → name ASC for stability
+    // Sort: score DESC, then name ASC
     employeeData.sort((a, b) => {
-      if (b.score !== a.score) return b.score - a.score;
-      return a.last_name.localeCompare(b.last_name);
+      if (Math.abs(b.score - a.score) > 0.001) return b.score - a.score;
+      return a.last_name.localeCompare(b.last_name, 'fr');
     });
 
-    // Build message
     const orderStr = employeeData.map((emp, i) => `${i + 1}. ${emp.first_name} ${emp.last_name}`).join(', ');
-    const debugStr = employeeData.map(e => `${e.first_name}=${e.score}h`).join(' | ');
-    const message = `Ordre de départ pour le service ${service} aujourd'hui :\n${orderStr}\nDEBUG: ${debugStr}`;
+    const debugStr = employeeData.map(e => `${e.first_name}=${e.score.toFixed(1)}h`).join(' | ');
+    const message = `Ordre de départ pour le service ${service} aujourd'hui :\n${orderStr}\nDEBUG scores: ${debugStr}`;
 
-    // Delete existing entry for today/service
+    console.log(`📋 Final order: ${orderStr}`);
+    console.log(`📊 Debug: ${debugStr}`);
+
     const existing = await b.entities.DepartureOrder.filter({ date: todayStr, service });
-    for (const e of existing) {
-      await b.entities.DepartureOrder.delete(e.id);
-    }
+    for (const e of existing) await b.entities.DepartureOrder.delete(e.id);
 
-    // Save new entry
     await b.entities.DepartureOrder.create({
       date: todayStr,
       service,
-      ordered_employees: employeeData.map(e => ({
+      ordered_employees: employeeData.map((e, i) => ({
         employee_id: e.employee_id,
         employee_name: `${e.first_name} ${e.last_name}`,
         score: e.score,
-        shift_duration: e.shift_duration
+        rank: i + 1
       })),
       message,
       generated_at: new Date().toISOString(),
       status: 'success'
     });
 
-    results.push({ service, status: 'success', count: employeeData.length });
+    results.push({ service, status: 'success', count: employeeData.length, debug: debugStr });
   }
 
   return Response.json({ success: true, date: todayStr, results });
