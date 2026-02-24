@@ -59,10 +59,11 @@ Deno.serve(async (req) => {
   const results = [];
 
   for (const service of services) {
-    // Shifts for this service today
+    // Shifts for this service today — exclude employees with a non-shift event (CP, absences, etc.)
     const serviceShifts = allShifts.filter(s =>
       (s.position || '').toLowerCase() === service.toLowerCase() &&
-      s.status !== 'absent' && s.status !== 'leave'
+      s.status !== 'absent' && s.status !== 'leave' &&
+      !employeeIdsOnNonShift.has(s.employee_id)
     );
 
     if (serviceShifts.length === 0) {
