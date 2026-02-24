@@ -53,17 +53,20 @@ Deno.serve(async (req) => {
   console.log(`📅 Month shifts: ${allMonthShifts.length} (month_key=${monthKey}, reset_version=${activeResetVersion})`);
 
   // Load non-shift events for today (to exclude absent/leave employees)
-  const allNonShifts = await b.entities.NonShiftEvent.filter({ date: todayStr });
+  // Load persisted recap data (source of truth = UI values)
+  // Load all active employees + teams in parallel
+  const [allNonShifts, allPersistedRecaps, allEmployees, allTeams] = await Promise.all([
+    b.entities.NonShiftEvent.filter({ date: todayStr }),
+    b.entities.MonthlyRecapPersisted.filter({ month_key: monthKey }),
+    b.entities.Employee.filter({ is_active: true }),
+    b.entities.Team.filter({ is_active: true })
+  ]);
+
   const employeeIdsOnNonShift = new Set(allNonShifts.map(ns => ns.employee_id));
+  console.log(`📋 Persisted recaps loaded: ${allPersistedRecaps.length} for ${monthKey}`);
 
   // Today shifts already in allMonthShifts
   const allTodayShifts = allMonthShifts.filter(s => s.date === todayStr);
-
-  // Load all active employees
-  const allEmployees = await b.entities.Employee.filter({ is_active: true });
-
-  // Load all teams
-  const allTeams = await b.entities.Team.filter({ is_active: true });
 
   // ─── Helper: parse contract hours (HH:MM or decimal string) ─────────────
   function parseContractHours(val) {
