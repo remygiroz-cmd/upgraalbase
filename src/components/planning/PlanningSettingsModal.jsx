@@ -557,6 +557,11 @@ export default function PlanningSettingsModal({ open, onOpenChange, displayMode,
             </div>
           </TabsContent>
 
+          {/* Tab 7: Optimisation Masse Salariale */}
+          <TabsContent value="optimisation" className="mt-6">
+            <OptimisationMasseSalariale />
+          </TabsContent>
+
           {/* Tab 6: Sécurité & validation */}
           <TabsContent value="securite" className="mt-6 space-y-4">
             <Alert className="bg-purple-50 border-purple-300">
