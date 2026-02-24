@@ -201,8 +201,8 @@ export default function ShiftSwapModal({ open, onOpenChange, currentYear, curren
       const requestData = {
         status: 'PENDING',
         requester_employee_id: currentEmployee.id,
-        employee_a_id: currentEmployee.id,
-        employee_a_name: `${currentEmployee.first_name} ${currentEmployee.last_name}`,
+        employee_a_id: employeeA.id,
+        employee_a_name: `${employeeA.first_name} ${employeeA.last_name}`,
         shift_a_id: shiftA.id,
         shift_a_date: shiftA.date,
         shift_a_start_time: shiftA.start_time,
@@ -233,7 +233,7 @@ export default function ShiftSwapModal({ open, onOpenChange, currentYear, curren
     }
   });
 
-  const otherEmployees = allEmployees.filter(e => e.id !== currentEmployee?.id);
+  const otherEmployees = allEmployees.filter(e => e.id !== employeeA?.id);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
