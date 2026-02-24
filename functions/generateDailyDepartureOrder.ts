@@ -50,23 +50,12 @@ Deno.serve(async (req) => {
   const allNonShifts = await b.entities.NonShiftEvent.filter({ date: todayStr });
   const employeeIdsOnNonShift = new Set(allNonShifts.map(ns => ns.employee_id));
 
-  // Load monthly recaps for current month - filter by month_key and take the most recent per employee
-  const allRecapsRaw = await b.entities.MonthlyRecap.filter({ month_key: monthKey });
-  
-  // Deduplicate: keep the most recently updated recap per employee
-  const recapsByEmployee = {};
-  for (const recap of allRecapsRaw) {
-    const existing = recapsByEmployee[recap.employee_id];
-    if (!existing || (recap.updated_date > existing.updated_date)) {
-      recapsByEmployee[recap.employee_id] = recap;
-    }
-  }
-  const allRecaps = Object.values(recapsByEmployee);
-  
-  console.log(`📊 Recaps found: ${allRecapsRaw.length} raw, ${allRecaps.length} after dedup`);
-  allRecaps.forEach(r => {
-    console.log(`  - ${r.employee_id}: comp10=${r.complementaryHours10} comp25=${r.complementaryHours25} ot25=${r.overtimeHours25} ot50=${r.overtimeHours50} | month_key=${r.month_key}`);
-  });
+  // Load ALL shifts for the current month to calculate complementary/overtime hours
+  const monthStart = `${monthKey}-01`;
+  const monthEnd = `${monthKey}-${new Date(year, month, 0).getDate().toString().padStart(2, '0')}`;
+  const allMonthShifts = await b.entities.Shift.filter({ month_key: monthKey });
+
+  console.log(`📊 Month shifts loaded: ${allMonthShifts.length} for ${monthKey}`);
 
   // Load all employees
   const allEmployees = await b.entities.Employee.filter({ is_active: true });
