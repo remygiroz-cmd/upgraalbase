@@ -229,8 +229,8 @@ export default function DirectShiftSwapModal({ open, onOpenChange, currentYear, 
       queryClient.invalidateQueries({ queryKey: ['shifts'] });
       queryClient.invalidateQueries({ queryKey: ['allWeeklyRecaps'] });
       queryClient.invalidateQueries({ queryKey: ['allMonthlyRecaps'] });
+      queryClient.invalidateQueries({ queryKey: ['approvedSwaps'] });
       if (data?.informEmployees) {
-        queryClient.invalidateQueries({ queryKey: ['shiftSwapRequests'] });
         toast.success('✅ Échange effectué et employés informés.');
       } else {
         toast.success('✅ Échange effectué.');
