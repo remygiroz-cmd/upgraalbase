@@ -1,7 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
-import { PageHeader } from '@/components/ui/PageHeader';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -14,14 +13,14 @@ import { toast } from 'sonner';
 import { AlertTriangle, RotateCcw, Save, Zap } from 'lucide-react';
 
 // Import des composants de sections
-import AssignationSettings from '@/components/vehicules/settings/AssignationSettings';
-import DashboardSettings from '@/components/vehicules/settings/DashboardSettings';
-import ControlsSettings from '@/components/vehicules/settings/ControlsSettings';
-import DocumentsSettings from '@/components/vehicules/settings/DocumentsSettings';
-import MaintenanceSettings from '@/components/vehicules/settings/MaintenanceSettings';
-import AlgorithmSettings from '@/components/vehicules/settings/AlgorithmSettings';
-import SecuritySettings from '@/components/vehicules/settings/SecuritySettings';
-import AdvancedSettings from '@/components/vehicules/settings/AdvancedSettings';
+import AssignationSettings from '@/components/vehicules/settings/AssignationSettings.jsx';
+import DashboardSettings from '@/components/vehicules/settings/DashboardSettings.jsx';
+import ControlsSettings from '@/components/vehicules/settings/ControlsSettings.jsx';
+import DocumentsSettings from '@/components/vehicules/settings/DocumentsSettings.jsx';
+import MaintenanceSettings from '@/components/vehicules/settings/MaintenanceSettings.jsx';
+import AlgorithmSettings from '@/components/vehicules/settings/AlgorithmSettings.jsx';
+import SecuritySettings from '@/components/vehicules/settings/SecuritySettings.jsx';
+import AdvancedSettings from '@/components/vehicules/settings/AdvancedSettings.jsx';
 
 const DEFAULT_SETTINGS = {
   setting_key: 'fleet_main',
