@@ -341,6 +341,17 @@ const ShiftCard = React.memo(function ShiftCard({
           )}
         </div>
       </div>
+
+      {swapInfo && (
+        <div className="mt-1 pt-1 border-t border-purple-200">
+          <div className="flex items-center gap-1 text-[9px] text-purple-700 font-semibold">
+            <span>🔄 échangé avec {swapInfo.otherName?.split(' ')[0]}</span>
+          </div>
+          <div className="text-[8px] text-purple-500 leading-tight mt-0.5">
+            <span>Leur shift : {swapInfo.otherDate ? new Date(swapInfo.otherDate).toLocaleDateString('fr-FR', { day:'2-digit', month:'2-digit' }) : ''} {swapInfo.otherTime}</span>
+          </div>
+        </div>
+      )}
     </div>
   );
 });
