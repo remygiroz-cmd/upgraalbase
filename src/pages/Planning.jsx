@@ -1390,11 +1390,13 @@ export default function Planning() {
                                   })}
                                   {employeeShifts.map((shift) => {
                                     const warnings = getShiftWarnings(shift, employeeShifts);
+                                    const swapInfo = swapLookup.get(shift.id) || null;
                                     return (
                                       <div key={shift.id} className={totalEvents === 1 ? "flex-1" : ""}>
                                         <ShiftCard
                                           shift={shift}
                                           positions={positions}
+                                          swapInfo={swapInfo}
                                           onClick={(e) => {
                                             e.stopPropagation();
                                             if (!canModifyPlanning) {
