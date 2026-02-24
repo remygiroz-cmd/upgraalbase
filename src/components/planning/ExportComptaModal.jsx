@@ -1305,29 +1305,34 @@ export default function ExportComptaModal({ open, onOpenChange, monthStart, mont
                   </tr>
                 </thead>
                 <tbody className="divide-y">
-                  {exportData.map((row, idx) => (
-                    <tr key={idx} className="hover:bg-gray-50">
-                      <td className="px-2 py-2 font-medium flex items-center gap-2">
-                        {row.employeeName}
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          onClick={() => {
-                            setSelectedEmployee(row.employee);
-                            setSelectedAutoValues(row.autoValues);
-                            setOverrideModalOpen(true);
-                          }}
-                          className="h-6 w-6 text-orange-600 hover:text-orange-700 hover:bg-orange-50"
-                          title="Surcharger les valeurs"
-                        >
-                          <Edit3 className="w-3 h-3" />
-                        </Button>
-                        {row.override && (
-                          <span className="text-xs bg-orange-100 text-orange-700 px-1.5 py-0.5 rounded" title="Valeurs surchargées">
-                            ⚠
-                          </span>
-                        )}
-                      </td>
+                 {exportData.map((row, idx) => (
+                   <tr key={idx} className={cn("hover:bg-gray-50", !row.hasPersistedRecap && "bg-yellow-50")}>
+                     <td className="px-2 py-2 font-medium flex items-center gap-2">
+                       {row.employeeName}
+                       <Button
+                         size="icon"
+                         variant="ghost"
+                         onClick={() => {
+                           setSelectedEmployee(row.employee);
+                           setSelectedAutoValues(row.autoValues);
+                           setOverrideModalOpen(true);
+                         }}
+                         className="h-6 w-6 text-orange-600 hover:text-orange-700 hover:bg-orange-50"
+                         title="Surcharger les valeurs"
+                       >
+                         <Edit3 className="w-3 h-3" />
+                       </Button>
+                       {row.override && (
+                         <span className="text-xs bg-orange-100 text-orange-700 px-1.5 py-0.5 rounded" title="Valeurs surchargées">
+                           ⚠
+                         </span>
+                       )}
+                       {!row.hasPersistedRecap && (
+                         <span className="text-xs bg-yellow-100 text-yellow-700 px-1.5 py-0.5 rounded" title="Récap UI non persisté">
+                           ⚡
+                         </span>
+                       )}
+                     </td>
                       <td className="px-2 py-2 text-center">{row.nbJoursTravailles || 0}</td>
                       <td className="px-2 py-2 text-center text-red-600 font-semibold">{row.joursSupp || ''}</td>
                       <td className="px-2 py-2 text-right font-bold bg-blue-50">{row.totalPaid.toFixed(1)}h</td>
