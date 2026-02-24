@@ -1154,7 +1154,7 @@ export default function Planning() {
       </div>
 
       {/* Departure Order Block */}
-      <DepartureOrderBlock date={formatLocalDate(new Date(currentYear, currentMonth, new Date().getDate()))} />
+      <DepartureOrderBlock date={formatLocalDate(new Date(currentYear, currentMonth, new Date().getDate()))} currentUser={currentUser} />
 
       {/* Today Summary */}
       <TodaySummary
