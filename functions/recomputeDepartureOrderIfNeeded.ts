@@ -33,15 +33,19 @@ Deno.serve(async (req) => {
   if (!forceImmediate) {
     const locks = await b.entities.DepartureOrderRecomputeLock.filter({ lock_key: lockKey });
     if (locks.length > 0) {
-      const lockAge = Date.now() - new Date(locks[0].created_at).getTime();
-      if (lockAge < lockDuration) {
+      const expiresAt = new Date(locks[0].expires_at);
+      const now = new Date();
+      
+      if (expiresAt > now) {
+        // Lock non expiré → debounce
         return Response.json({
           success: false,
           reason: 'debounced',
-          message: `Recalcul ignoré (lock actif depuis ${(lockAge / 1000).toFixed(1)}s)`
+          message: `Recalcul différé (+60s)`,
+          expires_at: locks[0].expires_at
         });
       } else {
-        // Lock expiré, le supprimer
+        // Lock expiré → le supprimer
         await b.entities.DepartureOrderRecomputeLock.delete(locks[0].id);
       }
     }
