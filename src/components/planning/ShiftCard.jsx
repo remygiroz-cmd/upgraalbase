@@ -343,7 +343,22 @@ const ShiftCard = React.memo(function ShiftCard({
       </div>
 
       {swapInfo && (
-        <div className="mt-1 pt-1 border-t border-purple-200">
+        <div className="mt-1 pt-1 border-t border-purple-200 relative">
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              if (swapInfo.swapRequestId) {
+                base44.entities.ShiftSwapRequest.delete(swapInfo.swapRequestId).then(() => {
+                  queryClient.invalidateQueries({ queryKey: ['approvedSwaps'] });
+                  toast.success('Indication d\'échange supprimée');
+                });
+              }
+            }}
+            className="absolute -top-1 -right-1 w-3.5 h-3.5 bg-purple-300 hover:bg-purple-500 text-white rounded-full flex items-center justify-center text-[8px] font-bold leading-none transition-colors"
+            title="Supprimer l'indication d'échange"
+          >
+            ×
+          </button>
           <div className="flex items-center gap-1 text-[9px] text-purple-700 font-semibold leading-tight">
             <span>🔄 échangé avec {swapInfo.otherName?.split(' ')[0]}</span>
           </div>
