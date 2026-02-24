@@ -53,8 +53,8 @@ Deno.serve(async (req) => {
   const allNonShifts = await b.entities.NonShiftEvent.filter({ date: todayStr });
   const employeeIdsOnNonShift = new Set(allNonShifts.map(ns => ns.employee_id));
 
-  // Load today's shifts
-  const allTodayShifts = await b.entities.Shift.filter({ date: todayStr });
+  // Today shifts already in allMonthShifts
+  const allTodayShifts = allMonthShifts.filter(s => s.date === todayStr);
 
   // Load all active employees
   const allEmployees = await b.entities.Employee.filter({ is_active: true });
