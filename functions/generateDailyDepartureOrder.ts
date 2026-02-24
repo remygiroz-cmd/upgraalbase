@@ -136,9 +136,12 @@ Deno.serve(async (req) => {
       }
 
       // Calculate contract monthly hours (approximate: weeks in month × weekly hours)
-      const daysInMonth = new Date(year, month, 0).getDate();
+      // month is already 1-indexed from the monthKey split, so use (month, 0) for last day of `month`
+      const daysInMonth = new Date(year, month, 0).getDate(); // month is 1-indexed so this gives last day correctly
       const weeksInMonth = daysInMonth / 7;
       const contractMonthlyHours = contractHoursWeekly * weeksInMonth;
+
+      console.log(`  Contract calc ${emp.first_name}: weekly=${contractHoursWeekly.toFixed(2)}h, daysInMonth=${daysInMonth}, weeksInMonth=${weeksInMonth.toFixed(2)}, contractMonthly=${contractMonthlyHours.toFixed(2)}h`);
 
       // Calculate extra hours (complementary for part-time, overtime for full-time)
       const extraHours = Math.max(0, totalWorkedHours - contractMonthlyHours);
