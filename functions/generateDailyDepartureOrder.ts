@@ -50,12 +50,23 @@ Deno.serve(async (req) => {
   const allNonShifts = await b.entities.NonShiftEvent.filter({ date: todayStr });
   const employeeIdsOnNonShift = new Set(allNonShifts.map(ns => ns.employee_id));
 
-  // Load ALL shifts for the current month to calculate complementary/overtime hours
-  const monthStart = `${monthKey}-01`;
-  const monthEnd = `${monthKey}-${new Date(year, month, 0).getDate().toString().padStart(2, '0')}`;
-  const allMonthShifts = await b.entities.Shift.filter({ month_key: monthKey });
-
-  console.log(`📊 Month shifts loaded: ${allMonthShifts.length} for ${monthKey}`);
+  // Load monthly recaps for current month - filter by month_key and take the most recent per employee
+  const allRecapsRaw = await b.entities.MonthlyRecap.filter({ month_key: monthKey });
+  
+  // Deduplicate: keep the most recently updated recap per employee
+  const recapsByEmployee = {};
+  for (const recap of allRecapsRaw) {
+    const existing = recapsByEmployee[recap.employee_id];
+    if (!existing || (recap.updated_date > existing.updated_date)) {
+      recapsByEmployee[recap.employee_id] = recap;
+    }
+  }
+  const allRecaps = Object.values(recapsByEmployee);
+  
+  console.log(`📊 Recaps found: ${allRecapsRaw.length} raw, ${allRecaps.length} after dedup`);
+  allRecaps.forEach(r => {
+    console.log(`  - ${r.employee_id}: comp10=${r.complementaryHours10} comp25=${r.complementaryHours25} ot25=${r.overtimeHours25} ot50=${r.overtimeHours50} | month_key=${r.month_key}`);
+  });
 
   // Load all employees
   const allEmployees = await b.entities.Employee.filter({ is_active: true });
@@ -104,65 +115,20 @@ Deno.serve(async (req) => {
       const emp = allEmployees.find(e => e.id === empId);
       if (!emp) return null;
 
-      // Calculate score directly from shifts for the month - no reliance on stored recaps
-      // Get all employee shifts for the current month
-      const empMonthShifts = allMonthShifts.filter(s =>
-        s.employee_id === empId &&
-        s.status !== 'absent' && s.status !== 'leave' && s.status !== 'cancelled'
-      );
+      const recap = allRecaps.find(r => r.employee_id === empId);
 
-      // Calculate total worked hours for the month (respecting base_hours_override)
-      // Only count shifts UP TO AND INCLUDING today (not future shifts)
-      const calcShiftHours = (s) => {
-        if (s.base_hours_override !== null && s.base_hours_override !== undefined) {
-          return parseFloat(s.base_hours_override) || 0;
-        }
-        if (!s.start_time || !s.end_time) return 0;
-        const [sh, sm] = s.start_time.split(':').map(Number);
-        const [eh, em] = s.end_time.split(':').map(Number);
-        let mins = (eh * 60 + em) - (sh * 60 + sm);
-        if (mins < 0) mins += 24 * 60;
-        mins -= (s.break_minutes || 0);
-        return Math.max(0, mins) / 60;
-      };
-
-      // Only count shifts up to today to get accurate "heures faites ce mois"
-      const empPastShifts = empMonthShifts.filter(s => s.date <= todayStr);
-      let totalWorkedHours = 0;
-      empPastShifts.forEach(s => { totalWorkedHours += calcShiftHours(s); });
-
-      // Get contract monthly hours directly from contract_hours field (most accurate)
-      const parseHours = (val) => {
-        if (!val) return 0;
-        const str = String(val).trim();
-        if (str.includes(':')) {
-          const [h, m] = str.split(':').map(Number);
-          return h + (m || 0) / 60;
-        }
-        return parseFloat(str.replace(',', '.')) || 0;
-      };
-
-      // Pro-rate contract hours to elapsed days (same as frontend recap logic)
-      const daysInMonth = new Date(year, month, 0).getDate(); // month is 1-indexed
-      const todayDayNum = parseInt(todayStr.split('-')[2]);
-      const elapsedFraction = todayDayNum / daysInMonth;
-      const contractMonthlyHours = parseHours(emp.contract_hours) * elapsedFraction;
-
-      // Calculate extra hours (complementary for part-time, overtime for full-time)
-      const extraHours = Math.max(0, totalWorkedHours - contractMonthlyHours);
-
-      const isPartTime = emp.work_time_type === 'part_time';
+      // Calculate score based on hours type
+      // Use stored calculated values from MonthlyRecap (complementaryHours10/25, overtimeHours25/50)
+      // These are populated by the frontend calculation engine and saved to DB
       let score = 0;
+      if (recap) {
+        const comp = (recap.complementaryHours10 || 0) + (recap.complementaryHours25 || 0);
+        const ot = (recap.overtimeHours25 || 0) + (recap.overtimeHours50 || 0);
 
-      if (isPartTime) {
-        if (hoursType === 'complementary' || hoursType === 'both') score += extraHours;
-      } else {
-        if (hoursType === 'overtime' || hoursType === 'both') score += extraHours;
-        // full-time has no complementary hours
-        if (hoursType === 'complementary') score = 0;
+        if (hoursType === 'complementary') score = comp;
+        else if (hoursType === 'overtime') score = ot;
+        else score = comp + ot;
       }
-
-      console.log(`  Score ${emp.first_name} ${emp.last_name}: shifts=${empMonthShifts.length}, worked=${totalWorkedHours.toFixed(2)}h, contract=${contractMonthlyHours.toFixed(2)}h, extra=${extraHours.toFixed(2)}h, score=${score.toFixed(2)}, partTime=${isPartTime}`);
 
       // Calculate today's total shift duration
       const todayShifts = serviceShifts.filter(s => s.employee_id === empId);
