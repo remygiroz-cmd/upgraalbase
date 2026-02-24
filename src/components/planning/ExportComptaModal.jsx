@@ -599,6 +599,15 @@ export default function ExportComptaModal({ open, onOpenChange, monthStart, mont
     enabled: open && activeResetVersion !== undefined
   });
 
+  // Fetch MonthlyRecapPersisted (source unique pour export compta)
+  const { data: recapsPersisted = [] } = useQuery({
+    queryKey: ['monthlyRecapsPersisted', monthKey],
+    queryFn: async () => {
+      return await base44.entities.MonthlyRecapPersisted.filter({ month_key: monthKey });
+    },
+    enabled: open && !isSyncing
+  });
+
   // 🎯 SOURCE UNIQUE: CALCUL DU RÉCAP MENSUEL + OVERRIDES EXPORT
   const exportData = employees
     .map(employee => {
