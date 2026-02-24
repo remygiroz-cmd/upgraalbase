@@ -146,11 +146,11 @@ export default function ShiftSwapModal({ open, onOpenChange, currentYear, curren
     return ids;
   }, [pendingSwaps]);
 
-  // Shifts for employee A (connected user)
+  // Shifts for employee A
   const shiftsA = useMemo(() => {
-    if (!currentEmployee) return [];
-    return allMonthShifts.filter(s => s.employee_id === currentEmployee.id);
-  }, [allMonthShifts, currentEmployee]);
+    if (!employeeA) return [];
+    return allMonthShifts.filter(s => s.employee_id === employeeA.id);
+  }, [allMonthShifts, employeeA]);
 
   // All shifts for employee B (raw)
   const allShiftsB = useMemo(() => {
