@@ -263,6 +263,23 @@ export default function Planning() {
     enabled: resetVersion !== undefined
   });
 
+  // Fetch approved swap requests for current month
+  const { data: approvedSwaps = [] } = useQuery({
+    queryKey: ['approvedSwaps', monthKey],
+    queryFn: () => base44.entities.ShiftSwapRequest.filter({ status: 'APPROVED', month_key: monthKey }),
+    enabled: !!monthKey
+  });
+
+  // Build a lookup: shiftId → swap info
+  const swapLookup = React.useMemo(() => {
+    const map = new Map();
+    for (const swap of approvedSwaps) {
+      map.set(swap.shift_a_id, { otherName: swap.employee_b_name, otherDate: swap.shift_b_date, otherTime: `${swap.shift_b_start_time}-${swap.shift_b_end_time}`, myDate: swap.shift_a_date, myTime: `${swap.shift_a_start_time}-${swap.shift_a_end_time}` });
+      map.set(swap.shift_b_id, { otherName: swap.employee_a_name, otherDate: swap.shift_a_date, otherTime: `${swap.shift_a_start_time}-${swap.shift_a_end_time}`, myDate: swap.shift_b_date, myTime: `${swap.shift_b_start_time}-${swap.shift_b_end_time}` });
+    }
+    return map;
+  }, [approvedSwaps]);
+
   // Fetch holiday dates for current month
   const { data: holidayDates = [] } = useQuery({
     queryKey: ['holidayDates', currentYear, currentMonth],
