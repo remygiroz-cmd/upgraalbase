@@ -168,9 +168,9 @@ export default function OptimisationMasseSalariale() {
             </Select>
           </div>
 
-          {/* Affichage Home Page */}
+          {/* Affichage Home Page et Planning */}
           <div>
-            <Label className="text-sm font-semibold text-gray-900 mb-2 block">Afficher sur la Home Page pour les rôles</Label>
+            <Label className="text-sm font-semibold text-gray-900 mb-2 block">Afficher sur la Home Page et sur le Planning pour les rôles</Label>
             <div className="flex flex-wrap gap-2">
               {roles.map(role => (
                 <button
@@ -186,19 +186,7 @@ export default function OptimisationMasseSalariale() {
                 </button>
               ))}
             </div>
-            <p className="text-xs text-gray-500 mt-2">Les employés dont le rôle est coché verront le message sur leur accueil.</p>
-          </div>
-
-          {/* Affichage Planning */}
-          <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg border border-gray-200">
-            <div>
-              <p className="font-medium text-gray-900">Afficher dans le Planning</p>
-              <p className="text-sm text-gray-600">Affiche un bloc en haut du planning du jour</p>
-            </div>
-            <Switch
-              checked={settings.show_in_planning !== false}
-              onCheckedChange={(v) => setSettings({ ...settings, show_in_planning: v })}
-            />
+            <p className="text-xs text-gray-500 mt-2">Les utilisateurs dont le rôle est coché verront le bloc sur l'accueil et dans le planning.</p>
           </div>
 
           {/* Recalcul manuel */}
