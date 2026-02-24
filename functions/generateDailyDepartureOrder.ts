@@ -122,12 +122,17 @@ Deno.serve(async (req) => {
       // These are populated by the frontend calculation engine and saved to DB
       let score = 0;
       if (recap) {
-        const comp = (recap.complementaryHours10 || 0) + (recap.complementaryHours25 || 0);
-        const ot = (recap.overtimeHours25 || 0) + (recap.overtimeHours50 || 0);
+        // Support both old field names (complementary_10) and new ones (complementaryHours10)
+        const comp = (recap.complementaryHours10 || recap.complementary_10 || 0)
+                   + (recap.complementaryHours25 || recap.complementary_25 || 0);
+        const ot = (recap.overtimeHours25 || recap.overtime_25 || 0)
+                 + (recap.overtimeHours50 || recap.overtime_50 || 0);
 
         if (hoursType === 'complementary') score = comp;
         else if (hoursType === 'overtime') score = ot;
         else score = comp + ot;
+
+        console.log(`  Score ${recap.employee_id}: comp=${comp} ot=${ot} (hoursType=${hoursType}) → score=${score}`);
       }
 
       // Calculate today's total shift duration
