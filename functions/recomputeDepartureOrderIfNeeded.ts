@@ -98,8 +98,31 @@ Deno.serve(async (req) => {
           return emp && (emp.team === svc || (emp.position && emp.position === svc));
         });
 
+        const now = new Date().toISOString();
+
+        // Always create/update DepartureOrder record (even if empty)
         if (serviceShifts.length === 0) {
-          results.push({ service: svc, status: 'empty', count: 0 });
+          const existing = await b.entities.DepartureOrder.filter({ date, service: svc });
+          if (existing.length > 0) {
+            await b.entities.DepartureOrder.update(existing[0].id, {
+              employee_order: [],
+              generated_at: now,
+              last_auto_recompute_at: now,
+              recompute_reason: reason,
+              version: (existing[0].version || 0) + 1
+            });
+          } else {
+            await b.entities.DepartureOrder.create({
+              date,
+              service: svc,
+              employee_order: [],
+              generated_at: now,
+              last_auto_recompute_at: now,
+              recompute_reason: reason,
+              version: 1
+            });
+          }
+          results.push({ service: svc, status: 'empty', count: 0, reason: 'no_shifts' });
           continue;
         }
 
