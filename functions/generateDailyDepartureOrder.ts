@@ -202,7 +202,8 @@ Deno.serve(async (req) => {
 
     // Build message
     const orderStr = employeeData.map((emp, i) => `${i + 1}. ${emp.first_name} ${emp.last_name}`).join(', ');
-    const message = `Ordre de départ pour le service ${service} aujourd'hui :\n${orderStr}`;
+    const debugStr = employeeData.map(e => `${e.first_name}=${e.score}h`).join(' | ');
+    const message = `Ordre de départ pour le service ${service} aujourd'hui :\n${orderStr}\nDEBUG: ${debugStr}`;
 
     // Delete existing entry for today/service
     const existing = await b.entities.DepartureOrder.filter({ date: todayStr, service });
