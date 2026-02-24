@@ -1195,6 +1195,15 @@ export default function ExportComptaModal({ open, onOpenChange, monthStart, mont
           </div>
         )}
 
+        {/* Sync status */}
+        {syncMessage && (
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 flex items-start gap-2">
+            <div className="text-sm text-blue-900">
+              {syncMessage}
+            </div>
+          </div>
+        )}
+
         {/* DEBUG UI - AFFICHÉ EN PREMIER pour être visible */}
         {new URLSearchParams(window.location.search).get('debug') === '1' && (
           <div className="bg-yellow-100 border-2 border-yellow-500 rounded-lg p-3 mb-4">
