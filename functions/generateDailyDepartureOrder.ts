@@ -111,19 +111,22 @@ Deno.serve(async (req) => {
         s.status !== 'absent' && s.status !== 'leave' && s.status !== 'cancelled'
       );
 
-      // Calculate total worked hours for the month
-      let totalWorkedMinutes = 0;
-      empMonthShifts.forEach(s => {
-        if (s.start_time && s.end_time) {
-          const [sh, sm] = s.start_time.split(':').map(Number);
-          const [eh, em] = s.end_time.split(':').map(Number);
-          let mins = (eh * 60 + em) - (sh * 60 + sm);
-          if (mins < 0) mins += 24 * 60;
-          mins -= (s.break_minutes || 0);
-          totalWorkedMinutes += Math.max(0, mins);
+      // Calculate total worked hours for the month (respecting base_hours_override)
+      const calcShiftHours = (s) => {
+        if (s.base_hours_override !== null && s.base_hours_override !== undefined) {
+          return parseFloat(s.base_hours_override) || 0;
         }
-      });
-      const totalWorkedHours = totalWorkedMinutes / 60;
+        if (!s.start_time || !s.end_time) return 0;
+        const [sh, sm] = s.start_time.split(':').map(Number);
+        const [eh, em] = s.end_time.split(':').map(Number);
+        let mins = (eh * 60 + em) - (sh * 60 + sm);
+        if (mins < 0) mins += 24 * 60;
+        mins -= (s.break_minutes || 0);
+        return Math.max(0, mins) / 60;
+      };
+
+      let totalWorkedHours = 0;
+      empMonthShifts.forEach(s => { totalWorkedHours += calcShiftHours(s); });
 
       // Get contract monthly hours directly from contract_hours field (most accurate)
       const parseHours = (val) => {
@@ -139,24 +142,21 @@ Deno.serve(async (req) => {
       // Use monthly contract hours directly
       const contractMonthlyHours = parseHours(emp.contract_hours);
 
-      console.log(`  Contract calc ${emp.first_name}: contract_hours=${emp.contract_hours}, contractMonthly=${contractMonthlyHours.toFixed(2)}h, workedHours=${totalWorkedHours.toFixed(2)}h`);
-
       // Calculate extra hours (complementary for part-time, overtime for full-time)
       const extraHours = Math.max(0, totalWorkedHours - contractMonthlyHours);
 
-      let score = 0;
       const isPartTime = emp.work_time_type === 'part_time';
+      let score = 0;
 
       if (isPartTime) {
-        // Complementary hours
         if (hoursType === 'complementary' || hoursType === 'both') score += extraHours;
       } else {
-        // Overtime hours
         if (hoursType === 'overtime' || hoursType === 'both') score += extraHours;
-        if (hoursType === 'complementary') score = 0; // full-time has no complementary
+        // full-time has no complementary hours
+        if (hoursType === 'complementary') score = 0;
       }
 
-      console.log(`  Score ${emp.first_name} ${emp.last_name}: worked=${totalWorkedHours.toFixed(2)}h, contract=${contractMonthlyHours.toFixed(2)}h, extra=${extraHours.toFixed(2)}h, score=${score.toFixed(2)}, partTime=${isPartTime}`);
+      console.log(`  Score ${emp.first_name} ${emp.last_name}: shifts=${empMonthShifts.length}, worked=${totalWorkedHours.toFixed(2)}h, contract=${contractMonthlyHours.toFixed(2)}h, extra=${extraHours.toFixed(2)}h, score=${score.toFixed(2)}, partTime=${isPartTime}`);
 
       // Calculate today's total shift duration
       const todayShifts = serviceShifts.filter(s => s.employee_id === empId);
