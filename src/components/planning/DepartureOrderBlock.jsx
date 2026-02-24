@@ -71,18 +71,76 @@ export default function DepartureOrderBlock({ date, currentUser }) {
     setLoadingDebug(false);
   };
 
+  // If no orders with employees, show diagnostic
+  if (ordersWithEmployees.length === 0) {
+    return (
+      <div className="bg-amber-50 border border-amber-300 rounded-xl p-4 mb-4">
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex-1">
+            <div className="flex items-center gap-2 mb-2">
+              <AlertCircle className="w-4 h-4 text-amber-700" />
+              <span className="text-sm font-bold text-amber-900">Aucun ordre de départ généré</span>
+            </div>
+            
+            {diagnostic && (
+              <div className="text-xs text-amber-800 space-y-1 bg-white rounded p-2">
+                <div><strong>Paramètres :</strong> {diagnostic.settings?.enabled ? '✓ Activée' : '✗ Désactivée'}</div>
+                <div><strong>Services :</strong> {diagnostic.settings?.services?.join(', ') || '(aucun)'}</div>
+                <div><strong>Shifts trouvés :</strong> {diagnostic.shiftsToday.length}</div>
+                <div><strong>Ordres en DB :</strong> {diagnostic.departureOrders.length}</div>
+                {diagnostic.locks.length > 0 && (
+                  <div className="text-orange-600">
+                    <strong>🔒 Lock actif :</strong> recalcul debouncé ({diagnostic.locks[0].expires_at})
+                  </div>
+                )}
+                {diagnostic.issues.length > 0 && (
+                  <div className="mt-1 pt-1 border-t border-amber-200">
+                    {diagnostic.issues.map((issue, i) => (
+                      <div key={i} className="text-orange-700">• {issue}</div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
+            <p className="text-xs text-amber-600 mt-2">
+              L'ordre peut évoluer automatiquement si le planning ou les recaps sont modifiés.
+            </p>
+          </div>
+
+          {isAdmin && (
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={handleForceRecalc}
+              disabled={loadingDebug}
+              className="flex-shrink-0"
+            >
+              {loadingDebug ? (
+                <RefreshCw className="w-3 h-3 animate-spin" />
+              ) : (
+                <RefreshCw className="w-3 h-3" />
+              )}
+              Recalculer
+            </Button>
+          )}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-2 mb-4">
-      {successOrders.map(order => (
+      {ordersWithEmployees.map(order => (
         <div key={order.id} className="bg-emerald-50 border border-emerald-300 rounded-xl p-4">
           <div className="flex items-center gap-2 mb-2">
             <TrendingDown className="w-4 h-4 text-emerald-700" />
             <span className="text-sm font-bold text-emerald-900">Optimisation masse salariale — {order.service}</span>
           </div>
           <p className="text-sm text-emerald-800 font-medium">
-            {order.ordered_employees.map((emp, i) => (
+            {order.employee_order?.map((emp, i) => (
               <span key={emp.employee_id}>
-                <span className="font-bold">{i + 1}.</span> {emp.employee_name}{i < order.ordered_employees.length - 1 ? ', ' : ''}
+                <span className="font-bold">{i + 1}.</span> {emp.employee_name}{i < (order.employee_order?.length || 1) - 1 ? ', ' : ''}
               </span>
             ))}
           </p>
