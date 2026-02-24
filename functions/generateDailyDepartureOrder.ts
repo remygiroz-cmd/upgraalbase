@@ -46,6 +46,10 @@ Deno.serve(async (req) => {
   // Load all shifts for today
   const allShifts = await b.entities.Shift.filter({ date: todayStr });
 
+  // Load non-shift events for today (employees on leave, CP, etc.)
+  const allNonShifts = await b.entities.NonShiftEvent.filter({ date: todayStr });
+  const employeeIdsOnNonShift = new Set(allNonShifts.map(ns => ns.employee_id));
+
   // Load monthly recaps for current month
   const allRecaps = await b.entities.MonthlyRecap.filter({ year, month });
 
