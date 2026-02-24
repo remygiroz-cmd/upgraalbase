@@ -62,9 +62,15 @@ Deno.serve(async (req) => {
   const results = [];
 
   for (const service of services) {
-    // Shifts for this service today — exclude employees with a non-shift event (CP, absences, etc.)
+    // Find the team matching this service name
+    const team = allTeams.find(t => t.name.toLowerCase() === service.toLowerCase());
+    const teamEmployeeIds = team
+      ? new Set(allEmployees.filter(e => e.team_id === team.id).map(e => e.id))
+      : new Set();
+
+    // Shifts for employees of this team today — exclude employees with a non-shift event (CP, absences, etc.)
     const serviceShifts = allShifts.filter(s =>
-      (s.position || '').toLowerCase() === service.toLowerCase() &&
+      teamEmployeeIds.has(s.employee_id) &&
       s.status !== 'absent' && s.status !== 'leave' &&
       !employeeIdsOnNonShift.has(s.employee_id)
     );
