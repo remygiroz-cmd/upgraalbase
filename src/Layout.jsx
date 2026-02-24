@@ -21,7 +21,8 @@ import {
         File,
         Receipt,
         Calendar,
-        Megaphone
+        Megaphone,
+        Car
       } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import UserAccessCheck from '@/components/UserAccessCheck';
