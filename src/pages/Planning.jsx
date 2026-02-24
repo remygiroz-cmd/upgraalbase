@@ -1404,7 +1404,7 @@ export default function Planning() {
                                   })}
                                   {employeeShifts.map((shift) => {
                                     const warnings = getShiftWarnings(shift, employeeShifts);
-                                    const swapInfo = swapLookup.get(shift.id) || null;
+                                    const swapInfo = swapLookup.get(`${shift.employee_id}_${shift.date}`) || null;
                                     return (
                                       <div key={shift.id} className={totalEvents === 1 ? "flex-1" : ""}>
                                         <ShiftCard
