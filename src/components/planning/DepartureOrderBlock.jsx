@@ -7,6 +7,8 @@ import { Button } from '@/components/ui/button';
 
 export default function DepartureOrderBlock({ date, currentUser }) {
   const today = date || formatLocalDate(new Date());
+  const [diagnostic, setDiagnostic] = useState(null);
+  const [loadingDebug, setLoadingDebug] = useState(false);
 
   const { data: settingsArr = [] } = useQuery({
     queryKey: ['optimisationSettings'],
@@ -23,7 +25,7 @@ export default function DepartureOrderBlock({ date, currentUser }) {
     enabled: !!(settings?.enabled)
   });
 
-  const { data: orders = [] } = useQuery({
+  const { data: orders = [], refetch: refetchOrders } = useQuery({
     queryKey: ['departureOrders', today],
     queryFn: () => base44.entities.DepartureOrder.filter({ date: today }),
     enabled: !!(settings?.enabled),
@@ -43,12 +45,31 @@ export default function DepartureOrderBlock({ date, currentUser }) {
   }
 
   const activeServices = (settings?.services || []).map(s => s.toLowerCase());
-  const successOrders = orders.filter(o =>
-    o.status === 'success' &&
-    o.ordered_employees?.length > 0 &&
+  const ordersWithEmployees = orders.filter(o =>
+    o.employee_order?.length > 0 &&
     (activeServices.length === 0 || activeServices.includes((o.service || '').toLowerCase()))
   );
-  if (successOrders.length === 0) return null;
+
+  // Load diagnostic if no orders or user is admin/manager
+  useEffect(() => {
+    if ((ordersWithEmployees.length === 0 || isAdmin) && !diagnostic) {
+      setLoadingDebug(true);
+      base44.functions.invoke('debugDepartureOrderState', { date: today })
+        .then(res => setDiagnostic(res.data))
+        .catch(() => {})
+        .finally(() => setLoadingDebug(false));
+    }
+  }, [ordersWithEmployees.length, isAdmin, today]);
+
+  const handleForceRecalc = async () => {
+    setLoadingDebug(true);
+    await base44.functions.invoke('recomputeDepartureOrderIfNeeded', {
+      date: today,
+      forceImmediate: true
+    }).catch(() => {});
+    setTimeout(() => refetchOrders(), 500);
+    setLoadingDebug(false);
+  };
 
   return (
     <div className="space-y-2 mb-4">
