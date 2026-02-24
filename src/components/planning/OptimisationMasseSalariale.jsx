@@ -131,21 +131,21 @@ export default function OptimisationMasseSalariale() {
           <div>
             <Label className="text-sm font-semibold text-gray-900 mb-3 block">Services à optimiser</Label>
             <div className="flex flex-wrap gap-2">
-              {positions.map(pos => (
+              {teams.map(team => (
                 <button
-                  key={pos.id}
-                  onClick={() => toggleService(pos.label)}
+                  key={team.id}
+                  onClick={() => toggleService(team.name)}
                   className={`px-3 py-1.5 rounded-lg text-sm font-medium border-2 transition-colors ${
-                    (settings.services || []).includes(pos.label)
+                    (settings.services || []).includes(team.name)
                       ? 'bg-emerald-600 text-white border-emerald-600'
                       : 'bg-white text-gray-700 border-gray-300 hover:border-emerald-400'
                   }`}
                 >
-                  {pos.label}
+                  {team.name}
                 </button>
               ))}
-              {positions.length === 0 && (
-                <p className="text-sm text-gray-500">Aucun poste défini. Configurez les postes dans les paramètres planning.</p>
+              {teams.length === 0 && (
+                <p className="text-sm text-gray-500">Aucune équipe définie. Configurez les équipes dans Gestion du Personnel.</p>
               )}
             </div>
           </div>
