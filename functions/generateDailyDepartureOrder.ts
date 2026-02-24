@@ -44,8 +44,10 @@ Deno.serve(async (req) => {
   const monthEnd = `${monthKey}-${String(lastDay).padStart(2, '0')}`;
 
   // Load all shifts for current month (to compute complementary hours)
-  const allMonthShifts = await b.entities.Shift.filter({ month_key: monthKey });
-  console.log(`📅 Month shifts loaded: ${allMonthShifts.length} (month_key=${monthKey})`);
+  // month_key may not be set on all shifts, so load all and filter by date range
+  const allShiftsRaw = await b.entities.Shift.list('-date', 2000);
+  const allMonthShifts = allShiftsRaw.filter(s => s.date >= monthStart && s.date <= monthEnd);
+  console.log(`📅 Month shifts loaded: ${allMonthShifts.length} (${monthStart} → ${monthEnd})`);
 
   // Load non-shift events for today (to exclude absent/leave employees)
   const allNonShifts = await b.entities.NonShiftEvent.filter({ date: todayStr });
