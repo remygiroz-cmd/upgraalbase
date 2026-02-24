@@ -75,6 +75,11 @@ export default function Vehicules() {
           <TabsTrigger value="documents" className="flex items-center gap-1.5">
             <FileText className="w-4 h-4" /> Documents
           </TabsTrigger>
+          {isManager && (
+            <TabsTrigger value="settings" className="flex items-center gap-1.5">
+              <Settings className="w-4 h-4" /> Paramètres
+            </TabsTrigger>
+          )}
         </TabsList>
 
         <TabsContent value="dashboard"><VehiclesDashboard /></TabsContent>
