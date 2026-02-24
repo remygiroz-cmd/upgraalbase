@@ -93,12 +93,30 @@ export default function ShiftSwapModal({ open, onOpenChange, currentYear, curren
     queryFn: () => base44.auth.me()
   });
 
+  // Load user role details
+  const { data: userRole } = useQuery({
+    queryKey: ['userRole', currentUser?.role_id],
+    queryFn: async () => {
+      if (!currentUser?.role_id) return null;
+      const roles = await base44.entities.Role.filter({ id: currentUser.role_id });
+      return roles[0] || null;
+    },
+    enabled: !!currentUser?.role_id
+  });
+
   // Check if user has permission to submit swaps for others
   const canSubmitForOthers = useMemo(() => {
     if (!currentUser) return false;
-    const role = currentUser.role?.toLowerCase() || '';
-    return ['admin', 'gérant', 'manager', 'bureau'].some(r => role.includes(r));
-  }, [currentUser]);
+    const allowedRoles = ['admin', 'gérant', 'manager', 'bureau'];
+    
+    // Check against role name
+    const roleName = (userRole?.name || currentUser.role || '').toLowerCase();
+    if (allowedRoles.some(r => roleName.includes(r))) return true;
+    
+    // Check against current user role string
+    const userRoleStr = (currentUser.role || '').toLowerCase();
+    return allowedRoles.some(r => userRoleStr.includes(r));
+  }, [currentUser, userRole]);
 
   // All active employees
   const { data: allEmployees = [] } = useQuery({
