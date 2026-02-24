@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Settings, Calendar, Calculator, Eye, Zap, Lock, Mail } from 'lucide-react';
+import { Settings, Calendar, Calculator, Eye, Zap, Lock, Mail, TrendingDown } from 'lucide-react';
+import OptimisationMasseSalariale from './OptimisationMasseSalariale';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import PositionsManager from './PositionsManager';

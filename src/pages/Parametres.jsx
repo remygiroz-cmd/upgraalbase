@@ -138,15 +138,7 @@ export default function Parametres() {
                 <span>Automation</span>
               </TabsTrigger>
             )}
-            {isAdmin && (
-              <TabsTrigger 
-                value="optimisation" 
-                className="data-[state=active]:bg-emerald-100 data-[state=active]:text-emerald-900 data-[state=active]:border-emerald-500 bg-white border-2 border-gray-300 text-gray-900 px-4 py-3 rounded-lg hover:bg-gray-50 transition-colors"
-              >
-                <TrendingDown className="w-4 h-4 mr-2" />
-                <span>Optimisation</span>
-              </TabsTrigger>
-            )}
+
           </TabsList>
 
           {/* Establishment Tab */}
