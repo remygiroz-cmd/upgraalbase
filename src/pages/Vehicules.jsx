@@ -87,6 +87,9 @@ export default function Vehicules() {
         <TabsContent value="assignations"><VehiclesAssignmentTab currentEmployee={currentEmployee} /></TabsContent>
         <TabsContent value="maintenance"><VehiclesMaintenanceTab /></TabsContent>
         <TabsContent value="documents"><VehiclesDocumentsTab /></TabsContent>
+        {isManager && (
+          <TabsContent value="settings"><VehiclesSettings /></TabsContent>
+        )}
       </Tabs>
     </div>
   );
