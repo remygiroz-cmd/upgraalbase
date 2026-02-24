@@ -218,6 +218,7 @@ export default function ExportComptaModal({ open, onOpenChange, monthStart, mont
   const [overrideModalOpen, setOverrideModalOpen] = useState(false);
   const [selectedEmployee, setSelectedEmployee] = useState(null);
   const [selectedAutoValues, setSelectedAutoValues] = useState(null);
+  const queryClient = useQueryClient();
 
   // DEBUG: Confirm modal is mounted
   React.useEffect(() => {
