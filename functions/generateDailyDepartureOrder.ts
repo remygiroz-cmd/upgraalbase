@@ -194,11 +194,9 @@ Deno.serve(async (req) => {
       };
     }).filter(Boolean);
 
-    // Sort: score DESC → shift_duration DESC → priority_optimisation ASC → alphabetical
+    // Sort: score (complementary hours) DESC → name ASC for stability
     employeeData.sort((a, b) => {
       if (b.score !== a.score) return b.score - a.score;
-      if (b.shift_duration !== a.shift_duration) return b.shift_duration - a.shift_duration;
-      if (a.priority_optimisation !== b.priority_optimisation) return a.priority_optimisation - b.priority_optimisation;
       return a.last_name.localeCompare(b.last_name);
     });
 
