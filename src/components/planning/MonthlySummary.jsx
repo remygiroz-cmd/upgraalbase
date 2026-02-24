@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { cn } from '@/lib/utils';
 import { Edit2, RotateCcw, AlertCircle, Clock, Calendar, Coffee, Sun, Briefcase, Eye, EyeOff } from 'lucide-react';
 import { useHiddenItems } from './useHiddenItems';
