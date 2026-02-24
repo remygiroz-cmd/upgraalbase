@@ -155,7 +155,6 @@ Deno.serve(async (req) => {
         employeeScores.forEach((e, idx) => { e.order_index = idx + 1; });
 
         // Persist order
-        const now = new Date().toISOString();
         const existing = await b.entities.DepartureOrder.filter({ date, service: svc });
 
         if (existing.length > 0) {
