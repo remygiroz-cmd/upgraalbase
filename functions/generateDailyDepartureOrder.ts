@@ -135,9 +135,10 @@ Deno.serve(async (req) => {
         contractHoursWeekly = (parseInt(parts[0] || 0) + (parseInt(parts[1] || 0) / 60)) / (52 / 12);
       }
 
-      // Calculate contract monthly hours (approximate: weeks in month × weekly hours)
-      // month is already 1-indexed from the monthKey split, so use (month, 0) for last day of `month`
-      const daysInMonth = new Date(year, month, 0).getDate(); // month is 1-indexed so this gives last day correctly
+      // Calculate contract monthly hours
+      // month from monthKey is 1-indexed (e.g. 2 for February)
+      // new Date(year, month, 0) gives last day of month-1, so we need month directly
+      const daysInMonth = new Date(year, month, 0).getDate(); // month=2 → Feb last day ✓ (JS month is 0-indexed, so month=2 means March, day=0 = last day of Feb)
       const weeksInMonth = daysInMonth / 7;
       const contractMonthlyHours = contractHoursWeekly * weeksInMonth;
 
