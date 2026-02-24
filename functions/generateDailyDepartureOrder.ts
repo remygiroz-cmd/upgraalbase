@@ -119,7 +119,8 @@ Deno.serve(async (req) => {
       else if (hoursType === 'overtime') score = ot;
       else score = comp + ot;
 
-      console.log(`  → ${emp.first_name} ${emp.last_name}: comp=${comp.toFixed(2)}h ot=${ot.toFixed(2)}h score=${score.toFixed(2)} (hoursType=${hoursType}, partTime=${isPartTime})`);
+      const recap = allPersistedRecaps.find(r => r.employee_id === empId);
+      console.log(`  → ${emp.first_name}: comp=${comp.toFixed(2)}h ot=${ot.toFixed(2)}h score=${score.toFixed(2)} [persisted=${!!recap}]`);
 
       return {
         employee_id: empId,
