@@ -167,16 +167,16 @@ export default function ShiftSwapModal({ open, onOpenChange, currentYear, curren
     if (!shiftAId || !shiftBId) return null;
     if (pendingShiftIds.has(shiftAId)) return 'Le shift A est déjà impliqué dans une demande d\'échange en attente.';
     if (pendingShiftIds.has(shiftBId)) return 'Le shift B est déjà impliqué dans une demande d\'échange en attente.';
-    if (selectedShiftA && selectedShiftB) {
-      const monthA = selectedShiftA.date?.substring(0, 7);
-      const monthB = selectedShiftB.date?.substring(0, 7);
+    if (selectedShiftA && selectedShiftB && employeeA?.id && employeeBId) {
+      const monthA = getLocalMonthKey(selectedShiftA.date);
+      const monthB = getLocalMonthKey(selectedShiftB.date);
       if (monthA !== monthB) return 'Les deux shifts doivent appartenir au même mois.';
-      if (swapHasConflict(selectedShiftA, selectedShiftB, allMonthShifts)) {
+      if (swapHasConflict(selectedShiftA, selectedShiftB, employeeA.id, employeeBId, allMonthShifts)) {
         return 'Échange impossible : conflit d\'horaires détecté.';
       }
     }
     return null;
-  }, [shiftAId, shiftBId, selectedShiftA, selectedShiftB, pendingShiftIds, allMonthShifts]);
+  }, [shiftAId, shiftBId, selectedShiftA, selectedShiftB, employeeA?.id, employeeBId, pendingShiftIds, allMonthShifts]);
 
   const isValid = shiftAId && shiftBId && !validationError && employeeA;
 
