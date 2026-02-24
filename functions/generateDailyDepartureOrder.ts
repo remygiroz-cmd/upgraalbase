@@ -112,6 +112,7 @@ Deno.serve(async (req) => {
       );
 
       // Calculate total worked hours for the month (respecting base_hours_override)
+      // Only count shifts UP TO AND INCLUDING today (not future shifts)
       const calcShiftHours = (s) => {
         if (s.base_hours_override !== null && s.base_hours_override !== undefined) {
           return parseFloat(s.base_hours_override) || 0;
@@ -125,8 +126,10 @@ Deno.serve(async (req) => {
         return Math.max(0, mins) / 60;
       };
 
+      // Only count shifts up to today to get accurate "heures faites ce mois"
+      const empPastShifts = empMonthShifts.filter(s => s.date <= todayStr);
       let totalWorkedHours = 0;
-      empMonthShifts.forEach(s => { totalWorkedHours += calcShiftHours(s); });
+      empPastShifts.forEach(s => { totalWorkedHours += calcShiftHours(s); });
 
       // Get contract monthly hours directly from contract_hours field (most accurate)
       const parseHours = (val) => {
