@@ -3,51 +3,70 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { toast } from 'sonner';
-import { CheckCircle2, AlertTriangle } from 'lucide-react';
+import { CheckCircle2, Camera, AlertTriangle } from 'lucide-react';
 
-export default function VehicleCheckModal({ open, onOpenChange, type, assignment, vehicle, employee }) {
+export default function VehicleCheckModal({ open, onOpenChange, type, assignment, vehicle, currentEmployee, onComplete }) {
   const queryClient = useQueryClient();
-  const [form, setForm] = useState({});
+  const isElectrique = vehicle?.energie === 'ELECTRIQUE';
+
+  const [form, setForm] = useState({
+    km_debut: assignment?.km_debut || '',
+    km_fin: '',
+    check_visuel_pneus: 'OK',
+    check_voyants: 'OK',
+    check_carrosserie: 'OK',
+    confirmation_vehicule_ok: false,
+    etat_pneus: 'BON',
+    etat_freins: 'BON',
+    etat_carrosserie: 'BON',
+    branche_en_charge: false,
+    charge_restante_pct: '',
+    niveau_carburant: 'PLEIN',
+    cle_remise_en_place: false,
+    validation_finale: false,
+    incidents: '',
+    tags_incidents: []
+  });
+
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
 
-  const isElectrique = vehicle?.energie === 'ELECTRIQUE';
-  const isThermique = vehicle?.energie === 'THERMIQUE';
+  const INCIDENT_TAGS = ['RAYURE', 'CHOC', 'PNEU_PLAT', 'VOYANT_ALLUME', 'VITRE_CASSEE', 'AUTRE'];
 
-  const isDebutShift = type === 'DEBUT_SHIFT';
-  const isFinRun = type === 'FIN_RUN';
-  const isFinService = type === 'FIN_SERVICE';
+  const toggleTag = (tag) => {
+    set('tags_incidents', form.tags_incidents.includes(tag)
+      ? form.tags_incidents.filter(t => t !== tag)
+      : [...form.tags_incidents, tag]);
+  };
+
+  const canSubmit = () => {
+    if (type === 'DEBUT_SHIFT') {
+      return form.km_debut !== '' && form.confirmation_vehicule_ok;
+    }
+    if (type === 'FIN_SERVICE') {
+      if (!form.cle_remise_en_place || !form.validation_finale) return false;
+      if (isElectrique && (form.charge_restante_pct === '' || !form.branche_en_charge)) return false;
+      if (!isElectrique && !form.niveau_carburant) return false;
+      return true;
+    }
+    if (type === 'FIN_RUN') {
+      return form.km_fin !== '' && Number(form.km_fin) >= Number(form.km_debut || 0);
+    }
+    return true;
+  };
 
   const mutation = useMutation({
     mutationFn: async () => {
-      // Validations
-      if (isDebutShift) {
-        if (!form.km_debut) throw new Error('Kilométrage de début obligatoire.');
-        if (!form.check_visuel_pneus) throw new Error('Vérification pneus obligatoire.');
-        if (!form.check_voyants) throw new Error('Vérification voyants obligatoire.');
-        if (!form.check_carrosserie) throw new Error('Vérification carrosserie obligatoire.');
-        if (!form.confirmation_vehicule_ok) throw new Error('Confirmation que le véhicule est en état de marche obligatoire.');
-      }
-      if (isFinRun) {
-        if (!form.km_fin) throw new Error('Kilométrage fin de run obligatoire.');
-        if (Number(form.km_fin) < Number(assignment.km_debut || 0)) throw new Error('Km fin doit être ≥ km début.');
-      }
-      if (isFinService) {
-        if (isElectrique && form.branche_en_charge === undefined) throw new Error('Indiquer si le véhicule est branché en charge.');
-        if (isThermique && !form.niveau_carburant) throw new Error('Niveau de carburant obligatoire.');
-        if (!form.cle_remise_en_place) throw new Error('Confirmation de remise de clé obligatoire.');
-        if (!form.validation_finale) throw new Error('Validation finale obligatoire.');
-      }
+      if (!canSubmit()) throw new Error('Remplissez tous les champs obligatoires.');
 
       const checkData = {
         type,
         assignment_id: assignment.id,
         vehicule_id: assignment.vehicule_id,
-        employe_id: employee?.id || assignment.employe_id,
-        employe_name: employee ? `${employee.first_name} ${employee.last_name}` : assignment.employe_name,
+        employe_id: currentEmployee.id,
+        employe_name: `${currentEmployee.first_name} ${currentEmployee.last_name}`,
         date_heure: new Date().toISOString(),
         ...form,
         km_debut: form.km_debut ? Number(form.km_debut) : undefined,
@@ -57,184 +76,253 @@ export default function VehicleCheckModal({ open, onOpenChange, type, assignment
 
       await base44.entities.VehicleCheck.create(checkData);
 
-      // Update assignment
+      // Update assignment flags + vehicle km
       const updates = {};
-      if (isDebutShift) {
+      if (type === 'DEBUT_SHIFT') {
         updates.debut_shift_fait = true;
         updates.km_debut = Number(form.km_debut);
         updates.statut = 'EN_COURS';
+        await base44.entities.Vehicle.update(assignment.vehicule_id, { km_actuel: Number(form.km_debut) });
       }
-      if (isFinRun && form.km_fin) {
-        updates.km_fin = Number(form.km_fin);
-        const dist = Number(form.km_fin) - (assignment.km_debut || 0);
-        updates.distance_calculee = dist > 0 ? dist : 0;
-      }
-      if (isFinService) {
+      if (type === 'FIN_SERVICE') {
         updates.fin_service_fait = true;
-        updates.cle_remise = !!form.cle_remise_en_place;
+        updates.cle_remise = form.cle_remise_en_place;
         updates.statut = 'TERMINE';
-        // Update vehicle km
         if (form.km_fin) {
+          updates.km_fin = Number(form.km_fin);
+          updates.distance_calculee = Number(form.km_fin) - Number(assignment.km_debut || 0);
           await base44.entities.Vehicle.update(assignment.vehicule_id, { km_actuel: Number(form.km_fin) });
         }
       }
-      if (Object.keys(updates).length > 0) {
-        await base44.entities.VehicleAssignment.update(assignment.id, updates);
+      if (type === 'FIN_RUN') {
+        updates.km_fin = Number(form.km_fin);
+        updates.distance_calculee = Number(form.km_fin) - Number(assignment.km_debut || 0);
+        if (form.tags_incidents?.length > 0 || form.incidents) {
+          updates.non_conformite = true;
+        }
       }
+
+      await base44.entities.VehicleAssignment.update(assignment.id, updates);
     },
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['vehicleChecks', assignment.id] });
       queryClient.invalidateQueries({ queryKey: ['assignments'] });
-      queryClient.invalidateQueries({ queryKey: ['vehicles'] });
-      queryClient.invalidateQueries({ queryKey: ['myAssignment'] });
-      const labels = { DEBUT_SHIFT: 'Check début de shift', FIN_RUN: 'Check fin de run', FIN_SERVICE: 'Check fin de service' };
-      toast.success(`✅ ${labels[type]} validé`);
-      setForm({});
-      onOpenChange(false);
+      queryClient.invalidateQueries({ queryKey: ['driverAssignment'] });
+      toast.success('Check enregistré ✅');
+      onComplete();
     },
     onError: (e) => toast.error(e.message)
   });
 
-  const typeLabels = { DEBUT_SHIFT: '🚀 Début de shift', FIN_RUN: '🔄 Fin de run', FIN_SERVICE: '🏁 Fin de service' };
+  const typeLabel = {
+    DEBUT_SHIFT: '🚗 Check Début de Shift',
+    FIN_RUN: '🔄 Check Fin de Run',
+    FIN_SERVICE: '🔑 Check Fin de Service'
+  }[type];
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="text-lg">{typeLabels[type]}</DialogTitle>
-          {vehicle && <p className="text-sm text-gray-500">{vehicle.marque} {vehicle.modele} — {vehicle.immatriculation}</p>}
+          <DialogTitle>{typeLabel}</DialogTitle>
+          <p className="text-sm text-gray-500">
+            {vehicle?.marque} {vehicle?.modele} — {vehicle?.immatriculation}
+          </p>
         </DialogHeader>
 
-        <div className="space-y-4">
-
-          {/* DÉBUT DE SHIFT */}
-          {isDebutShift && (
+        <div className="space-y-5">
+          {/* DEBUT SHIFT */}
+          {type === 'DEBUT_SHIFT' && (
             <>
-              <div>
-                <Label>Kilométrage de début *</Label>
-                <Input type="number" value={form.km_debut || ''} onChange={e => set('km_debut', e.target.value)}
-                  placeholder="Ex: 45230" className="mt-1" />
-              </div>
+              <Field label="Km au départ *">
+                <Input type="number" value={form.km_debut} onChange={e => set('km_debut', e.target.value)} placeholder="Ex: 45230" />
+              </Field>
+
               <div className="grid grid-cols-3 gap-3">
-                {[
-                  { key: 'check_visuel_pneus', label: '🔘 Pneus', opts: ['OK', 'DEFAUT'] },
-                  { key: 'check_voyants', label: '💡 Voyants', opts: ['OK', 'ANOMALIE'] },
-                  { key: 'check_carrosserie', label: '🚗 Carrosserie', opts: ['OK', 'DOMMAGE'] }
-                ].map(({ key, label, opts }) => (
-                  <div key={key}>
-                    <Label className="text-xs">{label} *</Label>
-                    <Select value={form[key] || ''} onValueChange={v => set(key, v)}>
-                      <SelectTrigger className="mt-1 h-9"><SelectValue placeholder="—" /></SelectTrigger>
-                      <SelectContent>
-                        {opts.map(o => <SelectItem key={o} value={o}>{o}</SelectItem>)}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                ))}
+                <RadioField label="Pneus" options={['OK', 'DEFAUT']} value={form.check_visuel_pneus} onChange={v => set('check_visuel_pneus', v)} />
+                <RadioField label="Voyants" options={['OK', 'ANOMALIE']} value={form.check_voyants} onChange={v => set('check_voyants', v)} />
+                <RadioField label="Carrosserie" options={['OK', 'DOMMAGE']} value={form.check_carrosserie} onChange={v => set('check_carrosserie', v)} />
               </div>
-              <label className="flex items-start gap-3 p-3 border rounded-lg cursor-pointer bg-green-50">
-                <input type="checkbox" checked={!!form.confirmation_vehicule_ok} onChange={e => set('confirmation_vehicule_ok', e.target.checked)} className="mt-0.5 w-4 h-4" />
+
+              {(form.check_visuel_pneus !== 'OK' || form.check_voyants !== 'OK' || form.check_carrosserie !== 'OK') && (
                 <div>
-                  <span className="text-sm font-medium">Véhicule en état de marche *</span>
-                  <p className="text-xs text-gray-500">Je confirme que le véhicule est en état pour prendre la route.</p>
+                  <Label>Détail anomalie</Label>
+                  <textarea value={form.incidents} onChange={e => set('incidents', e.target.value)}
+                    className="mt-1 w-full border border-gray-300 rounded-md px-3 py-2 text-sm resize-none"
+                    rows={2} placeholder="Décrire l'anomalie constatée..." />
                 </div>
-              </label>
+              )}
+
+              <CheckboxField
+                checked={form.confirmation_vehicule_ok}
+                onChange={v => set('confirmation_vehicule_ok', v)}
+                label="Je confirme avoir inspecté le véhicule et qu'il est en état de marche *"
+              />
             </>
           )}
 
-          {/* FIN DE RUN */}
-          {isFinRun && (
+          {/* FIN RUN */}
+          {type === 'FIN_RUN' && (
             <>
-              <div>
-                <Label>Kilométrage fin de run *</Label>
-                <Input type="number" value={form.km_fin || ''} onChange={e => set('km_fin', e.target.value)}
-                  placeholder="Ex: 45380" className="mt-1" />
-                {assignment?.km_debut && <p className="text-xs text-gray-400 mt-1">Km de début : {assignment.km_debut}</p>}
+              <Field label="Km compteur *">
+                <Input type="number" value={form.km_fin} onChange={e => set('km_fin', e.target.value)} />
+              </Field>
+
+              <div className="grid grid-cols-3 gap-3">
+                <SelectField label="Pneus" options={['BON', 'USAGE', 'CRITIQUE']} value={form.etat_pneus} onChange={v => set('etat_pneus', v)} />
+                <SelectField label="Freins" options={['BON', 'USAGE', 'CRITIQUE']} value={form.etat_freins} onChange={v => set('etat_freins', v)} />
+                <SelectField label="Carrosserie" options={['BON', 'RAYE', 'ENDOMMAGE']} value={form.etat_carrosserie} onChange={v => set('etat_carrosserie', v)} />
               </div>
-              {[
-                { key: 'etat_pneus', label: 'État pneus', opts: ['BON', 'USAGE', 'CRITIQUE'] },
-                { key: 'etat_freins', label: 'État freins', opts: ['BON', 'USAGE', 'CRITIQUE'] },
-                { key: 'etat_carrosserie', label: 'État carrosserie', opts: ['BON', 'RAYE', 'ENDOMMAGE'] },
-              ].map(({ key, label, opts }) => (
-                <div key={key}>
-                  <Label className="text-sm">{label}</Label>
-                  <Select value={form[key] || ''} onValueChange={v => set(key, v)}>
-                    <SelectTrigger className="mt-1"><SelectValue placeholder="Choisir..." /></SelectTrigger>
-                    <SelectContent>{opts.map(o => <SelectItem key={o} value={o}>{o}</SelectItem>)}</SelectContent>
-                  </Select>
+
+              <div>
+                <Label className="mb-2 block">Tags incidents</Label>
+                <div className="flex flex-wrap gap-2">
+                  {INCIDENT_TAGS.map(tag => (
+                    <button key={tag} onClick={() => toggleTag(tag)}
+                      className={`text-xs px-2 py-1 rounded-full border transition-all ${
+                        form.tags_incidents.includes(tag)
+                          ? 'bg-red-500 text-white border-red-500'
+                          : 'border-gray-300 text-gray-600 hover:border-red-400'
+                      }`}>{tag.replace('_', ' ')}</button>
+                  ))}
                 </div>
-              ))}
-              <div>
-                <Label>Incident éventuel</Label>
-                <textarea value={form.incidents || ''} onChange={e => set('incidents', e.target.value)}
-                  rows={2} placeholder="Décrire si incident..."
-                  className="mt-1 w-full border border-gray-300 rounded-md px-3 py-2 text-sm resize-none" />
               </div>
+
+              {form.tags_incidents.length > 0 && (
+                <Field label="Description incident">
+                  <textarea value={form.incidents} onChange={e => set('incidents', e.target.value)}
+                    className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm resize-none"
+                    rows={2} />
+                </Field>
+              )}
             </>
           )}
 
-          {/* FIN DE SERVICE */}
-          {isFinService && (
+          {/* FIN SERVICE */}
+          {type === 'FIN_SERVICE' && (
             <>
-              <div>
-                <Label>Kilométrage fin de service</Label>
-                <Input type="number" value={form.km_fin || ''} onChange={e => set('km_fin', e.target.value)}
-                  placeholder="Ex: 45600" className="mt-1" />
-              </div>
-              {isElectrique && (
+              <Field label="Km compteur final">
+                <Input type="number" value={form.km_fin} onChange={e => set('km_fin', e.target.value)} />
+              </Field>
+
+              {isElectrique ? (
                 <>
-                  <div>
-                    <Label>Charge restante (%)</Label>
-                    <Input type="number" min="0" max="100" value={form.charge_restante_pct || ''} onChange={e => set('charge_restante_pct', e.target.value)} className="mt-1" />
-                  </div>
-                  <label className="flex items-center gap-3 p-3 border rounded-lg cursor-pointer bg-blue-50">
-                    <input type="checkbox" checked={!!form.branche_en_charge} onChange={e => set('branche_en_charge', e.target.checked)} className="w-4 h-4" />
-                    <span className="text-sm font-medium">⚡ Branché en charge *</span>
-                  </label>
+                  <CheckboxField
+                    checked={form.branche_en_charge}
+                    onChange={v => set('branche_en_charge', v)}
+                    label="🔌 Véhicule branché en charge *"
+                  />
+                  <Field label="🔋 Charge restante (%) *">
+                    <Input type="number" min="0" max="100" value={form.charge_restante_pct}
+                      onChange={e => set('charge_restante_pct', e.target.value)} placeholder="Ex: 45" />
+                  </Field>
                 </>
-              )}
-              {isThermique && (
+              ) : (
                 <div>
-                  <Label>Niveau carburant *</Label>
-                  <Select value={form.niveau_carburant || ''} onValueChange={v => set('niveau_carburant', v)}>
-                    <SelectTrigger className="mt-1"><SelectValue placeholder="Choisir..." /></SelectTrigger>
-                    <SelectContent>
-                      {['PLEIN', '3/4', '1/2', '1/4', 'RESERVE'].map(o => <SelectItem key={o} value={o}>{o}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
+                  <Label>⛽ Niveau carburant *</Label>
+                  <div className="grid grid-cols-5 gap-2 mt-2">
+                    {['PLEIN', '3/4', '1/2', '1/4', 'RESERVE'].map(lvl => (
+                      <button key={lvl} onClick={() => set('niveau_carburant', lvl)}
+                        className={`text-xs py-2 rounded-lg border transition-all ${
+                          form.niveau_carburant === lvl
+                            ? lvl === 'RESERVE' ? 'bg-red-500 text-white border-red-500' : 'bg-blue-500 text-white border-blue-500'
+                            : 'border-gray-300 text-gray-600 hover:border-blue-400'
+                        }`}>{lvl}</button>
+                    ))}
+                  </div>
                 </div>
               )}
-              <label className="flex items-start gap-3 p-3 border rounded-lg cursor-pointer bg-yellow-50">
-                <input type="checkbox" checked={!!form.cle_remise_en_place} onChange={e => set('cle_remise_en_place', e.target.checked)} className="mt-0.5 w-4 h-4" />
-                <div>
-                  <span className="text-sm font-medium">🔑 Clé remise en place *</span>
-                  <p className="text-xs text-gray-500">J'ai remis les clés à l'endroit prévu.</p>
-                </div>
-              </label>
-              <div>
-                <Label>Incident éventuel</Label>
-                <textarea value={form.incidents || ''} onChange={e => set('incidents', e.target.value)} rows={2}
-                  placeholder="Décrire si incident..."
-                  className="mt-1 w-full border border-gray-300 rounded-md px-3 py-2 text-sm resize-none" />
-              </div>
-              <label className="flex items-start gap-3 p-4 border-2 border-green-400 rounded-lg cursor-pointer bg-green-50">
-                <input type="checkbox" checked={!!form.validation_finale} onChange={e => set('validation_finale', e.target.checked)} className="mt-0.5 w-4 h-4" />
-                <div>
-                  <span className="text-sm font-bold text-green-900">✅ Validation finale *</span>
-                  <p className="text-xs text-gray-600 mt-0.5">Je confirme avoir effectué toutes les vérifications de fin de service.</p>
-                </div>
-              </label>
+
+              <CheckboxField
+                checked={form.cle_remise_en_place}
+                onChange={v => set('cle_remise_en_place', v)}
+                label="🔑 Clé remise en place (coffre / bureau) *"
+              />
+
+              <CheckboxField
+                checked={form.validation_finale}
+                onChange={v => set('validation_finale', v)}
+                label="✅ Je valide avoir effectué toutes les actions de fin de service *"
+              />
             </>
           )}
 
-          <div className="flex gap-3 pt-2">
-            <Button onClick={() => mutation.mutate()} disabled={mutation.isPending} className="flex-1 bg-green-600 hover:bg-green-700">
-              <CheckCircle2 className="w-4 h-4 mr-2" />
-              {mutation.isPending ? 'Validation...' : 'Valider le check'}
+          {/* Submit */}
+          <div className="flex gap-3 pt-2 border-t">
+            <Button onClick={() => mutation.mutate()} disabled={mutation.isPending || !canSubmit()}
+              className="flex-1 bg-blue-600 hover:bg-blue-700">
+              {mutation.isPending ? 'Enregistrement...' : 'Valider le check'}
             </Button>
             <Button variant="outline" onClick={() => onOpenChange(false)}>Annuler</Button>
           </div>
         </div>
       </DialogContent>
     </Dialog>
+  );
+}
+
+function Field({ label, children }) {
+  return (
+    <div>
+      <Label className="mb-1 block">{label}</Label>
+      {children}
+    </div>
+  );
+}
+
+function RadioField({ label, options, value, onChange }) {
+  return (
+    <div>
+      <Label className="text-xs mb-1 block">{label}</Label>
+      <div className="space-y-1">
+        {options.map(o => (
+          <button key={o} onClick={() => onChange(o)}
+            className={`w-full text-xs py-1.5 px-2 rounded border transition-all ${
+              value === o
+                ? o === 'OK' || o === 'BON' ? 'bg-green-500 text-white border-green-500' : 'bg-red-500 text-white border-red-500'
+                : 'border-gray-300 text-gray-600 hover:border-gray-400'
+            }`}>{o}</button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function SelectField({ label, options, value, onChange }) {
+  const colorMap = { BON: 'green', USAGE: 'orange', CRITIQUE: 'red', RAYE: 'orange', ENDOMMAGE: 'red' };
+  return (
+    <div>
+      <Label className="text-xs mb-1 block">{label}</Label>
+      <div className="space-y-1">
+        {options.map(o => (
+          <button key={o} onClick={() => onChange(o)}
+            className={`w-full text-xs py-1.5 px-2 rounded border transition-all ${
+              value === o
+                ? colorMap[o] === 'green' ? 'bg-green-500 text-white border-green-500'
+                : colorMap[o] === 'orange' ? 'bg-orange-400 text-white border-orange-400'
+                : 'bg-red-500 text-white border-red-500'
+                : 'border-gray-300 text-gray-600 hover:border-gray-400'
+            }`}>{o}</button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function CheckboxField({ checked, onChange, label }) {
+  return (
+    <div
+      onClick={() => onChange(!checked)}
+      className={`flex items-start gap-3 p-3 rounded-xl border cursor-pointer transition-all ${
+        checked ? 'border-green-300 bg-green-50' : 'border-orange-300 bg-orange-50 hover:bg-orange-100'
+      }`}
+    >
+      <div className={`w-5 h-5 rounded border-2 flex items-center justify-center flex-shrink-0 mt-0.5 ${
+        checked ? 'bg-green-500 border-green-500' : 'border-orange-400'
+      }`}>
+        {checked && <CheckCircle2 className="w-3 h-3 text-white" />}
+      </div>
+      <span className="text-sm text-gray-800">{label}</span>
+    </div>
   );
 }
