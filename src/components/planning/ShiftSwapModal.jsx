@@ -31,25 +31,31 @@ function shiftsOverlap(start1, end1, start2, end2) {
 }
 
 // Returns true if swapping shiftA and shiftB would create a schedule conflict
-// allShifts: all shifts in the month
+// IMPORTANT: shiftA and shiftB are EXCLUDED from the conflict check, as they are the shifts being swapped
+// and will be removed from their current employees during the swap.
 function swapHasConflict(shiftA, shiftB, allShifts) {
+  if (!shiftA || !shiftB) return false;
+  
   // After swap: shiftA goes to employee B (on shiftA.date), shiftB goes to employee A (on shiftB.date)
-  // Check: does employee A have any other shift on shiftB.date that overlaps shiftB's time?
+  // Check: does employee A have any OTHER shift on shiftB.date that overlaps shiftB's time?
+  // EXCLUDE both shiftA and shiftB from the check
   const aShiftsOnBDay = allShifts.filter(s =>
     s.employee_id === shiftA.employee_id &&
     s.date === shiftB.date &&
-    s.id !== shiftA.id &&
-    s.id !== shiftB.id
+    s.id !== shiftA.id &&    // Exclude shift A (it will be removed)
+    s.id !== shiftB.id       // Exclude shift B (for safety, though it's not employee A's)
   );
   for (const s of aShiftsOnBDay) {
     if (shiftsOverlap(shiftB.start_time, shiftB.end_time, s.start_time, s.end_time)) return true;
   }
-  // Check: does employee B have any other shift on shiftA.date that overlaps shiftA's time?
+  
+  // Check: does employee B have any OTHER shift on shiftA.date that overlaps shiftA's time?
+  // EXCLUDE both shiftA and shiftB from the check
   const bShiftsOnADay = allShifts.filter(s =>
     s.employee_id === shiftB.employee_id &&
     s.date === shiftA.date &&
-    s.id !== shiftA.id &&
-    s.id !== shiftB.id
+    s.id !== shiftA.id &&    // Exclude shift A (for safety, though it's not employee B's)
+    s.id !== shiftB.id       // Exclude shift B (it will be removed)
   );
   for (const s of bShiftsOnADay) {
     if (shiftsOverlap(shiftA.start_time, shiftA.end_time, s.start_time, s.end_time)) return true;
