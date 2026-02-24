@@ -13,6 +13,8 @@ import html2canvas from 'html2canvas';
 import { calculateMonthlyRecap } from '@/components/utils/monthlyRecapCalculations';
 import { getActiveMonthContext } from './monthContext';
 import ExportOverrideModal from './ExportOverrideModal';
+import { useQueryClient } from '@tanstack/react-query';
+import { cn } from '@/lib/utils';
 
 const MONTHS = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'];
 
