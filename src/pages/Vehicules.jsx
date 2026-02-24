@@ -2,14 +2,13 @@ import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Car, BarChart3, FileText, Wrench, Calendar, Settings } from 'lucide-react';
+import { Car, BarChart3, FileText, Wrench, Calendar } from 'lucide-react';
 import VehiclesFleetTab from '@/components/vehicules/VehiclesFleetTab.jsx';
 import VehiclesAssignmentTab from '@/components/vehicules/VehiclesAssignmentTab.jsx';
 import VehiclesDashboard from '@/components/vehicules/VehiclesDashboard.jsx';
 import VehiclesDocumentsTab from '@/components/vehicules/VehiclesDocumentsTab.jsx';
 import VehiclesMaintenanceTab from '@/components/vehicules/VehiclesMaintenanceTab.jsx';
 import DriverView from '@/components/vehicules/DriverView.jsx';
-import VehiclesSettings from '@/pages/VehiclesSettings';
 
 export default function Vehicules() {
   const { data: currentUser } = useQuery({
@@ -75,11 +74,6 @@ export default function Vehicules() {
           <TabsTrigger value="documents" className="flex items-center gap-1.5">
             <FileText className="w-4 h-4" /> Documents
           </TabsTrigger>
-          {isManager && (
-            <TabsTrigger value="settings" className="flex items-center gap-1.5">
-              <Settings className="w-4 h-4" /> Paramètres
-            </TabsTrigger>
-          )}
         </TabsList>
 
         <TabsContent value="dashboard"><VehiclesDashboard /></TabsContent>
@@ -87,9 +81,6 @@ export default function Vehicules() {
         <TabsContent value="assignations"><VehiclesAssignmentTab currentEmployee={currentEmployee} /></TabsContent>
         <TabsContent value="maintenance"><VehiclesMaintenanceTab /></TabsContent>
         <TabsContent value="documents"><VehiclesDocumentsTab /></TabsContent>
-        {isManager && (
-          <TabsContent value="settings"><VehiclesSettings /></TabsContent>
-        )}
       </Tabs>
     </div>
   );
