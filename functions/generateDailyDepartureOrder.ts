@@ -199,20 +199,14 @@ Deno.serve(async (req) => {
       const emp = allEmployees.find(e => e.id === empId);
       if (!emp) return null;
 
+      // Filter this employee's shifts for the month
+      const empMonthShifts = allMonthShifts.filter(s => s.employee_id === empId);
+
+      const { comp, ot } = computeScore(emp, empMonthShifts, hoursType);
       const isPartTime = emp.work_time_type === 'part_time';
 
-      // Compute score directly from shifts (no DB recap needed)
-      let comp = 0;
-      let ot = 0;
-
-      if (isPartTime) {
-        comp = computeComplementaryHours(emp, allMonthShifts);
-      } else {
-        ot = computeOvertimeHours(emp, allMonthShifts);
-      }
-
       let score = 0;
-      if (hoursType === 'complementary') score = isPartTime ? comp : 0;
+      if (hoursType === 'complementary') score = comp;
       else if (hoursType === 'overtime') score = ot;
       else score = comp + ot;
 
