@@ -38,7 +38,14 @@ export default function OptimisationMasseSalariale() {
 
   useEffect(() => {
     if (settingsArr[0]) {
-      setSettings({ ...DEFAULT_SETTINGS, ...settingsArr[0] });
+      const d = settingsArr[0];
+      setSettings({
+        enabled: d.enabled ?? DEFAULT_SETTINGS.enabled,
+        services: d.services ?? DEFAULT_SETTINGS.services,
+        hours_type: d.hours_type ?? DEFAULT_SETTINGS.hours_type,
+        home_roles: d.home_roles ?? DEFAULT_SETTINGS.home_roles,
+        show_in_planning: d.show_in_planning ?? DEFAULT_SETTINGS.show_in_planning,
+      });
     }
   }, [settingsArr]);
 
