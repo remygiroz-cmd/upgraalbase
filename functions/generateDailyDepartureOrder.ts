@@ -156,20 +156,19 @@ Deno.serve(async (req) => {
       // Calculate score based on hours type
       // Use stored calculated values from MonthlyRecap (complementaryHours10/25, overtimeHours25/50)
       // These are populated by the frontend calculation engine and saved to DB
+      const compResult = getComplementaryHours(recap);
+      const compScore = compResult.value;
+
+      const ot = recap
+        ? ((recap.overtimeHours25 || recap.overtime_25 || 0) + (recap.overtimeHours50 || recap.overtime_50 || 0))
+        : 0;
+
       let score = 0;
-      if (recap) {
-        // Support both old field names (complementary_10) and new ones (complementaryHours10)
-        const comp = (recap.complementaryHours10 || recap.complementary_10 || 0)
-                   + (recap.complementaryHours25 || recap.complementary_25 || 0);
-        const ot = (recap.overtimeHours25 || recap.overtime_25 || 0)
-                 + (recap.overtimeHours50 || recap.overtime_50 || 0);
+      if (hoursType === 'complementary') score = compScore;
+      else if (hoursType === 'overtime') score = ot;
+      else score = compScore + ot;
 
-        if (hoursType === 'complementary') score = comp;
-        else if (hoursType === 'overtime') score = ot;
-        else score = comp + ot;
-
-        console.log(`  Score ${recap.employee_id}: comp=${comp} ot=${ot} (hoursType=${hoursType}) → score=${score}`);
-      }
+      console.log(`  [DEBUG] ${emp.first_name} ${emp.last_name} | recap_id=${recap?.id ?? 'NONE'} | month_key=${recap?.month_key ?? 'N/A'} | source=${compResult.source} | raw=${compResult.raw ?? 'N/A'} | comp=${compScore} ot=${ot} → score=${score}`);
 
       // Calculate today's total shift duration
       const todayShifts = serviceShifts.filter(s => s.employee_id === empId);
