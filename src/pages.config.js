@@ -70,6 +70,7 @@ import Temperatures from './pages/Temperatures';
 import TemplatesRH from './pages/TemplatesRH';
 import TravailDuJour from './pages/TravailDuJour';
 import Vehicules from './pages/Vehicules';
+import VehiclesSettings from './pages/VehiclesSettings';
 import __Layout from './Layout.jsx';
 
 
@@ -97,6 +98,7 @@ export const PAGES = {
     "TemplatesRH": TemplatesRH,
     "TravailDuJour": TravailDuJour,
     "Vehicules": Vehicules,
+    "VehiclesSettings": VehiclesSettings,
 }
 
 export const pagesConfig = {
