@@ -104,7 +104,7 @@ export default function DirectShiftSwapModal({ open, onOpenChange, currentYear, 
   });
 
   const { data: allEmployees = [] } = useQuery({
-    queryKey: ['employees'],
+    queryKey: ['activeEmployees'],
     queryFn: () => base44.entities.Employee.filter({ is_active: true })
   });
 
