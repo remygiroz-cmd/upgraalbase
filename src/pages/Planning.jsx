@@ -30,6 +30,7 @@ import { calculateShiftDuration, checkMinimumRest } from '@/components/planning/
 import { parseLocalDate, formatLocalDate } from '@/components/planning/dateUtils';
 import { isDateInCPPeriod } from '@/components/planning/paidLeaveCalculations';
 import { usePlanningVersion, withPlanningVersion, filterByVersion } from '@/components/planning/usePlanningVersion';
+import { getActiveShiftsForMonth, shiftsQueryKey } from '@/components/planning/shiftService';
 import { useUndoStack } from '@/components/planning/useUndoStack';
 import UndoRedoButtons from '@/components/planning/UndoRedoButtons';
 import PinchZoomContainer from '@/components/planning/PinchZoomContainer';
