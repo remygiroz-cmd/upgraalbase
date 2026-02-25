@@ -53,17 +53,16 @@ export default function ApplyTemplateModal({ open, onOpenChange, employeeId, emp
   });
 
   const { data: existingShifts = [] } = useQuery({
-    queryKey: ['shifts', startDate, endDate],
+    queryKey: ['shifts', startDate, endDate, activeMonthKey, resetVersion],
     queryFn: async () => {
       if (!startDate || !endDate) return [];
-      const allShifts = await base44.entities.Shift.list();
-      return allShifts.filter(s => 
-        s.employee_id === employeeId && 
-        s.date >= startDate && 
-        s.date <= endDate
-      );
+      // Use activeMonthKey derived from the start date
+      const [sy, sm] = startDate.split('-').map(Number);
+      const mk = `${sy}-${String(sm).padStart(2, '0')}`;
+      const monthShifts = await getActiveShiftsForMonth(mk, resetVersion, { employeeId });
+      return monthShifts.filter(s => s.date >= startDate && s.date <= endDate);
     },
-    enabled: !!startDate && !!endDate && !!employeeId
+    enabled: !!startDate && !!endDate && !!employeeId && resetVersion !== undefined
   });
 
   const applyTemplateMutation = useMutation({
