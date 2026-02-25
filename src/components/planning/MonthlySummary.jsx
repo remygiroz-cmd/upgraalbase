@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { cn } from '@/lib/utils';
-import { Edit2, RotateCcw, AlertCircle, Clock, Calendar, Coffee, Sun, Briefcase, Eye, EyeOff } from 'lucide-react';
+import { Edit2, RotateCcw, AlertCircle, Clock, Calendar, Coffee, Sun, Briefcase, Eye, EyeOff, Trash2 } from 'lucide-react';
 import { useHiddenItems } from './useHiddenItems';
 import { calculateMonthlyCPTotal } from './paidLeaveCalculations';
 import { parseContractHours } from '@/components/utils/weeklyHoursCalculation';
