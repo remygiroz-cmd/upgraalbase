@@ -192,10 +192,11 @@ export default function ApplyTemplateModal({ open, onOpenChange, employeeId, emp
         console.log('🔍 DELETED SHIFTS:', deletedIds.length);
       }
 
-      // 4️⃣ CRÉATION DES NOUVEAUX SHIFTS
+      // 4️⃣ UPSERT DES NOUVEAUX SHIFTS (protection anti-doublons)
       if (shifts.length > 0) {
-        await base44.entities.Shift.bulkCreate(shifts);
-        console.log('🔍 CREATED SHIFTS:', shifts.length);
+        const freshCache = await base44.entities.Shift.list();
+        const { created, updated } = await bulkUpsertShifts(shifts, freshCache);
+        console.log(`🔍 UPSERT SHIFTS: ${created} créés, ${updated} mis à jour`);
       }
 
       // 5️⃣ APRÈS APPLICATION : VÉRIFIER LE RÉSULTAT EN BASE
