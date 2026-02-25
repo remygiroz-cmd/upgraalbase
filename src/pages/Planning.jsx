@@ -23,6 +23,7 @@ import EmployeeHeaderCell from '@/components/planning/EmployeeHeaderCell';
 import ExportComptaModal from '@/components/planning/ExportComptaModal';
 import ApplyTemplatesModal from '@/components/planning/ApplyTemplatesModal';
 import ClearMonthModal from '@/components/planning/ClearMonthModal';
+import ClearEmployeeMonthModal from '@/components/planning/ClearEmployeeMonthModal';
 import DeleteCPModal from '@/components/planning/DeleteCPModal';
 import ShiftSwapModal from '@/components/planning/ShiftSwapModal';
 import DirectShiftSwapModal, { canDirectSwap } from '@/components/planning/DirectShiftSwapModal';

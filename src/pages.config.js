@@ -47,6 +47,7 @@
  *
  * The mainPage value must match a key in the PAGES object exactly.
  */
+import AdminShiftCleanup from './pages/AdminShiftCleanup';
 import AnnoncesUrgentes from './pages/AnnoncesUrgentes';
 import AnnouncementDetail from './pages/AnnouncementDetail';
 import CoffreFactures from './pages/CoffreFactures';
@@ -71,11 +72,11 @@ import TemplatesRH from './pages/TemplatesRH';
 import TravailDuJour from './pages/TravailDuJour';
 import VehiclesSettings from './pages/VehiclesSettings';
 import Vehicules from './pages/Vehicules';
-import AdminShiftCleanup from './pages/AdminShiftCleanup';
 import __Layout from './Layout.jsx';
 
 
 export const PAGES = {
+    "AdminShiftCleanup": AdminShiftCleanup,
     "AnnoncesUrgentes": AnnoncesUrgentes,
     "AnnouncementDetail": AnnouncementDetail,
     "CoffreFactures": CoffreFactures,
@@ -100,7 +101,6 @@ export const PAGES = {
     "TravailDuJour": TravailDuJour,
     "VehiclesSettings": VehiclesSettings,
     "Vehicules": Vehicules,
-    "AdminShiftCleanup": AdminShiftCleanup,
 }
 
 export const pagesConfig = {
