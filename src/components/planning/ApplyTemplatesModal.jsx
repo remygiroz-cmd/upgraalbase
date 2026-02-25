@@ -109,21 +109,22 @@ export default function ApplyTemplatesModal({ open, onOpenChange, monthStart, mo
     setProgress({ current: 0, total: employeesWithTemplates.length });
 
     try {
-      const shiftsToCreate = [];
-      let shiftsCreated = 0;
+      let shiftsDeleted = 0;
       let shiftsIgnored = 0;
-      let shiftsReplaced = 0;
+      const shiftsToCreate = [];
 
-      // Step 1: Si mode "recreate" ou "replace", supprimer les shifts existants
+      // ─── PHASE 1 : PURGE DU SCOPE ───────────────────────────────────────────
+      // recreate = purge tout le mois
+      // replace  = purge par employé concerné
+      // add_empty = pas de purge
       if (mode === 'recreate') {
-        const shiftsToDelete = existingShifts.map(s => s.id);
-        for (const shiftId of shiftsToDelete) {
-          await base44.entities.Shift.delete(shiftId);
-          shiftsReplaced++;
-        }
+        // Wipe ALL shifts in the active scope for this month
+        await Promise.all(existingShifts.map(s => base44.entities.Shift.delete(s.id)));
+        shiftsDeleted = existingShifts.length;
+        console.log(`[ApplyTemplates] RECREATE — purgé ${shiftsDeleted} shifts`);
       }
 
-      // Step 2: Générer les shifts
+      // ─── PHASE 2 : GENERATION ────────────────────────────────────────────────
       for (let i = 0; i < employeesWithTemplates.length; i++) {
         const emp = employeesWithTemplates[i];
         setProgress({ current: i + 1, total: employeesWithTemplates.length });
@@ -134,16 +135,14 @@ export default function ApplyTemplatesModal({ open, onOpenChange, monthStart, mo
         const activeTemplate = empTemplates[0];
         if (!activeTemplate.template_shifts || activeTemplate.template_shifts.length === 0) continue;
 
-        // Si mode "replace", supprimer les shifts de cet employé ce mois
+        // REPLACE mode: purge shifts for this specific employee first
         if (mode === 'replace') {
-          const empShifts = existingShifts.filter(s => s.employee_id === emp.id);
-          for (const shift of empShifts) {
-            await base44.entities.Shift.delete(shift.id);
-            shiftsReplaced++;
-          }
+          const empExisting = existingShifts.filter(s => s.employee_id === emp.id);
+          await Promise.all(empExisting.map(s => base44.entities.Shift.delete(s.id)));
+          shiftsDeleted += empExisting.length;
+          console.log(`[ApplyTemplates] REPLACE emp=${emp.id} — purgé ${empExisting.length} shifts`);
         }
 
-        // Générer pour chaque jour du mois
         const daysInMonth = new Date(year, month, 0).getDate();
         for (let day = 1; day <= daysInMonth; day++) {
           const date = new Date(year, month - 1, day);
@@ -151,25 +150,15 @@ export default function ApplyTemplatesModal({ open, onOpenChange, monthStart, mo
           const dayOfWeek = date.getDay();
           const dayKey = DAYS_MAP[dayOfWeek];
 
-          // Vérifier si l'employé a une absence ce jour
           const hasAbsence = nonShiftEvents.some(e => e.employee_id === emp.id && e.date === dateStr);
-          if (hasAbsence) {
-            shiftsIgnored++;
-            continue;
-          }
+          if (hasAbsence) { shiftsIgnored++; continue; }
 
-          // Vérifier si déjà occupé (mode add_empty)
           if (mode === 'add_empty') {
             const hasShift = existingShifts.some(s => s.employee_id === emp.id && s.date === dateStr);
-            if (hasShift) {
-              shiftsIgnored++;
-              continue;
-            }
+            if (hasShift) { shiftsIgnored++; continue; }
           }
 
-          // Trouver les shifts du template pour ce jour
           const templateShiftsForDay = activeTemplate.template_shifts.filter(ts => ts.day === dayKey);
-          
           for (const templateShift of templateShiftsForDay) {
             shiftsToCreate.push({
               employee_id: emp.id,
@@ -189,18 +178,25 @@ export default function ApplyTemplatesModal({ open, onOpenChange, monthStart, mo
         }
       }
 
-      // Step 3: Upsert les shifts (dédupliqué par dedupe_key)
-      let upsertResult = { created: 0, updated: 0 };
+      // ─── PHASE 3 : CREATION ──────────────────────────────────────────────────
+      // After purge, scope is clean → plain bulkCreate is safe (no duplicates possible)
+      let shiftsCreated = 0;
       if (shiftsToCreate.length > 0) {
-        // Re-fetch fresh cache after possible deletions above
-        const freshCache = await base44.entities.Shift.list();
-        upsertResult = await bulkUpsertShifts(shiftsToCreate, freshCache);
-        shiftsCreated = upsertResult.created + upsertResult.updated;
+        if (mode === 'add_empty') {
+          // add_empty didn't purge, so use upsert to be safe
+          const freshCache = await base44.entities.Shift.list();
+          const r = await bulkUpsertShifts(shiftsToCreate, freshCache);
+          shiftsCreated = r.created + r.updated;
+        } else {
+          // scope was purged → direct bulkCreate, faster
+          await base44.entities.Shift.bulkCreate(shiftsToCreate);
+          shiftsCreated = shiftsToCreate.length;
+        }
       }
 
+      console.log(`[ApplyTemplates] ✅ purgés=${shiftsDeleted}, créés=${shiftsCreated}, ignorés=${shiftsIgnored}`);
       setApplying(false);
-      const updatedLabel = upsertResult.updated > 0 ? `, ${upsertResult.updated} mis à jour` : '';
-      toast.success(`✓ ${upsertResult.created} shifts créés${updatedLabel}, ${shiftsIgnored} ignorés, ${shiftsReplaced} remplacés`);
+      toast.success(`✓ ${shiftsCreated} shifts créés, ${shiftsDeleted} remplacés, ${shiftsIgnored} ignorés`);
       onSuccess?.();
       onOpenChange(false);
 
