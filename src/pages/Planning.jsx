@@ -75,7 +75,6 @@ export default function Planning() {
   const [showHideColumnsPanel, setShowHideColumnsPanel] = useState(false);
   const [draggingId, setDraggingId] = useState(null);
   const [monthKey, setMonthKey] = useState(null);
-  const queryClient = useQueryClient();
   const [dragOverId, setDragOverId] = useState(null);
   const queryClient = useQueryClient();
 
