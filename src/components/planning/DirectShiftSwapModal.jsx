@@ -126,7 +126,15 @@ export default function DirectShiftSwapModal({ open, onOpenChange, currentYear, 
 
   const allShiftsB = useMemo(() => {
     if (!employeeBId) return [];
-    return allMonthShifts.filter(s => s.employee_id === employeeBId).sort((a, b) => a.date.localeCompare(b.date));
+    const raw = allMonthShifts.filter(s => s.employee_id === employeeBId).sort((a, b) => a.date.localeCompare(b.date));
+    // Deduplicate: keep only one shift per (date + start_time + end_time) combination
+    const seen = new Set();
+    return raw.filter(s => {
+      const key = `${s.date}_${s.start_time}_${s.end_time}`;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
   }, [allMonthShifts, employeeBId]);
 
   const shiftsB = useMemo(() => {
