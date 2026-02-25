@@ -37,24 +37,22 @@ export const saveLayout = async (monthKey, { hidden_employee_ids }) => {
   }
 };
 
-export const applyLayoutToEmployees = (employees, layout) => {
-  if (!layout || !employees) return employees;
+export const applyLayoutToEmployees = (employees, globalColumnOrder, hiddenEmployeeIds = []) => {
+  if (!employees) return employees;
 
-  const { column_order, hidden_employee_ids } = layout;
+  // Étape 1 : Filtrer les employés masqués
+  const visibleEmployees = employees.filter(emp => !hiddenEmployeeIds?.includes(emp.id));
   
-  // Filtrer les employés masqués
-  const visibleEmployees = employees.filter(emp => !hidden_employee_ids?.includes(emp.id));
-  
-  if (!column_order || column_order.length === 0) {
+  if (!globalColumnOrder || globalColumnOrder.length === 0) {
     return visibleEmployees;
   }
 
-  // Réordonner selon column_order, puis ajouter les autres à la fin
+  // Étape 2 : Réordonner selon globalColumnOrder
   const ordered = [];
   const usedIds = new Set();
 
   // D'abord, ajouter les employés selon l'ordre défini (s'ils existent et ne sont pas masqués)
-  for (const empId of column_order) {
+  for (const empId of globalColumnOrder) {
     const emp = visibleEmployees.find(e => e.id === empId);
     if (emp) {
       ordered.push(emp);
@@ -62,7 +60,7 @@ export const applyLayoutToEmployees = (employees, layout) => {
     }
   }
 
-  // Puis ajouter les employés visibles non présents dans column_order
+  // Puis ajouter les employés visibles non présents dans globalColumnOrder
   for (const emp of visibleEmployees) {
     if (!usedIds.has(emp.id)) {
       ordered.push(emp);
