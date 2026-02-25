@@ -45,24 +45,44 @@ export default function AdminShiftCleanup() {
       const allShifts = await base44.entities.Shift.list();
       const monthShifts = allShifts.filter(s => s.date >= firstDay && s.date <= lastDay);
 
-      // Group by employee_id + date + start_time + end_time
-      const groups = {};
+      // --- Detect dedupe_key duplicates (new method) ---
+      const dedupeGroups = {};
       for (const s of monthShifts) {
-        const key = `${s.employee_id}|${s.date}|${s.start_time}|${s.end_time}`;
-        if (!groups[key]) groups[key] = [];
-        groups[key].push(s);
+        if (s.status === 'archived') continue;
+        const key = s.dedupe_key || buildDedupeKey(s);
+        if (!dedupeGroups[key]) dedupeGroups[key] = [];
+        dedupeGroups[key].push(s);
       }
 
-      // Find groups with duplicates
-      const duplicateGroups = Object.entries(groups)
-        .filter(([, shifts]) => shifts.length > 1)
-        .map(([key, shifts]) => {
-          // Sort by created_date desc — keep newest
-          const sorted = [...shifts].sort((a, b) =>
-            new Date(b.created_date || 0) - new Date(a.created_date || 0)
-          );
-          return { key, keepId: sorted[0].id, duplicates: sorted.slice(1), allShifts: sorted };
-        });
+      // --- Also detect legacy duplicates (same fields, no dedupe_key) ---
+      const legacyGroups = {};
+      for (const s of monthShifts) {
+        if (s.status === 'archived') continue;
+        const key = `${s.employee_id}|${s.date}|${s.start_time}|${s.end_time}`;
+        if (!legacyGroups[key]) legacyGroups[key] = [];
+        legacyGroups[key].push(s);
+      }
+
+      // Merge both: prefer dedupe_key groups
+      const allGroupsMap = {};
+      for (const [key, shifts] of Object.entries(dedupeGroups)) {
+        if (shifts.length > 1) allGroupsMap[key] = shifts;
+      }
+      // Also catch legacy duplicates not yet caught by dedupe_key
+      for (const [key, shifts] of Object.entries(legacyGroups)) {
+        if (shifts.length > 1 && !allGroupsMap[key]) allGroupsMap[key] = shifts;
+      }
+
+      const duplicateGroups = Object.entries(allGroupsMap).map(([key, shifts]) => {
+        // Sort by created_date desc — keep newest
+        const sorted = [...shifts].sort((a, b) =>
+          new Date(b.created_date || 0) - new Date(a.created_date || 0)
+        );
+        return { key, keepShift: sorted[0], duplicates: sorted.slice(1) };
+      });
+
+      // Count shifts missing dedupe_key
+      const missingDedupeKey = monthShifts.filter(s => !s.dedupe_key && s.status !== 'archived').length;
 
       // Shifts with wrong reset_version
       const wrongVersionShifts = monthShifts.filter(s =>
@@ -73,6 +93,7 @@ export default function AdminShiftCleanup() {
 
       // Active shifts (matching current version)
       const activeShifts = monthShifts.filter(s =>
+        s.status !== 'archived' &&
         (s.month_key === undefined || s.month_key === null || s.month_key === monthKey) &&
         (s.reset_version === undefined || s.reset_version === null || s.reset_version === activeResetVersion)
       );
@@ -82,10 +103,13 @@ export default function AdminShiftCleanup() {
         activeResetVersion,
         totalMonthShifts: monthShifts.length,
         activeShifts: activeShifts.length,
+        missingDedupeKey,
         wrongVersionShifts: wrongVersionShifts.length,
         wrongVersionIds: wrongVersionShifts.map(s => s.id),
         duplicateGroups,
         totalDuplicatesToRemove: duplicateGroups.reduce((acc, g) => acc + g.duplicates.length, 0),
+        // raw list for backfill
+        shiftsWithoutKey: monthShifts.filter(s => !s.dedupe_key && s.status !== 'archived'),
       });
     } catch (e) {
       toast.error('Erreur lors du scan : ' + e.message);
@@ -94,6 +118,7 @@ export default function AdminShiftCleanup() {
     }
   };
 
+  // Delete duplicates (hard delete)
   const handleCleanDuplicates = async () => {
     if (!scanResult || scanResult.totalDuplicatesToRemove === 0) return;
     setCleaning(true);
@@ -101,6 +126,41 @@ export default function AdminShiftCleanup() {
       const idsToDelete = scanResult.duplicateGroups.flatMap(g => g.duplicates.map(s => s.id));
       await Promise.all(idsToDelete.map(id => base44.entities.Shift.delete(id)));
       toast.success(`✅ ${idsToDelete.length} doublon(s) supprimé(s)`);
+      setScanResult(null);
+    } catch (e) {
+      toast.error('Erreur : ' + e.message);
+    } finally {
+      setCleaning(false);
+    }
+  };
+
+  // Archive duplicates (soft: set status = 'archived', keep newest)
+  const handleArchiveDuplicates = async () => {
+    if (!scanResult || scanResult.totalDuplicatesToRemove === 0) return;
+    setCleaning(true);
+    try {
+      const idsToArchive = scanResult.duplicateGroups.flatMap(g => g.duplicates.map(s => s.id));
+      await Promise.all(idsToArchive.map(id => base44.entities.Shift.update(id, { status: 'archived' })));
+      toast.success(`✅ ${idsToArchive.length} doublon(s) archivé(s)`);
+      setScanResult(null);
+    } catch (e) {
+      toast.error('Erreur : ' + e.message);
+    } finally {
+      setCleaning(false);
+    }
+  };
+
+  // Backfill dedupe_key on all shifts that are missing it
+  const handleBackfillDedupeKey = async () => {
+    if (!scanResult || scanResult.shiftsWithoutKey.length === 0) return;
+    setCleaning(true);
+    try {
+      await Promise.all(
+        scanResult.shiftsWithoutKey.map(s =>
+          base44.entities.Shift.update(s.id, { dedupe_key: buildDedupeKey(s) })
+        )
+      );
+      toast.success(`✅ dedupe_key ajoutée sur ${scanResult.shiftsWithoutKey.length} shift(s)`);
       setScanResult(null);
     } catch (e) {
       toast.error('Erreur : ' + e.message);
