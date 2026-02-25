@@ -1715,6 +1715,15 @@ export default function Planning() {
         monthKey={monthKey}
       />
 
+      {/* Clear All Employees Month Modal */}
+      <ClearAllEmployeesMonthModal
+        open={showClearAllEmployeesMonthModal}
+        onOpenChange={setShowClearAllEmployeesMonthModal}
+        year={currentYear}
+        month={currentMonth}
+        monthKey={monthKey}
+      />
+
       {/* Copy Week Modal */}
       <Dialog open={copyWeekModal.open} onOpenChange={(open) => !open && setCopyWeekModal({ open: false, weekStart: null, weekAbove: null })}>
         <DialogContent className="max-w-md">
