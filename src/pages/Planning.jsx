@@ -1234,18 +1234,23 @@ export default function Planning() {
                   {employees.map((employee) => {
                     const team = allTeams.find(t => t.id === employee.team_id);
                     return (
-                      <EmployeeHeaderCell
-                        key={employee.id}
-                        employee={employee}
-                        team={team}
-                        isDragging={draggingId === employee.id}
-                        isDragOver={dragOverId === employee.id}
-                        onDragStart={handleColumnDragStart}
-                        onDragOver={handleColumnDragOver}
-                        onDrop={handleColumnDrop}
-                        onDragEnd={handleColumnDragEnd}
-                        displayMode={displayMode}
-                      />
+                      <div key={employee.id} className="relative group/header">
+                        <EmployeeHeaderCell
+                          employee={employee} team={team}
+                          isDragging={draggingId === employee.id}
+                          isDragOver={dragOverId === employee.id}
+                          onDragStart={handleColumnDragStart}
+                          onDragOver={handleColumnDragOver}
+                          onDrop={handleColumnDrop}
+                          onDragEnd={handleColumnDragEnd}
+                          displayMode={displayMode}
+                        />
+                        <button onClick={(e) => { e.stopPropagation(); toggleHideColumn(employee.id); }}
+                          className="absolute top-1 right-1 p-0.5 rounded bg-white/80 hover:bg-red-100 opacity-0 group-hover/header:opacity-100 transition-opacity z-10"
+                          title="Masquer cette colonne">
+                          <EyeOff className="w-3 h-3 text-gray-400 hover:text-red-500" />
+                        </button>
+                      </div>
                     );
                   })}
                 </div>
