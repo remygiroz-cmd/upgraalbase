@@ -554,8 +554,8 @@ export default function Planning() {
   };
 
   const showAllColumns = () => {
-    setHiddenColumns([]);
-    localStorage.setItem('planning_hidden_columns', JSON.stringify([]));
+    setLayout({ column_order: layout?.column_order || [], hidden_employee_ids: [] });
+    saveLayout(monthKey, { column_order: layout?.column_order || [], hidden_employee_ids: [] });
   };
 
   // Pre-compute shift lookups for O(1) access - major performance improvement
