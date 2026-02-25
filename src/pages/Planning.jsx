@@ -527,7 +527,7 @@ export default function Planning() {
     newOrder.splice(toIdx, 0, moved);
     const newIds = newOrder.map(e => e.id);
     setColumnOrder(newIds);
-    localStorage.setItem('planning_column_order', JSON.stringify(newIds));
+    saveViewSettingsMutation.mutate({ columnOrder: newIds, hiddenColumns });
     setDraggingId(null);
     setDragOverId(null);
   };
@@ -539,14 +539,14 @@ export default function Planning() {
   const toggleHideColumn = (employeeId) => {
     setHiddenColumns(prev => {
       const next = prev.includes(employeeId) ? prev.filter(id => id !== employeeId) : [...prev, employeeId];
-      localStorage.setItem('planning_hidden_columns', JSON.stringify(next));
+      saveViewSettingsMutation.mutate({ columnOrder, hiddenColumns: next });
       return next;
     });
   };
 
   const showAllColumns = () => {
     setHiddenColumns([]);
-    localStorage.setItem('planning_hidden_columns', JSON.stringify([]));
+    saveViewSettingsMutation.mutate({ columnOrder, hiddenColumns: [] });
   };
 
   // Pre-compute shift lookups for O(1) access - major performance improvement
