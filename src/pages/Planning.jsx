@@ -1059,12 +1059,12 @@ export default function Planning() {
             <button
               onClick={() => setShowColumnsManager(true)}
               className="hidden sm:flex items-center gap-1 px-2 py-1 bg-orange-100 border border-orange-300 rounded text-xs text-orange-700 hover:bg-orange-200 transition-colors"
-              title="Colonnes masquées"
-            >
-              <EyeOff className="w-3 h-3" />
-              {hiddenColumns.length}
-            </button>
-          )}
+               title="Colonnes masquées"
+              >
+               <EyeOff className="w-3 h-3" />
+               {layout?.hidden_employee_ids?.length || 0}
+              </button>
+              )}
 
           {/* Undo/Redo buttons - hidden on very small screens */}
           <div className="hidden sm:block">
