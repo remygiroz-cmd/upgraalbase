@@ -116,8 +116,7 @@ export default function Planning() {
     setMonthKey(computedMonthKey);
   }, [computedMonthKey]);
 
-  // Load hidden columns settings per month
-  const saveViewSettings = usePlanningViewSettings(monthKey, setHiddenColumns, queryClient);
+
 
   // Fetch ALL employees (including archived)
   const { data: allEmployees = [] } = useQuery({
