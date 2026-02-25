@@ -413,15 +413,7 @@ export default function Planning() {
       await queryClient.invalidateQueries({ queryKey: ['shifts'] });
       await queryClient.invalidateQueries({ queryKey: ['allWeeklyRecaps'] });
       await queryClient.invalidateQueries({ queryKey: ['allMonthlyRecaps'] });
-      
-      await queryClient.refetchQueries({ 
-        queryKey: ['allWeeklyRecaps', currentYear, currentMonth, resetVersion],
-        exact: true 
-      });
-      
-      if (!undoStack.isUndoingRef.current && !undoStack.isRedoingRef.current) {
-        toast.success('Shift enregistré');
-      }
+      if (!undoStack.isUndoingRef.current && !undoStack.isRedoingRef.current) toast.success('Shift enregistré');
     },
     onError: (error) => {
       toast.error('Erreur lors de l\'enregistrement : ' + error.message);
