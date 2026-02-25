@@ -20,16 +20,15 @@ export default function ClearAllEmployeesMonthModal({ open, onOpenChange, year, 
       const lastDay = formatLocalDate(new Date(year, month + 1, 0));
       const weekRangeStart = formatLocalDate(new Date(year, month - 1, 24));
 
-      const [allShifts, allNonShifts, allCpPeriods, allWeeklyRecaps, allMonthlyRecaps] = await Promise.all([
-        base44.entities.Shift.list(),
-        base44.entities.NonShiftEvent.list(),
-        base44.entities.PaidLeavePeriod.list(),
-        base44.entities.WeeklyRecap.list(),
+      // Fetch using filter with date ranges to avoid 50-record default limit
+      const [shiftsToDelete, nonShiftsToDelete, allCpPeriods, allWeeklyRecaps, allMonthlyRecaps] = await Promise.all([
+        base44.entities.Shift.filter({ month_key: monthKey }),
+        base44.entities.NonShiftEvent.filter({ month_key: monthKey }),
+        base44.entities.PaidLeavePeriod.list('-created_date', 500),
+        base44.entities.WeeklyRecap.list('-created_date', 500),
         base44.entities.MonthlyRecap.filter({ year: year, month: month + 1 }),
       ]);
 
-      const shiftsToDelete = allShifts.filter(s => s.date >= firstDay && s.date <= lastDay);
-      const nonShiftsToDelete = allNonShifts.filter(e => e.date >= firstDay && e.date <= lastDay);
       const cpToDelete = allCpPeriods.filter(p => p.end_cp >= firstDay && p.start_cp <= lastDay);
       const weeklyRecapsToDelete = allWeeklyRecaps.filter(r => r.week_start >= weekRangeStart && r.week_start <= lastDay);
 
