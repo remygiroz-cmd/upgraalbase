@@ -941,7 +941,6 @@ export default function Planning() {
 
       toast.success(`↩︎ ${action.label} annulé`);
     } catch (error) {
-      console.error('❌ Erreur undo:', error);
       toast.error('Impossible d\'annuler : ' + error.message);
     } finally {
       setIsUndoing(false);
