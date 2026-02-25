@@ -1706,9 +1706,9 @@ export default function Planning() {
               })}
             </div>
             <div className="flex gap-2 pt-2 border-t">
-              <Button onClick={showAllColumns} variant="outline" size="sm" className="flex-1 text-xs"><Eye className="w-3.5 h-3.5 mr-1" />Tout afficher</Button>
-              <Button onClick={() => setShowHideColumnsPanel(false)} size="sm" className="flex-1 text-xs bg-orange-500 hover:bg-orange-600">Fermer</Button>
-            </div>
+               <Button onClick={showAllColumns} variant="outline" size="sm" className="flex-1 text-xs"><Eye className="w-3.5 h-3.5 mr-1" />Tout afficher</Button>
+               <Button onClick={() => setShowColumnsManager(false)} size="sm" className="flex-1 text-xs bg-orange-500 hover:bg-orange-600">Fermer</Button>
+             </div>
           </DialogContent>
         </Dialog>
       )}
