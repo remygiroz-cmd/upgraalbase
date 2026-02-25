@@ -931,14 +931,10 @@ export default function Planning() {
           break;
 
         default:
-          console.warn('Action type non supporté:', action.actionType);
-      }
-
-      // Invalidate queries
+        }
       await queryClient.invalidateQueries({ queryKey: ['shifts'] });
       await queryClient.invalidateQueries({ queryKey: ['allWeeklyRecaps'] });
       await queryClient.invalidateQueries({ queryKey: ['allMonthlyRecaps'] });
-
       toast.success(`↩︎ ${action.label} annulé`);
     } catch (error) {
       toast.error('Impossible d\'annuler : ' + error.message);
