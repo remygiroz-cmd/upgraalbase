@@ -1055,7 +1055,7 @@ export default function Planning() {
           </div>
 
           {/* Hidden columns indicator */}
-          {hiddenColumns.length > 0 && (
+          {canHideColumns && hiddenColumns.length > 0 && (
             <button
               onClick={() => setShowHideColumnsPanel(true)}
               className="hidden sm:flex items-center gap-1 px-2 py-1 bg-orange-100 border border-orange-300 rounded text-xs text-orange-700 hover:bg-orange-200 transition-colors"
