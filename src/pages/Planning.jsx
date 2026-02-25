@@ -21,7 +21,6 @@ import ApplyTemplateGlobalModal from '@/components/planning/ApplyTemplateGlobalM
 import LeaveRequestModal from '@/components/planning/LeaveRequestModal';
 import EmployeeHeaderCell from '@/components/planning/EmployeeHeaderCell';
 import ExportComptaModal from '@/components/planning/ExportComptaModal';
-import ApplyTemplatesModal from '@/components/planning/ApplyTemplatesModal';
 import ClearMonthModal from '@/components/planning/ClearMonthModal';
 import ClearEmployeeMonthModal from '@/components/planning/ClearEmployeeMonthModal';
 import DeleteCPModal from '@/components/planning/DeleteCPModal';
