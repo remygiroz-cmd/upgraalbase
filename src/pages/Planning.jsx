@@ -535,8 +535,9 @@ export default function Planning() {
     const [moved] = newOrder.splice(fromIdx, 1);
     newOrder.splice(toIdx, 0, moved);
     const newIds = newOrder.map(e => e.id);
-    setColumnOrder(newIds);
-    localStorage.setItem('planning_column_order', JSON.stringify(newIds));
+    const newLayout = { column_order: newIds, hidden_employee_ids: layout?.hidden_employee_ids || [] };
+    setLayout(newLayout);
+    saveLayout(monthKey, newLayout);
     setDraggingId(null);
     setDragOverId(null);
   };
