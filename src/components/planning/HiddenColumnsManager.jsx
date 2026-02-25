@@ -1,7 +1,8 @@
+import { useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 
-export const useHiddenColumnsSettings = (monthKey, queryClient) => {
+export const usePlanningViewSettings = (monthKey, setHiddenColumns, queryClient) => {
   const { data: viewSettings } = useQuery({
     queryKey: ['planningViewSettings', monthKey],
     queryFn: async () => {
@@ -11,6 +12,14 @@ export const useHiddenColumnsSettings = (monthKey, queryClient) => {
     },
     enabled: !!monthKey
   });
+
+  useEffect(() => {
+    if (viewSettings?.hidden_columns) {
+      setHiddenColumns(viewSettings.hidden_columns);
+    } else {
+      setHiddenColumns([]);
+    }
+  }, [viewSettings]);
 
   const saveViewSettings = async (data) => {
     if (!monthKey) return;
@@ -30,8 +39,5 @@ export const useHiddenColumnsSettings = (monthKey, queryClient) => {
     }
   };
 
-  return {
-    hiddenColumns: viewSettings?.hidden_columns || [],
-    saveHiddenColumns: saveViewSettings
-  };
+  return saveViewSettings;
 };
