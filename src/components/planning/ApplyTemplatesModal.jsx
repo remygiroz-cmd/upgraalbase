@@ -47,14 +47,9 @@ export default function ApplyTemplatesModal({ open, onOpenChange, monthStart, mo
   });
 
   const { data: existingShifts = [] } = useQuery({
-    queryKey: ['shifts', year, month],
-    queryFn: async () => {
-      const allShifts = await base44.entities.Shift.list();
-      const firstDay = formatDate(monthStart);
-      const lastDay = formatDate(monthEnd);
-      return allShifts.filter(s => s.date >= firstDay && s.date <= lastDay);
-    },
-    enabled: open
+    queryKey: ['shifts', year, month - 1, resetVersion],
+    queryFn: () => getActiveShiftsForMonth(monthKey, resetVersion),
+    enabled: open && resetVersion !== undefined
   });
 
   const { data: nonShiftEvents = [] } = useQuery({
