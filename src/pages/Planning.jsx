@@ -985,7 +985,6 @@ export default function Planning() {
 
       toast.success(`↪︎ ${action.label} rétabli`);
     } catch (error) {
-      console.error('❌ Erreur redo:', error);
       toast.error('Impossible de rétablir : ' + error.message);
     } finally {
       setIsRedoing(false);
