@@ -1692,7 +1692,7 @@ export default function Planning() {
               </DialogTitle>
             </DialogHeader>
             <div className="space-y-2">
-              {hiddenColumns.map(id => {
+               {(layout?.hidden_employee_ids || []).map(id => {
                 const emp = allEmployees.find(e => e.id === id);
                 if (!emp) return null;
                 return (
