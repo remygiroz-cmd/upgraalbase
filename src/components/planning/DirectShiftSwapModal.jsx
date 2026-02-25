@@ -70,7 +70,7 @@ function calcDuration(start, end) {
   return m > 0 ? `${h}h${String(m).padStart(2, '0')}` : `${h}h`;
 }
 
-export default function DirectShiftSwapModal({ open, onOpenChange, currentYear, currentMonth }) {
+export default function DirectShiftSwapModal({ open, onOpenChange, currentYear, currentMonth, resetVersion, monthKey }) {
   const queryClient = useQueryClient();
   const [employeeAId, setEmployeeAId] = useState('');
   const [shiftAId, setShiftAId] = useState('');

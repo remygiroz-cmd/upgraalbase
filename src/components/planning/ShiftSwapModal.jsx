@@ -145,16 +145,24 @@ export default function ShiftSwapModal({ open, onOpenChange, currentYear, curren
     return currentEmployee;
   }, [canSubmitForOthers, employeeAId, currentEmployee, allEmployees]);
 
-  // All shifts for the current month
+  // Get active planning version for the current month
+  const { resetVersion, monthKey } = usePlanningVersion(currentYear, currentMonth);
+
+  // All shifts for the current month (filtered by active reset_version)
   const { data: allMonthShifts = [] } = useQuery({
-    queryKey: ['shifts', currentYear, currentMonth],
+    queryKey: ['shifts', currentYear, currentMonth, resetVersion],
     queryFn: async () => {
       const firstDay = formatLocalDate(new Date(currentYear, currentMonth, 1));
       const lastDay = formatLocalDate(new Date(currentYear, currentMonth + 1, 0));
       const all = await base44.entities.Shift.list();
-      return all.filter(s => s.date >= firstDay && s.date <= lastDay);
+      return all.filter(s =>
+        s.date >= firstDay &&
+        s.date <= lastDay &&
+        (s.month_key === undefined || s.month_key === null || s.month_key === monthKey) &&
+        (s.reset_version === undefined || s.reset_version === null || s.reset_version === resetVersion)
+      );
     },
-    enabled: open
+    enabled: open && resetVersion !== undefined
   });
 
   // Pending swap requests (to check if a shift is already pending)
