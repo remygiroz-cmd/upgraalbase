@@ -180,30 +180,15 @@ export default function PlanningV2() {
     return sortedEmployees;
   }, [sortedEmployees, filterType, selectedEmployee, selectedTeam]);
 
-  // Apply layout (reorder + hide) to get visibleEmployees
+  // Apply layout (order + hide) to get visibleEmployees
+  // Étape 1: Appliquer l'ordre GLOBAL + masquage du mois
   const visibleEmployees = React.useMemo(() => {
-    if (!layout) return filteredEmployees;
-    
-    let result = filteredEmployees;
-    
-    // Apply column order
-    if (layout.column_order?.length > 0) {
-      const ordered = [];
-      const rest = [...filteredEmployees];
-      for (const id of layout.column_order) {
-        const idx = rest.findIndex(e => e.id === id);
-        if (idx !== -1) {
-          ordered.push(rest[idx]);
-          rest.splice(idx, 1);
-        }
-      }
-      result = [...ordered, ...rest];
-    }
-    
-    // Apply hidden employees filter
-    const hiddenIds = layout.hidden_employee_ids || [];
-    return result.filter(e => !hiddenIds.includes(e.id));
-  }, [filteredEmployees, layout]);
+    return applyLayoutToEmployees(
+      filteredEmployees,
+      globalColumnOrder,
+      layout?.hidden_employee_ids || []
+    );
+  }, [filteredEmployees, globalColumnOrder, layout]);
 
   // Fetch other data (non-shift events, types, positions, etc.)
   const { data: nonShiftEvents = [] } = useQuery({
