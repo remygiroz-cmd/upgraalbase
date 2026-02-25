@@ -547,11 +547,10 @@ export default function Planning() {
   };
 
   const toggleHideColumn = (employeeId) => {
-    setHiddenColumns(prev => {
-      const next = prev.includes(employeeId) ? prev.filter(id => id !== employeeId) : [...prev, employeeId];
-      localStorage.setItem('planning_hidden_columns', JSON.stringify(next));
-      return next;
-    });
+    const hiddenIds = layout?.hidden_employee_ids || [];
+    const next = hiddenIds.includes(employeeId) ? hiddenIds.filter(id => id !== employeeId) : [...hiddenIds, employeeId];
+    setLayout({ column_order: layout?.column_order || [], hidden_employee_ids: next });
+    saveLayout(monthKey, { column_order: layout?.column_order || [], hidden_employee_ids: next });
   };
 
   const showAllColumns = () => {
