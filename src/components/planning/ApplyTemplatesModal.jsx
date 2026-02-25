@@ -189,14 +189,18 @@ export default function ApplyTemplatesModal({ open, onOpenChange, monthStart, mo
         }
       }
 
-      // Step 3: Créer les shifts
+      // Step 3: Upsert les shifts (dédupliqué par dedupe_key)
+      let upsertResult = { created: 0, updated: 0 };
       if (shiftsToCreate.length > 0) {
-        await base44.entities.Shift.bulkCreate(shiftsToCreate);
-        shiftsCreated = shiftsToCreate.length;
+        // Re-fetch fresh cache after possible deletions above
+        const freshCache = await base44.entities.Shift.list();
+        upsertResult = await bulkUpsertShifts(shiftsToCreate, freshCache);
+        shiftsCreated = upsertResult.created + upsertResult.updated;
       }
 
       setApplying(false);
-      toast.success(`✓ ${shiftsCreated} shifts créés, ${shiftsIgnored} ignorés, ${shiftsReplaced} remplacés`);
+      const updatedLabel = upsertResult.updated > 0 ? `, ${upsertResult.updated} mis à jour` : '';
+      toast.success(`✓ ${upsertResult.created} shifts créés${updatedLabel}, ${shiftsIgnored} ignorés, ${shiftsReplaced} remplacés`);
       onSuccess?.();
       onOpenChange(false);
 
