@@ -109,10 +109,10 @@ export default function Planning() {
     enabled: !!currentUser?.role_id
   });
 
-  // Check if user can modify planning (admin or has planning_modify permission)
   const canModifyPlanning = currentUser?.role === 'admin' || userRole?.permissions?.planning_modify || false;
-  // Check if user can do direct swap (manager/admin roles)
   const canDoDirectSwap = canDirectSwap(currentUser, userRole);
+  const HIDE_COLS_ROLES = ['gérant', 'gerant', 'bureau', 'manager'];
+  const canHideColumns = currentUser?.role === 'admin' || HIDE_COLS_ROLES.some(r => userRole?.name?.toLowerCase() === r.toLowerCase());
 
   const currentMonth = currentDate.getMonth();
   const currentYear = currentDate.getFullYear();
