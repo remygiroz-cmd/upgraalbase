@@ -27,6 +27,7 @@ import ClearEmployeeMonthModal from '@/components/planning/ClearEmployeeMonthMod
 import DeleteCPModal from '@/components/planning/DeleteCPModal';
 import ShiftSwapModal from '@/components/planning/ShiftSwapModal';
 import DirectShiftSwapModal, { canDirectSwap } from '@/components/planning/DirectShiftSwapModal';
+import { usePlanningViewSettings } from '@/components/planning/HiddenColumnsManager';
 import { calculateShiftDuration, checkMinimumRest } from '@/components/planning/LegalChecks';
 import { parseLocalDate, formatLocalDate } from '@/components/planning/dateUtils';
 import { isDateInCPPeriod } from '@/components/planning/paidLeaveCalculations';
