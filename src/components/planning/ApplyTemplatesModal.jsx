@@ -181,7 +181,9 @@ export default function ApplyTemplatesModal({ open, onOpenChange, monthStart, mo
               position: emp.position || '',
               team: emp.team || '',
               status: 'planned',
-              notes: 'Généré depuis planning type'
+              notes: 'Généré depuis planning type',
+              month_key: monthKey,
+              reset_version: resetVersion
             });
           }
         }
