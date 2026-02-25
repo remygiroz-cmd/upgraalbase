@@ -147,7 +147,7 @@ export default function ShiftSwapModal({ open, onOpenChange, currentYear, curren
   }, [canSubmitForOthers, employeeAId, currentEmployee, allEmployees]);
 
   // Get active planning version for the current month
-  const { resetVersion, monthKey } = usePlanningVersion(currentYear, currentMonth);
+  const { resetVersion, monthKey: activeMonthKey } = usePlanningVersion(currentYear, currentMonth);
 
   // All shifts for the current month (filtered by active reset_version)
   const { data: allMonthShifts = [] } = useQuery({
