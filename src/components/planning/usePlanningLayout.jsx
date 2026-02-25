@@ -16,8 +16,8 @@ export const usePlanningLayout = (monthKey) => {
     staleTime: 1000 * 60 * 5, // 5 min
   });
 
-  // Default layout si aucun record en DB
-  const layout = dbLayout || { column_order: [], hidden_employee_ids: [] };
+  // Default layout - retourner uniquement hidden_employee_ids (l'ordre global est géré séparément)
+  const layout = dbLayout || { hidden_employee_ids: [] };
 
   // Mutation pour sauvegarder
   const saveLayoutMutation = useMutation({
