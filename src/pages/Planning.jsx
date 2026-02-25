@@ -1687,8 +1687,8 @@ export default function Planning() {
           <DialogContent className="max-w-sm">
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2 text-base">
-                <EyeOff className="w-4 h-4 text-orange-500" />
-                Colonnes masquées ({hiddenColumns.length})
+                 <EyeOff className="w-4 h-4 text-orange-500" />
+                 Colonnes masquées ({layout?.hidden_employee_ids?.length || 0})
               </DialogTitle>
             </DialogHeader>
             <div className="space-y-2">
