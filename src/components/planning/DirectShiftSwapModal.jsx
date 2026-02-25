@@ -121,12 +121,12 @@ export default function DirectShiftSwapModal({ open, onOpenChange, currentYear, 
 
   const shiftsA = useMemo(() => {
     if (!employeeAId) return [];
-    return allMonthShifts.filter(s => s.employee_id === employeeAId);
+    return allMonthShifts.filter(s => s.employee_id === employeeAId).sort((a, b) => a.date.localeCompare(b.date));
   }, [allMonthShifts, employeeAId]);
 
   const allShiftsB = useMemo(() => {
     if (!employeeBId) return [];
-    return allMonthShifts.filter(s => s.employee_id === employeeBId);
+    return allMonthShifts.filter(s => s.employee_id === employeeBId).sort((a, b) => a.date.localeCompare(b.date));
   }, [allMonthShifts, employeeBId]);
 
   const shiftsB = useMemo(() => {
