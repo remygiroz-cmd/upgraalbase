@@ -468,13 +468,13 @@ export default function PlanningV2() {
   const toggleHideColumn = (employeeId) => {
     const hiddenIds = layout?.hidden_employee_ids || [];
     const next = hiddenIds.includes(employeeId) ? hiddenIds.filter(id => id !== employeeId) : [...hiddenIds, employeeId];
-    const newLayout = { column_order: layout?.column_order || [], hidden_employee_ids: next };
-    saveLayout(newLayout);
+    // Sauvegarder le masquage du MOIS (hidden_employee_ids uniquement)
+    saveLayout({ hidden_employee_ids: next });
   };
 
   const showAllColumns = () => {
-    const newLayout = { column_order: layout?.column_order || [], hidden_employee_ids: [] };
-    saveLayout(newLayout);
+    // Réafficher tous les employés du mois
+    saveLayout({ hidden_employee_ids: [] });
   };
 
   // Shifts lookup
