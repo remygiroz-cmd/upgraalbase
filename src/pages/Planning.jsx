@@ -522,27 +522,22 @@ export default function Planning() {
   };
 
   // Handle column reordering via native HTML5 drag & drop
-  const handleColumnDragStart = (id) => setDraggingId(id);
-  const handleColumnDragOver = (id) => setDragOverId(id);
+  const draggingIdRef = useRef(null);
+  const handleColumnDragStart = (id) => { draggingIdRef.current = id; setDraggingId(id); };
+  const handleColumnDragOver = (id) => { if (draggingIdRef.current && draggingIdRef.current !== id) setDragOverId(id); };
   const handleColumnDrop = (sourceId, targetId) => {
-    if (!sourceId || !targetId || sourceId === targetId) return;
+    const src = sourceId || draggingIdRef.current;
+    if (!src || !targetId || src === targetId) { setDraggingId(null); setDragOverId(null); draggingIdRef.current = null; return; }
     const current = [...employees];
-    const fromIdx = current.findIndex(e => e.id === sourceId);
+    const fromIdx = current.findIndex(e => e.id === src);
     const toIdx = current.findIndex(e => e.id === targetId);
-    if (fromIdx === -1 || toIdx === -1) return;
-    const newOrder = [...current];
-    const [moved] = newOrder.splice(fromIdx, 1);
-    newOrder.splice(toIdx, 0, moved);
+    if (fromIdx === -1 || toIdx === -1) { setDraggingId(null); setDragOverId(null); draggingIdRef.current = null; return; }
+    const newOrder = [...current]; const [moved] = newOrder.splice(fromIdx, 1); newOrder.splice(toIdx, 0, moved);
     const newIds = newOrder.map(e => e.id);
-    setColumnOrder(newIds);
-    saveViewSettingsMutation.mutate({ columnOrder: newIds, hiddenColumns });
-    setDraggingId(null);
-    setDragOverId(null);
+    setColumnOrder(newIds); saveViewSettingsMutation.mutate({ columnOrder: newIds, hiddenColumns });
+    setDraggingId(null); setDragOverId(null); draggingIdRef.current = null;
   };
-  const handleColumnDragEnd = () => {
-    setDraggingId(null);
-    setDragOverId(null);
-  };
+  const handleColumnDragEnd = () => { setDraggingId(null); setDragOverId(null); draggingIdRef.current = null; };
 
   const toggleHideColumn = (employeeId) => {
     setHiddenColumns(prev => {
