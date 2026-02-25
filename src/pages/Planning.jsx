@@ -1538,14 +1538,9 @@ export default function Planning() {
                                       : null
                                     }
                                     onRecapUpdate={async () => {
-                                      console.log('[Planning] 🔄 onRecapUpdate called - invalidating and refetching');
-                                      await queryClient.invalidateQueries({ queryKey: ['allWeeklyRecaps'] });
-                                      await queryClient.refetchQueries({ 
-                                        queryKey: ['allWeeklyRecaps', currentYear, currentMonth],
-                                        exact: true 
-                                      });
-                                      console.log('[Planning] ✅ Refetch complete');
-                                    }}
+                                                       await queryClient.invalidateQueries({ queryKey: ['allWeeklyRecaps'] });
+                                                       await queryClient.refetchQueries({ queryKey: ['allWeeklyRecaps', currentYear, currentMonth], exact: true });
+                                                     }}
                                     nonShiftEvents={nonShiftEvents}
                                     nonShiftTypes={nonShiftTypes}
                                     disabled={!canModifyPlanning}
