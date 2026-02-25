@@ -33,7 +33,6 @@ import { applyLayoutToEmployees } from '@/components/planning/planningLayoutServ
 import { parseLocalDate, formatLocalDate } from '@/components/planning/dateUtils';
 import { computeMonthKey, usePlanningLayout } from '@/components/planning/usePlanningLayout';
 import { useGlobalColumnOrder } from '@/components/planning/useGlobalColumnOrder';
-import { applyLayoutToEmployees } from '@/components/planning/planningLayoutService';
 import { isDateInCPPeriod } from '@/components/planning/paidLeaveCalculations';
 import { usePlanningVersion, withPlanningVersion, filterByVersion } from '@/components/planning/usePlanningVersion';
 import { getActiveShiftsForMonth, shiftsQueryKey } from '@/components/planning/shiftService';
