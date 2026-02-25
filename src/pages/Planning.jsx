@@ -17,6 +17,7 @@ import NonShiftCard from '@/components/planning/NonShiftCard';
 import PlanningSettingsModal from '@/components/planning/PlanningSettingsModal';
 import AddCPGlobalModal from '@/components/planning/AddCPGlobalModal';
 import ApplyTemplateGlobalModal from '@/components/planning/ApplyTemplateGlobalModal';
+import ApplyTemplatesModal from '@/components/planning/ApplyTemplatesModal';
 import LeaveRequestModal from '@/components/planning/LeaveRequestModal';
 import EmployeeHeaderCell from '@/components/planning/EmployeeHeaderCell';
 import ExportComptaModal from '@/components/planning/ExportComptaModal';
