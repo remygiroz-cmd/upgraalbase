@@ -1,30 +1,34 @@
 import { base44 } from '@/api/base44Client';
 
 export const getLayout = async (monthKey) => {
-  if (!monthKey) return null;
+  if (!monthKey) return { hidden_employee_ids: [] };
   try {
     const layouts = await base44.entities.PlanningLayout.filter({ month_key: monthKey });
-    return layouts[0] || null;
+    if (layouts[0]) {
+      // Retourner uniquement hidden_employee_ids (ignorer column_order)
+      return { hidden_employee_ids: layouts[0].hidden_employee_ids || [] };
+    }
+    return { hidden_employee_ids: [] };
   } catch (error) {
     console.error('Erreur lecture layout:', error);
-    return null;
+    return { hidden_employee_ids: [] };
   }
 };
 
-export const saveLayout = async (monthKey, { column_order, hidden_employee_ids }) => {
+export const saveLayout = async (monthKey, { hidden_employee_ids }) => {
   if (!monthKey) return;
   try {
     const existing = await base44.entities.PlanningLayout.filter({ month_key: monthKey });
     
     if (existing[0]) {
+      // Update - sauvegarder uniquement hidden_employee_ids
       await base44.entities.PlanningLayout.update(existing[0].id, {
-        column_order: column_order || [],
         hidden_employee_ids: hidden_employee_ids || []
       });
     } else {
+      // Create - sauvegarder uniquement hidden_employee_ids
       await base44.entities.PlanningLayout.create({
         month_key: monthKey,
-        column_order: column_order || [],
         hidden_employee_ids: hidden_employee_ids || []
       });
     }
