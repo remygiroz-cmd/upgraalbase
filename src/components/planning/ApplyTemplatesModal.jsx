@@ -28,8 +28,10 @@ export default function ApplyTemplatesModal({ open, onOpenChange, monthStart, mo
   const [progress, setProgress] = useState({ current: 0, total: 0 });
 
   const year = monthStart.getFullYear();
-  const month = monthStart.getMonth() + 1;
+  const month = monthStart.getMonth() + 1; // 1-based
   const monthName = MONTHS[monthStart.getMonth()];
+  const monthKey = `${year}-${String(month).padStart(2, '0')}`;
+  const { resetVersion } = usePlanningVersion(year, month - 1); // usePlanningVersion uses 0-based month
 
   // Fetch employees with templates
   const { data: employees = [] } = useQuery({
