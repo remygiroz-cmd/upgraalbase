@@ -914,8 +914,6 @@ export default function Planning() {
       const action = undoStack.popUndo();
       if (!action) return;
 
-      console.log('🔄 Undo:', action.actionType, action);
-
       switch (action.actionType) {
         case 'createShift':
           // Undo create = delete
