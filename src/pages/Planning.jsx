@@ -106,6 +106,18 @@ export default function Planning() {
   // Get current planning version for reset system
   const { resetVersion, monthKey } = usePlanningVersion(currentYear, currentMonth);
 
+  // Shared view settings (column order + hidden columns) persisted for all users via AppSettings
+  const { data: _pvs = [] } = useQuery({ queryKey: ['planningViewSettings'], queryFn: () => base44.entities.AppSettings.filter({ setting_key: 'planning_view' }) });
+  const planningViewRecord = _pvs[0] || null;
+  useEffect(() => { if (planningViewRecord) { setColumnOrder(planningViewRecord.column_order || []); setHiddenColumns(planningViewRecord.hidden_columns || []); } }, [planningViewRecord?.id, planningViewRecord?.updated_date]);
+  const saveViewSettingsMutation = useMutation({
+    mutationFn: async ({ columnOrder: co, hiddenColumns: hc }) => {
+      if (planningViewRecord?.id) return base44.entities.AppSettings.update(planningViewRecord.id, { column_order: co, hidden_columns: hc });
+      return base44.entities.AppSettings.create({ setting_key: 'planning_view', column_order: co, hidden_columns: hc });
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['planningViewSettings'] })
+  });
+
   // Fetch ALL employees (including archived)
   const { data: allEmployees = [] } = useQuery({
     queryKey: ['employees'],
