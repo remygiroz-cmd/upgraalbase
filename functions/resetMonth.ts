@@ -191,7 +191,25 @@ Deno.serve(async (req) => {
       return remaining.length;
     };
 
-    stats.verified.shifts = await verify('Shift', 'month_key', monthKey);
+    // Post-condition check for shifts: count by date range (not by month_key)
+    const verifShifts = async () => {
+      const [y, m] = monthKey.split('-').map(Number);
+      const firstDay = `${monthKey}-01`;
+      const lastDayDate = new Date(y, m, 0);
+      const lastDay = `${monthKey}-${String(lastDayDate.getDate()).padStart(2, '0')}`;
+      const allShifts = await base44.asServiceRole.entities.Shift.list();
+      const remaining = allShifts.filter(s => s.date >= firstDay && s.date <= lastDay);
+      if (remaining.length > 0) {
+        console.log(`  ⚠️ RETRY: ${remaining.length} shifts restants — second purge`);
+        const cs = 10;
+        for (let i = 0; i < remaining.length; i += cs) {
+          await Promise.all(remaining.slice(i, i + cs).map(s => base44.asServiceRole.entities.Shift.delete(s.id)));
+        }
+      }
+      console.log(`  ✅ Post-condition shifts: ${remaining.length} résidus (→ supprimés)`);
+      return remaining.length;
+    };
+    stats.verified.shifts = await verifShifts();
     stats.verified.nonShifts = await verify('NonShiftEvent', 'month_key', monthKey);
     stats.verified.cpPeriods = await verify('PaidLeavePeriod', 'month_key', monthKey);
     stats.verified.exportOverrides = await verify('ExportComptaOverride', 'month_key', monthKey);
