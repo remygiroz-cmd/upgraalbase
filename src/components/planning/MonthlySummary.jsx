@@ -46,7 +46,8 @@ export default function MonthlySummary({
   onRecapUpdate,
   currentUser,
   weeklyRecaps = [], // NOUVEAU: pour utiliser les overrides du BASE hebdomadaire
-  disabled = false // Mode lecture seule
+  disabled = false, // Mode lecture seule
+  onClearEmployeeMonth = null // Callback to clear this employee's month
 }) {
   const [showEditDialog, setShowEditDialog] = useState(false);
   const queryClient = useQueryClient();
