@@ -159,7 +159,7 @@ export default function ShiftSwapModal({ open, onOpenChange, currentYear, curren
       return all.filter(s =>
         s.date >= firstDay &&
         s.date <= lastDay &&
-        (s.month_key === undefined || s.month_key === null || s.month_key === monthKey) &&
+        (s.month_key === undefined || s.month_key === null || s.month_key === activeMonthKey) &&
         (s.reset_version === undefined || s.reset_version === null || s.reset_version === resetVersion)
       );
     },
