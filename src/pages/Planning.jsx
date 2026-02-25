@@ -206,20 +206,20 @@ export default function Planning() {
     return sortedEmployees;
   }, [sortedEmployees, filterType, selectedEmployee, selectedTeam]);
 
-  // Apply column order on top of filtered employees
+  // Apply column order on top of filtered employees, then filter hidden
   const employees = React.useMemo(() => {
-    if (columnOrder.length === 0) return filteredEmployees;
-    const ordered = [];
-    const rest = [...filteredEmployees];
-    for (const id of columnOrder) {
-      const idx = rest.findIndex(e => e.id === id);
-      if (idx !== -1) {
-        ordered.push(rest[idx]);
-        rest.splice(idx, 1);
+    let result = filteredEmployees;
+    if (columnOrder.length > 0) {
+      const ordered = [];
+      const rest = [...filteredEmployees];
+      for (const id of columnOrder) {
+        const idx = rest.findIndex(e => e.id === id);
+        if (idx !== -1) { ordered.push(rest[idx]); rest.splice(idx, 1); }
       }
+      result = [...ordered, ...rest];
     }
-    return [...ordered, ...rest];
-  }, [filteredEmployees, columnOrder]);
+    return result.filter(e => !hiddenColumns.includes(e.id));
+  }, [filteredEmployees, columnOrder, hiddenColumns]);
 
   // Fetch non-shift events for current month (filtered by reset_version)
   const { data: nonShiftEvents = [] } = useQuery({
