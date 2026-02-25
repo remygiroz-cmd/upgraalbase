@@ -554,7 +554,18 @@ export default function Planning() {
     setDragOverId(null);
   };
 
+  const toggleHideColumn = (employeeId) => {
+    setHiddenColumns(prev => {
+      const next = prev.includes(employeeId) ? prev.filter(id => id !== employeeId) : [...prev, employeeId];
+      localStorage.setItem('planning_hidden_columns', JSON.stringify(next));
+      return next;
+    });
+  };
 
+  const showAllColumns = () => {
+    setHiddenColumns([]);
+    localStorage.setItem('planning_hidden_columns', JSON.stringify([]));
+  };
 
   // Pre-compute shift lookups for O(1) access - major performance improvement
   const shiftsLookup = React.useMemo(() => {
