@@ -97,11 +97,31 @@ Deno.serve(async (req) => {
     };
 
     // Lancer toutes les suppressions en parallèle
+    // 🔴 WIPE TOTAL shifts : on ne peut pas filtrer par month_key uniquement car
+    // les shifts legacy n'ont pas month_key. On doit lister TOUS les shifts du mois
+    // par date, sans filtrer reset_version ni status.
     deleteTasks.push(
-      batchDelete('Shift', 'month_key', monthKey).then(count => { 
-        stats.deleted.shifts = count; 
-        console.log(`  ✓ ${count} shifts`);
-      })
+      (async () => {
+        const [y, m] = monthKey.split('-').map(Number);
+        const firstDay = `${monthKey}-01`;
+        const lastDayDate = new Date(y, m, 0);
+        const lastDay = `${monthKey}-${String(lastDayDate.getDate()).padStart(2, '0')}`;
+
+        // Fetch ALL shifts, filter by date range (catches legacy + versioned)
+        const allShifts = await base44.asServiceRole.entities.Shift.list();
+        const inRange = allShifts.filter(s => s.date >= firstDay && s.date <= lastDay);
+
+        console.log(`  🔍 Shifts trouvés dans la plage [${firstDay}..${lastDay}]: ${inRange.length}`);
+
+        const chunkSize = 10;
+        for (let i = 0; i < inRange.length; i += chunkSize) {
+          const chunk = inRange.slice(i, i + chunkSize);
+          await Promise.all(chunk.map(s => base44.asServiceRole.entities.Shift.delete(s.id)));
+        }
+
+        stats.deleted.shifts = inRange.length;
+        console.log(`  ✓ ${inRange.length} shifts supprimés (toutes versions + legacy)`);
+      })()
     );
 
     deleteTasks.push(
