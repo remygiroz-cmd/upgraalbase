@@ -87,7 +87,10 @@ export default function PlanningV2() {
   // Compute monthKey (YYYY-MM format)
   const monthKey = computeMonthKey(currentYear, currentMonth);
 
-  // Hook: Planning layout persistence (order + hidden columns)
+  // Hook: Global column order (applies to ALL months)
+  const { globalColumnOrder, saveGlobalColumnOrder } = useGlobalColumnOrder();
+
+  // Hook: Planning layout for THIS month (hidden columns only)
   const { layout, saveLayout, clearLayout } = usePlanningLayout(monthKey);
 
   // Get reset version for shifts
