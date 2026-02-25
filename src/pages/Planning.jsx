@@ -109,7 +109,11 @@ export default function Planning() {
   const currentYear = currentDate.getFullYear();
 
   // Get current planning version for reset system
-  const { resetVersion, monthKey } = usePlanningVersion(currentYear, currentMonth);
+  const { resetVersion, monthKey: computedMonthKey } = usePlanningVersion(currentYear, currentMonth);
+  
+  useEffect(() => {
+    setMonthKey(computedMonthKey);
+  }, [computedMonthKey]);
 
   // Fetch ALL employees (including archived)
   const { data: allEmployees = [] } = useQuery({
