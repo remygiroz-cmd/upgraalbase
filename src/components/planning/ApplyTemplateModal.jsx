@@ -159,7 +159,9 @@ export default function ApplyTemplateModal({ open, onOpenChange, employeeId, emp
             break_minutes: template.break_minutes || 0,
             position: template.position,
             notes: template.notes || '',
-            status: 'planned'
+            status: 'planned',
+            month_key: activeMonthKey,
+            reset_version: resetVersion
           };
           
           shifts.push(shiftPayload);
