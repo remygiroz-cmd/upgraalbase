@@ -34,6 +34,7 @@ import { useUndoStack } from '@/components/planning/useUndoStack';
 import UndoRedoButtons from '@/components/planning/UndoRedoButtons';
 import TodaySummary from '@/components/planning/TodaySummary';
 import DepartureOrderBlock from '@/components/planning/DepartureOrderBlock';
+import { usePlanningViewSettings } from '@/components/planning/usePlanningViewSettings';
 
 const DAYS = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche'];
 const MONTHS = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'];
@@ -44,16 +45,14 @@ export default function Planning() {
   const [showPlanningSettings, setShowPlanningSettings] = useState(false);
   const [showExportComptaModal, setShowExportComptaModal] = useState(false);
   const [showClearMonthModal, setShowClearMonthModal] = useState(false);
-  const [clearEmployeeMonthTarget, setClearEmployeeMonthTarget] = useState(null); // employee object
+  const [clearEmployeeMonthTarget, setClearEmployeeMonthTarget] = useState(null);
   const [selectedCPPeriod, setSelectedCPPeriod] = useState(null);
   const [showLeaveRequestModal, setShowLeaveRequestModal] = useState(false);
   const [showShiftSwapModal, setShowShiftSwapModal] = useState(false);
   const [showDirectSwapModal, setShowDirectSwapModal] = useState(false);
-  
-  // État centralisé pour les actions depuis le dropdown
   const [modalState, setModalState] = useState({
     isOpen: false,
-    actionType: null, // 'ADD_CP' | 'APPLY_TEMPLATE' | 'DELETE_CP'
+    actionType: null,
     selectedEmployee: null
   });
   const [selectedCell, setSelectedCell] = useState(null);
@@ -62,16 +61,17 @@ export default function Planning() {
   const [selectedEmployee, setSelectedEmployee] = useState('');
   const [copyWeekModal, setCopyWeekModal] = useState({ open: false, weekStart: null, weekAbove: null });
   const [weekConflictMode, setWeekConflictMode] = useState('replace');
-  const [displayMode, setDisplayMode] = useState('normal'); // 'compact' | 'normal'
-  const [showFab, setShowFab] = useState(false); // Floating Action Button
+  const [displayMode, setDisplayMode] = useState('normal');
+  const [showFab, setShowFab] = useState(false);
   const [isUndoing, setIsUndoing] = useState(false);
   const [isRedoing, setIsRedoing] = useState(false);
-  const [columnOrder, setColumnOrder] = useState([]);
-  const [hiddenColumns, setHiddenColumns] = useState([]);
   const [showHideColumnsPanel, setShowHideColumnsPanel] = useState(false);
   const [draggingId, setDraggingId] = useState(null);
   const [dragOverId, setDragOverId] = useState(null);
   const queryClient = useQueryClient();
+  
+  // Use hook for view settings with real-time sync
+  const { columnOrder, setColumnOrder, hiddenColumns, setHiddenColumns, saveViewSettingsMutation } = usePlanningViewSettings();
 
   // Undo/Redo system
   const undoStack = useUndoStack();
