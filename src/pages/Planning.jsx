@@ -1211,36 +1211,34 @@ export default function Planning() {
           <div className="inline-block min-w-full">
             {/* Header - Sticky */}
               <div className="bg-gradient-to-r from-gray-100 to-gray-50 flex border-b-2 border-gray-300 sticky top-0 z-40 shadow-md">
-                <div className="sticky left-0 z-50 bg-gradient-to-r from-gray-100 to-gray-50 border-r-2 border-gray-300 px-2 lg:px-4 py-2 lg:py-3 text-left text-xs lg:text-sm font-bold text-gray-900 w-[80px] lg:w-[120px] shadow-md flex items-center gap-1 lg:gap-2">
+                <div className="sticky left-0 z-50 bg-gradient-to-r from-gray-100 to-gray-50 border-r-2 border-gray-300 px-2 lg:px-4 py-2 lg:py-3 text-left text-xs lg:text-sm font-bold text-gray-900 w-[80px] lg:w-[120px] shadow-md flex items-center gap-1 lg:gap-2 flex-shrink-0">
                   <Calendar className="w-3.5 h-3.5 lg:w-4 lg:h-4 text-orange-600" />
                   <span className="hidden sm:inline">Jour</span>
                 </div>
-                <div className="flex overflow-x-auto">
-                  {employees.map((employee) => {
-                    const team = allTeams.find(t => t.id === employee.team_id);
-                    return (
-                      <div key={employee.id} className="relative group/header">
-                        <EmployeeHeaderCell
-                          employee={employee} team={team}
-                          isDragging={draggingId === employee.id}
-                          isDragOver={dragOverId === employee.id}
-                          onDragStart={handleColumnDragStart}
-                          onDragOver={handleColumnDragOver}
-                          onDrop={handleColumnDrop}
-                          onDragEnd={handleColumnDragEnd}
-                          displayMode={displayMode}
-                        />
-                        {canHideColumns && (
-                          <button onClick={(e) => { e.stopPropagation(); toggleHideColumn(employee.id); }}
-                            className="absolute top-1 right-1 p-0.5 rounded bg-white/80 hover:bg-red-100 opacity-0 group-hover/header:opacity-100 transition-opacity z-10"
-                            title="Masquer cette colonne">
-                            <EyeOff className="w-3 h-3 text-gray-400 hover:text-red-500" />
-                          </button>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
+                {employees.map((employee) => {
+                  const team = allTeams.find(t => t.id === employee.team_id);
+                  return (
+                    <div key={employee.id} className="relative group/header flex-shrink-0">
+                      <EmployeeHeaderCell
+                        employee={employee} team={team}
+                        isDragging={draggingId === employee.id}
+                        isDragOver={dragOverId === employee.id}
+                        onDragStart={handleColumnDragStart}
+                        onDragOver={handleColumnDragOver}
+                        onDrop={handleColumnDrop}
+                        onDragEnd={handleColumnDragEnd}
+                        displayMode={displayMode}
+                      />
+                      {canHideColumns && (
+                        <button onClick={(e) => { e.stopPropagation(); toggleHideColumn(employee.id); }}
+                          className="absolute top-1 right-1 p-0.5 rounded bg-white/80 hover:bg-red-100 opacity-0 group-hover/header:opacity-100 transition-opacity z-10"
+                          title="Masquer cette colonne">
+                          <EyeOff className="w-3 h-3 text-gray-400 hover:text-red-500" />
+                        </button>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
 
             {/* Body */}
