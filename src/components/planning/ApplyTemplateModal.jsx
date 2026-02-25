@@ -22,7 +22,7 @@ const DAYS_MAP = {
   7: 'Dimanche'
 };
 
-export default function ApplyTemplateModal({ open, onOpenChange, employeeId, employeeName, embedded = false }) {
+export default function ApplyTemplateModal({ open, onOpenChange, employeeId, employeeName, embedded = false, currentYear, currentMonth }) {
   const [selectedTemplateId, setSelectedTemplateId] = useState('');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
@@ -31,6 +31,11 @@ export default function ApplyTemplateModal({ open, onOpenChange, employeeId, emp
   const [debugMode, setDebugMode] = useState(false);
   const [debugLogs, setDebugLogs] = useState([]);
   const queryClient = useQueryClient();
+
+  // Active planning version — needed to tag new shifts and filter existing ones
+  const derivedYear = currentYear ?? (startDate ? parseInt(startDate.split('-')[0]) : new Date().getFullYear());
+  const derivedMonth = currentMonth ?? (startDate ? parseInt(startDate.split('-')[1]) - 1 : new Date().getMonth());
+  const { resetVersion, monthKey: activeMonthKey } = usePlanningVersion(derivedYear, derivedMonth);
 
   const { data: templateWeeks = [] } = useQuery({
     queryKey: ['templateWeeks', employeeId],
