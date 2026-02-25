@@ -339,6 +339,17 @@ ${deductionDetails.length > 0 ? `  Détail: ${deductionDetails.map(d => `${d.dat
             <Edit2 className="w-3 h-3 text-blue-600" />
           </button>
         )}
+
+        {/* Clear employee month button */}
+        {!disabled && onClearEmployeeMonth && (
+          <button
+            onClick={(e) => { e.stopPropagation(); onClearEmployeeMonth(); }}
+            className="absolute bottom-1 right-1 p-1 rounded hover:bg-red-100 transition-colors opacity-0 group-hover:opacity-100"
+            title="Vider le mois de cet employé (shifts, non-shifts, CP, récaps)"
+          >
+            <Trash2 className="w-3 h-3 text-red-500" />
+          </button>
+        )}
         
         {/* Show all button (if items hidden) */}
         {!disabled && hasHiddenItems && (
