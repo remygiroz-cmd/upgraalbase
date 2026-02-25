@@ -1,7 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
-import { Calendar, ChevronLeft, ChevronRight, Plus, Filter, Settings, ArrowDown, FileText, X, EyeOff, Eye } from 'lucide-react';
+import { Calendar, ChevronLeft, ChevronRight, Plus, Filter, GripVertical, Settings, MoreVertical, Copy, ArrowDown, FileText, X, EyeOff, Eye } from 'lucide-react';
+import PageHeader from '@/components/ui/PageHeader';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -20,21 +21,22 @@ import ApplyTemplateGlobalModal from '@/components/planning/ApplyTemplateGlobalM
 import LeaveRequestModal from '@/components/planning/LeaveRequestModal';
 import EmployeeHeaderCell from '@/components/planning/EmployeeHeaderCell';
 import ExportComptaModal from '@/components/planning/ExportComptaModal';
+import ApplyTemplatesModal from '@/components/planning/ApplyTemplatesModal';
 import ClearMonthModal from '@/components/planning/ClearMonthModal';
 import ClearEmployeeMonthModal from '@/components/planning/ClearEmployeeMonthModal';
 import DeleteCPModal from '@/components/planning/DeleteCPModal';
 import ShiftSwapModal from '@/components/planning/ShiftSwapModal';
 import DirectShiftSwapModal, { canDirectSwap } from '@/components/planning/DirectShiftSwapModal';
-import { checkMinimumRest } from '@/components/planning/LegalChecks';
+import { calculateShiftDuration, checkMinimumRest } from '@/components/planning/LegalChecks';
 import { parseLocalDate, formatLocalDate } from '@/components/planning/dateUtils';
 import { isDateInCPPeriod } from '@/components/planning/paidLeaveCalculations';
 import { usePlanningVersion, withPlanningVersion, filterByVersion } from '@/components/planning/usePlanningVersion';
 import { getActiveShiftsForMonth, shiftsQueryKey } from '@/components/planning/shiftService';
 import { useUndoStack } from '@/components/planning/useUndoStack';
 import UndoRedoButtons from '@/components/planning/UndoRedoButtons';
+import PinchZoomContainer from '@/components/planning/PinchZoomContainer';
 import TodaySummary from '@/components/planning/TodaySummary';
 import DepartureOrderBlock from '@/components/planning/DepartureOrderBlock';
-import { usePlanningViewSettings } from '@/components/planning/usePlanningViewSettings';
 
 const DAYS = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche'];
 const MONTHS = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'];
@@ -44,15 +46,18 @@ export default function Planning() {
   const [showShiftModal, setShowShiftModal] = useState(false);
   const [showPlanningSettings, setShowPlanningSettings] = useState(false);
   const [showExportComptaModal, setShowExportComptaModal] = useState(false);
+  const [showApplyTemplatesModal, setShowApplyTemplatesModal] = useState(false);
   const [showClearMonthModal, setShowClearMonthModal] = useState(false);
-  const [clearEmployeeMonthTarget, setClearEmployeeMonthTarget] = useState(null);
+  const [clearEmployeeMonthTarget, setClearEmployeeMonthTarget] = useState(null); // employee object
   const [selectedCPPeriod, setSelectedCPPeriod] = useState(null);
   const [showLeaveRequestModal, setShowLeaveRequestModal] = useState(false);
   const [showShiftSwapModal, setShowShiftSwapModal] = useState(false);
   const [showDirectSwapModal, setShowDirectSwapModal] = useState(false);
+  
+  // État centralisé pour les actions depuis le dropdown
   const [modalState, setModalState] = useState({
     isOpen: false,
-    actionType: null,
+    actionType: null, // 'ADD_CP' | 'APPLY_TEMPLATE' | 'DELETE_CP'
     selectedEmployee: null
   });
   const [selectedCell, setSelectedCell] = useState(null);
@@ -61,17 +66,17 @@ export default function Planning() {
   const [selectedEmployee, setSelectedEmployee] = useState('');
   const [copyWeekModal, setCopyWeekModal] = useState({ open: false, weekStart: null, weekAbove: null });
   const [weekConflictMode, setWeekConflictMode] = useState('replace');
-  const [displayMode, setDisplayMode] = useState('normal');
-  const [showFab, setShowFab] = useState(false);
+  const [displayMode, setDisplayMode] = useState('normal'); // 'compact' | 'normal'
+  const [showFab, setShowFab] = useState(false); // Floating Action Button
   const [isUndoing, setIsUndoing] = useState(false);
   const [isRedoing, setIsRedoing] = useState(false);
+  const [columnOrder, setColumnOrder] = useState([]);
+  const [hiddenColumns, setHiddenColumns] = useState([]);
+  const [planningViewSettingsId, setPlanningViewSettingsId] = useState(null);
   const [showHideColumnsPanel, setShowHideColumnsPanel] = useState(false);
   const [draggingId, setDraggingId] = useState(null);
   const [dragOverId, setDragOverId] = useState(null);
   const queryClient = useQueryClient();
-  
-  // Use hook for view settings with real-time sync
-  const { columnOrder, setColumnOrder, hiddenColumns, setHiddenColumns, saveViewSettingsMutation } = usePlanningViewSettings();
 
   // Undo/Redo system
   const undoStack = useUndoStack();
@@ -105,8 +110,6 @@ export default function Planning() {
 
   // Get current planning version for reset system
   const { resetVersion, monthKey } = usePlanningVersion(currentYear, currentMonth);
-
-
 
   // Fetch ALL employees (including archived)
   const { data: allEmployees = [] } = useQuery({
@@ -512,34 +515,39 @@ export default function Planning() {
   };
 
   // Handle column reordering via native HTML5 drag & drop
-  const draggingIdRef = useRef(null);
-  const handleColumnDragStart = (id) => { draggingIdRef.current = id; setDraggingId(id); };
-  const handleColumnDragOver = (id) => { if (draggingIdRef.current && draggingIdRef.current !== id) setDragOverId(id); };
+  const handleColumnDragStart = (id) => setDraggingId(id);
+  const handleColumnDragOver = (id) => setDragOverId(id);
   const handleColumnDrop = (sourceId, targetId) => {
-    const src = sourceId || draggingIdRef.current;
-    if (!src || !targetId || src === targetId) { setDraggingId(null); setDragOverId(null); draggingIdRef.current = null; return; }
+    if (!sourceId || !targetId || sourceId === targetId) return;
     const current = [...employees];
-    const fromIdx = current.findIndex(e => e.id === src);
+    const fromIdx = current.findIndex(e => e.id === sourceId);
     const toIdx = current.findIndex(e => e.id === targetId);
-    if (fromIdx === -1 || toIdx === -1) { setDraggingId(null); setDragOverId(null); draggingIdRef.current = null; return; }
-    const newOrder = [...current]; const [moved] = newOrder.splice(fromIdx, 1); newOrder.splice(toIdx, 0, moved);
+    if (fromIdx === -1 || toIdx === -1) return;
+    const newOrder = [...current];
+    const [moved] = newOrder.splice(fromIdx, 1);
+    newOrder.splice(toIdx, 0, moved);
     const newIds = newOrder.map(e => e.id);
-    setColumnOrder(newIds); saveViewSettingsMutation.mutate({ columnOrder: newIds, hiddenColumns });
-    setDraggingId(null); setDragOverId(null); draggingIdRef.current = null;
+    setColumnOrder(newIds);
+    localStorage.setItem('planning_column_order', JSON.stringify(newIds));
+    setDraggingId(null);
+    setDragOverId(null);
   };
-  const handleColumnDragEnd = () => { setDraggingId(null); setDragOverId(null); draggingIdRef.current = null; };
+  const handleColumnDragEnd = () => {
+    setDraggingId(null);
+    setDragOverId(null);
+  };
 
   const toggleHideColumn = (employeeId) => {
     setHiddenColumns(prev => {
       const next = prev.includes(employeeId) ? prev.filter(id => id !== employeeId) : [...prev, employeeId];
-      saveViewSettingsMutation.mutate({ columnOrder, hiddenColumns: next });
+      localStorage.setItem('planning_hidden_columns', JSON.stringify(next));
       return next;
     });
   };
 
   const showAllColumns = () => {
     setHiddenColumns([]);
-    saveViewSettingsMutation.mutate({ columnOrder, hiddenColumns: [] });
+    localStorage.setItem('planning_hidden_columns', JSON.stringify([]));
   };
 
   // Pre-compute shift lookups for O(1) access - major performance improvement
@@ -1201,34 +1209,36 @@ export default function Planning() {
           <div className="inline-block min-w-full">
             {/* Header - Sticky */}
               <div className="bg-gradient-to-r from-gray-100 to-gray-50 flex border-b-2 border-gray-300 sticky top-0 z-40 shadow-md">
-                <div className="sticky left-0 z-50 bg-gradient-to-r from-gray-100 to-gray-50 border-r-2 border-gray-300 px-2 lg:px-4 py-2 lg:py-3 text-left text-xs lg:text-sm font-bold text-gray-900 w-[80px] lg:w-[120px] shadow-md flex items-center gap-1 lg:gap-2 flex-shrink-0">
+                <div className="sticky left-0 z-50 bg-gradient-to-r from-gray-100 to-gray-50 border-r-2 border-gray-300 px-2 lg:px-4 py-2 lg:py-3 text-left text-xs lg:text-sm font-bold text-gray-900 w-[80px] lg:w-[120px] shadow-md flex items-center gap-1 lg:gap-2">
                   <Calendar className="w-3.5 h-3.5 lg:w-4 lg:h-4 text-orange-600" />
                   <span className="hidden sm:inline">Jour</span>
                 </div>
-                {employees.map((employee) => {
-                  const team = allTeams.find(t => t.id === employee.team_id);
-                  return (
-                    <div key={employee.id} className="relative group/header flex-shrink-0">
-                      <EmployeeHeaderCell
-                        employee={employee} team={team}
-                        isDragging={draggingId === employee.id}
-                        isDragOver={dragOverId === employee.id}
-                        onDragStart={handleColumnDragStart}
-                        onDragOver={handleColumnDragOver}
-                        onDrop={handleColumnDrop}
-                        onDragEnd={handleColumnDragEnd}
-                        displayMode={displayMode}
-                      />
-                      {canHideColumns && (
-                        <button onClick={(e) => { e.stopPropagation(); toggleHideColumn(employee.id); }}
-                          className="absolute top-1 right-1 p-0.5 rounded bg-white/80 hover:bg-red-100 opacity-0 group-hover/header:opacity-100 transition-opacity z-10"
-                          title="Masquer cette colonne">
-                          <EyeOff className="w-3 h-3 text-gray-400 hover:text-red-500" />
-                        </button>
-                      )}
-                    </div>
-                  );
-                })}
+                <div className="flex overflow-x-auto">
+                  {employees.map((employee) => {
+                    const team = allTeams.find(t => t.id === employee.team_id);
+                    return (
+                      <div key={employee.id} className="relative group/header">
+                        <EmployeeHeaderCell
+                          employee={employee} team={team}
+                          isDragging={draggingId === employee.id}
+                          isDragOver={dragOverId === employee.id}
+                          onDragStart={handleColumnDragStart}
+                          onDragOver={handleColumnDragOver}
+                          onDrop={handleColumnDrop}
+                          onDragEnd={handleColumnDragEnd}
+                          displayMode={displayMode}
+                        />
+                        {canHideColumns && (
+                          <button onClick={(e) => { e.stopPropagation(); toggleHideColumn(employee.id); }}
+                            className="absolute top-1 right-1 p-0.5 rounded bg-white/80 hover:bg-red-100 opacity-0 group-hover/header:opacity-100 transition-opacity z-10"
+                            title="Masquer cette colonne">
+                            <EyeOff className="w-3 h-3 text-gray-400 hover:text-red-500" />
+                          </button>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
 
             {/* Body */}

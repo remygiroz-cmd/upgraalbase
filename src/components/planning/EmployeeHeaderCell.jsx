@@ -31,7 +31,6 @@ const EmployeeHeaderCell = React.memo(({
       }}
       onDrop={(e) => {
         e.preventDefault();
-        e.stopPropagation();
         const sourceId = e.dataTransfer.getData('text/plain');
         onDrop?.(sourceId, employee.id);
       }}
@@ -40,7 +39,7 @@ const EmployeeHeaderCell = React.memo(({
         "border-r border-gray-200 px-2 text-center min-w-[150px] w-[150px] lg:min-w-[180px] lg:w-[180px] relative group flex-shrink-0 select-none cursor-grab active:cursor-grabbing transition-all duration-100",
         displayMode === 'compact' ? 'py-1' : 'py-3',
         isDragging && "opacity-30 bg-orange-50",
-        isDragOver && !isDragging && "bg-orange-100 border-l-4 border-l-orange-500"
+        isDragOver && !isDragging && "bg-orange-100 border-l-4 border-l-orange-500 scale-[1.02]"
       )}
     >
       {/* Grip icon */}
@@ -49,6 +48,8 @@ const EmployeeHeaderCell = React.memo(({
           <path d="M8 5a2 2 0 11-4 0 2 2 0 014 0zM12 5a2 2 0 11-4 0 2 2 0 014 0zM8 13a2 2 0 11-4 0 2 2 0 014 0zM12 13a2 2 0 11-4 0 2 2 0 014 0z" />
         </svg>
       </div>
+
+
 
       {/* Employee name */}
       <div
@@ -60,6 +61,8 @@ const EmployeeHeaderCell = React.memo(({
         onMouseLeave={() => setShowTooltip(false)}
       >
         {fullName}
+        
+        {/* Tooltip */}
         {showTooltip && isNameTruncated && (
           <div className="absolute left-0 top-full mt-1 z-50 bg-gray-900 text-white text-xs rounded px-2 py-1 whitespace-nowrap shadow-lg">
             {fullName}
@@ -72,7 +75,7 @@ const EmployeeHeaderCell = React.memo(({
         <div
           className={cn(
             "font-semibold text-white inline-block rounded-full mt-1 shadow-sm",
-            displayMode === 'compact' ? 'text-[8px] px-1 py-0.5' : 'text-[9px] px-2 py-0.5'
+            displayMode === 'compact' ? 'text-[8px] px-1 py-0 py-0.5' : 'text-[9px] px-2 py-0.5'
           )}
           style={{ backgroundColor: team.color || '#3b82f6' }}
           title={team.name}
