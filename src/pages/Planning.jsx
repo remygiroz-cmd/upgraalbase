@@ -971,14 +971,10 @@ export default function Planning() {
           break;
 
         default:
-          console.warn('Action type non supporté:', action.actionType);
-      }
-
-      // Invalidate queries
+        }
       await queryClient.invalidateQueries({ queryKey: ['shifts'] });
       await queryClient.invalidateQueries({ queryKey: ['allWeeklyRecaps'] });
       await queryClient.invalidateQueries({ queryKey: ['allMonthlyRecaps'] });
-
       toast.success(`↪︎ ${action.label} rétabli`);
     } catch (error) {
       toast.error('Impossible de rétablir : ' + error.message);
