@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState } from 'react';
 import { cn } from '@/lib/utils';
 
 const EmployeeHeaderCell = React.memo(({
@@ -15,37 +15,29 @@ const EmployeeHeaderCell = React.memo(({
   const [showTooltip, setShowTooltip] = useState(false);
   const fullName = `${employee.first_name} ${employee.last_name}`;
   const isNameTruncated = fullName.length > 20;
-  const divRef = useRef(null);
 
   return (
     <div
-      ref={divRef}
       draggable
       onDragStart={(e) => {
         e.dataTransfer.effectAllowed = 'move';
-        e.dataTransfer.setData('application/x-employee-id', employee.id);
-        // Small delay so the drag image has time to render
-        requestAnimationFrame(() => onDragStart?.(employee.id));
+        e.dataTransfer.setData('text/plain', employee.id);
+        onDragStart?.(employee.id);
       }}
       onDragOver={(e) => {
         e.preventDefault();
-        e.stopPropagation();
         e.dataTransfer.dropEffect = 'move';
         onDragOver?.(employee.id);
       }}
       onDrop={(e) => {
         e.preventDefault();
         e.stopPropagation();
-        const sourceId = e.dataTransfer.getData('application/x-employee-id')
-          || e.dataTransfer.getData('text/plain');
-        if (sourceId) onDrop?.(sourceId, employee.id);
+        const sourceId = e.dataTransfer.getData('text/plain');
+        onDrop?.(sourceId, employee.id);
       }}
-      onDragEnd={(e) => {
-        e.preventDefault();
-        onDragEnd?.();
-      }}
+      onDragEnd={() => onDragEnd?.()}
       className={cn(
-        "border-r border-gray-200 px-2 text-center min-w-[150px] w-[150px] lg:min-w-[180px] lg:w-[180px] relative group flex-shrink-0 select-none cursor-grab active:cursor-grabbing transition-all duration-150",
+        "border-r border-gray-200 px-2 text-center min-w-[150px] w-[150px] lg:min-w-[180px] lg:w-[180px] relative group flex-shrink-0 select-none cursor-grab active:cursor-grabbing transition-all duration-100",
         displayMode === 'compact' ? 'py-1' : 'py-3',
         isDragging && "opacity-30 bg-orange-50",
         isDragOver && !isDragging && "bg-orange-100 border-l-4 border-l-orange-500"
@@ -68,7 +60,6 @@ const EmployeeHeaderCell = React.memo(({
         onMouseLeave={() => setShowTooltip(false)}
       >
         {fullName}
-
         {showTooltip && isNameTruncated && (
           <div className="absolute left-0 top-full mt-1 z-50 bg-gray-900 text-white text-xs rounded px-2 py-1 whitespace-nowrap shadow-lg">
             {fullName}
