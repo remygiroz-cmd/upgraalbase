@@ -123,17 +123,10 @@ export default function Planning() {
     queryFn: () => base44.entities.Team.filter({ is_active: true })
   });
 
-  // Fetch shifts for current month (filtered by reset_version)
+  // Fetch shifts for current month (filtered by reset_version) via centralized service
   const { data: shifts = [] } = useQuery({
-    queryKey: ['shifts', currentYear, currentMonth, resetVersion],
-    queryFn: async () => {
-      const firstDay = formatLocalDate(new Date(currentYear, currentMonth, 1));
-      const lastDay = formatLocalDate(new Date(currentYear, currentMonth + 1, 0));
-      
-      const allShifts = await base44.entities.Shift.list();
-      const monthShifts = allShifts.filter(s => s.date >= firstDay && s.date <= lastDay);
-      return filterByVersion(monthShifts, resetVersion);
-    },
+    queryKey: shiftsQueryKey(currentYear, currentMonth, resetVersion),
+    queryFn: () => getActiveShiftsForMonth(monthKey, resetVersion),
     enabled: resetVersion !== undefined
   });
 
