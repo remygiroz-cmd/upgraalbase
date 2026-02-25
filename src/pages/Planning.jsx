@@ -50,6 +50,7 @@ export default function Planning() {
   const [showApplyTemplatesModal, setShowApplyTemplatesModal] = useState(false);
   const [showClearMonthModal, setShowClearMonthModal] = useState(false);
   const [clearEmployeeMonthTarget, setClearEmployeeMonthTarget] = useState(null); // employee object
+  const [showClearAllEmployeesMonthModal, setShowClearAllEmployeesMonthModal] = useState(false);
   const [selectedCPPeriod, setSelectedCPPeriod] = useState(null);
   const [showLeaveRequestModal, setShowLeaveRequestModal] = useState(false);
   const [showShiftSwapModal, setShowShiftSwapModal] = useState(false);
