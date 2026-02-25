@@ -1511,22 +1511,6 @@ export default function Planning() {
                               const weeklyRecapKey = `${employee.id}_${weekStartStr}`;
                               const weeklyRecap = weeklyRecapsLookup.get(weeklyRecapKey) || null;
                               
-                              // 🔍 E) LOOKUP UI - CE QUE LE COMPOSANT VA AFFICHER
-                              if (weeklyRecap && weeklyRecap.base_override_hours !== null) {
-                                console.log('═══════════════════════════════════════════════════');
-                                console.log('E) LOOKUP UI - VALEUR AFFICHÉE');
-                                console.log('═══════════════════════════════════════════════════');
-                                console.log('employeeId:', employee.id);
-                                console.log('employeeName:', employee.first_name + ' ' + employee.last_name);
-                                console.log('weekStartStr:', weekStartStr);
-                                console.log('clé de matching:', weeklyRecapKey);
-                                console.log('recap trouvé?:', !!weeklyRecap);
-                                console.log('recap.id:', weeklyRecap?.id);
-                                console.log('recap.base_override_hours:', weeklyRecap?.base_override_hours);
-                                console.log('DÉCISION: override présent → afficher', weeklyRecap.base_override_hours);
-                                console.log('═══════════════════════════════════════════════════\n');
-                              }
-
                               return (
                                 <div key={employee.id} className="border-r border-gray-200 min-w-[150px] w-[150px] lg:min-w-[180px] lg:w-[180px]">
                                   <WeeklySummary
