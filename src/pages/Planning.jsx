@@ -76,6 +76,13 @@ export default function Planning() {
       return saved ? JSON.parse(saved) : [];
     } catch { return []; }
   });
+  const [hiddenColumns, setHiddenColumns] = useState(() => {
+    try {
+      const saved = localStorage.getItem('planning_hidden_columns');
+      return saved ? JSON.parse(saved) : [];
+    } catch { return []; }
+  });
+  const [showHideColumnsPanel, setShowHideColumnsPanel] = useState(false);
   const [draggingId, setDraggingId] = useState(null);
   const [dragOverId, setDragOverId] = useState(null);
   const queryClient = useQueryClient();
