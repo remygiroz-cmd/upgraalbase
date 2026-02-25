@@ -1,56 +1,59 @@
-// Logic helpers for column management
-import { saveLayout } from './planningLayoutService';
+export const createColumnHandlers = ({
+  employees,
+  layout,
+  monthKey,
+  savePlanningLayout,
+  setLayout,
+  setDraggingId,
+  setDragOverId,
+}) => {
+  const handleColumnDragStart = (id) => setDraggingId(id);
+  const handleColumnDragOver = (id) => setDragOverId(id);
 
-export const createColumnHandlers = (monthKey, layout, setLayout, queryClient, employees) => {
   const handleColumnDrop = (sourceId, targetId) => {
     if (!sourceId || !targetId || sourceId === targetId) return;
-    
-    // Find indices in visible employees
-    const fromIdx = employees.findIndex(e => e.id === sourceId);
-    const toIdx = employees.findIndex(e => e.id === targetId);
+    const current = [...employees];
+    const fromIdx = current.findIndex(e => e.id === sourceId);
+    const toIdx = current.findIndex(e => e.id === targetId);
     if (fromIdx === -1 || toIdx === -1) return;
-
-    // Create new order
-    const newEmployees = [...employees];
-    const [moved] = newEmployees.splice(fromIdx, 1);
-    newEmployees.splice(toIdx, 0, moved);
-    const newOrder = newEmployees.map(e => e.id);
-
-    // Update and save
-    const newLayout = {
-      column_order: newOrder,
-      hidden_employee_ids: layout?.hidden_employee_ids || []
-    };
+    const newOrder = [...current];
+    const [moved] = newOrder.splice(fromIdx, 1);
+    newOrder.splice(toIdx, 0, moved);
+    const newIds = newOrder.map(e => e.id);
+    const newLayout = { column_order: newIds, hidden_employee_ids: layout?.hidden_employee_ids || [] };
     setLayout(newLayout);
-    saveLayout(monthKey, newLayout);
+    savePlanningLayout(newLayout);
+    setDraggingId(null);
+    setDragOverId(null);
   };
 
-  const handleToggleColumn = (employeeId) => {
-    const currentHidden = layout?.hidden_employee_ids || [];
-    const newHidden = currentHidden.includes(employeeId)
-      ? currentHidden.filter(id => id !== employeeId)
-      : [...currentHidden, employeeId];
-
-    const newLayout = {
-      column_order: layout?.column_order || [],
-      hidden_employee_ids: newHidden
-    };
-    setLayout(newLayout);
-    saveLayout(monthKey, newLayout);
+  const handleColumnDragEnd = () => {
+    setDraggingId(null);
+    setDragOverId(null);
   };
 
-  const handleShowAll = () => {
-    const newLayout = {
-      column_order: layout?.column_order || [],
-      hidden_employee_ids: []
-    };
+  const toggleHideColumn = async (employeeId) => {
+    const hiddenIds = layout?.hidden_employee_ids || [];
+    const next = hiddenIds.includes(employeeId)
+      ? hiddenIds.filter(id => id !== employeeId)
+      : [...hiddenIds, employeeId];
+    const newLayout = { column_order: layout?.column_order || [], hidden_employee_ids: next };
     setLayout(newLayout);
-    saveLayout(monthKey, newLayout);
+    await savePlanningLayout(newLayout);
+  };
+
+  const showAllColumns = async () => {
+    const newLayout = { column_order: layout?.column_order || [], hidden_employee_ids: [] };
+    setLayout(newLayout);
+    await savePlanningLayout(newLayout);
   };
 
   return {
+    handleColumnDragStart,
+    handleColumnDragOver,
     handleColumnDrop,
-    handleToggleColumn,
-    handleShowAll
+    handleColumnDragEnd,
+    toggleHideColumn,
+    showAllColumns,
   };
 };
