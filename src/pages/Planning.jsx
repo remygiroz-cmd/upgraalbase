@@ -538,7 +538,7 @@ export default function Planning() {
     const newIds = newOrder.map(e => e.id);
     const newLayout = { column_order: newIds, hidden_employee_ids: layout?.hidden_employee_ids || [] };
     setLayout(newLayout);
-    savePlanningLayout(newLayout);
+    saveLayout(newLayout);
     setDraggingId(null);
     setDragOverId(null);
   };
