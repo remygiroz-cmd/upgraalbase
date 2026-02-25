@@ -1817,6 +1817,8 @@ export default function Planning() {
         onOpenChange={setShowDirectSwapModal}
         currentYear={currentYear}
         currentMonth={currentMonth}
+        resetVersion={resetVersion}
+        monthKey={monthKey}
       />
 
       {/* Floating Action Button - Only for users with modify permission */}
