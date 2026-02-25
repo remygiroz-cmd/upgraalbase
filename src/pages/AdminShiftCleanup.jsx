@@ -5,8 +5,9 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
-import { AlertTriangle, Trash2, Search, CheckCircle, ShieldAlert } from 'lucide-react';
+import { AlertTriangle, Trash2, Search, CheckCircle, ShieldAlert, Archive } from 'lucide-react';
 import { toast } from 'sonner';
+import { buildDedupeKey } from '@/components/planning/shiftService';
 
 const MONTHS = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'];
 
