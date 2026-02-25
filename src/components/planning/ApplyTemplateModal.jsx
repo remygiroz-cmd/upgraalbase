@@ -177,26 +177,34 @@ export default function ApplyTemplateModal({ open, onOpenChange, employeeId, emp
         }
       }
 
-      // 3️⃣ SUPPRESSION SI MODE REPLACE
+      // 3️⃣ PURGE DU SCOPE SI MODE REPLACE
+      // On supprime TOUS les shifts existants dans ce scope avant de recréer,
+      // garantissant qu'aucun reliquat ne subsiste.
       if (mode === 'replace' && existingShifts.length > 0) {
-        const deletedIds = existingShifts.map(s => s.id);
         await Promise.all(existingShifts.map(s => base44.entities.Shift.delete(s.id)));
         logs.push({ 
           type: 'deletion', 
           data: { 
             mode: 'replace', 
-            deletedCount: deletedIds.length,
-            deletedIds 
+            deletedCount: existingShifts.length,
+            deletedIds: existingShifts.map(s => s.id)
           }
         });
-        console.log('🔍 DELETED SHIFTS:', deletedIds.length);
+        console.log(`🔍 PURGE SCOPE: ${existingShifts.length} shifts supprimés avant recréation`);
       }
 
-      // 4️⃣ UPSERT DES NOUVEAUX SHIFTS (protection anti-doublons)
+      // 4️⃣ CREATION DIRECTE (scope purgé → pas de doublon possible)
+      // Pour mode 'add', upsert pour sécurité ; pour 'replace', bulkCreate direct après purge.
       if (shifts.length > 0) {
-        const freshCache = await base44.entities.Shift.list();
-        const { created, updated } = await bulkUpsertShifts(shifts, freshCache);
-        console.log(`🔍 UPSERT SHIFTS: ${created} créés, ${updated} mis à jour`);
+        if (mode === 'add') {
+          const freshCache = await base44.entities.Shift.list();
+          const { created, updated } = await bulkUpsertShifts(shifts, freshCache);
+          console.log(`🔍 UPSERT SHIFTS: ${created} créés, ${updated} mis à jour`);
+        } else {
+          // scope is clean after purge
+          await base44.entities.Shift.bulkCreate(shifts);
+          console.log(`🔍 BULK CREATE SHIFTS: ${shifts.length}`);
+        }
       }
 
       // 5️⃣ APRÈS APPLICATION : VÉRIFIER LE RÉSULTAT EN BASE
