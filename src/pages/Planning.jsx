@@ -72,6 +72,7 @@ export default function Planning() {
   const [isRedoing, setIsRedoing] = useState(false);
   const [columnOrder, setColumnOrder] = useState([]);
   const [hiddenColumns, setHiddenColumns] = useState([]);
+  const [planningViewSettingsId, setPlanningViewSettingsId] = useState(null);
   const [showHideColumnsPanel, setShowHideColumnsPanel] = useState(false);
   const [draggingId, setDraggingId] = useState(null);
   const [dragOverId, setDragOverId] = useState(null);
