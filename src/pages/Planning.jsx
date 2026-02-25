@@ -33,7 +33,6 @@ import { usePlanningVersion, withPlanningVersion, filterByVersion } from '@/comp
 import { getActiveShiftsForMonth, shiftsQueryKey } from '@/components/planning/shiftService';
 import { useUndoStack } from '@/components/planning/useUndoStack';
 import UndoRedoButtons from '@/components/planning/UndoRedoButtons';
-import PinchZoomContainer from '@/components/planning/PinchZoomContainer';
 import TodaySummary from '@/components/planning/TodaySummary';
 import DepartureOrderBlock from '@/components/planning/DepartureOrderBlock';
 
