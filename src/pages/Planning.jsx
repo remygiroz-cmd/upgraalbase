@@ -120,6 +120,13 @@ export default function Planning() {
     queryFn: () => base44.entities.Team.filter({ is_active: true })
   });
 
+  const updateTeamMutation = useMutation({
+    mutationFn: ({ id, data }) => base44.entities.Team.update(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['teams'] });
+    }
+  });
+
   // Fetch shifts for current month (filtered by reset_version) via centralized service
   const { data: shifts = [] } = useQuery({
     queryKey: shiftsQueryKey(currentYear, currentMonth, resetVersion),
