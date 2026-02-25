@@ -278,10 +278,16 @@ export default function AdminShiftCleanup() {
                   {scanResult.wrongVersionShifts}
                 </p>
               </div>
-              <div className={`rounded p-3 col-span-2 ${scanResult.totalDuplicatesToRemove > 0 ? 'bg-red-50' : 'bg-gray-50'}`}>
-                <p className="text-gray-500 text-xs">Doublons à supprimer (groupes: {scanResult.duplicateGroups.length})</p>
+              <div className={`rounded p-3 ${scanResult.totalDuplicatesToRemove > 0 ? 'bg-red-50' : 'bg-gray-50'}`}>
+                <p className="text-gray-500 text-xs">Doublons détectés (groupes: {scanResult.duplicateGroups.length})</p>
                 <p className={`font-bold text-lg ${scanResult.totalDuplicatesToRemove > 0 ? 'text-red-700' : 'text-gray-900'}`}>
                   {scanResult.totalDuplicatesToRemove}
+                </p>
+              </div>
+              <div className={`rounded p-3 ${scanResult.missingDedupeKey > 0 ? 'bg-yellow-50' : 'bg-gray-50'}`}>
+                <p className="text-gray-500 text-xs">Sans dedupe_key (legacy)</p>
+                <p className={`font-bold text-lg ${scanResult.missingDedupeKey > 0 ? 'text-yellow-700' : 'text-gray-900'}`}>
+                  {scanResult.missingDedupeKey}
                 </p>
               </div>
             </div>
@@ -293,10 +299,10 @@ export default function AdminShiftCleanup() {
                 <div className="max-h-48 overflow-y-auto space-y-1">
                   {scanResult.duplicateGroups.map((g, i) => (
                     <div key={i} className="text-xs bg-red-50 border border-red-200 rounded p-2 font-mono">
-                      <span className="text-green-700">✓ Garder : {g.keepId.slice(-8)}</span>
+                      <span className="text-green-700">✓ Garder : {g.keepShift.id.slice(-8)}</span>
                       {' | '}
-                      <span className="text-red-700">✗ Supprimer : {g.duplicates.map(s => s.id.slice(-8)).join(', ')}</span>
-                      <span className="text-gray-500 ml-2">[{g.key.split('|').slice(1).join(' | ')}]</span>
+                      <span className="text-red-700">✗ Archiver/Suppr : {g.duplicates.map(s => s.id.slice(-8)).join(', ')}</span>
+                      <span className="text-gray-500 ml-2">[{g.key.split('|').slice(1, 4).join(' | ')}]</span>
                     </div>
                   ))}
                 </div>
@@ -304,16 +310,27 @@ export default function AdminShiftCleanup() {
             )}
 
             {/* Actions */}
-            <div className="flex gap-3 pt-2 border-t">
+            <div className="flex flex-wrap gap-3 pt-2 border-t">
               {scanResult.totalDuplicatesToRemove > 0 && (
-                <Button
-                  onClick={handleCleanDuplicates}
-                  disabled={cleaning}
-                  className="bg-red-600 hover:bg-red-700"
-                >
-                  <Trash2 className="w-4 h-4 mr-2" />
-                  {cleaning ? 'Suppression...' : `Supprimer ${scanResult.totalDuplicatesToRemove} doublon(s)`}
-                </Button>
+                <>
+                  <Button
+                    onClick={handleArchiveDuplicates}
+                    disabled={cleaning}
+                    className="bg-orange-600 hover:bg-orange-700"
+                  >
+                    <Archive className="w-4 h-4 mr-2" />
+                    {cleaning ? 'Archivage...' : `Archiver ${scanResult.totalDuplicatesToRemove} doublon(s)`}
+                  </Button>
+                  <Button
+                    onClick={handleCleanDuplicates}
+                    disabled={cleaning}
+                    variant="outline"
+                    className="border-red-400 text-red-700 hover:bg-red-50"
+                  >
+                    <Trash2 className="w-4 h-4 mr-2" />
+                    {cleaning ? 'Suppression...' : `Supprimer définitivement`}
+                  </Button>
+                </>
               )}
               {scanResult.wrongVersionShifts > 0 && (
                 <Button
@@ -323,10 +340,21 @@ export default function AdminShiftCleanup() {
                   className="border-orange-400 text-orange-700 hover:bg-orange-50"
                 >
                   <Trash2 className="w-4 h-4 mr-2" />
-                  {cleaning ? 'Suppression...' : `Supprimer ${scanResult.wrongVersionShifts} shift(s) version inactive`}
+                  {cleaning ? 'Suppression...' : `Supprimer ${scanResult.wrongVersionShifts} version inactive`}
                 </Button>
               )}
-              {scanResult.totalDuplicatesToRemove === 0 && scanResult.wrongVersionShifts === 0 && (
+              {scanResult.missingDedupeKey > 0 && (
+                <Button
+                  onClick={handleBackfillDedupeKey}
+                  disabled={cleaning}
+                  variant="outline"
+                  className="border-yellow-500 text-yellow-700 hover:bg-yellow-50"
+                >
+                  <CheckCircle className="w-4 h-4 mr-2" />
+                  {cleaning ? 'Mise à jour...' : `Ajouter dedupe_key sur ${scanResult.missingDedupeKey} shift(s)`}
+                </Button>
+              )}
+              {scanResult.totalDuplicatesToRemove === 0 && scanResult.wrongVersionShifts === 0 && scanResult.missingDedupeKey === 0 && (
                 <div className="flex items-center gap-2 text-green-700">
                   <CheckCircle className="w-5 h-5" />
                   <span className="text-sm font-medium">Aucun problème détecté — le planning est propre ✓</span>
