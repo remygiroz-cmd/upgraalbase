@@ -70,18 +70,8 @@ export default function Planning() {
   const [showFab, setShowFab] = useState(false); // Floating Action Button
   const [isUndoing, setIsUndoing] = useState(false);
   const [isRedoing, setIsRedoing] = useState(false);
-  const [columnOrder, setColumnOrder] = useState(() => {
-    try {
-      const saved = localStorage.getItem('planning_column_order');
-      return saved ? JSON.parse(saved) : [];
-    } catch { return []; }
-  });
-  const [hiddenColumns, setHiddenColumns] = useState(() => {
-    try {
-      const saved = localStorage.getItem('planning_hidden_columns');
-      return saved ? JSON.parse(saved) : [];
-    } catch { return []; }
-  });
+  const [columnOrder, setColumnOrder] = useState([]);
+  const [hiddenColumns, setHiddenColumns] = useState([]);
   const [showHideColumnsPanel, setShowHideColumnsPanel] = useState(false);
   const [draggingId, setDraggingId] = useState(null);
   const [dragOverId, setDragOverId] = useState(null);
