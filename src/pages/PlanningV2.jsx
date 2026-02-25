@@ -454,8 +454,8 @@ export default function PlanningV2() {
     const [moved] = newOrder.splice(fromIdx, 1);
     newOrder.splice(toIdx, 0, moved);
     const newIds = newOrder.map(e => e.id);
-    const newLayout = { column_order: newIds, hidden_employee_ids: layout?.hidden_employee_ids || [] };
-    saveLayout(newLayout);
+    // Sauvegarder l'ordre GLOBAL (s'applique à tous les mois)
+    saveGlobalColumnOrder(newIds);
     setDraggingId(null);
     setDragOverId(null);
   };
