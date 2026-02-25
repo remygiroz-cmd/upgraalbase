@@ -959,8 +959,6 @@ export default function Planning() {
       const action = undoStack.popRedo();
       if (!action) return;
 
-      console.log('🔁 Redo:', action.actionType, action);
-
       switch (action.actionType) {
         case 'createShift':
           // Redo create
