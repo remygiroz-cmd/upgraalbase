@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { cn } from '@/lib/utils';
 
 const EmployeeHeaderCell = React.memo(({
@@ -15,31 +15,40 @@ const EmployeeHeaderCell = React.memo(({
   const [showTooltip, setShowTooltip] = useState(false);
   const fullName = `${employee.first_name} ${employee.last_name}`;
   const isNameTruncated = fullName.length > 20;
+  const divRef = useRef(null);
 
   return (
     <div
+      ref={divRef}
       draggable
       onDragStart={(e) => {
         e.dataTransfer.effectAllowed = 'move';
-        e.dataTransfer.setData('text/plain', employee.id);
-        onDragStart?.(employee.id);
+        e.dataTransfer.setData('application/x-employee-id', employee.id);
+        // Small delay so the drag image has time to render
+        requestAnimationFrame(() => onDragStart?.(employee.id));
       }}
       onDragOver={(e) => {
         e.preventDefault();
+        e.stopPropagation();
         e.dataTransfer.dropEffect = 'move';
         onDragOver?.(employee.id);
       }}
       onDrop={(e) => {
         e.preventDefault();
-        const sourceId = e.dataTransfer.getData('text/plain');
-        onDrop?.(sourceId, employee.id);
+        e.stopPropagation();
+        const sourceId = e.dataTransfer.getData('application/x-employee-id')
+          || e.dataTransfer.getData('text/plain');
+        if (sourceId) onDrop?.(sourceId, employee.id);
       }}
-      onDragEnd={() => onDragEnd?.()}
+      onDragEnd={(e) => {
+        e.preventDefault();
+        onDragEnd?.();
+      }}
       className={cn(
-        "border-r border-gray-200 px-2 text-center min-w-[150px] w-[150px] lg:min-w-[180px] lg:w-[180px] relative group flex-shrink-0 select-none cursor-grab active:cursor-grabbing transition-all duration-100",
+        "border-r border-gray-200 px-2 text-center min-w-[150px] w-[150px] lg:min-w-[180px] lg:w-[180px] relative group flex-shrink-0 select-none cursor-grab active:cursor-grabbing transition-all duration-150",
         displayMode === 'compact' ? 'py-1' : 'py-3',
         isDragging && "opacity-30 bg-orange-50",
-        isDragOver && !isDragging && "bg-orange-100 border-l-4 border-l-orange-500 scale-[1.02]"
+        isDragOver && !isDragging && "bg-orange-100 border-l-4 border-l-orange-500"
       )}
     >
       {/* Grip icon */}
@@ -48,8 +57,6 @@ const EmployeeHeaderCell = React.memo(({
           <path d="M8 5a2 2 0 11-4 0 2 2 0 014 0zM12 5a2 2 0 11-4 0 2 2 0 014 0zM8 13a2 2 0 11-4 0 2 2 0 014 0zM12 13a2 2 0 11-4 0 2 2 0 014 0z" />
         </svg>
       </div>
-
-
 
       {/* Employee name */}
       <div
@@ -61,8 +68,7 @@ const EmployeeHeaderCell = React.memo(({
         onMouseLeave={() => setShowTooltip(false)}
       >
         {fullName}
-        
-        {/* Tooltip */}
+
         {showTooltip && isNameTruncated && (
           <div className="absolute left-0 top-full mt-1 z-50 bg-gray-900 text-white text-xs rounded px-2 py-1 whitespace-nowrap shadow-lg">
             {fullName}
@@ -75,7 +81,7 @@ const EmployeeHeaderCell = React.memo(({
         <div
           className={cn(
             "font-semibold text-white inline-block rounded-full mt-1 shadow-sm",
-            displayMode === 'compact' ? 'text-[8px] px-1 py-0 py-0.5' : 'text-[9px] px-2 py-0.5'
+            displayMode === 'compact' ? 'text-[8px] px-1 py-0.5' : 'text-[9px] px-2 py-0.5'
           )}
           style={{ backgroundColor: team.color || '#3b82f6' }}
           title={team.name}
