@@ -99,3 +99,100 @@ export async function getActiveShiftsForMonth(monthKey, resetVersion, options = 
 export function shiftsQueryKey(year, month, resetVersion) {
   return ['shifts', year, month, resetVersion];
 }
+
+// ---------------------------------------------------------------------------
+// UPSERT — dedupe-key based shift creation
+// ---------------------------------------------------------------------------
+
+/**
+ * Build a stable deduplication key for a shift payload.
+ * Components of the key: employee_id | date | start_time | end_time | month_key | reset_version
+ */
+export function buildDedupeKey(payload) {
+  const { employee_id, date, start_time, end_time, month_key, reset_version } = payload;
+  return [employee_id, date, start_time, end_time, month_key ?? '', reset_version ?? 0].join('|');
+}
+
+/**
+ * Upsert a shift by dedupe_key.
+ *
+ * Algorithm:
+ *  1. Look for an existing shift with the same dedupe_key and status != 'archived'
+ *  2. If found → update it (preserves the id, avoids a duplicate)
+ *  3. If not found → create it with the dedupe_key stamped on the payload
+ *
+ * @param {object} payload  - shift data (without id)
+ * @param {Array}  [cache]  - optional pre-fetched list of shifts to avoid an extra DB call
+ * @returns {Promise<object>}  the created or updated shift
+ */
+export async function upsertShiftByDedupeKey(payload, cache = null) {
+  const dedupeKey = buildDedupeKey(payload);
+  const payloadWithKey = { ...payload, dedupe_key: dedupeKey };
+
+  // Resolve the candidate list
+  let candidates;
+  if (cache) {
+    candidates = cache;
+  } else {
+    // Narrow the fetch to date + employee when possible (cheaper than list())
+    candidates = await base44.entities.Shift.list();
+  }
+
+  const existing = candidates.find(
+    s => s.dedupe_key === dedupeKey && s.status !== 'archived'
+  );
+
+  if (existing) {
+    log(`upsert: UPDATE existing shift ${existing.id} (dedupe_key=${dedupeKey})`);
+    return base44.entities.Shift.update(existing.id, payloadWithKey);
+  }
+
+  log(`upsert: CREATE new shift (dedupe_key=${dedupeKey})`);
+  return base44.entities.Shift.create(payloadWithKey);
+}
+
+/**
+ * Bulk upsert using a pre-fetched cache — much more efficient than calling
+ * upsertShiftByDedupeKey() one by one for large batches.
+ *
+ * @param {object[]} payloads - array of shift payloads
+ * @param {object[]} cache    - pre-fetched shifts list (used for conflict detection)
+ * @returns {Promise<{created: number, updated: number}>}
+ */
+export async function bulkUpsertShifts(payloads, cache) {
+  const cacheByKey = {};
+  for (const s of cache) {
+    if (s.dedupe_key && s.status !== 'archived') {
+      cacheByKey[s.dedupe_key] = s;
+    }
+  }
+
+  const toCreate = [];
+  const toUpdate = []; // { id, payload }
+
+  for (const payload of payloads) {
+    const dedupeKey = buildDedupeKey(payload);
+    const payloadWithKey = { ...payload, dedupe_key: dedupeKey };
+    const existing = cacheByKey[dedupeKey];
+    if (existing) {
+      toUpdate.push({ id: existing.id, payload: payloadWithKey });
+    } else {
+      toCreate.push(payloadWithKey);
+      // Add to cacheByKey immediately so same key in this batch doesn't create twice
+      cacheByKey[dedupeKey] = { dedupe_key: dedupeKey, status: 'planned' };
+    }
+  }
+
+  log(`bulkUpsert: ${toCreate.length} creates, ${toUpdate.length} updates`);
+
+  const ops = [];
+  if (toCreate.length > 0) {
+    ops.push(base44.entities.Shift.bulkCreate(toCreate));
+  }
+  for (const { id, payload } of toUpdate) {
+    ops.push(base44.entities.Shift.update(id, payload));
+  }
+  await Promise.all(ops);
+
+  return { created: toCreate.length, updated: toUpdate.length };
+}
