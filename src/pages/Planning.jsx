@@ -1679,6 +1679,38 @@ export default function Planning() {
         month={currentMonth}
       />
 
+      {/* Hidden Columns Panel */}
+      {showHideColumnsPanel && (
+        <Dialog open={showHideColumnsPanel} onOpenChange={setShowHideColumnsPanel}>
+          <DialogContent className="max-w-sm">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2 text-base">
+                <EyeOff className="w-4 h-4 text-orange-500" />
+                Colonnes masquées ({hiddenColumns.length})
+              </DialogTitle>
+            </DialogHeader>
+            <div className="space-y-2">
+              {hiddenColumns.map(id => {
+                const emp = allEmployees.find(e => e.id === id);
+                if (!emp) return null;
+                return (
+                  <div key={id} className="flex items-center justify-between px-3 py-2 bg-gray-50 rounded-lg border">
+                    <span className="text-sm font-medium">{emp.first_name} {emp.last_name}</span>
+                    <button onClick={() => toggleHideColumn(id)} className="flex items-center gap-1 text-xs text-blue-600 hover:text-blue-800">
+                      <Eye className="w-3.5 h-3.5" /> Afficher
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+            <div className="flex gap-2 pt-2 border-t">
+              <Button onClick={showAllColumns} variant="outline" size="sm" className="flex-1 text-xs"><Eye className="w-3.5 h-3.5 mr-1" />Tout afficher</Button>
+              <Button onClick={() => setShowHideColumnsPanel(false)} size="sm" className="flex-1 text-xs bg-orange-500 hover:bg-orange-600">Fermer</Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
+
       {/* Clear Employee Month Modal */}
       <ClearEmployeeMonthModal
         open={!!clearEmployeeMonthTarget}
