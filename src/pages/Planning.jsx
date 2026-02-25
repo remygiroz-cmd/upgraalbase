@@ -1682,8 +1682,8 @@ export default function Planning() {
       />
 
       {/* Hidden Columns Panel */}
-      {showHideColumnsPanel && (
-        <Dialog open={showHideColumnsPanel} onOpenChange={setShowHideColumnsPanel}>
+      {showColumnsManager && (
+        <Dialog open={showColumnsManager} onOpenChange={setShowColumnsManager}>
           <DialogContent className="max-w-sm">
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2 text-base">
