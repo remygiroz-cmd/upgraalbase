@@ -52,7 +52,7 @@ export default function VehicleFormModal({ open, onOpenChange, vehicle = null })
         throw new Error('Marque, modèle et immatriculation sont obligatoires.');
       }
       // Convert numeric fields: empty string → remove key, otherwise parse as number
-      ['km_initial', 'km_actuel', 'loa_km_total_autorises', 'loa_cout_km_supp',
+      ['numero', 'km_initial', 'km_actuel', 'loa_km_total_autorises', 'loa_cout_km_supp',
         'batterie_capacite_kwh', 'km_montage_pneus', 'seuil_alerte_km_pneus', 'annee']
         .forEach(k => {
           if (data[k] === '' || data[k] === null || data[k] === undefined) {
