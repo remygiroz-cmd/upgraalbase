@@ -94,6 +94,10 @@ export default function VehicleFormModal({ open, onOpenChange, vehicle = null })
           <section>
             <h3 className="text-sm font-semibold text-gray-700 mb-3 uppercase tracking-wide">Identité</h3>
             <div className="grid grid-cols-2 gap-3">
+              <div className="col-span-2">
+                <Label>Numéro du véhicule</Label>
+                <Input type="number" value={form.numero} onChange={e => set('numero', e.target.value)} placeholder="Ex: 1, 2, 3..." className="mt-1 w-32" />
+              </div>
               <div>
                 <Label>Marque *</Label>
                 <Input value={form.marque} onChange={e => set('marque', e.target.value)} placeholder="Ex: Renault" className="mt-1" />
