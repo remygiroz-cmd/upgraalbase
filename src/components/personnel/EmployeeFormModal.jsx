@@ -1149,6 +1149,54 @@ ${currentUser.email || '-'}`;
                   </SelectContent>
                 </Select>
               </div>
+
+              {/* Override Planning */}
+              {isManager && (
+                <div className="bg-purple-50 border border-purple-200 rounded-lg p-4 space-y-3">
+                  <Label className="text-gray-900 font-semibold flex items-center gap-2">
+                    📅 Override affichage dans le planning
+                  </Label>
+                  <p className="text-xs text-gray-600">
+                    Ces options remplacent les règles automatiques basées sur les dates de contrat.
+                  </p>
+                  <div className="space-y-3">
+                    <label className={`flex items-start gap-3 p-3 border-2 rounded-lg cursor-pointer transition-colors ${formData.force_show_in_planning ? 'border-green-400 bg-green-50' : 'border-gray-200 hover:bg-gray-50'}`}>
+                      <input
+                        type="checkbox"
+                        checked={formData.force_show_in_planning || false}
+                        onChange={(e) => setFormData({
+                          ...formData,
+                          force_show_in_planning: e.target.checked,
+                          force_hide_in_planning: e.target.checked ? false : formData.force_hide_in_planning
+                        })}
+                        disabled={formData.force_hide_in_planning}
+                        className="w-4 h-4 rounded border-gray-300 mt-0.5"
+                      />
+                      <div>
+                        <p className="font-medium text-sm text-gray-900">✅ Forcer l'affichage dans tous les plannings</p>
+                        <p className="text-xs text-gray-500 mt-0.5">Visible sur tous les mois, même si contrat terminé ou archivé</p>
+                      </div>
+                    </label>
+                    <label className={`flex items-start gap-3 p-3 border-2 rounded-lg cursor-pointer transition-colors ${formData.force_hide_in_planning ? 'border-red-400 bg-red-50' : 'border-gray-200 hover:bg-gray-50'}`}>
+                      <input
+                        type="checkbox"
+                        checked={formData.force_hide_in_planning || false}
+                        onChange={(e) => setFormData({
+                          ...formData,
+                          force_hide_in_planning: e.target.checked,
+                          force_show_in_planning: e.target.checked ? false : formData.force_show_in_planning
+                        })}
+                        disabled={formData.force_show_in_planning}
+                        className="w-4 h-4 rounded border-gray-300 mt-0.5"
+                      />
+                      <div>
+                        <p className="font-medium text-sm text-gray-900">🚫 Masquer totalement dans les plannings</p>
+                        <p className="text-xs text-gray-500 mt-0.5">N'apparaît jamais, quel que soit le mois</p>
+                      </div>
+                    </label>
+                  </div>
+                </div>
+              )}
             </TabsContent>
 
             <TabsContent value="remuneration" className="space-y-4 mt-4">
