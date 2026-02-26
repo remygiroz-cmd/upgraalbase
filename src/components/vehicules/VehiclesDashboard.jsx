@@ -4,6 +4,7 @@ import { base44 } from '@/api/base44Client';
 import { Car, AlertTriangle, TrendingUp, Users, Shield, Zap, Fuel, FileText } from 'lucide-react';
 import { calcLoaStats, getRisqueBadge, isDocumentExpired, isDocumentExpiringSoon } from './vehiculeUtils';
 import moment from 'moment';
+import EnergyWidget from './EnergyWidget';
 
 export default function VehiclesDashboard() {
   const { data: vehicles = [] } = useQuery({ queryKey: ['vehicles'], queryFn: () => base44.entities.Vehicle.list() });
