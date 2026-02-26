@@ -20,6 +20,7 @@ import CreateUrgentAnnouncementModal from '@/components/messaging/CreateUrgentAn
 import { cn } from '@/lib/utils';
 import { calculatePresenceStatus } from '@/components/utils/presenceUtils';
 import DepartureOrderHomeBlock from '@/components/planning/DepartureOrderHomeBlock';
+import HomeVehicleAlertsWidget from '@/components/vehicules/HomeVehicleAlertsWidget';
 
 export default function Home() {
   const [showNewConversation, setShowNewConversation] = useState(false);
