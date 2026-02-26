@@ -175,7 +175,7 @@ export default function DriverView({ currentUser, currentEmployee }) {
         onOpenChange={setShowReportAlert}
         vehicle={vehicle}
         assignment={assignment}
-        currentUser={null}
+        currentUser={currentUser}
         currentEmployee={currentEmployee}
         vehicles={vehicles}
       />
