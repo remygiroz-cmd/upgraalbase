@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { toast } from 'sonner';
-import { CheckCircle2, Camera, AlertTriangle } from 'lucide-react';
+import { CheckCircle2 } from 'lucide-react';
 
 export default function VehicleCheckModal({ open, onOpenChange, type, assignment, vehicle, currentEmployee, onComplete }) {
   const queryClient = useQueryClient();
@@ -15,20 +15,25 @@ export default function VehicleCheckModal({ open, onOpenChange, type, assignment
   const [form, setForm] = useState({
     km_debut: assignment?.km_debut || '',
     km_fin: '',
+    // Début shift
     check_visuel_pneus: 'OK',
     check_voyants: 'OK',
     check_carrosserie: 'OK',
     confirmation_vehicule_ok: false,
+    start_energy_level_pct: '',
+    start_anomaly_detail: '',
+    // Fin run
     etat_pneus: 'BON',
     etat_freins: 'BON',
     etat_carrosserie: 'BON',
+    tags_incidents: [],
+    incidents: '',
+    // Fin service
     branche_en_charge: false,
-    charge_restante_pct: '',
-    niveau_carburant: 'PLEIN',
+    end_energy_level_pct: '',
     cle_remise_en_place: false,
     validation_finale: false,
-    incidents: '',
-    tags_incidents: []
+    end_service_note: '',
   });
 
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
@@ -43,12 +48,13 @@ export default function VehicleCheckModal({ open, onOpenChange, type, assignment
 
   const canSubmit = () => {
     if (type === 'DEBUT_SHIFT') {
-      return form.km_debut !== '' && form.confirmation_vehicule_ok;
+      if (!form.km_debut || !form.confirmation_vehicule_ok) return false;
+      if (form.start_energy_level_pct === '' || Number(form.start_energy_level_pct) < 0 || Number(form.start_energy_level_pct) > 100) return false;
+      return true;
     }
     if (type === 'FIN_SERVICE') {
       if (!form.cle_remise_en_place || !form.validation_finale) return false;
-      if (isElectrique && form.charge_restante_pct === '') return false;
-      if (!isElectrique && !form.niveau_carburant) return false;
+      if (form.end_energy_level_pct === '' || Number(form.end_energy_level_pct) < 0 || Number(form.end_energy_level_pct) > 100) return false;
       return true;
     }
     if (type === 'FIN_RUN') {
@@ -68,15 +74,41 @@ export default function VehicleCheckModal({ open, onOpenChange, type, assignment
         employe_id: currentEmployee.id,
         employe_name: `${currentEmployee.first_name} ${currentEmployee.last_name}`,
         date_heure: new Date().toISOString(),
-        ...form,
         km_debut: form.km_debut ? Number(form.km_debut) : undefined,
         km_fin: form.km_fin ? Number(form.km_fin) : undefined,
-        charge_restante_pct: form.charge_restante_pct ? Number(form.charge_restante_pct) : undefined,
+        // Début shift fields
+        check_visuel_pneus: form.check_visuel_pneus,
+        check_voyants: form.check_voyants,
+        check_carrosserie: form.check_carrosserie,
+        confirmation_vehicule_ok: form.confirmation_vehicule_ok,
+        start_energy_level_pct: form.start_energy_level_pct !== '' ? Number(form.start_energy_level_pct) : undefined,
+        start_energy_type: isElectrique ? 'ELECTRIC' : 'THERMIQUE',
+        start_tires_status: form.check_visuel_pneus,
+        start_warning_lights_status: form.check_voyants,
+        start_body_status: form.check_carrosserie,
+        start_anomaly_detail: form.start_anomaly_detail || undefined,
+        // Fin run fields
+        etat_pneus: form.etat_pneus,
+        etat_freins: form.etat_freins,
+        etat_carrosserie: form.etat_carrosserie,
+        tags_incidents: form.tags_incidents,
+        incidents: form.incidents || undefined,
+        // Fin service fields
+        branche_en_charge: form.branche_en_charge,
+        end_energy_level_pct: form.end_energy_level_pct !== '' ? Number(form.end_energy_level_pct) : undefined,
+        end_energy_type: isElectrique ? 'ELECTRIC' : 'THERMIQUE',
+        end_vehicle_plugged: form.branche_en_charge,
+        cle_remise_en_place: form.cle_remise_en_place,
+        end_key_returned: form.cle_remise_en_place,
+        validation_finale: form.validation_finale,
+        end_final_validation: form.validation_finale,
+        end_service_note: form.end_service_note || undefined,
+        // Legacy
+        charge_restante_pct: form.end_energy_level_pct !== '' ? Number(form.end_energy_level_pct) : undefined,
       };
 
       await base44.entities.VehicleCheck.create(checkData);
 
-      // Update assignment flags + vehicle km
       const updates = {};
       if (type === 'DEBUT_SHIFT') {
         updates.debut_shift_fait = true;
@@ -120,6 +152,8 @@ export default function VehicleCheckModal({ open, onOpenChange, type, assignment
     FIN_SERVICE: '🔑 Check Fin de Service'
   }[type];
 
+  const energyLabel = isElectrique ? '🔋 Charge' : '⛽ Carburant';
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
@@ -138,6 +172,15 @@ export default function VehicleCheckModal({ open, onOpenChange, type, assignment
                 <Input type="number" value={form.km_debut} onChange={e => set('km_debut', e.target.value)} placeholder="Ex: 45230" />
               </Field>
 
+              <Field label={`${energyLabel} au départ (%) *`}>
+                <Input
+                  type="number" min="0" max="100"
+                  value={form.start_energy_level_pct}
+                  onChange={e => set('start_energy_level_pct', e.target.value)}
+                  placeholder="Ex: 82"
+                />
+              </Field>
+
               <div className="grid grid-cols-3 gap-3">
                 <RadioField label="Pneus" options={['OK', 'DEFAUT']} value={form.check_visuel_pneus} onChange={v => set('check_visuel_pneus', v)} />
                 <RadioField label="Voyants" options={['OK', 'ANOMALIE']} value={form.check_voyants} onChange={v => set('check_voyants', v)} />
@@ -147,7 +190,7 @@ export default function VehicleCheckModal({ open, onOpenChange, type, assignment
               {(form.check_visuel_pneus !== 'OK' || form.check_voyants !== 'OK' || form.check_carrosserie !== 'OK') && (
                 <div>
                   <Label>Détail anomalie</Label>
-                  <textarea value={form.incidents} onChange={e => set('incidents', e.target.value)}
+                  <textarea value={form.start_anomaly_detail} onChange={e => set('start_anomaly_detail', e.target.value)}
                     className="mt-1 w-full border border-gray-300 rounded-md px-3 py-2 text-sm resize-none"
                     rows={2} placeholder="Décrire l'anomalie constatée..." />
                 </div>
@@ -205,39 +248,39 @@ export default function VehicleCheckModal({ open, onOpenChange, type, assignment
                 <Input type="number" value={form.km_fin} onChange={e => set('km_fin', e.target.value)} />
               </Field>
 
-              {isElectrique ? (
-                <>
-                  <CheckboxField
-                    checked={form.branche_en_charge}
-                    onChange={v => set('branche_en_charge', v)}
-                    label="🔌 Véhicule branché en charge *"
-                  />
-                  <Field label="🔋 Charge restante (%) *">
-                    <Input type="number" min="0" max="100" value={form.charge_restante_pct}
-                      onChange={e => set('charge_restante_pct', e.target.value)} placeholder="Ex: 45" />
-                  </Field>
-                </>
-              ) : (
-                <div>
-                  <Label>⛽ Niveau carburant *</Label>
-                  <div className="grid grid-cols-5 gap-2 mt-2">
-                    {['PLEIN', '3/4', '1/2', '1/4', 'RESERVE'].map(lvl => (
-                      <button key={lvl} onClick={() => set('niveau_carburant', lvl)}
-                        className={`text-xs py-2 rounded-lg border transition-all ${
-                          form.niveau_carburant === lvl
-                            ? lvl === 'RESERVE' ? 'bg-red-500 text-white border-red-500' : 'bg-blue-500 text-white border-blue-500'
-                            : 'border-gray-300 text-gray-600 hover:border-blue-400'
-                        }`}>{lvl}</button>
-                    ))}
-                  </div>
-                </div>
+              {isElectrique && (
+                <CheckboxField
+                  checked={form.branche_en_charge}
+                  onChange={v => set('branche_en_charge', v)}
+                  label="🔌 Véhicule branché en charge"
+                />
               )}
+
+              <Field label={`${energyLabel} restant(e) (%) *`}>
+                <Input
+                  type="number" min="0" max="100"
+                  value={form.end_energy_level_pct}
+                  onChange={e => set('end_energy_level_pct', e.target.value)}
+                  placeholder="Ex: 43"
+                />
+              </Field>
 
               <CheckboxField
                 checked={form.cle_remise_en_place}
                 onChange={v => set('cle_remise_en_place', v)}
                 label="🔑 Clé remise en place (coffre / bureau) *"
               />
+
+              <div>
+                <Label className="mb-1 block">📝 Détail incident de service (facultatif)</Label>
+                <textarea
+                  value={form.end_service_note}
+                  onChange={e => set('end_service_note', e.target.value)}
+                  className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm resize-none"
+                  rows={2}
+                  placeholder="Ex: recharge lente, borne capricieuse..."
+                />
+              </div>
 
               <CheckboxField
                 checked={form.validation_finale}
