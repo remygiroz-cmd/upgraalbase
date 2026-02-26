@@ -12,7 +12,8 @@ export default function VehicleCard({ vehicle, onClick, compact = false }) {
   return (
     <div
       onClick={onClick}
-      className="bg-white border border-gray-200 rounded-xl p-4 hover:shadow-md transition-all cursor-pointer"
+      className="border border-gray-200 rounded-xl p-4 hover:shadow-md transition-all cursor-pointer"
+      style={vehicle.card_color ? { backgroundColor: vehicle.card_color + '22', borderColor: vehicle.card_color + '66' } : { backgroundColor: 'white' }}
     >
       <div className="flex items-start justify-between gap-3">
         <div className="flex items-start gap-3 flex-1 min-w-0">
