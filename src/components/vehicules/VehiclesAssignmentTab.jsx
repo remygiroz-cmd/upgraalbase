@@ -10,6 +10,7 @@ import { CalendarDays, Plus, Zap, CheckCircle2, XCircle, AlertTriangle, Lock, Re
 import { toast } from 'sonner';
 import moment from 'moment';
 import { calcLoaStats, vehicleDisplayName } from './vehiculeUtils';
+import AssignmentCheckDetails from './AssignmentCheckDetails';
 
 /**
  * Sort delivery vehicles by priority:
