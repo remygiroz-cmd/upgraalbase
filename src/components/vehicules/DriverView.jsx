@@ -8,6 +8,7 @@ import BlockingFinServiceModal from './BlockingFinServiceModal';
 import ReportAlertModal from './ReportAlertModal';
 
 export default function DriverView({ currentUser, currentEmployee }) {
+  // currentUser is passed as prop
   const [checkType, setCheckType] = useState(null);
   const [showReportAlert, setShowReportAlert] = useState(false);
 
