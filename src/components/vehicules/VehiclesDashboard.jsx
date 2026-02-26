@@ -107,6 +107,9 @@ export default function VehiclesDashboard() {
         </div>
       )}
 
+      {/* Energy widget - full width */}
+      <EnergyWidget vehicles={vehicles} />
+
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* LOA gauge overview */}
         <div className="bg-white rounded-xl border border-gray-200 p-5">
