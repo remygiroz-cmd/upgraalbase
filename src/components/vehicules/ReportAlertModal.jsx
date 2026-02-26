@@ -42,6 +42,13 @@ export default function ReportAlertModal({ open, onOpenChange, vehicle, assignme
   });
   const [uploading, setUploading] = useState(false);
 
+  // Sync vehicle_id when vehicle prop changes or modal opens
+  useEffect(() => {
+    if (open && vehicle?.id) {
+      setForm(f => ({ ...f, vehicle_id: vehicle.id }));
+    }
+  }, [open, vehicle?.id]);
+
   const set = (key, val) => setForm(f => ({ ...f, [key]: val }));
 
   const mutation = useMutation({
