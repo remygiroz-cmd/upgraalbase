@@ -183,11 +183,12 @@ export default function DriverView({ currentUser, currentEmployee }) {
       <ReportAlertModal
         open={showReportAlert}
         onOpenChange={setShowReportAlert}
-        vehicle={vehicle}
+        vehicle={null}
         assignment={assignment}
         currentUser={currentUser}
         currentEmployee={currentEmployee}
         vehicles={vehicles}
+        defaultWhenContext={!assignment ? 'HORS_SHIFT' : 'PENDANT_SHIFT'}
       />
 
       {checkType && assignment && (
