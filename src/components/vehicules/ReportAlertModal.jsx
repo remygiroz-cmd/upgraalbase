@@ -26,28 +26,66 @@ const WHEN_OPTIONS = [
   { value: 'HORS_SHIFT', label: 'Hors shift' },
 ];
 
-export default function ReportAlertModal({ open, onOpenChange, vehicle, assignment, currentUser, currentEmployee, vehicles = [] }) {
+export default function ReportAlertModal({ open, onOpenChange, vehicle, assignment, currentUser, currentEmployee, vehicles: vehiclesProp = [], defaultWhenContext }) {
   const queryClient = useQueryClient();
+
+  // Fetch all vehicles if not provided
+  const { data: allVehicles = [] } = useQuery({
+    queryKey: ['vehicles'],
+    queryFn: () => base44.entities.Vehicle.list(),
+    enabled: open,
+  });
+  const vehicles = vehiclesProp.length > 0 ? vehiclesProp : allVehicles;
+
+  const defaultContext = defaultWhenContext || 'PENDANT_SHIFT';
+
   const [form, setForm] = useState({
-    vehicle_id: vehicle?.id || '',
+    vehicle_id: '',
     category: '',
     severity: 'IMPORTANT',
     title: '',
     description: '',
-    when_context: 'PENDANT_SHIFT',
+    when_context: defaultContext,
     location_context: '',
     vehicle_drivable: true,
     impact: 'NON_BLOQUANT',
     photos: [],
   });
   const [uploading, setUploading] = useState(false);
+  const [vehicleSearch, setVehicleSearch] = useState('');
+  const [vehicleDropdownOpen, setVehicleDropdownOpen] = useState(false);
+  const dropdownRef = useRef(null);
 
-  // Sync vehicle_id when vehicle prop changes or modal opens
+  // Reset form on open
   useEffect(() => {
-    if (open && vehicle?.id) {
-      setForm(f => ({ ...f, vehicle_id: vehicle.id }));
+    if (open) {
+      setForm({
+        vehicle_id: '',
+        category: '',
+        severity: 'IMPORTANT',
+        title: '',
+        description: '',
+        when_context: defaultWhenContext || 'PENDANT_SHIFT',
+        location_context: '',
+        vehicle_drivable: true,
+        impact: 'NON_BLOQUANT',
+        photos: [],
+      });
+      setVehicleSearch('');
+      setVehicleDropdownOpen(false);
     }
-  }, [open, vehicle?.id]);
+  }, [open, defaultWhenContext]);
+
+  // Close dropdown on outside click
+  useEffect(() => {
+    const handler = (e) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
+        setVehicleDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
 
   const set = (key, val) => setForm(f => ({ ...f, [key]: val }));
 
