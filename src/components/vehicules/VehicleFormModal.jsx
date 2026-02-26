@@ -26,7 +26,7 @@ const CARD_COLORS = [
 const defaultForm = {
   type_usage: 'LIVRAISON', energie: 'THERMIQUE', propriete: 'SOCIETE',
   statut: 'ACTIF', marque: '', modele: '', immatriculation: '', couleur: '', card_color: '',
-  annee: new Date().getFullYear(), km_initial: 0, km_actuel: 0,
+  numero: '', annee: new Date().getFullYear(), km_initial: 0, km_actuel: 0,
   loa_date_debut: '', loa_date_fin: '', loa_km_total_autorises: '',
   loa_cout_km_supp: '', batterie_capacite_kwh: '', type_prise: '',
   carburant_type: 'DIESEL', photo_url: '', notes: '',
