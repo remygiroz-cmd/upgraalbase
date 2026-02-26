@@ -110,6 +110,28 @@ export default function VehicleFormModal({ open, onOpenChange, vehicle = null })
                 <Label>Couleur</Label>
                 <Input value={form.couleur} onChange={e => set('couleur', e.target.value)} placeholder="Blanc" className="mt-1" />
               </div>
+              <div className="col-span-2">
+                <Label>Couleur de la clé (fond de carte)</Label>
+                <div className="flex items-center gap-2 mt-1 flex-wrap">
+                  {CARD_COLORS.map(c => (
+                    <button
+                      key={c.value}
+                      type="button"
+                      onClick={() => set('card_color', c.value)}
+                      className={`w-8 h-8 rounded-full border-2 transition-all flex items-center justify-center ${form.card_color === c.value ? 'border-gray-900 scale-110' : 'border-gray-300'}`}
+                      style={c.value ? { backgroundColor: c.value } : { backgroundColor: '#f3f4f6' }}
+                      title={c.label}
+                    >
+                      {!c.value && <span className="text-gray-400 text-xs">✕</span>}
+                    </button>
+                  ))}
+                  {form.card_color && (
+                    <span className="text-xs text-gray-500 ml-1">
+                      Aperçu : <span className="inline-block px-2 py-0.5 rounded font-medium" style={{ backgroundColor: form.card_color + '33', border: `1px solid ${form.card_color}` }}>Carte</span>
+                    </span>
+                  )}
+                </div>
+              </div>
               <div>
                 <Label>Année</Label>
                 <Input type="number" value={form.annee} onChange={e => set('annee', e.target.value)} className="mt-1" />
