@@ -114,16 +114,35 @@ export default function VehicleCheckModal({ open, onOpenChange, type, assignment
         updates.debut_shift_fait = true;
         updates.km_debut = Number(form.km_debut);
         updates.statut = 'EN_COURS';
-        await base44.entities.Vehicle.update(assignment.vehicule_id, { km_actuel: Number(form.km_debut) });
+        const vehicleUpdates = { km_actuel: Number(form.km_debut) };
+        if (form.start_energy_level_pct !== '') {
+          vehicleUpdates.last_energy_level_pct = Number(form.start_energy_level_pct);
+          vehicleUpdates.last_energy_updated_at = new Date().toISOString();
+          vehicleUpdates.last_energy_source = 'START_SHIFT';
+        }
+        await base44.entities.Vehicle.update(assignment.vehicule_id, vehicleUpdates);
       }
       if (type === 'FIN_SERVICE') {
         updates.fin_service_fait = true;
         updates.cle_remise = form.cle_remise_en_place;
         updates.statut = 'TERMINE';
+        const vehicleUpdates = {};
         if (form.km_fin) {
           updates.km_fin = Number(form.km_fin);
           updates.distance_calculee = Number(form.km_fin) - Number(assignment.km_debut || 0);
-          await base44.entities.Vehicle.update(assignment.vehicule_id, { km_actuel: Number(form.km_fin) });
+          vehicleUpdates.km_actuel = Number(form.km_fin);
+        }
+        if (form.end_energy_level_pct !== '') {
+          vehicleUpdates.last_energy_level_pct = Number(form.end_energy_level_pct);
+          vehicleUpdates.last_energy_updated_at = new Date().toISOString();
+          vehicleUpdates.last_energy_source = 'END_SHIFT';
+          vehicleUpdates.last_plugged_in_charge = form.branche_en_charge;
+          if (form.branche_en_charge) {
+            vehicleUpdates.last_plugged_at = new Date().toISOString();
+          }
+        }
+        if (Object.keys(vehicleUpdates).length > 0) {
+          await base44.entities.Vehicle.update(assignment.vehicule_id, vehicleUpdates);
         }
       }
       if (type === 'FIN_RUN') {
