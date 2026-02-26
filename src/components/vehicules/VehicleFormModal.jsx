@@ -36,6 +36,17 @@ const defaultForm = {
 export default function VehicleFormModal({ open, onOpenChange, vehicle = null }) {
   const queryClient = useQueryClient();
   const [form, setForm] = useState(defaultForm);
+  const [photoUploading, setPhotoUploading] = useState(false);
+  const photoInputRef = useRef(null);
+
+  const handlePhotoUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    setPhotoUploading(true);
+    const { file_url } = await base44.integrations.Core.UploadFile({ file });
+    set('photo_url', file_url);
+    setPhotoUploading(false);
+  };
 
   useEffect(() => {
     if (open) {
