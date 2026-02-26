@@ -108,6 +108,9 @@ export default function VehiclesDashboard() {
         </div>
       )}
 
+      {/* Alerts panel - top priority */}
+      <VehicleAlertsPanel vehicles={vehicles} />
+
       {/* Energy widget - full width */}
       <EnergyWidget vehicles={vehicles} />
 

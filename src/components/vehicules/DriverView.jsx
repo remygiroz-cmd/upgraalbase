@@ -9,6 +9,7 @@ import ReportAlertModal from './ReportAlertModal';
 
 export default function DriverView({ currentUser, currentEmployee }) {
   const [checkType, setCheckType] = useState(null);
+  const [showReportAlert, setShowReportAlert] = useState(false);
 
   const today = moment().format('YYYY-MM-DD');
 
