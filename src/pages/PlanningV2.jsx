@@ -139,22 +139,11 @@ export default function PlanningV2() {
 
   // Filter and sort employees
   const sortedEmployees = React.useMemo(() => {
-    const today = new Date();
-    const currentMonthDate = new Date(currentYear, currentMonth, 1);
-    const isPastMonth = currentMonthDate < new Date(today.getFullYear(), today.getMonth(), 1);
-    const isCurrentMonth = currentMonthDate.getFullYear() === today.getFullYear() && currentMonthDate.getMonth() === today.getMonth();
-    
-    let filteredEmployees = allEmployees;
-    if (!isPastMonth && !isCurrentMonth) {
-      filteredEmployees = allEmployees.filter(emp => emp.is_active === true);
-    } else if (isCurrentMonth) {
-      filteredEmployees = allEmployees.filter(emp => {
-        if (emp.is_active === true) return true;
-        const hasShiftsThisMonth = shifts.some(s => s.employee_id === emp.id);
-        return hasShiftsThisMonth;
-      });
-    }
-    
+    // Utiliser la fonction centralisée shouldDisplayEmployeeInPlanning
+    const filteredEmployees = allEmployees.filter(emp =>
+      shouldDisplayEmployeeInPlanning(emp, currentYear, currentMonth)
+    );
+
     return [...filteredEmployees].sort((a, b) => {
       const teamA = allTeams.find(t => t.id === a.team_id);
       const teamB = allTeams.find(t => t.id === b.team_id);
