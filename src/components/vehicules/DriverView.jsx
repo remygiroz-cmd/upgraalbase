@@ -92,10 +92,20 @@ export default function DriverView({ currentUser, currentEmployee }) {
         {isLoading ? (
           <div className="bg-white rounded-2xl p-8 text-center text-gray-400">Chargement...</div>
         ) : !assignment ? (
-          <div className="bg-white rounded-2xl p-8 text-center border border-gray-100 shadow-sm">
-            <Car className="w-12 h-12 mx-auto mb-3 text-gray-300" />
-            <p className="font-semibold text-gray-700">Aucun véhicule assigné aujourd'hui</p>
-            <p className="text-sm text-gray-400 mt-1">Contactez votre manager si cela vous semble incorrect.</p>
+          <div className="space-y-4">
+            <div className="bg-white rounded-2xl p-8 text-center border border-gray-100 shadow-sm">
+              <Car className="w-12 h-12 mx-auto mb-3 text-gray-300" />
+              <p className="font-semibold text-gray-700">Aucun véhicule assigné aujourd'hui</p>
+              <p className="text-sm text-gray-400 mt-1">Contactez votre manager si cela vous semble incorrect.</p>
+            </div>
+            {/* Bouton signalement même sans assignation */}
+            <button
+              onClick={() => setShowReportAlert(true)}
+              className="w-full flex items-center justify-center gap-2 bg-red-600 hover:bg-red-700 text-white font-bold py-3 rounded-2xl transition-colors"
+            >
+              <AlertTriangle className="w-5 h-5" />
+              🚨 Signaler un problème
+            </button>
           </div>
         ) : (
           <>
