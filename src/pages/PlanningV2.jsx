@@ -31,6 +31,7 @@ import { calculateShiftDuration, checkMinimumRest } from '@/components/planning/
 import PlanningColumnsManager from '@/components/planning/PlanningColumnsManager';
 import { applyLayoutToEmployees } from '@/components/planning/planningLayoutService';
 import { parseLocalDate, formatLocalDate } from '@/components/planning/dateUtils';
+import { shouldDisplayEmployeeInPlanning } from '@/components/planning/employeeDisplayFilter';
 import { computeMonthKey, usePlanningLayout } from '@/components/planning/usePlanningLayout';
 import { useGlobalColumnOrder } from '@/components/planning/useGlobalColumnOrder';
 import { isDateInCPPeriod } from '@/components/planning/paidLeaveCalculations';

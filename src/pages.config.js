@@ -63,6 +63,7 @@ import MiseEnPlace from './pages/MiseEnPlace';
 import Parametres from './pages/Parametres';
 import Pertes from './pages/Pertes';
 import Planning from './pages/Planning';
+import PlanningV2 from './pages/PlanningV2';
 import Presence from './pages/Presence';
 import Recettes from './pages/Recettes';
 import RegistrePersonnel from './pages/RegistrePersonnel';
@@ -72,7 +73,6 @@ import TemplatesRH from './pages/TemplatesRH';
 import TravailDuJour from './pages/TravailDuJour';
 import VehiclesSettings from './pages/VehiclesSettings';
 import Vehicules from './pages/Vehicules';
-import PlanningV2 from './pages/PlanningV2';
 import __Layout from './Layout.jsx';
 
 
@@ -93,6 +93,7 @@ export const PAGES = {
     "Parametres": Parametres,
     "Pertes": Pertes,
     "Planning": Planning,
+    "PlanningV2": PlanningV2,
     "Presence": Presence,
     "Recettes": Recettes,
     "RegistrePersonnel": RegistrePersonnel,
@@ -102,7 +103,6 @@ export const PAGES = {
     "TravailDuJour": TravailDuJour,
     "VehiclesSettings": VehiclesSettings,
     "Vehicules": Vehicules,
-    "PlanningV2": PlanningV2,
 }
 
 export const pagesConfig = {
