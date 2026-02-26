@@ -905,9 +905,9 @@ export default function PlanningV2() {
                       })
                     );
 
+                    // Is this the last visible day of this week (Sunday or last day of month)?
                     const isLastDayOfWeekInMonth = dayInfo.isLastDayOfWeek || index === daysArray.length - 1;
-                    const weekStartForRecap = React.useMemo ? null : null; // computed below
-                    // Compute week start for this day (Monday)
+                    // Compute week start (Monday) for this day
                     const thisDate = dayInfo.date;
                     const dayOfWeekAdj = thisDate.getDay() === 0 ? 6 : thisDate.getDay() - 1;
                     const weekStartDate = new Date(thisDate);
