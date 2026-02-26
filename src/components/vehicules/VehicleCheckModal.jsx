@@ -47,7 +47,7 @@ export default function VehicleCheckModal({ open, onOpenChange, type, assignment
     }
     if (type === 'FIN_SERVICE') {
       if (!form.cle_remise_en_place || !form.validation_finale) return false;
-      if (isElectrique && (form.charge_restante_pct === '' || !form.branche_en_charge)) return false;
+      if (isElectrique && form.charge_restante_pct === '') return false;
       if (!isElectrique && !form.niveau_carburant) return false;
       return true;
     }
