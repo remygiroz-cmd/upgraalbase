@@ -1,10 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { base44 } from '@/api/base44Client';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { AlertTriangle, Upload, X } from 'lucide-react';
+import { AlertTriangle, Upload, X, Search, ChevronDown } from 'lucide-react';
 
 const CATEGORIES = [
   { value: 'PNEUS', label: '🔧 Pneus' },
