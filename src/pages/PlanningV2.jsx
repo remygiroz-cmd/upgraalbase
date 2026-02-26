@@ -1098,11 +1098,44 @@ export default function PlanningV2() {
                           })}
                         </div>
                       </div>
+                      {/* Weekly Summary Row - shown after Sunday or last day of month */}
+                      {isLastDayOfWeekInMonth && (
+                        <div className="bg-gradient-to-r from-purple-50 to-indigo-50 border-t-2 border-purple-300 flex">
+                          <div className="sticky left-0 z-20 bg-gradient-to-r from-purple-50 to-indigo-50 border-r-2 border-purple-200 px-1 lg:px-2 py-1 shadow-sm w-[80px] lg:w-[120px]">
+                            <div className="text-[8px] lg:text-[10px] font-bold text-purple-900 uppercase tracking-wide text-center">
+                              <span className="hidden lg:inline">📅 Semaine</span>
+                              <span className="lg:hidden">📅 Sem</span>
+                            </div>
+                          </div>
+                          <div className="flex flex-1">
+                            {visibleEmployees.map(employee => {
+                              const weekRecapKey = `${employee.id}_${formatLocalDate(weekStartDate)}`;
+                              const weeklyRecap = weeklyRecapsLookup.get(weekRecapKey) || null;
+                              return (
+                                <div key={employee.id} className="border-r border-purple-200 min-w-[150px] w-[150px] lg:min-w-[180px] lg:w-[180px]">
+                                  <WeeklySummary
+                                    employee={employee}
+                                    shifts={shifts}
+                                    weekStart={weekStartDate}
+                                    weeklyRecap={weeklyRecap}
+                                    onRecapUpdate={() => queryClient.invalidateQueries({ queryKey: ['allWeeklyRecaps'] })}
+                                    currentMonth={currentMonth}
+                                    currentYear={currentYear}
+                                    nonShiftEvents={nonShiftEvents}
+                                    nonShiftTypes={nonShiftTypes}
+                                    disabled={!canModifyPlanning}
+                                  />
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
                       </>
-                    );
-                  })}
+                      );
+                      })}
 
-                   {/* Monthly Summary Row */}
+                      {/* Monthly Summary Row */}
                    <div className="bg-gradient-to-r from-blue-100 to-blue-50 border-t-4 border-blue-500 flex">
                      <div className="sticky left-0 z-20 bg-gradient-to-r from-blue-100 to-blue-50 border-r-2 border-blue-300 px-1 lg:px-2 py-2 lg:py-3 shadow-sm w-[80px] lg:w-[120px]">
                        <div className="text-[9px] lg:text-[11px] font-bold text-blue-900 uppercase tracking-wide text-center">
