@@ -27,6 +27,11 @@ export default function VehicleCard({ vehicle, onClick, compact = false }) {
           )}
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
+              {vehicle.numero && (
+                <span className="text-xs font-bold px-1.5 py-0.5 rounded bg-gray-800 text-white min-w-[1.5rem] text-center">
+                  #{vehicle.numero}
+                </span>
+              )}
               <span className="font-bold text-gray-900">{vehicle.marque} {vehicle.modele}</span>
               <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${statutBadge.className}`}>
                 {statutBadge.label}
