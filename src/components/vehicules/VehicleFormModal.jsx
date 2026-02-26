@@ -315,8 +315,26 @@ export default function VehicleFormModal({ open, onOpenChange, vehicle = null })
             <h3 className="text-sm font-semibold text-gray-700 mb-3 uppercase tracking-wide">Photo & Notes</h3>
             <div className="space-y-3">
               <div>
-                <Label>URL photo</Label>
-                <Input value={form.photo_url} onChange={e => set('photo_url', e.target.value)} placeholder="https://..." className="mt-1" />
+                <Label>Photo du véhicule</Label>
+                <input ref={photoInputRef} type="file" accept="image/*" className="hidden" onChange={handlePhotoUpload} />
+                {form.photo_url ? (
+                  <div className="mt-1 flex items-center gap-3">
+                    <img src={form.photo_url} alt="Photo" className="w-20 h-14 object-cover rounded-lg border border-gray-200" />
+                    <div className="flex flex-col gap-1">
+                      <Button type="button" size="sm" variant="outline" onClick={() => photoInputRef.current?.click()} disabled={photoUploading}>
+                        <Upload className="w-3 h-3 mr-1" /> Changer
+                      </Button>
+                      <Button type="button" size="sm" variant="ghost" className="text-red-500 hover:text-red-600" onClick={() => set('photo_url', '')}>
+                        <X className="w-3 h-3 mr-1" /> Supprimer
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <Button type="button" variant="outline" className="mt-1 w-full border-dashed" onClick={() => photoInputRef.current?.click()} disabled={photoUploading}>
+                    <Upload className="w-4 h-4 mr-2" />
+                    {photoUploading ? 'Chargement...' : 'Uploader une photo'}
+                  </Button>
+                )}
               </div>
               <div>
                 <Label>Notes internes</Label>
