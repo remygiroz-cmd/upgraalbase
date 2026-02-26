@@ -531,8 +531,10 @@ export default function Home() {
 
   const isManagerOrAdmin = useMemo(() => {
     if (!currentEmployee) return false;
-    return currentUser?.role === 'admin' || currentEmployee.permission_level === 'manager';
-  }, [currentUser, currentEmployee]);
+    const roleName = (userRole?.name || '').toLowerCase();
+    const isGerant = ['responsable', 'gérant', 'gerant', 'manager', 'bureau'].some(r => roleName.includes(r));
+    return currentUser?.role === 'admin' || currentEmployee.permission_level === 'manager' || isGerant;
+  }, [currentUser, currentEmployee, userRole]);
 
   // Get urgent announcements history for managers
   const { data: allUrgentAnnouncements = [] } = useQuery({
