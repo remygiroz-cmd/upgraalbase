@@ -303,29 +303,30 @@ export default function VehiclesAssignmentTab() {
                       👤 {emp.first_name} {emp.last_name}
                     </p>
                     <div className="flex items-center gap-4 mt-2 text-xs text-gray-500">
-                      {a.km_debut != null && <span>Km départ: {a.km_debut}</span>}
-                      {a.km_fin != null && <span>Km fin: {a.km_fin}</span>}
+                      {a.km_debut != null && <span>Km départ : <strong>{a.km_debut}</strong></span>}
+                      {a.km_fin != null && <span>Km fin : <strong>{a.km_fin}</strong></span>}
                       {a.distance_calculee != null && <span className="font-medium text-gray-700">{a.distance_calculee} km parcourus</span>}
                     </div>
                     <div className="flex items-center gap-3 mt-2">
-                      <span className="text-xs flex items-center gap-1">
-                        {a.debut_shift_fait ? <CheckCircle2 className="w-3.5 h-3.5 text-green-500" /> : <XCircle className="w-3.5 h-3.5 text-gray-300" />}
+                      <span className={`text-xs flex items-center gap-1 px-2 py-0.5 rounded-full ${a.debut_shift_fait ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-400'}`}>
+                        {a.debut_shift_fait ? <CheckCircle2 className="w-3 h-3" /> : <XCircle className="w-3 h-3" />}
                         Début shift
                       </span>
-                      <span className="text-xs flex items-center gap-1">
-                        {a.fin_service_fait ? <CheckCircle2 className="w-3.5 h-3.5 text-green-500" /> : <XCircle className="w-3.5 h-3.5 text-gray-300" />}
+                      <span className={`text-xs flex items-center gap-1 px-2 py-0.5 rounded-full ${a.fin_service_fait ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-400'}`}>
+                        {a.fin_service_fait ? <CheckCircle2 className="w-3 h-3" /> : <XCircle className="w-3 h-3" />}
                         Fin service
                       </span>
-                      <span className="text-xs flex items-center gap-1">
-                        {a.cle_remise ? <CheckCircle2 className="w-3.5 h-3.5 text-green-500" /> : <XCircle className="w-3.5 h-3.5 text-gray-300" />}
+                      <span className={`text-xs flex items-center gap-1 px-2 py-0.5 rounded-full ${a.cle_remise ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-400'}`}>
+                        {a.cle_remise ? <CheckCircle2 className="w-3 h-3" /> : <XCircle className="w-3 h-3" />}
                         Clé remise
                       </span>
                       {a.non_conformite && (
-                        <span className="text-xs text-red-600 flex items-center gap-1 font-medium">
-                          <AlertTriangle className="w-3.5 h-3.5" /> Non-conformité
+                        <span className="text-xs text-red-600 flex items-center gap-1 font-medium px-2 py-0.5 rounded-full bg-red-50">
+                          <AlertTriangle className="w-3 h-3" /> Non-conformité
                         </span>
                       )}
                     </div>
+                    <AssignmentCheckDetails assignmentId={a.id} vehicle={vehicle} />
                   </div>
                   <div className="flex flex-col items-end gap-2">
                     <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
