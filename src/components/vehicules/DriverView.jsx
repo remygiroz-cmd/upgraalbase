@@ -170,6 +170,16 @@ export default function DriverView({ currentUser, currentEmployee }) {
         )}
       </div>
 
+      <ReportAlertModal
+        open={showReportAlert}
+        onOpenChange={setShowReportAlert}
+        vehicle={vehicle}
+        assignment={assignment}
+        currentUser={null}
+        currentEmployee={currentEmployee}
+        vehicles={vehicles}
+      />
+
       {checkType && assignment && (
         <VehicleCheckModal
           open={!!checkType}
