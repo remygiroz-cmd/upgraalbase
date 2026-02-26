@@ -482,6 +482,17 @@ export default function Home() {
     return currentUser?.role === 'admin' || currentEmployee.permission_level === 'manager';
   }, [currentUser, currentEmployee]);
 
+  // Get user role (for gérant detection)
+  const { data: userRole } = useQuery({
+    queryKey: ['userRole', currentUser?.role_id],
+    queryFn: async () => {
+      if (!currentUser?.role_id) return null;
+      const roles = await base44.entities.Role.filter({ id: currentUser.role_id });
+      return roles[0] || null;
+    },
+    enabled: !!currentUser?.role_id
+  });
+
   // Check if current user is planning manager
   const { data: isPlanningManager = false } = useQuery({
     queryKey: ['isPlanningManager', currentUser?.email],
