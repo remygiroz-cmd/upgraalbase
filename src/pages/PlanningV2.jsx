@@ -905,6 +905,14 @@ export default function PlanningV2() {
                       })
                     );
 
+                    const isLastDayOfWeekInMonth = dayInfo.isLastDayOfWeek || index === daysArray.length - 1;
+                    const weekStartForRecap = React.useMemo ? null : null; // computed below
+                    // Compute week start for this day (Monday)
+                    const thisDate = dayInfo.date;
+                    const dayOfWeekAdj = thisDate.getDay() === 0 ? 6 : thisDate.getDay() - 1;
+                    const weekStartDate = new Date(thisDate);
+                    weekStartDate.setDate(thisDate.getDate() - dayOfWeekAdj);
+
                     return (
                       <>
                       <div className={cn(
