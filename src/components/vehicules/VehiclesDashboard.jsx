@@ -5,6 +5,7 @@ import { Car, AlertTriangle, TrendingUp, Users, Shield, Zap, Fuel, FileText } fr
 import { calcLoaStats, getRisqueBadge, isDocumentExpired, isDocumentExpiringSoon } from './vehiculeUtils';
 import moment from 'moment';
 import EnergyWidget from './EnergyWidget';
+import VehicleAlertsPanel from './VehicleAlertsPanel';
 
 export default function VehiclesDashboard() {
   const { data: vehicles = [] } = useQuery({ queryKey: ['vehicles'], queryFn: () => base44.entities.Vehicle.list() });

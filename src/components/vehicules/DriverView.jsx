@@ -5,6 +5,7 @@ import { Car, AlertTriangle, CheckCircle2, Clock } from 'lucide-react';
 import moment from 'moment';
 import VehicleCheckModal from './VehicleCheckModal';
 import BlockingFinServiceModal from './BlockingFinServiceModal';
+import ReportAlertModal from './ReportAlertModal';
 
 export default function DriverView({ currentUser, currentEmployee }) {
   const [checkType, setCheckType] = useState(null);
