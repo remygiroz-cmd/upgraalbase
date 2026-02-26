@@ -641,6 +641,9 @@ export default function Home() {
         {/* Departure Order Home Block */}
         <DepartureOrderHomeBlock currentUser={currentUser} currentEmployee={currentEmployee} />
 
+        {/* Vehicle Alerts Widget - managers only */}
+        {isManagerOrAdmin && <HomeVehicleAlertsWidget />}
+
         {/* Today's Staff Summary - EXACT same as Planning */}
         {currentEmployee && sortedEmployees.length > 0 && (
           <TodaySummary
