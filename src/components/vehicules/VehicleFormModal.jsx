@@ -63,8 +63,8 @@ export default function VehicleFormModal({ open, onOpenChange, vehicle = null })
         });
       // Remove empty string date/string fields
       ['loa_date_debut', 'loa_date_fin', 'date_mise_en_service', 'date_montage_pneus',
-        'couleur', 'photo_url', 'notes', 'type_prise', 'carburant_type']
-        .forEach(k => { if (data[k] === '') delete data[k]; });
+      'couleur', 'card_color', 'photo_url', 'notes', 'type_prise', 'carburant_type']
+      .forEach(k => { if (data[k] === '') delete data[k]; });
 
       if (vehicle?.id) {
         return base44.entities.Vehicle.update(vehicle.id, data);
