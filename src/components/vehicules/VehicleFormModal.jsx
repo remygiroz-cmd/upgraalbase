@@ -9,9 +9,23 @@ import { base44 } from '@/api/base44Client';
 import { toast } from 'sonner';
 import { Car } from 'lucide-react';
 
+const CARD_COLORS = [
+  { label: 'Aucune', value: '' },
+  { label: 'Rouge', value: '#ef4444' },
+  { label: 'Orange', value: '#f97316' },
+  { label: 'Jaune', value: '#eab308' },
+  { label: 'Vert', value: '#22c55e' },
+  { label: 'Bleu', value: '#3b82f6' },
+  { label: 'Violet', value: '#a855f7' },
+  { label: 'Rose', value: '#ec4899' },
+  { label: 'Gris', value: '#6b7280' },
+  { label: 'Marron', value: '#92400e' },
+  { label: 'Cyan', value: '#06b6d4' },
+];
+
 const defaultForm = {
   type_usage: 'LIVRAISON', energie: 'THERMIQUE', propriete: 'SOCIETE',
-  statut: 'ACTIF', marque: '', modele: '', immatriculation: '', couleur: '',
+  statut: 'ACTIF', marque: '', modele: '', immatriculation: '', couleur: '', card_color: '',
   annee: new Date().getFullYear(), km_initial: 0, km_actuel: 0,
   loa_date_debut: '', loa_date_fin: '', loa_km_total_autorises: '',
   loa_cout_km_supp: '', batterie_capacite_kwh: '', type_prise: '',
