@@ -155,6 +155,15 @@ export default function DriverView({ currentUser, currentEmployee }) {
               </div>
             </div>
 
+            {/* Signaler un problème */}
+            <button
+              onClick={() => setShowReportAlert(true)}
+              className="w-full flex items-center justify-center gap-2 bg-red-600 hover:bg-red-700 text-white font-bold py-3 rounded-2xl transition-colors"
+            >
+              <AlertTriangle className="w-5 h-5" />
+              🚨 Signaler un problème
+            </button>
+
             {/* Score conformité */}
             <ComplianceScore employeeId={currentEmployee.id} />
           </>
