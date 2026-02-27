@@ -60,6 +60,29 @@ export default function WeeklySummary({
   const baseOverrideFromDB = weeklyRecap?.base_override_hours ?? null;
 
   // =====================================================
+  // RANGE CLIPPÉ AU MOIS (vue mois uniquement)
+  // =====================================================
+  const { rangeStartStr, rangeEndStr } = useMemo(() => {
+    const weekEnd = new Date(weekStart);
+    weekEnd.setDate(weekEnd.getDate() + 6);
+
+    if (clipToMonth && currentMonth !== undefined && currentYear !== undefined) {
+      const monthStart = new Date(currentYear, currentMonth, 1);
+      const monthEnd = new Date(currentYear, currentMonth + 1, 0);
+      const clippedStart = new Date(Math.max(weekStart.getTime(), monthStart.getTime()));
+      const clippedEnd = new Date(Math.min(weekEnd.getTime(), monthEnd.getTime()));
+      return {
+        rangeStartStr: formatLocalDate(clippedStart),
+        rangeEndStr: formatLocalDate(clippedEnd)
+      };
+    }
+    return {
+      rangeStartStr: weekStartStr,
+      rangeEndStr: formatLocalDate(weekEnd)
+    };
+  }, [weekStart, weekStartStr, clipToMonth, currentMonth, currentYear]);
+
+  // =====================================================
   // PRORATISATION SEMAINE INCOMPLÈTE
   // =====================================================
   const { isPartialWeek, workingDaysInPartialWeek, proratedBase } = useMemo(() => {
