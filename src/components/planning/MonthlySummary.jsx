@@ -554,13 +554,7 @@ ${deductionDetails.length > 0 ? `  Détail: ${deductionDetails.map(d => `${d.dat
           </HideableItem>
         )}
 
-        {/* Override indicator */}
-        {hasManualOverride && (
-          <div className="mt-1 text-[9px] text-blue-700 font-semibold flex items-center justify-center gap-1">
-            <AlertCircle className="w-3 h-3" />
-            Valeurs modifiées
-          </div>
-        )}
+
       </div>
 
       <EditMonthlyRecapDialog
