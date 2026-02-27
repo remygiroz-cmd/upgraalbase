@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { RotateCcw, Save, X } from 'lucide-react';
 import { toast } from 'sonner';
-import { upsertExportOverride, clearExportOverride } from './monthlyExportOverrideService';
+import { upsertExportOverride, deleteExportOverride } from './monthlyExportOverrideService';
 
 const EMPTY_STATE = {
   nb_jours_travailles: null,
