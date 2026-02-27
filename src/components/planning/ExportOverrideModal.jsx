@@ -163,12 +163,12 @@ export default function ExportOverrideModal({
           <div className="space-y-2 border-t pt-4">
             <Label className="text-sm font-semibold">Non-shifts visibles</Label>
             <div className="text-xs text-gray-600 mb-2">
-              Auto : <pre className="inline whitespace-pre-line font-mono bg-gray-50 p-2 rounded">{autoValues.nonShiftsStr || '–'}</pre>
+              Auto : <pre className="inline whitespace-pre-line font-mono bg-gray-50 p-2 rounded">{autoValues?.nonShiftsStr || '–'}</pre>
             </div>
             <div className="flex gap-2">
               <Textarea
-                value={overrides.override_nonShiftsText ?? ''}
-                onChange={(e) => handleChange('override_nonShiftsText', e.target.value || null)}
+                value={overrides.non_shifts_visibles ?? ''}
+                onChange={(e) => handleChange('non_shifts_visibles', e.target.value || null)}
                 placeholder="Auto"
                 rows={3}
                 className="text-sm font-mono"
@@ -176,7 +176,7 @@ export default function ExportOverrideModal({
               <Button
                 size="icon"
                 variant="ghost"
-                onClick={() => handleReset('override_nonShiftsText')}
+                onClick={() => handleReset('non_shifts_visibles')}
                 title="Revenir en auto"
                 className="flex-shrink-0"
               >
@@ -189,12 +189,12 @@ export default function ExportOverrideModal({
           <div className="space-y-2">
             <Label className="text-sm font-semibold">CP décomptés</Label>
             <div className="text-xs text-gray-600 mb-2">
-              Auto : <pre className="inline whitespace-pre-line font-mono bg-gray-50 p-2 rounded">{autoValues.cpStr || '–'}</pre>
+              Auto : <pre className="inline whitespace-pre-line font-mono bg-gray-50 p-2 rounded">{autoValues?.cpStr || '–'}</pre>
             </div>
             <div className="flex gap-2">
               <Textarea
-                value={overrides.override_cpText ?? ''}
-                onChange={(e) => handleChange('override_cpText', e.target.value || null)}
+                value={overrides.cp_decomptes ?? ''}
+                onChange={(e) => handleChange('cp_decomptes', e.target.value || null)}
                 placeholder="Auto"
                 rows={3}
                 className="text-sm font-mono"
@@ -202,7 +202,7 @@ export default function ExportOverrideModal({
               <Button
                 size="icon"
                 variant="ghost"
-                onClick={() => handleReset('override_cpText')}
+                onClick={() => handleReset('cp_decomptes')}
                 title="Revenir en auto"
                 className="flex-shrink-0"
               >
