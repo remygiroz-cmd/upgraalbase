@@ -927,6 +927,7 @@ export default function PlanningV2() {
         style={{ height: 'calc(100vh - 240px)' }}
         ref={(el) => {
           tableContainerRef.current = el;
+          planningGridRef.current = el;
           if (!el) return;
           el.addEventListener('scroll', () => {
             const topBar = document.getElementById('planning-top-scrollbar');
@@ -938,7 +939,7 @@ export default function PlanningV2() {
           });
         }}
       >
-        <div className="min-w-full" data-planning-calendar>
+        <div className="min-w-full" data-planning-calendar ref={planningGridRef}>
           <div className="inline-block min-w-full">
             {/* Header - Sticky */}
               <div className="bg-gradient-to-r from-gray-100 to-gray-50 flex border-b-2 border-gray-300 sticky top-0 z-40 shadow-md">
