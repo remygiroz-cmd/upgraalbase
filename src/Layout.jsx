@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { createPageUrl } from './utils';
 import { useQuery } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
-import { usePlanningContext } from '@/components/PlanningContext';
+
 import { 
         ChefHat, 
         ClipboardList, 
@@ -31,7 +31,6 @@ import UserActivityTracker from '@/components/UserActivityTracker';
 
 export default function Layout({ children, currentPageName }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const { triggerPlanningOpen } = usePlanningContext();
 
   const { data: currentUser } = useQuery({
     queryKey: ['currentUser'],
@@ -97,9 +96,6 @@ export default function Layout({ children, currentPageName }) {
       to={createPageUrl(to)}
       onClick={() => {
         setSidebarOpen(false);
-        if (to === 'Planning') {
-          triggerPlanningOpen();
-        }
       }}
       className={cn(
         "flex items-center gap-3 px-4 py-2.5 transition-all duration-200 relative",
