@@ -39,19 +39,15 @@ const ShiftCard = React.memo(function ShiftCard({
   const [isSettingEndNow, setIsSettingEndNow] = useState(false);
   const inputRef = useRef(null);
   const queryClient = useQueryClient();
+  const hoursMode = useHoursDisplayMode();
 
   const calculateDuration = () => {
     const [startH, startM] = shift.start_time.split(':').map(Number);
     const [endH, endM] = shift.end_time.split(':').map(Number);
-    
     let totalMinutes = (endH * 60 + endM) - (startH * 60 + startM);
     if (totalMinutes < 0) totalMinutes += 24 * 60;
-    
     totalMinutes -= (shift.break_minutes || 0);
-    
-    const hours = Math.floor(totalMinutes / 60);
-    const minutes = totalMinutes % 60;
-    return `${hours}h${minutes > 0 ? minutes.toString().padStart(2, '0') : ''}`;
+    return formatMinutes(totalMinutes, hoursMode);
   };
 
   const position = positions.find(p => p.label === shift.position);
