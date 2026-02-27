@@ -155,7 +155,7 @@ export default function WeeklySummary({
   }, [baseOverrideFromDB, baseDefault, employee.id, weekStartStr, isEditingBase, baseDraft, weeklyRecap, employee.first_name, employee.last_name]);
 
   // Calculer les heures travaillées (workedHours) - including non-shifts that generate hours
-  const workedHours = useMemo(() => {
+  const { workedHours, debugMinutes } = useMemo(() => {
     const weekEnd = new Date(weekStart);
     weekEnd.setDate(weekEnd.getDate() + 6);
     const weekEndStr = formatLocalDate(weekEnd);
