@@ -36,6 +36,15 @@ export default function VehiclesAssignmentTab() {
   const [selectedDate, setSelectedDate] = useState(moment().format('YYYY-MM-DD'));
   const [showManualForm, setShowManualForm] = useState(false);
   const [manualForm, setManualForm] = useState({ vehicule_id: '', employe_id: '' });
+  const [showDebug, setShowDebug] = useState(false);
+
+  // Parse selected date to get year/month for version lookup
+  const selectedMoment = moment(selectedDate);
+  const selectedYear = selectedMoment.year();
+  const selectedMonth = selectedMoment.month(); // 0-indexed
+
+  // Get the current reset_version for the selected month
+  const { resetVersion } = usePlanningVersion(selectedYear, selectedMonth);
 
   const { data: vehicles = [] } = useQuery({
     queryKey: ['vehicles'],
@@ -52,10 +61,11 @@ export default function VehiclesAssignmentTab() {
     queryFn: () => base44.entities.VehicleAssignment.filter({ date: selectedDate })
   });
 
-  // Get all shifts for selected date to determine who is present
+  // Get all shifts for selected date + current reset_version (strict match)
   const { data: shifts = [] } = useQuery({
-    queryKey: ['shifts-date', selectedDate],
-    queryFn: () => base44.entities.Shift.filter({ date: selectedDate })
+    queryKey: ['shifts-date', selectedDate, resetVersion],
+    queryFn: () => base44.entities.Shift.filter({ date: selectedDate }),
+    enabled: resetVersion !== undefined
   });
 
   const vehicleMap = useMemo(() => Object.fromEntries(vehicles.map(v => [v.id, v])), [vehicles]);
@@ -65,12 +75,15 @@ export default function VehiclesAssignmentTab() {
   const NON_SHIFT_STATUSES = new Set(['absent', 'leave', 'archived']);
 
   // Livreurs présents = employés ayant AU MOINS 1 vrai shift LIVRAISON ce jour
-  // Source de vérité : table Shifts du planning uniquement
-  const livreursPresents = useMemo(() => {
-    // Shifts LIVRAISON valides (exclure non-shifts, absences, CP, etc.)
-    const deliveryShifts = shifts.filter(s => {
-      const pos = (s.position || '').toLowerCase();
-      const isLivraison = pos.includes('livraison') || pos.includes('livreur') || pos.includes('livreuse');
+  // Source de vérité : table Shifts du planning avec filtrage strict par reset_version
+  const { livreursPresents, deliveryShiftsForDebug } = useMemo(() => {
+    // Filter by current reset_version (excludes old/deleted versions)
+    const currentVersionShifts = shifts.filter(s => (s.reset_version ?? 0) === (resetVersion ?? 0));
+
+    // Shifts LIVRAISON valides avec match strict sur position
+    const deliveryShifts = currentVersionShifts.filter(s => {
+      const pos = (s.position || '').trim().toLowerCase();
+      const isLivraison = pos === 'livraison' || pos === 'livreur' || pos === 'livreuse';
       const isRealShift = !NON_SHIFT_STATUSES.has(s.status);
       return isLivraison && isRealShift;
     });
@@ -85,8 +98,11 @@ export default function VehiclesAssignmentTab() {
         if (emp) result.push(emp);
       }
     }
-    return result.sort((a, b) => (a.first_name || '').localeCompare(b.first_name || ''));
-  }, [shifts, employees]);
+    return {
+      livreursPresents: result.sort((a, b) => (a.first_name || '').localeCompare(b.first_name || '')),
+      deliveryShiftsForDebug: deliveryShifts
+    };
+  }, [shifts, employees, resetVersion]);
 
   // Auto-assignable vehicles: ACTIF + LIVRAISON only (never DIRECTION)
   const autoVehicles = useMemo(() => {
