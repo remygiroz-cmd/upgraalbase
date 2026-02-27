@@ -255,7 +255,7 @@ export default function WeeklySummary({
 
 
 
-  // Compter les shifts
+  // Compter les shifts (sur range complet de la semaine pour le bouton supprimer)
   const shiftsCount = useMemo(() => {
     const weekEnd = new Date(weekStart);
     weekEnd.setDate(weekEnd.getDate() + 6);
