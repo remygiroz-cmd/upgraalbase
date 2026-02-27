@@ -528,7 +528,7 @@ export default function WeeklySummary({
             )}
             title={disabled ? "Lecture seule" : "Cliquer pour modifier"}
           >
-            {displayedBase.toFixed(2)}h
+            {formatHours(displayedBase, hoursMode)}
             {hasOverride && <span className="text-[8px] ml-1">*</span>}
           </button>
         )}
