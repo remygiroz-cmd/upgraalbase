@@ -49,6 +49,13 @@ const MONTHS = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet'
 export default function PlanningV2() {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [showShiftModal, setShowShiftModal] = useState(false);
+
+  // Reset to today on mount
+  useEffect(() => {
+    const today = new Date();
+    setCurrentDate(today);
+    console.log("Planning initialized on today:", today);
+  }, []);
   const [showPlanningSettings, setShowPlanningSettings] = useState(false);
   const [showExportComptaModal, setShowExportComptaModal] = useState(false);
   const [showApplyTemplatesModal, setShowApplyTemplatesModal] = useState(false);
