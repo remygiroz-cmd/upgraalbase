@@ -304,7 +304,6 @@ export default function WeeklySummary({
       toast.success('Base hebdo enregistrée ✓');
     },
     onError: (error) => {
-      console.error('❌ SAVE ERROR:', error);
       toast.error(`Erreur d'enregistrement de la base hebdo: ${error.message || 'Échec'}`);
     }
   });
