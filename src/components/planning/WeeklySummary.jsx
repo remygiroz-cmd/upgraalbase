@@ -189,7 +189,8 @@ export default function WeeklySummary({
     });
     
     // Calculate total hours for the week
-    let totalHours = 0;
+    // Accumulate in minutes (integers) to avoid floating-point drift
+    let totalMinutes = 0;
     dateMap.forEach((dayData) => {
       const { hours } = calculateDayHours(
         dayData.shifts, 
@@ -198,10 +199,11 @@ export default function WeeklySummary({
         employee, 
         calculateShiftDuration
       );
-      totalHours += hours;
+      totalMinutes += Math.round(hours * 60);
     });
 
-    return totalHours;
+    // Convert back to hours with stable 2-decimal rounding
+    return Math.round(totalMinutes) / 60;
   }, [shifts, employee.id, weekStart, weekStartStr, nonShiftEvents, nonShiftTypes, employee]);
 
   // Compter les shifts
