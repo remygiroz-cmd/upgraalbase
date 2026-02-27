@@ -335,6 +335,10 @@ export default function PlanningV2() {
       await queryClient.invalidateQueries({ queryKey: ['shifts'] });
       await queryClient.invalidateQueries({ queryKey: ['allWeeklyRecaps'] });
       await queryClient.invalidateQueries({ queryKey: ['allMonthlyRecaps'] });
+      queryClient.invalidateQueries({ queryKey: ['monthlyRecapsPersisted', monthKey] });
+      queryClient.invalidateQueries({ queryKey: ['recapExtrasOverride', monthKey] });
+      queryClient.invalidateQueries({ queryKey: ['exportOverrides', monthKey] });
+      queryClient.invalidateQueries({ queryKey: ['monthlyExportOverrides', monthKey] });
       if (!undoStack.isUndoingRef.current && !undoStack.isRedoingRef.current) toast.success('Shift enregistré');
     },
     onError: (error) => {
@@ -362,6 +366,12 @@ export default function PlanningV2() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['shifts'] });
+      queryClient.invalidateQueries({ queryKey: ['allWeeklyRecaps'] });
+      queryClient.invalidateQueries({ queryKey: ['allMonthlyRecaps'] });
+      queryClient.invalidateQueries({ queryKey: ['monthlyRecapsPersisted', monthKey] });
+      queryClient.invalidateQueries({ queryKey: ['recapExtrasOverride', monthKey] });
+      queryClient.invalidateQueries({ queryKey: ['exportOverrides', monthKey] });
+      queryClient.invalidateQueries({ queryKey: ['monthlyExportOverrides', monthKey] });
       if (!undoStack.isUndoingRef.current && !undoStack.isRedoingRef.current) {
         toast.success('Shift supprimé');
       }
