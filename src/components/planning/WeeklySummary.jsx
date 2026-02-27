@@ -569,7 +569,7 @@ export default function WeeklySummary({
       {/* Indicateur de surcharge ou proratisation */}
       {hasOverride && (
         <div className="mt-1 text-[8px] text-blue-600">
-          (défaut: {baseDefault.toFixed(2)}h)
+          (défaut: {formatHours(baseDefault, hoursMode)})
         </div>
       )}
       {isPartialWeek && !hasOverride && (
