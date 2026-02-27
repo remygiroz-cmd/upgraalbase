@@ -49,3 +49,6 @@ export async function clearExportOverride(monthKey, employeeId) {
     await base44.entities.MonthlyExportOverride.delete(existing.id);
   }
 }
+
+// Alias explicite
+export const deleteExportOverride = clearExportOverride;
