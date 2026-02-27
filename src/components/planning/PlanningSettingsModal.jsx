@@ -459,6 +459,47 @@ export default function PlanningSettingsModal({ open, onOpenChange, displayMode,
               </AlertDescription>
             </Alert>
 
+            <div className="bg-white border-2 border-blue-200 rounded-lg p-6 space-y-4">
+              <h3 className="font-bold text-gray-900 text-lg">🕐 Affichage des heures</h3>
+              <p className="text-sm text-gray-600">
+                Choisissez comment les durées et heures sont affichées partout dans le planning (récap semaine, récap mois, cartes shifts, export compta).
+              </p>
+              <div className="space-y-3">
+                <label className={`flex items-start gap-3 p-4 border-2 rounded-lg cursor-pointer transition-all ${
+                  hoursDisplayMode === 'HHMM' ? 'bg-blue-50 border-blue-500' : 'hover:bg-blue-50 border-gray-200'
+                }`}>
+                  <input
+                    type="radio"
+                    name="hours_display_mode"
+                    value="HHMM"
+                    checked={hoursDisplayMode === 'HHMM'}
+                    onChange={() => saveDisplayModeMutation.mutate('HHMM')}
+                    className="mt-1"
+                  />
+                  <div>
+                    <div className="font-semibold text-gray-900">🕐 Heures:minutes (ex: 5h30)</div>
+                    <div className="text-xs text-gray-600 mt-1">Format HH:MM — plus lisible au quotidien</div>
+                  </div>
+                </label>
+                <label className={`flex items-start gap-3 p-4 border-2 rounded-lg cursor-pointer transition-all ${
+                  hoursDisplayMode === 'DECIMAL' ? 'bg-blue-50 border-blue-500' : 'hover:bg-blue-50 border-gray-200'
+                }`}>
+                  <input
+                    type="radio"
+                    name="hours_display_mode"
+                    value="DECIMAL"
+                    checked={hoursDisplayMode === 'DECIMAL'}
+                    onChange={() => saveDisplayModeMutation.mutate('DECIMAL')}
+                    className="mt-1"
+                  />
+                  <div>
+                    <div className="font-semibold text-gray-900">🔢 Décimal (ex: 5.50h)</div>
+                    <div className="text-xs text-gray-600 mt-1">Format décimal à 2 décimales — utile pour export paie</div>
+                  </div>
+                </label>
+              </div>
+            </div>
+
             <div className="bg-white border border-gray-200 rounded-lg p-6 space-y-6">
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
