@@ -551,13 +551,12 @@ export default function WeeklySummary({
       <div className="flex justify-center gap-2 text-[11px]">
         {plusHours > 0 && (
           <div className="text-green-700 font-bold bg-green-50 px-1.5 py-0.5 rounded">
-            +{plusHours.toFixed(2)}h
+            +{formatHours(plusHours, hoursMode)}
           </div>
         )}
         {minusHours > 0 && (
           <div className="text-red-700 font-bold bg-red-50 px-1.5 py-0.5 rounded">
-            {/* CORRECTION: pas de signe négatif, minusHours est déjà positif */}
-            {minusHours.toFixed(2)}h -
+            {formatHours(minusHours, hoursMode)} -
           </div>
         )}
         {plusHours === 0 && minusHours === 0 && workedHours > 0 && (
