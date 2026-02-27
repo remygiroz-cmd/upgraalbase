@@ -215,6 +215,7 @@ export default function VehiclesAssignmentTab() {
             <span className="text-xs font-semibold text-blue-800">Livreurs présents</span>
           </div>
           <p className="text-2xl font-bold text-blue-900">{nbLivreurs}</p>
+          <p className="text-[10px] text-blue-500 mt-0.5">Shifts LIVRAISON du planning</p>
         </div>
         <div className="bg-green-50 border border-green-200 rounded-lg p-3 text-center">
           <div className="flex items-center justify-center gap-1 mb-1">
