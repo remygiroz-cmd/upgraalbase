@@ -1193,12 +1193,16 @@ export default function PlanningV2() {
 
                      <ShiftFormModal
                      open={showShiftModal}
-                     onOpenChange={(open) => { setShowShiftModal(open); if (!open) setSelectedCell(null); }}
+                     onOpenChange={(open) => {
+                       setShowShiftModal(open);
+                       // Ne pas effacer selectedCell ici — le modal le fait en interne après settled
+                       if (!open) setSelectedCell(null);
+                     }}
                      selectedCell={selectedCell}
                      existingShifts={selectedCell ? getShiftsForEmployeeAndDate(selectedCell.employeeId, selectedCell.date) : []}
                      existingNonShifts={selectedCell ? getNonShiftsForEmployeeAndDate(selectedCell.employeeId, selectedCell.date) : []}
                      allShifts={shifts}
-                     onSave={(id, data) => saveShiftMutation.mutate({ id, data, captureForUndo: true })}
+                     onSave={(id, data) => saveShiftMutation.mutateAsync({ id, data, captureForUndo: true })}
                      currentUser={currentUser}
                      />
 
