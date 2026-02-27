@@ -323,7 +323,6 @@ export default function WeeklySummary({
       toast.success('Base remise par défaut');
     },
     onError: (error) => {
-      console.error('[WeeklySummary] Delete error:', error);
       toast.error(`Erreur: ${error.message}`);
     }
   });
