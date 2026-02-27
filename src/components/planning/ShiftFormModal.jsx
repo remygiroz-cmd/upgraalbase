@@ -187,10 +187,11 @@ export default function ShiftFormModal({
     return true;
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     
     if (!validateShift()) return;
+    if (isSubmitting) return;
 
     const shiftData = {
       ...formData,
@@ -202,15 +203,20 @@ export default function ShiftFormModal({
       modified_at: new Date().toISOString()
     };
 
-    // Always close or reset BEFORE calling onSave to prevent stale state issues
-    if (keepModalOpen) {
-      resetForm();
-      // onSave is called after reset so the form is ready for next entry
-      onSave(selectedEditShift?.id, shiftData);
-      toast.success('Shift enregistré. Vous pouvez en ajouter un autre.');
-    } else {
-      onSave(selectedEditShift?.id, shiftData);
-      onOpenChange(false);
+    const editId = selectedEditShift?.id;
+
+    setIsSubmitting(true);
+    try {
+      await onSave(editId, shiftData);
+      if (keepModalOpen) {
+        resetForm();
+        // selectedCell reste intact — l'utilisateur peut ajouter un autre shift sur la même case
+        toast.success('Shift enregistré. Vous pouvez en ajouter un autre.');
+      } else {
+        onOpenChange(false);
+      }
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
