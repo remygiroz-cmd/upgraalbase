@@ -32,6 +32,31 @@ export default function PlanningSettingsModal({ open, onOpenChange, displayMode,
   const currentSetting = settings[0];
   const calculationMode = currentSetting?.planning_calculation_mode || 'disabled';
 
+  // Fetch hours display mode setting
+  const { data: displayModeSettings = [] } = useQuery({
+    queryKey: ['appSettings', 'hours_display_mode'],
+    queryFn: async () => {
+      return await base44.entities.AppSettings.filter({ setting_key: 'hours_display_mode' });
+    }
+  });
+  const currentDisplayModeSetting = displayModeSettings[0];
+  const hoursDisplayMode = currentDisplayModeSetting?.hours_display_mode || 'HHMM';
+
+  // Mutation to save hours display mode
+  const saveDisplayModeMutation = useMutation({
+    mutationFn: async (mode) => {
+      if (currentDisplayModeSetting) {
+        return await base44.entities.AppSettings.update(currentDisplayModeSetting.id, { hours_display_mode: mode });
+      } else {
+        return await base44.entities.AppSettings.create({ setting_key: 'hours_display_mode', hours_display_mode: mode });
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['appSettings', 'hours_display_mode'] });
+      toast.success('Mode d\'affichage des heures enregistré');
+    }
+  });
+
   // Fetch compta export settings
   const { data: comptaSettingsData = [] } = useQuery({
     queryKey: ['appSettings', 'compta_export'],
