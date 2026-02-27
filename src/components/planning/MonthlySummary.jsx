@@ -462,14 +462,14 @@ ${deductionDetails.length > 0 ? `  Détail: ${deductionDetails.map(d => `${d.dat
                       H. Supplémentaires
                     </div>
                     <div className="text-sm font-bold text-orange-700">
-                      {renderValue(totalOvertimeHours, 'totalOvertimeHours', 'h')}
+                      {renderValue(totalOvertimeHours, 'totalOvertimeHours', '', 0, true)}
                     </div>
                     <div className="text-[9px] text-orange-600 space-y-0.5">
                       {overtimeHours25 > 0 && (
-                        <div>+25%: {renderValue(overtimeHours25, 'overtimeHours25', 'h')}</div>
+                        <div>+25%: {renderValue(overtimeHours25, 'overtimeHours25', '', 0, true)}</div>
                       )}
                       {overtimeHours50 > 0 && (
-                        <div>+50%: {renderValue(overtimeHours50, 'overtimeHours50', 'h')}</div>
+                        <div>+50%: {renderValue(overtimeHours50, 'overtimeHours50', '', 0, true)}</div>
                       )}
                     </div>
                   </div>
