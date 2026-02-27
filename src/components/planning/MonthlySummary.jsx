@@ -486,7 +486,7 @@ ${deductionDetails.length > 0 ? `  Détail: ${deductionDetails.map(d => `${d.dat
               <div className="flex items-center justify-center gap-1 text-red-700 font-medium">
                 <Sun className="w-3 h-3" />
                 Jours fériés: {renderValue(holidaysWorkedDays, 'holidaysWorkedDays', '', 0)}j
-                ({renderValue(holidaysWorkedHours, 'holidaysWorkedHours', 'h')})
+                ({renderValue(holidaysWorkedHours, 'holidaysWorkedHours', '', 0, true)})
               </div>
               <div className="text-[9px] text-red-600">
                 Éligible majoration férié
