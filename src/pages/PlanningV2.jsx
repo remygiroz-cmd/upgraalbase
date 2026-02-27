@@ -52,7 +52,11 @@ export default function PlanningV2() {
   const [showShiftModal, setShowShiftModal] = useState(false);
   const [isPlanningReady, setIsPlanningReady] = useState(false);
   const [pendingGoToToday, setPendingGoToToday] = useState(null);
+  const [lastSidebarToken, setLastSidebarToken] = useState(null);
   const planningGridRef = useRef(null);
+  const scrollAttemptRef = useRef(0);
+  const maxScrollAttemptsRef = useRef(10);
+  const { planningOpenToken } = usePlanningContext();
   const [showPlanningSettings, setShowPlanningSettings] = useState(false);
   const [showExportComptaModal, setShowExportComptaModal] = useState(false);
   const [showApplyTemplatesModal, setShowApplyTemplatesModal] = useState(false);
