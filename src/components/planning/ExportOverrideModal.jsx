@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -8,6 +8,22 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { RotateCcw, Save, X } from 'lucide-react';
 import { toast } from 'sonner';
+import { upsertExportOverride, clearExportOverride } from './monthlyExportOverrideService';
+
+const EMPTY_STATE = {
+  nb_jours_travailles: null,
+  jours_supp: null,
+  payees_hors_sup_comp: null,
+  compl_10: null,
+  compl_25: null,
+  supp_25: null,
+  supp_50: null,
+  ferie_jours: null,
+  ferie_heures: null,
+  non_shifts_visibles: null,
+  cp_decomptes: null,
+  notes: ''
+};
 
 export default function ExportOverrideModal({ 
   open, 
@@ -15,69 +31,46 @@ export default function ExportOverrideModal({
   employee, 
   monthKey,
   autoValues,
-  existingOverride
+  existingOverride  // kept for backward compat but not used anymore
 }) {
   const queryClient = useQueryClient();
-  const [overrides, setOverrides] = useState({
-    override_nbJoursTravailles: null,
-    override_joursSupp: null,
-    override_payeesHorsSupComp: null,
-    override_compl10: null,
-    override_compl25: null,
-    override_supp25: null,
-    override_supp50: null,
-    override_ferieDays: null,
-    override_ferieHours: null,
-    override_nonShiftsText: null,
-    override_cpText: null,
-    notes: ''
-  });
+  const [overrides, setOverrides] = useState(EMPTY_STATE);
 
+  // Charger la surcharge export depuis MonthlyExportOverride (nouvelle entité)
   useEffect(() => {
-    if (existingOverride) {
-      setOverrides(existingOverride);
-    } else {
-      setOverrides({
-        override_nbJoursTravailles: null,
-        override_joursSupp: null,
-        override_payeesHorsSupComp: null,
-        override_compl10: null,
-        override_compl25: null,
-        override_supp25: null,
-        override_supp50: null,
-        override_ferieDays: null,
-        override_ferieHours: null,
-        override_nonShiftsText: null,
-        override_cpText: null,
-        notes: ''
+    if (!open || !employee?.id) return;
+    base44.entities.MonthlyExportOverride.filter({ month_key: monthKey, employee_id: employee.id })
+      .then(arr => {
+        const rec = arr[0];
+        if (rec) {
+          setOverrides({
+            nb_jours_travailles:  rec.nb_jours_travailles ?? null,
+            jours_supp:           rec.jours_supp ?? null,
+            payees_hors_sup_comp: rec.payees_hors_sup_comp ?? null,
+            compl_10:             rec.compl_10 ?? null,
+            compl_25:             rec.compl_25 ?? null,
+            supp_25:              rec.supp_25 ?? null,
+            supp_50:              rec.supp_50 ?? null,
+            ferie_jours:          rec.ferie_jours ?? null,
+            ferie_heures:         rec.ferie_heures ?? null,
+            non_shifts_visibles:  rec.non_shifts_visibles ?? null,
+            cp_decomptes:         rec.cp_decomptes ?? null,
+            notes:                rec.notes || ''
+          });
+        } else {
+          setOverrides(EMPTY_STATE);
+        }
       });
-    }
-  }, [existingOverride, open]);
+  }, [open, employee?.id, monthKey]);
 
   const saveMutation = useMutation({
-    mutationFn: async (data) => {
-      const user = await base44.auth.me();
-      
-      if (existingOverride) {
-        return await base44.entities.ExportComptaOverride.update(existingOverride.id, {
-          ...data,
-          modified_by: user.email,
-          modified_by_name: user.full_name
-        });
-      } else {
-        return await base44.entities.ExportComptaOverride.create({
-          month_key: monthKey,
-          employee_id: employee.id,
-          employee_name: `${employee.first_name} ${employee.last_name}`,
-          ...data,
-          modified_by: user.email,
-          modified_by_name: user.full_name
-        });
-      }
+    mutationFn: async () => {
+      await upsertExportOverride(monthKey, employee.id, overrides);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['exportOverrides'] });
-      toast.success('Surcharge enregistrée');
+      queryClient.invalidateQueries({ queryKey: ['exportOverrides', monthKey] });
+      queryClient.invalidateQueries({ queryKey: ['monthlyExportOverrides', monthKey] });
+      toast.success('Surcharge export enregistrée');
       onOpenChange(false);
     },
     onError: (error) => {
@@ -85,9 +78,18 @@ export default function ExportOverrideModal({
     }
   });
 
-  const handleSave = () => {
-    saveMutation.mutate(overrides);
-  };
+  const resetAllMutation = useMutation({
+    mutationFn: () => clearExportOverride(monthKey, employee.id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['exportOverrides', monthKey] });
+      queryClient.invalidateQueries({ queryKey: ['monthlyExportOverrides', monthKey] });
+      setOverrides(EMPTY_STATE);
+      toast.success('Surcharges export supprimées');
+      onOpenChange(false);
+    }
+  });
+
+  const handleSave = () => saveMutation.mutate();
 
   const handleReset = (field) => {
     setOverrides(prev => ({ ...prev, [field]: null }));
@@ -97,18 +99,21 @@ export default function ExportOverrideModal({
     setOverrides(prev => ({ ...prev, [field]: value }));
   };
 
-  const formatHours = (h) => h % 1 === 0 ? h.toFixed(0) : h.toFixed(1);
+  const formatHours = (h) => {
+    if (h === null || h === undefined) return '';
+    return h % 1 === 0 ? h.toFixed(0) : h.toFixed(1);
+  };
 
   const fields = [
-    { key: 'override_nbJoursTravailles', label: 'Nb jours travaillés', auto: autoValues.nbJoursTravailles, type: 'number' },
-    { key: 'override_joursSupp', label: 'Jours supp', auto: autoValues.joursSupp, type: 'number' },
-    { key: 'override_payeesHorsSupComp', label: 'Payées (hors sup/comp)', auto: formatHours(autoValues.payeesHorsSup) + 'h', type: 'number', suffix: 'h' },
-    { key: 'override_compl10', label: 'Compl +10%', auto: autoValues.compl10 > 0 ? formatHours(autoValues.compl10) + 'h' : '', type: 'number', suffix: 'h' },
-    { key: 'override_compl25', label: 'Compl +25%', auto: autoValues.compl25 > 0 ? formatHours(autoValues.compl25) + 'h' : '', type: 'number', suffix: 'h' },
-    { key: 'override_supp25', label: 'Supp +25%', auto: autoValues.supp25 > 0 ? formatHours(autoValues.supp25) + 'h' : '', type: 'number', suffix: 'h' },
-    { key: 'override_supp50', label: 'Supp +50%', auto: autoValues.supp50 > 0 ? formatHours(autoValues.supp50) + 'h' : '', type: 'number', suffix: 'h' },
-    { key: 'override_ferieDays', label: 'Férié (jours)', auto: autoValues.ferieDays || '', type: 'number' },
-    { key: 'override_ferieHours', label: 'Férié (heures)', auto: autoValues.ferieHours > 0 ? formatHours(autoValues.ferieHours) + 'h' : '', type: 'number', suffix: 'h' }
+    { key: 'nb_jours_travailles', label: 'Nb jours travaillés', auto: autoValues?.nbJoursTravailles, type: 'number' },
+    { key: 'jours_supp', label: 'Jours supp', auto: autoValues?.joursSupp, type: 'number' },
+    { key: 'payees_hors_sup_comp', label: 'Payées (hors sup/comp)', auto: autoValues?.payeesHorsSup != null ? formatHours(autoValues.payeesHorsSup) + 'h' : '', type: 'number', suffix: 'h' },
+    { key: 'compl_10', label: 'Compl +10%', auto: autoValues?.compl10 > 0 ? formatHours(autoValues.compl10) + 'h' : '', type: 'number', suffix: 'h' },
+    { key: 'compl_25', label: 'Compl +25%', auto: autoValues?.compl25 > 0 ? formatHours(autoValues.compl25) + 'h' : '', type: 'number', suffix: 'h' },
+    { key: 'supp_25', label: 'Supp +25%', auto: autoValues?.supp25 > 0 ? formatHours(autoValues.supp25) + 'h' : '', type: 'number', suffix: 'h' },
+    { key: 'supp_50', label: 'Supp +50%', auto: autoValues?.supp50 > 0 ? formatHours(autoValues.supp50) + 'h' : '', type: 'number', suffix: 'h' },
+    { key: 'ferie_jours', label: 'Férié (jours)', auto: autoValues?.ferieDays || '', type: 'number' },
+    { key: 'ferie_heures', label: 'Férié (heures)', auto: autoValues?.ferieHours > 0 ? formatHours(autoValues.ferieHours) + 'h' : '', type: 'number', suffix: 'h' }
   ];
 
   return (
