@@ -712,6 +712,10 @@ function EditMonthlyRecapDialog({
       queryClient.invalidateQueries({ queryKey: ['monthlyRecapsPersisted', monthKey] });
       queryClient.invalidateQueries({ queryKey: ['exportOverrides', monthKey] });
       queryClient.invalidateQueries({ queryKey: ['monthlyExportOverrides', monthKey] });
+      // Forcer recalcul auto : invalider aussi shifts + weekly recaps
+      queryClient.invalidateQueries({ queryKey: ['shifts'] });
+      queryClient.invalidateQueries({ queryKey: ['allWeeklyRecaps'] });
+      queryClient.invalidateQueries({ queryKey: ['allMonthlyRecaps'] });
       setFormData({});
       if (onRecapUpdate) onRecapUpdate();
       toast.success('Modifications supprimées');
