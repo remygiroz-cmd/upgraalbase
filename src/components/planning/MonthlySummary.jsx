@@ -646,26 +646,33 @@ function EditMonthlyRecapDialog({
       const toNum = (v) => (v !== '' && v !== null && v !== undefined ? parseFloat(v) : null);
       const toStr = (v) => (v !== '' && v !== null && v !== undefined ? String(v) : null);
 
-      // 1) Sauvegarder les extras (jours / fériés / CP / payées / non-shifts / notes)
-      await upsertRecapExtras(monthKey, employee.id, {
-        jours_travailles:     toNum(formData.jours_travailles),
-        jours_prevus:         toNum(formData.jours_prevus),
-        jours_supp:           toNum(formData.jours_supp),
-        ferie_jours:          toNum(formData.ferie_jours),
-        ferie_heures:         toNum(formData.ferie_heures),
-        cp_decomptes:         toNum(formData.cp_decomptes),
-        payees_hors_sup_comp: toNum(formData.payees_hors_sup_comp),
-        non_shifts_visibles:  toStr(formData.non_shifts_visibles),
-        notes:                toStr(formData.notes)
-      }, resetVersion);
+      // Détecter si les extras sont tous vides (=> DELETE plutôt qu'upsert null)
+      const extrasFields = ['jours_travailles', 'jours_prevus', 'jours_supp', 'ferie_jours', 'ferie_heures', 'cp_decomptes', 'payees_hors_sup_comp', 'non_shifts_visibles', 'notes'];
+      const hasAnyExtras = extrasFields.some(f => formData[f] !== '' && formData[f] !== null && formData[f] !== undefined);
 
-      // 2) Sauvegarder les heures dans MonthlyRecapPersisted via backend function
-      const hasHoursOverride = [
-        formData.worked_hours, formData.complementary_10, formData.complementary_25,
-        formData.overtime_25, formData.overtime_50
-      ].some(v => v !== '' && v !== null && v !== undefined);
+      // Détecter si les heures sont toutes vides
+      const hoursFields = ['worked_hours', 'complementary_10', 'complementary_25', 'overtime_25', 'overtime_50'];
+      const hasAnyHours = hoursFields.some(v => formData[v] !== '' && formData[v] !== null && formData[v] !== undefined);
 
-      if (hasHoursOverride) {
+      // 1) Extras : upsert si au moins 1 champ rempli, sinon DELETE
+      if (hasAnyExtras) {
+        await upsertRecapExtras(monthKey, employee.id, {
+          jours_travailles:     toNum(formData.jours_travailles),
+          jours_prevus:         toNum(formData.jours_prevus),
+          jours_supp:           toNum(formData.jours_supp),
+          ferie_jours:          toNum(formData.ferie_jours),
+          ferie_heures:         toNum(formData.ferie_heures),
+          cp_decomptes:         toNum(formData.cp_decomptes),
+          payees_hors_sup_comp: toNum(formData.payees_hors_sup_comp),
+          non_shifts_visibles:  toStr(formData.non_shifts_visibles),
+          notes:                toStr(formData.notes)
+        }, resetVersion);
+      } else {
+        await clearRecapExtras(monthKey, employee.id);
+      }
+
+      // 2) Heures : upsert si au moins 1 champ rempli, sinon DELETE
+      if (hasAnyHours) {
         const c10 = toNum(formData.complementary_10) || 0;
         const c25 = toNum(formData.complementary_25) || 0;
         const o25 = toNum(formData.overtime_25) || 0;
@@ -682,6 +689,8 @@ function EditMonthlyRecapDialog({
           complementary_hours_ui: c10 + c25,
           overtime_hours_ui:      o25 + o50
         });
+      } else {
+        await deleteRecapPersisted(monthKey, employee.id);
       }
     },
     onSuccess: () => {
