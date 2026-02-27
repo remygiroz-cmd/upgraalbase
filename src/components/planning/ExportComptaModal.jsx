@@ -1326,12 +1326,6 @@ export default function ExportComptaModal({ open, onOpenChange, monthStart, mont
                          </span>
                        )}
                      </td>
-                      {/* DEBUG TEMPORAIRE - à retirer après validation */}
-                      <td className="px-1 py-1 text-[8px] text-gray-400 font-mono border-r border-dashed border-gray-200">
-                        <div>src={row.debugSource}</div>
-                        <div>c10={row.debugMin?.compl10}min</div>
-                        <div>c25={row.debugMin?.compl25}min</div>
-                      </td>
                       <td className="px-2 py-2 text-center">{row.nbJoursTravailles || 0}</td>
                       <td className="px-2 py-2 text-center text-red-600 font-semibold">{row.joursSupp || ''}</td>
                       <td className="px-2 py-2 text-right font-bold bg-blue-50">{row.totalPaid.toFixed(1)}h</td>
