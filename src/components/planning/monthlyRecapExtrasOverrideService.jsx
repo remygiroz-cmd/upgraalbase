@@ -53,3 +53,6 @@ export async function clearRecapExtras(monthKey, employeeId) {
     await base44.entities.MonthlyRecapExtrasOverride.delete(existing.id);
   }
 }
+
+// Alias explicite
+export const deleteRecapExtras = clearRecapExtras;
