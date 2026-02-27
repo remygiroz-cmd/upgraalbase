@@ -22,6 +22,7 @@ import {
 } from '@/components/utils/monthlyRecapCalculations';
 import { resolveRecapFinal } from './resolveMonthlyPayrollValues';
 import { getRecapExtras, upsertRecapExtras, clearRecapExtras } from './monthlyRecapExtrasOverrideService';
+import { deleteRecapPersisted } from './monthlyRecapPersistedService';
 
 /**
  * Récap mensuel avec support 3 modes de calcul
