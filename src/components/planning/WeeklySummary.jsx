@@ -524,6 +524,13 @@ export default function WeeklySummary({
         )}
       </div>
 
+      {/* DEBUG TEMPORAIRE: afficher rangeStart/rangeEnd pour vérification clip */}
+      {clipToMonth && (
+        <div className="mt-1 text-[7px] text-purple-500 font-mono leading-tight">
+          [{rangeStartStr}→{rangeEndStr}]
+        </div>
+      )}
+
       {/* Indicateur de surcharge ou proratisation */}
       {hasOverride && (
         <div className="mt-1 text-[8px] text-blue-600">
