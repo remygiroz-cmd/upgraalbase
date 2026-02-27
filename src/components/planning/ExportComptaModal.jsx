@@ -755,32 +755,72 @@ export default function ExportComptaModal({ open, onOpenChange, monthStart, mont
       // Jours travaillés (depuis shifts)
       const workedDays = employeeShifts.length;
 
+      // Chercher les surcharges export (nouvelle entité priorité max)
+      const exportOverrideNew = monthlyExportOverrides.find(o => o.employee_id === employee.id);
+      // Chercher les extras récap (jours/CP/fériés)
+      const recapExtras = recapExtrasOverrides.find(o => o.employee_id === employee.id);
+
+      // Appliquer la règle de priorité : exportOverride > recapExtras > auto
+      const r3 = (expVal, recapVal, autoVal) => {
+        if (expVal !== null && expVal !== undefined) return expVal;
+        if (recapVal !== null && recapVal !== undefined) return recapVal;
+        return autoVal;
+      };
+
+      const finalNbJours       = r3(exportOverrideNew?.nb_jours_travailles, recapExtras?.jours_travailles, workedDays);
+      const finalJoursSupp     = r3(exportOverrideNew?.jours_supp, recapExtras?.jours_supp, 0);
+      const finalPayees        = r3(exportOverrideNew?.payees_hors_sup_comp, recapExtras?.payees_hors_sup_comp, payeesHorsSup);
+      const finalCompl10       = r3(exportOverrideNew?.compl_10, recapPersisted?.complementary_hours_10, complementary_hours_10);
+      const finalCompl25       = r3(exportOverrideNew?.compl_25, recapPersisted?.complementary_hours_25, complementary_hours_25);
+      const finalSupp25        = r3(exportOverrideNew?.supp_25, recapPersisted?.overtime_hours_25, overtime_hours_25);
+      const finalSupp50        = r3(exportOverrideNew?.supp_50, recapPersisted?.overtime_hours_50, overtime_hours_50);
+      const finalFerieJours    = r3(exportOverrideNew?.ferie_jours, recapExtras?.ferie_jours, null);
+      const finalFerieHeures   = r3(exportOverrideNew?.ferie_heures, recapExtras?.ferie_heures, null);
+      const finalNonShifts     = r3(exportOverrideNew?.non_shifts_visibles, recapExtras?.non_shifts_visibles, nonShiftsStr);
+      const finalCp            = r3(exportOverrideNew?.cp_decomptes, recapExtras?.cp_decomptes != null ? String(recapExtras.cp_decomptes) : null, cpStr);
+
+      const finalFerieStr = (finalFerieJours > 0 && finalFerieHeures > 0)
+        ? `${finalFerieJours}j, ${finalFerieHeures % 1 === 0 ? finalFerieHeures.toFixed(0) : finalFerieHeures.toFixed(1)}h`
+        : '';
+
+      const finalCompl_ui = finalCompl10 + finalCompl25;
+      const finalOvertime_ui = finalSupp25 + finalSupp50;
+      const finalTotalPaid = finalPayees + finalCompl_ui + finalOvertime_ui + (finalFerieStr ? (finalFerieHeures || 0) : 0);
+
+      const hasAnyOverride = !!(exportOverrideNew || recapExtras);
+
       const row = {
         employeeName,
-        nbJoursTravailles: workedDays,
-        joursSupp: '',
-        totalPaid,
-        payeesHorsSup,
-        compl10: complementary_hours_10,
-        compl25: complementary_hours_25,
-        supp25: overtime_hours_25,
-        supp50: overtime_hours_50,
-        ferieStr: '',
-        ferieEligible: false,
-        nonShiftsStr,
-        cpStr,
+        nbJoursTravailles: finalNbJours,
+        joursSupp: finalJoursSupp > 0 ? `+${finalJoursSupp}` : '',
+        totalPaid: finalTotalPaid,
+        payeesHorsSup: finalPayees,
+        compl10: finalCompl10,
+        compl25: finalCompl25,
+        supp25: finalSupp25,
+        supp50: finalSupp50,
+        ferieStr: finalFerieStr,
+        ferieEligible: !!finalFerieStr,
+        nonShiftsStr: finalNonShifts,
+        cpStr: finalCp,
         hasPersistedRecap,
+        hasAnyOverride,
         autoValues: {
           nbJoursTravailles: workedDays,
+          joursSupp: 0,
           payeesHorsSup,
           compl10: complementary_hours_10,
           compl25: complementary_hours_25,
           supp25: overtime_hours_25,
-          supp50: overtime_hours_50
+          supp50: overtime_hours_50,
+          ferieDays: null,
+          ferieHours: null,
+          nonShiftsStr,
+          cpStr
         }
       };
       
-      return { ...row, employee, override };
+      return { ...row, employee, override: exportOverrideNew || override };
     })
     .filter(Boolean);
 
