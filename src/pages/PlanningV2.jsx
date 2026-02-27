@@ -623,6 +623,8 @@ export default function PlanningV2() {
       await queryClient.invalidateQueries({ queryKey: ['shifts'] });
       await queryClient.invalidateQueries({ queryKey: ['allWeeklyRecaps'] });
       await queryClient.invalidateQueries({ queryKey: ['allMonthlyRecaps'] });
+      queryClient.invalidateQueries({ queryKey: ['monthlyRecapsPersisted', monthKey] });
+      queryClient.invalidateQueries({ queryKey: ['recapExtrasOverride', monthKey] });
       toast.success(`↪︎ ${action.label} rétabli`);
     } catch (error) {
       toast.error('Impossible de rétablir : ' + error.message);
