@@ -106,35 +106,41 @@ export default function MonthlySummary({
     );
   }, [calculationMode, employee, shifts, nonShiftEvents, nonShiftTypes, holidayDates, year, month, weeklyRecaps]);
 
-  // 🎯 SOURCE DE VÉRITÉ : Récap final = auto + overrides export
-  const recapWithExportOverrides = useMemo(() => {
-    return getFinalRecap(monthKey, employee.id, calculatedRecap, exportOverrides);
-  }, [monthKey, employee.id, calculatedRecap, exportOverrides]);
+  // 🎯 SOURCE DE VÉRITÉ : Récap final = recapPersisted/recapExtras > auto
+  const recapResolved = useMemo(() => {
+    const recapPersisted = recapPersistedList.find(r => r.employee_id === employee.id) || null;
+    const recapExtras = recapExtrasList.find(r => r.employee_id === employee.id) || null;
+    return resolveRecapFinal(calculatedRecap, recapPersisted, recapExtras);
+  }, [calculatedRecap, recapPersistedList, recapExtrasList, employee.id]);
 
-  // Apply manual overrides from monthlyRecap entity (legacy, kept for backward compatibility)
+  // Adapter recapResolved vers la structure attendue par l'UI (noms camelCase legacy)
   const recapWithOverrides = useMemo(() => {
-    if (!monthlyRecap) return { ...recapWithExportOverrides, overriddenFields: [] };
-
-    const overrides = {
-      expectedDays: monthlyRecap.manual_expected_days,
-      workedDays: monthlyRecap.manual_days_worked,
-      extraDays: monthlyRecap.manual_extra_days,
-      contractMonthlyHours: monthlyRecap.manual_contract_hours,
-      adjustedContractHours: monthlyRecap.manual_adjusted_hours,
-      workedHours: monthlyRecap.manual_total_hours,
-      overtimeHours25: monthlyRecap.manual_overtime_25,
-      overtimeHours50: monthlyRecap.manual_overtime_50,
-      totalOvertimeHours: monthlyRecap.manual_total_overtime,
-      complementaryHours10: monthlyRecap.manual_complementary_10,
-      complementaryHours25: monthlyRecap.manual_complementary_25,
-      totalComplementaryHours: monthlyRecap.manual_total_complementary,
-      holidaysWorkedDays: monthlyRecap.manual_holidays_days,
-      holidaysWorkedHours: monthlyRecap.manual_holidays_hours,
-      cpDays: monthlyRecap.manual_cp_days
+    return {
+      ...calculatedRecap,
+      // Jours
+      workedDays:             recapResolved.jours_travailles,
+      expectedDays:           recapResolved.jours_prevus,
+      extraDays:              recapResolved.jours_supp,
+      // Heures
+      workedHours:            recapResolved.worked_hours,
+      // Complémentaires
+      complementaryHours10:   recapResolved.complementary_hours_10,
+      complementaryHours25:   recapResolved.complementary_hours_25,
+      totalComplementaryHours: recapResolved.complementary_hours_ui,
+      // Supplémentaires
+      overtimeHours25:        recapResolved.overtime_hours_25,
+      overtimeHours50:        recapResolved.overtime_hours_50,
+      totalOvertimeHours:     recapResolved.overtime_hours_ui,
+      // Fériés
+      holidaysWorkedDays:     recapResolved.ferie_jours,
+      holidaysWorkedHours:    recapResolved.ferie_heures,
+      // CP
+      cpDays:                 recapResolved.cp_decomptes,
+      // Indicateurs
+      overriddenFields: [],
+      hasRecapOverride: recapResolved.hasRecapOverride,
     };
-
-    return applyManualOverrides(recapWithExportOverrides, overrides);
-  }, [recapWithExportOverrides, monthlyRecap]);
+  }, [recapResolved, calculatedRecap]);
 
   // 🔄 Auto-persist the final UI values to MonthlyRecapPersisted
   // Debounced to avoid spamming the backend on every render
