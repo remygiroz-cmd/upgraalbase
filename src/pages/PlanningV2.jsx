@@ -706,28 +706,14 @@ export default function PlanningV2() {
     }
   }, [isPlanningReady, pendingGoToToday, goToToday]);
 
-  // Détecter activation de l'onglet Planning (visibilité/focus)
+  // Écouter les clics sur le bouton Planning de la sidebar
   useEffect(() => {
-    const handleVisibilityChange = () => {
-      if (!document.hidden) {
-        console.log('PLANNING_ACTIVATED { via: "visibilitychange" }');
-        goToToday('tab_visible');
-      }
-    };
-
-    const handleFocus = () => {
-      console.log('PLANNING_ACTIVATED { via: "window_focus" }');
-      goToToday('window_focus');
-    };
-
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-    window.addEventListener('focus', handleFocus);
-
-    return () => {
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-      window.removeEventListener('focus', handleFocus);
-    };
-  }, [goToToday]);
+    if (planningOpenToken !== null && planningOpenToken !== lastSidebarToken) {
+      console.log(`PLANNING_TOKEN_RECEIVED token=${planningOpenToken}`);
+      setLastSidebarToken(planningOpenToken);
+      goToToday('sidebar_click');
+    }
+  }, [planningOpenToken, lastSidebarToken, goToToday]);
 
   // Marquer Planning comme prêt quand les données clés sont là
   useEffect(() => {
