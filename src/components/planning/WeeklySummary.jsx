@@ -538,7 +538,7 @@ export default function WeeklySummary({
       <div className="mb-1">
         <div className="text-[9px] text-gray-500 uppercase font-semibold">Réalisé</div>
         <div className="text-lg font-bold text-gray-900">
-          {toHHMM(workedHours)}
+          {formatHours(workedHours, hoursMode)}
         </div>
         {debugUsed !== debugStrict && (
           <div className="text-[7px] text-red-500 font-mono">
