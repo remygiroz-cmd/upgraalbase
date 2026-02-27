@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { createPageUrl } from './utils';
 import { useQuery } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
@@ -30,6 +30,7 @@ import UserAccessCheck from '@/components/UserAccessCheck';
 import UserActivityTracker from '@/components/UserActivityTracker';
 
 export default function Layout({ children, currentPageName }) {
+  const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const { data: currentUser } = useQuery({
@@ -92,13 +93,19 @@ export default function Layout({ children, currentPageName }) {
   ].filter(link => hasPermission(link.module));
 
   const NavLink = ({ to, icon: Icon, label, active }) => (
-    <Link
-      to={createPageUrl(to)}
+    <button
       onClick={() => {
         setSidebarOpen(false);
+        if (to === 'Planning') {
+          const token = Date.now();
+          console.log(`SIDEBAR_NAV_PLANNING focus=today t=${token}`);
+          navigate(createPageUrl('Planning') + `?focus=today&t=${token}`);
+        } else {
+          navigate(createPageUrl(to));
+        }
       }}
       className={cn(
-        "flex items-center gap-3 px-4 py-2.5 transition-all duration-200 relative",
+        "flex items-center gap-3 px-4 py-2.5 transition-all duration-200 relative w-full text-left",
         theme === 'professional-light' ? (
           active 
             ? currentTheme.navActive
@@ -112,7 +119,7 @@ export default function Layout({ children, currentPageName }) {
     >
       <Icon className="w-5 h-5" />
       <span className="font-medium text-sm">{label}</span>
-    </Link>
+    </button>
   );
 
   // Theme configurations
