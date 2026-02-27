@@ -11,6 +11,8 @@ import {
 } from '@/components/utils/weeklyHoursCalculation';
 import { calculateDayHours } from '@/components/utils/nonShiftHoursCalculation';
 import { usePlanningVersion, withPlanningVersion } from '@/components/planning/usePlanningVersion';
+import { useHoursDisplayMode } from '@/components/planning/useHoursDisplayMode';
+import { formatHours, formatMinutes } from '@/components/utils/hoursFormat';
 
 /**
  * Récap semaine simplifié
