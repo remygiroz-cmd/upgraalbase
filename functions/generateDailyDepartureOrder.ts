@@ -47,7 +47,12 @@ Deno.serve(async (req) => {
   const planningMonths = await b.entities.PlanningMonth.filter({ month_key: monthKey });
   const activeResetVersion = planningMonths[0]?.reset_version ?? 0;
 
-  // Load shifts for current month using month_key + active reset_version (to avoid counting old versions)
+  console.log(`🔄 Triggering persistMonthlyRecaps before scoring (month=${monthKey}, v=${activeResetVersion})`);
+  // Toujours re-persister avant de scorer pour s'assurer que les données sont à jour
+  await base44.asServiceRole.functions.invoke('persistMonthlyRecaps', { month_key: monthKey });
+  console.log(`✅ persistMonthlyRecaps done`);
+
+  // Load shifts for current month using month_key + active reset_version
   const allShiftsRaw = await b.entities.Shift.filter({ month_key: monthKey, reset_version: activeResetVersion });
   const allMonthShifts = allShiftsRaw;
   console.log(`📅 Month shifts: ${allMonthShifts.length} (month_key=${monthKey}, reset_version=${activeResetVersion})`);
