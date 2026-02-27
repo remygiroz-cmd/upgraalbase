@@ -575,83 +575,126 @@ function EditMonthlyRecapDialog({
   currentRecap,
   onRecapUpdate,
   calculationMode,
-  autoCPDays
+  autoCPDays,
+  monthKey,
+  resetVersion
 }) {
   const queryClient = useQueryClient();
   const [formData, setFormData] = useState({});
+  const [loadingExtras, setLoadingExtras] = useState(false);
+
+  // Clé pour invalider les queries après save
+  const queryKey = ['recapExtrasOverride', monthKey, employee?.id];
 
   React.useEffect(() => {
-    if (open) {
-      // Initialize form with current manual values or empty
+    if (!open || !employee?.id) return;
+    setLoadingExtras(true);
+
+    // Charger en parallèle : MonthlyRecap (legacy heures) + MonthlyRecapExtrasOverride (jours/CP/fériés)
+    Promise.all([
+      base44.entities.MonthlyRecapExtrasOverride.filter({ month_key: monthKey, employee_id: employee.id }),
+      base44.entities.MonthlyRecapPersisted.filter({ month_key: monthKey, employee_id: employee.id })
+    ]).then(([extrasArr, persistedArr]) => {
+      const extras = extrasArr[0] || null;
+      const persisted = persistedArr[0] || null;
+
       setFormData({
-        manual_expected_days: currentRecap?.manual_expected_days ?? '',
-        manual_days_worked: currentRecap?.manual_days_worked ?? '',
-        manual_extra_days: currentRecap?.manual_extra_days ?? '',
-        manual_contract_hours: currentRecap?.manual_contract_hours ?? '',
-        manual_adjusted_hours: currentRecap?.manual_adjusted_hours ?? '',
-        manual_total_hours: currentRecap?.manual_total_hours ?? '',
-        manual_overtime_25: currentRecap?.manual_overtime_25 ?? '',
-        manual_overtime_50: currentRecap?.manual_overtime_50 ?? '',
-        manual_total_overtime: currentRecap?.manual_total_overtime ?? '',
-        manual_complementary_10: currentRecap?.manual_complementary_10 ?? '',
-        manual_complementary_25: currentRecap?.manual_complementary_25 ?? '',
-        manual_total_complementary: currentRecap?.manual_total_complementary ?? '',
-        manual_holidays_days: currentRecap?.manual_holidays_days ?? '',
-        manual_holidays_hours: currentRecap?.manual_holidays_hours ?? '',
-        manual_cp_days: currentRecap?.manual_cp_days ?? '',
-        notes: currentRecap?.notes || ''
+        // Jours (depuis extras override)
+        jours_prevus:   extras?.jours_prevus ?? '',
+        jours_travailles: extras?.jours_travailles ?? '',
+        jours_supp:     extras?.jours_supp ?? '',
+        // Heures (depuis persisted override)
+        worked_hours:   persisted?.worked_hours ?? '',
+        // Complémentaires
+        complementary_10: persisted?.complementary_hours_10 ?? '',
+        complementary_25: persisted?.complementary_hours_25 ?? '',
+        // Supplémentaires
+        overtime_25:    persisted?.overtime_hours_25 ?? '',
+        overtime_50:    persisted?.overtime_hours_50 ?? '',
+        // Fériés
+        ferie_jours:    extras?.ferie_jours ?? '',
+        ferie_heures:   extras?.ferie_heures ?? '',
+        // CP
+        cp_decomptes:   extras?.cp_decomptes ?? '',
+        // Payées
+        payees_hors_sup_comp: extras?.payees_hors_sup_comp ?? '',
+        // Non-shifts / Notes
+        non_shifts_visibles: extras?.non_shifts_visibles ?? '',
+        notes: extras?.notes || ''
       });
-    }
-  }, [open, currentRecap]);
+    }).finally(() => setLoadingExtras(false));
+  }, [open, employee?.id, monthKey]);
 
   const saveMutation = useMutation({
-    mutationFn: async (data) => {
-      if (currentRecap) {
-        return await base44.entities.MonthlyRecap.update(currentRecap.id, data);
-      } else {
-        return await base44.entities.MonthlyRecap.create({
+    mutationFn: async () => {
+      const toNum = (v) => (v !== '' && v !== null && v !== undefined ? parseFloat(v) : null);
+      const toStr = (v) => (v !== '' && v !== null && v !== undefined ? String(v) : null);
+
+      // 1) Sauvegarder les extras (jours / fériés / CP / payées / non-shifts / notes)
+      await upsertRecapExtras(monthKey, employee.id, {
+        jours_travailles:     toNum(formData.jours_travailles),
+        jours_prevus:         toNum(formData.jours_prevus),
+        jours_supp:           toNum(formData.jours_supp),
+        ferie_jours:          toNum(formData.ferie_jours),
+        ferie_heures:         toNum(formData.ferie_heures),
+        cp_decomptes:         toNum(formData.cp_decomptes),
+        payees_hors_sup_comp: toNum(formData.payees_hors_sup_comp),
+        non_shifts_visibles:  toStr(formData.non_shifts_visibles),
+        notes:                toStr(formData.notes)
+      }, resetVersion);
+
+      // 2) Sauvegarder les heures dans MonthlyRecapPersisted via backend function
+      const hasHoursOverride = [
+        formData.worked_hours, formData.complementary_10, formData.complementary_25,
+        formData.overtime_25, formData.overtime_50
+      ].some(v => v !== '' && v !== null && v !== undefined);
+
+      if (hasHoursOverride) {
+        const c10 = toNum(formData.complementary_10) || 0;
+        const c25 = toNum(formData.complementary_25) || 0;
+        const o25 = toNum(formData.overtime_25) || 0;
+        const o50 = toNum(formData.overtime_50) || 0;
+
+        await base44.functions.invoke('saveSingleMonthlyRecap', {
+          month_key: monthKey,
           employee_id: employee.id,
-          year,
-          month,
-          ...data
+          worked_hours:           toNum(formData.worked_hours) ?? undefined,
+          complementary_hours_10: c10,
+          complementary_hours_25: c25,
+          overtime_hours_25:      o25,
+          overtime_hours_50:      o50,
+          complementary_hours_ui: c10 + c25,
+          overtime_hours_ui:      o25 + o50
         });
       }
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['allMonthlyRecaps'] });
+      queryClient.invalidateQueries({ queryKey: ['recapExtrasOverride', monthKey] });
+      queryClient.invalidateQueries({ queryKey: ['monthlyRecapsPersisted', monthKey] });
+      queryClient.invalidateQueries({ queryKey: ['exportOverrides', monthKey] });
       if (onRecapUpdate) onRecapUpdate();
       toast.success('Récapitulatif enregistré');
       onOpenChange(false);
-    }
+    },
+    onError: (e) => toast.error('Erreur: ' + e.message)
   });
 
   const deleteMutation = useMutation({
     mutationFn: async () => {
-      if (currentRecap) {
-        return await base44.entities.MonthlyRecap.delete(currentRecap.id);
-      }
+      await clearRecapExtras(monthKey, employee.id);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['allMonthlyRecaps'] });
+      queryClient.invalidateQueries({ queryKey: ['recapExtrasOverride', monthKey] });
+      queryClient.invalidateQueries({ queryKey: ['monthlyRecapsPersisted', monthKey] });
       if (onRecapUpdate) onRecapUpdate();
       toast.success('Modifications supprimées');
       onOpenChange(false);
-    }
+    },
+    onError: (e) => toast.error('Erreur: ' + e.message)
   });
 
   const handleSave = () => {
-    const cleanData = {};
-    Object.keys(formData).forEach(key => {
-      if (formData[key] !== '' && formData[key] !== null && formData[key] !== undefined) {
-        if (key === 'notes') {
-          cleanData[key] = formData[key];
-        } else {
-          cleanData[key] = parseFloat(formData[key]);
-        }
-      }
-    });
-
-    saveMutation.mutate(cleanData);
+    saveMutation.mutate();
   };
 
   const resetField = (fieldName) => {
