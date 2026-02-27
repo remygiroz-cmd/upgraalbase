@@ -21,6 +21,7 @@ import {
   parseHoursString
 } from '@/components/utils/monthlyRecapCalculations';
 import { getFinalRecap } from './recapWithOverrides';
+import { getRecapExtras, upsertRecapExtras, clearRecapExtras } from './monthlyRecapExtrasOverrideService';
 
 /**
  * Récap mensuel avec support 3 modes de calcul
