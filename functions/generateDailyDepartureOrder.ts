@@ -115,16 +115,24 @@ Deno.serve(async (req) => {
       const emp = allEmployees.find(e => e.id === empId);
       if (!emp) return null;
 
-      const { comp, ot } = getScoreFromPersisted(empId, hoursType);
-      const isPartTime = emp.work_time_type === 'part_time';
+      const { comp, ot, workedHours } = getScoreFromPersisted(empId);
 
+      // Score selon le type d'heures configuré
       let score = 0;
       if (hoursType === 'complementary') score = comp;
       else if (hoursType === 'overtime') score = ot;
-      else score = comp + ot;
+      else score = comp + ot; // 'both' ou par défaut
 
-      const recap = allPersistedRecaps.find(r => r.employee_id === empId);
-      console.log(`  → ${emp.first_name}: comp=${comp.toFixed(2)}h ot=${ot.toFixed(2)}h score=${score.toFixed(2)} [persisted=${!!recap}]`);
+      console.log("OPTIM DEBUG", {
+        employee: `${emp.first_name} ${emp.last_name}`,
+        complementary_hours_ui: comp,
+        overtime_hours_ui: ot,
+        score,
+        workedHours,
+        hoursType,
+        month_key: monthKey,
+        reset_version: activeResetVersion
+      });
 
       return {
         employee_id: empId,
@@ -132,13 +140,15 @@ Deno.serve(async (req) => {
         last_name: emp.last_name,
         score,
         comp,
-        ot
+        ot,
+        workedHours
       };
     }).filter(Boolean);
 
-    // Sort: score DESC, then name ASC
+    // Tri : 1) score DESC, 2) workedHours DESC, 3) nom alphabétique
     employeeData.sort((a, b) => {
       if (Math.abs(b.score - a.score) > 0.001) return b.score - a.score;
+      if (Math.abs(b.workedHours - a.workedHours) > 0.001) return b.workedHours - a.workedHours;
       return a.last_name.localeCompare(b.last_name, 'fr');
     });
 
