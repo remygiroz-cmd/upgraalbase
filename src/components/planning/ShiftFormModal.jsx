@@ -201,12 +201,14 @@ export default function ShiftFormModal({
       modified_at: new Date().toISOString()
     };
 
-    onSave(selectedEditShift?.id, shiftData);
-
+    // Always close or reset BEFORE calling onSave to prevent stale state issues
     if (keepModalOpen) {
       resetForm();
+      // onSave is called after reset so the form is ready for next entry
+      onSave(selectedEditShift?.id, shiftData);
       toast.success('Shift enregistré. Vous pouvez en ajouter un autre.');
     } else {
+      onSave(selectedEditShift?.id, shiftData);
       onOpenChange(false);
     }
   };
