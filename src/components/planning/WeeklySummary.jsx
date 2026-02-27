@@ -291,8 +291,7 @@ export default function WeeklySummary({
         return await base44.entities.WeeklyRecap.create(withPlanningVersion(dataToSave, resetVersion, monthKey));
       }
     },
-    onSuccess: async (data) => {
-      console.log('✅ SAVE SUCCESS - base_override_hours:', data.base_override_hours);
+    onSuccess: async () => {
       
       setIsEditingBase(false);
       setBaseDraft('');
