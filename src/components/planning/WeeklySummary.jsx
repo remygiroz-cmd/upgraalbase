@@ -138,10 +138,8 @@ export default function WeeklySummary({
   // Priorité: override > baseDefault
   // ============================================
   const displayedBase = useMemo(() => {
-    const value = baseOverrideFromDB !== null ? baseOverrideFromDB : baseDefault;
-    
-    return value;
-  }, [baseOverrideFromDB, baseDefault, employee.id, weekStartStr, isEditingBase, baseDraft, weeklyRecap, employee.first_name, employee.last_name]);
+    return baseOverrideFromDB !== null ? baseOverrideFromDB : baseDefault;
+  }, [baseOverrideFromDB, baseDefault]);
 
   // Calculer les heures travaillées (workedHours) - including non-shifts that generate hours
   const { workedHours, debugStrict, debugUsed } = useMemo(() => {
