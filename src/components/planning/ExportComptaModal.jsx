@@ -11,6 +11,7 @@ import { jsPDF } from 'jspdf';
 import 'jspdf-autotable';
 import html2canvas from 'html2canvas';
 import { calculateMonthlyRecap } from '@/components/utils/monthlyRecapCalculations';
+import { resolveRecapFinal } from './resolveMonthlyPayrollValues';
 import { getActiveMonthContext } from './monthContext';
 import ExportOverrideModal from './ExportOverrideModal';
 import { useQueryClient } from '@tanstack/react-query';
