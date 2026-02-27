@@ -1006,11 +1006,14 @@ export default function PlanningV2() {
 
                     return (
                       <>
-                      <div className={cn(
-                        "flex border-b border-gray-200 hover:bg-gray-50/50 transition-colors",
-                        dayInfo.isWeekend && "bg-orange-50/30",
-                        dayInfo.isToday && "bg-blue-50/80"
-                      )}>
+                      <div 
+                        className={cn(
+                          "flex border-b border-gray-200 hover:bg-gray-50/50 transition-colors",
+                          dayInfo.isWeekend && "bg-orange-50/30",
+                          dayInfo.isToday && "bg-blue-50/80"
+                        )}
+                        data-date={dateStr}
+                      >
                         <div className={cn(
                           "sticky left-0 z-20 border-r-2 border-gray-300 px-2 lg:px-4 py-2 lg:py-3 shadow-sm w-[80px] lg:w-[120px] flex flex-col justify-center bg-white",
                           dayInfo.isWeekend && "bg-orange-50/30",
