@@ -510,6 +510,9 @@ export default function WeeklySummary({
         <div className="text-lg font-bold text-gray-900">
           {workedHours.toFixed(2)}h
         </div>
+        <div className="text-[7px] text-red-500 font-mono">
+          debug: min={debugMinutes} raw={(debugMinutes/60).toFixed(4)}
+        </div>
       </div>
 
       {/* HEURES + / HEURES - (toujours positifs dans l'affichage) */}
