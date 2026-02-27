@@ -110,6 +110,7 @@ export default function ShiftFormModal({
       setSelectedEditShift(null);
       setLegalWarnings([]);
       setActiveTab('shifts');
+      setIsSubmitting(false);
     }
   }, [open]);
 
