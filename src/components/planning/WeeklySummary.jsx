@@ -46,6 +46,7 @@ export default function WeeklySummary({
 
   const queryClient = useQueryClient();
   const weekStartStr = formatLocalDate(weekStart);
+  const hoursMode = useHoursDisplayMode();
   
   // Get planning version for reset system
   const { resetVersion, monthKey } = usePlanningVersion(currentYear, currentMonth);
