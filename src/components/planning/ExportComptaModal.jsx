@@ -600,7 +600,21 @@ export default function ExportComptaModal({ open, onOpenChange, monthStart, mont
 
   const calculationMode = calculationSettings[0]?.planning_calculation_mode || 'disabled';
 
-  // Fetch export overrides
+  // Fetch export overrides (nouvelle entité MonthlyExportOverride)
+  const { data: monthlyExportOverrides = [] } = useQuery({
+    queryKey: ['monthlyExportOverrides', monthKey],
+    queryFn: () => base44.entities.MonthlyExportOverride.filter({ month_key: monthKey }),
+    enabled: open
+  });
+
+  // Fetch recap extras overrides (jours/CP/fériés/payées)
+  const { data: recapExtrasOverrides = [] } = useQuery({
+    queryKey: ['recapExtrasOverride', monthKey],
+    queryFn: () => base44.entities.MonthlyRecapExtrasOverride.filter({ month_key: monthKey }),
+    enabled: open
+  });
+
+  // Legacy export overrides (ancien ExportComptaOverride - kept for backward compat)
   const { data: overrides = [] } = useQuery({
     queryKey: ['exportOverrides', monthKey, activeResetVersion],
     queryFn: async () => {
