@@ -310,7 +310,6 @@ export default function WeeklySummary({
   const deleteMutation = useMutation({
     mutationFn: async () => {
       if (weeklyRecap) {
-        console.log('[WeeklySummary] Deleting recap:', weeklyRecap.id);
         return await base44.entities.WeeklyRecap.delete(weeklyRecap.id);
       }
     },
