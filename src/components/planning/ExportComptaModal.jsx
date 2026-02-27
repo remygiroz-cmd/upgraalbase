@@ -269,28 +269,10 @@ export default function ExportComptaModal({ open, onOpenChange, monthStart, mont
   const settings = settingsData[0] || {};
   const hasRequiredSettings = settings.email_compta && settings.etablissement_name && settings.responsable_name && settings.responsable_email;
 
-  // Refresh recaps before exporting (sync step)
-  const [isSyncing, setIsSyncing] = React.useState(false);
-  const [syncMessage, setSyncMessage] = React.useState(null);
-  
-  React.useEffect(() => {
-    if (open && activeResetVersion !== undefined) {
-      setIsSyncing(true);
-      setSyncMessage('🔄 Synchronisation des recaps...');
-      base44.functions.invoke('refreshMonthlyRecapPersistedForMonth', { month_key: monthKey })
-        .then(() => {
-          setSyncMessage(null);
-          setIsSyncing(false);
-          // Refresh the persisted recaps after sync
-          queryClient?.invalidateQueries(['monthlyRecapsPersisted', monthKey]);
-        })
-        .catch(err => {
-          console.error('Sync error:', err);
-          setSyncMessage(null);
-          setIsSyncing(false);
-        });
-    }
-  }, [open, activeResetVersion, monthKey]);
+  // ⚠️ Sync auto SUPPRIMÉ — ne jamais écrire dans MonthlyRecapPersisted depuis l'export.
+  // Les heures comp/supp sont calculées LIVE depuis les shifts ci-dessous.
+  const isSyncing = false;
+  const syncMessage = null;
 
   // Fetch all data
   const { data: employees = [] } = useQuery({
