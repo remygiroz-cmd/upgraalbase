@@ -259,6 +259,23 @@ export default function VehiclesAssignmentTab() {
         )}
       </div>
 
+      {/* Debug panel */}
+      <div className="flex justify-end">
+        <button onClick={() => setShowDebug(v => !v)} className="flex items-center gap-1 text-[10px] text-gray-400 hover:text-gray-600">
+          <Bug className="w-3 h-3" /> {showDebug ? 'Masquer debug' : 'Debug shifts'}
+        </button>
+      </div>
+      {showDebug && (
+        <div className="bg-gray-900 text-green-300 rounded-lg p-3 text-xs font-mono space-y-1">
+          <p className="text-yellow-300 font-bold">🔍 Shifts LIVRAISON comptés (reset_version={resetVersion}) :</p>
+          {deliveryShiftsForDebug.length === 0 && <p className="text-red-400">Aucun shift LIVRAISON valide trouvé</p>}
+          {deliveryShiftsForDebug.map(s => (
+            <p key={s.id}>• {s.employee_name} | {s.start_time}-{s.end_time} | pos="{s.position}" | status={s.status} | v={s.reset_version}</p>
+          ))}
+          <p className="text-blue-300 mt-2">Total shifts du jour chargés : {shifts.length} | Après filtre version : {shifts.filter(s => (s.reset_version ?? 0) === (resetVersion ?? 0)).length}</p>
+        </div>
+      )}
+
       {/* Alert: no delivery drivers */}
       {nbLivreurs === 0 && (
         <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 text-sm text-gray-600 flex items-center gap-2">
