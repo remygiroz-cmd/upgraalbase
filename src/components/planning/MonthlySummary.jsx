@@ -554,12 +554,14 @@ ${deductionDetails.length > 0 ? `  Détail: ${deductionDetails.map(d => `${d.dat
         onOpenChange={setShowEditDialog}
         employee={employee}
         year={year}
-        month={month + 1} // DB uses 1-indexed months
+        month={month + 1}
         calculatedValues={calculatedRecap}
         currentRecap={monthlyRecap}
         onRecapUpdate={onRecapUpdate}
         calculationMode={calculationMode}
         autoCPDays={autoCPDays}
+        monthKey={monthKey}
+        resetVersion={undefined}
       />
     </>
   );
