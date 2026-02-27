@@ -343,10 +343,7 @@ export default function WeeklySummary({
       });
       return;
     }
-    // Initialiser baseDraft avec la valeur RÉELLEMENT AFFICHÉE (source de vérité)
-    const currentBase = displayedBase;
-    console.log('[WeeklySummary] 🖊️ START EDIT - initializing baseDraft with:', currentBase);
-    setBaseDraft(currentBase.toString());
+    setBaseDraft(displayedBase.toString());
     setIsEditingBase(true);
   }, [displayedBase, disabled]);
 
