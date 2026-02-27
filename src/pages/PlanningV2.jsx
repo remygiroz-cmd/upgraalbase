@@ -986,6 +986,7 @@ export default function PlanningV2() {
                 <>
                   {daysArray.map((dayInfo, index) => {
                     const dateStr = formatLocalDate(dayInfo.date);
+                    const todayStr = formatLocalDate(new Date());
                     const maxEventsInRow = Math.max(
                       1,
                       ...visibleEmployees.map(emp => {
