@@ -557,7 +557,7 @@ ${deductionDetails.length > 0 ? `  Détail: ${deductionDetails.map(d => `${d.dat
         {hasManualOverride && (
           <div className="mt-1 text-[9px] text-blue-700 font-semibold flex items-center justify-center gap-1">
             <AlertCircle className="w-3 h-3" />
-            {hasExportOverride ? 'Export compta modifié' : 'Valeurs modifiées'}
+            Valeurs modifiées
           </div>
         )}
       </div>
