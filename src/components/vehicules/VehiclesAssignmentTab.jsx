@@ -6,11 +6,12 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { CalendarDays, Plus, Zap, CheckCircle2, XCircle, AlertTriangle, Lock, RefreshCw, Users, Car } from 'lucide-react';
+import { CalendarDays, Plus, Zap, CheckCircle2, XCircle, AlertTriangle, Lock, RefreshCw, Users, Car, Bug } from 'lucide-react';
 import { toast } from 'sonner';
 import moment from 'moment';
 import { calcLoaStats, vehicleDisplayName } from './vehiculeUtils';
 import AssignmentCheckDetails from './AssignmentCheckDetails';
+import { usePlanningVersion } from '@/components/planning/usePlanningVersion';
 
 /**
  * Sort delivery vehicles by priority:
