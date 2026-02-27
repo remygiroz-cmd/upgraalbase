@@ -69,11 +69,19 @@ export default function MonthlySummary({
 
   const calculationMode = calculationSettings[0]?.planning_calculation_mode || 'disabled';
 
-  // Fetch export overrides
-  const { data: exportOverrides = [] } = useQuery({
-    queryKey: ['exportOverrides', monthKey],
-    queryFn: () => base44.entities.ExportComptaOverride.filter({ month_key: monthKey }),
-    staleTime: 60 * 1000,
+  // Fetch MonthlyRecapPersisted (heures override)
+  const { data: recapPersistedList = [] } = useQuery({
+    queryKey: ['monthlyRecapsPersisted', monthKey],
+    queryFn: () => base44.entities.MonthlyRecapPersisted.filter({ month_key: monthKey }),
+    staleTime: 30 * 1000,
+    enabled: !!employee?.id
+  });
+
+  // Fetch MonthlyRecapExtrasOverride (jours / CP / fériés / payées)
+  const { data: recapExtrasList = [] } = useQuery({
+    queryKey: ['recapExtrasOverride', monthKey],
+    queryFn: () => base44.entities.MonthlyRecapExtrasOverride.filter({ month_key: monthKey }),
+    staleTime: 30 * 1000,
     enabled: !!employee?.id
   });
 
