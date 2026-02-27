@@ -55,15 +55,18 @@ Deno.serve(async (req) => {
   // Load non-shift events for today (to exclude absent/leave employees)
   // Load persisted recap data (source of truth = UI values)
   // Load all active employees + teams in parallel
-  const [allNonShifts, allPersistedRecaps, allEmployees, allTeams] = await Promise.all([
+  const [allNonShifts, allPersistedRecapsRaw, allEmployees, allTeams] = await Promise.all([
     b.entities.NonShiftEvent.filter({ date: todayStr }),
-    b.entities.MonthlyRecapPersisted.filter({ month_key: monthKey }),
+    b.entities.MonthlyRecapPersisted.filter({ month_key: monthKey, reset_version: activeResetVersion }),
     b.entities.Employee.filter({ is_active: true }),
     b.entities.Team.filter({ is_active: true })
   ]);
 
+  // Filtrage strict sur reset_version active (double sécurité)
+  const allPersistedRecaps = allPersistedRecapsRaw.filter(r => r.reset_version === activeResetVersion);
+
   const employeeIdsOnNonShift = new Set(allNonShifts.map(ns => ns.employee_id));
-  console.log(`📋 Persisted recaps loaded: ${allPersistedRecaps.length} for ${monthKey}`);
+  console.log(`📋 Persisted recaps loaded: ${allPersistedRecaps.length} for ${monthKey} v${activeResetVersion}`);
 
   // Today shifts already in allMonthShifts
   const allTodayShifts = allMonthShifts.filter(s => s.date === todayStr);
