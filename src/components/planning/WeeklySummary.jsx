@@ -283,13 +283,7 @@ export default function WeeklySummary({
         base_override_hours: baseValue
       };
 
-      console.log('💾 SAVE BASE - Mutation');
-      console.log('  employee:', employee.first_name, employee.last_name);
-      console.log('  week_start:', weekStartStr);
-      console.log('  base_override_hours:', baseValue);
-      console.log('  monthKey:', monthKey);
-      console.log('  resetVersion:', resetVersion);
-      console.log('  action:', weeklyRecap?.id ? `UPDATE (${weeklyRecap.id})` : 'CREATE');
+
 
       try {
         let result;
