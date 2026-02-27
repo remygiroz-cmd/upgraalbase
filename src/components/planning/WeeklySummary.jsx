@@ -30,15 +30,16 @@ export default function WeeklySummary({
   employee,
   shifts,
   weekStart,
-  weeklyRecap = null, // NOUVEAU: reçu depuis le parent, plus de requête individuelle
+  weeklyRecap = null,
   onDeleteWeek,
   onCopyFromAbove,
-  onRecapUpdate, // NOUVEAU: callback pour notifier le parent de rafraîchir
+  onRecapUpdate,
   currentMonth,
   currentYear,
   nonShiftEvents = [],
   nonShiftTypes = [],
-  disabled = false // Mode lecture seule
+  disabled = false,
+  clipToMonth = false // Si true, clips les calculs au mois courant
 }) {
   const [showConfirm, setShowConfirm] = useState(false);
   const [isEditingBase, setIsEditingBase] = useState(false);
