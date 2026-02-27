@@ -77,6 +77,7 @@ export default function ShiftFormModal({
   const [legalWarnings, setLegalWarnings] = useState([]);
   const [selectedEditShift, setSelectedEditShift] = useState(null);
   const [keepModalOpen, setKeepModalOpen] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const saveNonShiftMutation = useMutation({
     mutationFn: (data) => base44.entities.NonShiftEvent.create(data),
