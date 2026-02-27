@@ -188,22 +188,43 @@ export default function WeeklySummary({
       dateMap.get(ns.date).nonShifts.push(ns);
     });
     
-    // Calculate total hours for the week
-    // Accumulate in minutes (integers) to avoid floating-point drift
+    // Calculate total hours for the week — accumulate in minutes to avoid float drift
     let totalMinutes = 0;
-    dateMap.forEach((dayData) => {
-      const { hours } = calculateDayHours(
-        dayData.shifts, 
-        dayData.nonShifts, 
-        nonShiftTypes, 
-        employee, 
-        calculateShiftDuration
-      );
-      totalMinutes += Math.round(hours * 60);
+    const debugDays = [];
+    dateMap.forEach((dayData, date) => {
+      // Accumulate shift minutes directly (bypass calculateDayHours float return)
+      let dayMinutes = 0;
+      if (dayData.shifts.length > 0) {
+        dayData.shifts.forEach(shift => {
+          let shiftMinutes;
+          if (shift.base_hours_override !== null && shift.base_hours_override !== undefined) {
+            shiftMinutes = Math.round(shift.base_hours_override * 60);
+          } else {
+            const [sh, sm] = shift.start_time.split(':').map(Number);
+            const [eh, em] = shift.end_time.split(':').map(Number);
+            let mins = (eh * 60 + em) - (sh * 60 + sm);
+            if (mins < 0) mins += 24 * 60;
+            mins -= (shift.break_minutes || 0);
+            shiftMinutes = Math.max(0, mins);
+          }
+          dayMinutes += shiftMinutes;
+        });
+      } else {
+        const { hours } = calculateDayHours([], dayData.nonShifts, nonShiftTypes, employee, calculateShiftDuration);
+        dayMinutes = Math.round(hours * 60);
+      }
+      totalMinutes += dayMinutes;
+      debugDays.push({ date, dayMinutes });
     });
 
-    // Convert back to hours with stable 2-decimal rounding
-    return Math.round(totalMinutes) / 60;
+    console.log(`[WeeklySummary DEBUG] ${employee.first_name} ${employee.last_name} ${weekStartStr}`, {
+      debugDays,
+      totalMinutes,
+      totalHoursRaw: totalMinutes / 60,
+      totalHoursRounded: Math.round(totalMinutes) / 60
+    });
+
+    return totalMinutes / 60;
   }, [shifts, employee.id, weekStart, weekStartStr, nonShiftEvents, nonShiftTypes, employee]);
 
   // Compter les shifts
