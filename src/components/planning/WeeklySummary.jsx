@@ -255,13 +255,7 @@ export default function WeeklySummary({
     return { workedHours: totalStrict / 60, debugStrict: totalStrict, debugUsed: totalUsed, debugShifts };
   }, [shifts, employee.id, weekStart, weekStartStr, nonShiftEvents, nonShiftTypes, employee]);
 
-  // helpers for HH:MM display
-  const toHHMM = (totalHours) => {
-    const totalMins = Math.round(totalHours * 60);
-    const h = Math.floor(totalMins / 60);
-    const m = totalMins % 60;
-    return `${h}h${m.toString().padStart(2, '0')}`;
-  };
+
 
   // Compter les shifts
   const shiftsCount = useMemo(() => {
