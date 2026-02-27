@@ -243,13 +243,7 @@ export default function WeeklySummary({
       totalUsed += dayUsed;
     });
 
-    console.log(`[WeeklySummary] ${employee.first_name} ${employee.last_name} ${weekStartStr}`, {
-      shifts: debugShifts,
-      totalStrict,
-      totalUsed,
-      delta: totalUsed - totalStrict,
-      conclusion: totalUsed === totalStrict ? '✅ no drift' : `⚠️ +${totalUsed - totalStrict}min from overrides`
-    });
+
 
     // FIX: Réalisé = strict real times, never base_hours_override
     return { workedHours: totalStrict / 60, debugStrict: totalStrict, debugUsed: totalUsed, debugShifts };
