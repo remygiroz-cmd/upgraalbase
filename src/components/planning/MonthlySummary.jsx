@@ -227,13 +227,6 @@ export default function MonthlySummary({
       }
     });
 
-    // Debug log
-    console.log(`
-💰 Payées (hors sup/comp) - ${employee.first_name} ${employee.last_name}
-  Contract: ${monthlyContractHours.toFixed(2)}h | Non-shifts: ${employeeNonShifts.length} (${deductionDetails.length} impact paie)
-  Déductions: ${totalDeduction.toFixed(2)}h | Final: ${Math.max(0, monthlyContractHours - totalDeduction).toFixed(2)}h
-${deductionDetails.length > 0 ? `  Détail: ${deductionDetails.map(d => `${d.date} ${d.code} ${d.hoursDeducted.toFixed(2)}h`).join(', ')}` : ''}`);
-
     const result = monthlyContractHours - totalDeduction;
     return Math.max(0, result); // Never go below 0
   }, [employee.id, employee.contract_hours, employee.contract_hours_weekly, employee.work_days_per_week, employee.weekly_schedule, nonShiftEvents, nonShiftTypes, year, month]);
