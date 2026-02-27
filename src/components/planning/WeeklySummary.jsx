@@ -285,25 +285,10 @@ export default function WeeklySummary({
 
 
 
-      try {
-        let result;
-        if (weeklyRecap?.id) {
-          // Update existing recap
-          result = await base44.entities.WeeklyRecap.update(weeklyRecap.id, {
-            base_override_hours: baseValue
-          });
-          console.log('✅ UPDATE SUCCESS - base saved:', result.base_override_hours);
-        } else {
-          // Create new recap with versioning
-          const dataWithVersion = withPlanningVersion(dataToSave, resetVersion, monthKey);
-          result = await base44.entities.WeeklyRecap.create(dataWithVersion);
-          console.log('✅ CREATE SUCCESS - base saved:', result.base_override_hours);
-        }
-        
-        return result;
-      } catch (err) {
-        console.error('❌ SAVE ERROR:', err);
-        throw err;
+      if (weeklyRecap?.id) {
+        return await base44.entities.WeeklyRecap.update(weeklyRecap.id, { base_override_hours: baseValue });
+      } else {
+        return await base44.entities.WeeklyRecap.create(withPlanningVersion(dataToSave, resetVersion, monthKey));
       }
     },
     onSuccess: async (data) => {
