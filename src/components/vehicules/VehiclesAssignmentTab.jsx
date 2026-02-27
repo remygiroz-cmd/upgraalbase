@@ -60,24 +60,32 @@ export default function VehiclesAssignmentTab() {
   const vehicleMap = useMemo(() => Object.fromEntries(vehicles.map(v => [v.id, v])), [vehicles]);
   const employeeMap = useMemo(() => Object.fromEntries(employees.map(e => [e.id, e])), [employees]);
 
-  // Employees present today with a shift (not absent/leave)
-  const presentEmployeeIds = useMemo(() => {
-    return new Set(
-      shifts
-        .filter(s => s.status !== 'absent' && s.status !== 'leave')
-        .map(s => s.employee_id)
-    );
-  }, [shifts]);
+  // NON_SHIFT statuses to exclude
+  const NON_SHIFT_STATUSES = new Set(['absent', 'leave', 'archived']);
 
-  // Livreurs = present employees in team "Livraison" or position containing "livreur"
+  // Livreurs présents = employés ayant AU MOINS 1 vrai shift LIVRAISON ce jour
+  // Source de vérité : table Shifts du planning uniquement
   const livreursPresents = useMemo(() => {
-    return employees.filter(e => {
-      if (!presentEmployeeIds.has(e.id)) return false;
-      const team = (e.team || '').toLowerCase();
-      const position = (e.position || '').toLowerCase();
-      return team.includes('livraison') || position.includes('livreur') || position.includes('livreuse');
+    // Shifts LIVRAISON valides (exclure non-shifts, absences, CP, etc.)
+    const deliveryShifts = shifts.filter(s => {
+      const pos = (s.position || '').toLowerCase();
+      const isLivraison = pos.includes('livraison') || pos.includes('livreur') || pos.includes('livreuse');
+      const isRealShift = !NON_SHIFT_STATUSES.has(s.status);
+      return isLivraison && isRealShift;
     });
-  }, [employees, presentEmployeeIds]);
+
+    // Dédupliquer par employee_id et récupérer les objets employé
+    const seenIds = new Set();
+    const result = [];
+    for (const shift of deliveryShifts) {
+      if (!seenIds.has(shift.employee_id)) {
+        seenIds.add(shift.employee_id);
+        const emp = employees.find(e => e.id === shift.employee_id);
+        if (emp) result.push(emp);
+      }
+    }
+    return result.sort((a, b) => (a.first_name || '').localeCompare(b.first_name || ''));
+  }, [shifts, employees]);
 
   // Auto-assignable vehicles: ACTIF + LIVRAISON only (never DIRECTION)
   const autoVehicles = useMemo(() => {
