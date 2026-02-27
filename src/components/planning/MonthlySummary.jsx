@@ -796,6 +796,10 @@ function EditMonthlyRecapDialog({
             Saisissez une valeur pour la remplacer. L'icône <RotateCcw className="w-3 h-3 inline" /> réinitialise au calcul.
           </div>
 
+          {loadingExtras && (
+            <div className="text-center py-4 text-gray-400 text-sm">Chargement des surcharges...</div>
+          )}
+
           {/* Section 1: Days */}
           <div className="border rounded-lg p-4">
             <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
@@ -803,9 +807,9 @@ function EditMonthlyRecapDialog({
               Jours
             </h3>
             <div className="grid grid-cols-3 gap-4">
-              <FieldInput name="manual_expected_days" label="Jours prévus" step="1" />
-              <FieldInput name="manual_days_worked" label="Jours travaillés" step="1" />
-              <FieldInput name="manual_extra_days" label="Jours supplémentaires" step="1" />
+              <FieldInput name="jours_prevus" label="Jours prévus" step="1" />
+              <FieldInput name="jours_travailles" label="Jours travaillés" step="1" />
+              <FieldInput name="jours_supp" label="Jours supplémentaires" step="1" />
             </div>
           </div>
 
@@ -813,12 +817,11 @@ function EditMonthlyRecapDialog({
           <div className="border rounded-lg p-4">
             <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
               <Clock className="w-4 h-4 text-gray-600" />
-              Heures
+              Heures effectuées
             </h3>
-            <div className="grid grid-cols-3 gap-4">
-              <FieldInput name="manual_total_hours" label="Heures effectuées" />
-              <FieldInput name="manual_contract_hours" label="Base contractuelle" />
-              <FieldInput name="manual_adjusted_hours" label="Base ajustée" />
+            <div className="grid grid-cols-2 gap-4">
+              <FieldInput name="worked_hours" label="Heures effectuées" />
+              <FieldInput name="payees_hors_sup_comp" label="Payées (hors sup/comp)" />
             </div>
           </div>
 
@@ -830,16 +833,14 @@ function EditMonthlyRecapDialog({
             </h3>
 
             {isPartTime ? (
-              <div className="grid grid-cols-3 gap-4">
-                <FieldInput name="manual_complementary_10" label="H. compl. +10%" />
-                <FieldInput name="manual_complementary_25" label="H. compl. +25%" />
-                <FieldInput name="manual_total_complementary" label="Total complémentaires" />
+              <div className="grid grid-cols-2 gap-4">
+                <FieldInput name="complementary_10" label="H. compl. +10%" />
+                <FieldInput name="complementary_25" label="H. compl. +25%" />
               </div>
             ) : (
-              <div className="grid grid-cols-3 gap-4">
-                <FieldInput name="manual_overtime_25" label="H. sup. +25%" />
-                <FieldInput name="manual_overtime_50" label="H. sup. +50%" />
-                <FieldInput name="manual_total_overtime" label="Total supplémentaires" />
+              <div className="grid grid-cols-2 gap-4">
+                <FieldInput name="overtime_25" label="H. sup. +25%" />
+                <FieldInput name="overtime_50" label="H. sup. +50%" />
               </div>
             )}
 
@@ -857,8 +858,8 @@ function EditMonthlyRecapDialog({
               Jours fériés travaillés
             </h3>
             <div className="grid grid-cols-2 gap-4">
-              <FieldInput name="manual_holidays_days" label="Nombre de jours" step="1" />
-              <FieldInput name="manual_holidays_hours" label="Heures fériées" />
+              <FieldInput name="ferie_jours" label="Nombre de jours" step="1" />
+              <FieldInput name="ferie_heures" label="Heures fériées" />
             </div>
             <p className="text-[10px] text-gray-500 mt-2">
               Majoration applicable après 8 mois d'ancienneté.
@@ -872,19 +873,42 @@ function EditMonthlyRecapDialog({
               Congés payés
             </h3>
             <div className="w-1/3">
-              <FieldInput name="manual_cp_days" label="CP décomptés" step="0.5" />
+              <FieldInput name="cp_decomptes" label="CP décomptés" step="0.5" />
             </div>
           </div>
 
-          {/* Section 6: Notes */}
+          {/* Section 6: Non-shifts visibles */}
+          <div className="border rounded-lg p-4">
+            <h3 className="font-semibold text-gray-900 mb-2 text-sm flex items-center gap-2">
+              <AlertCircle className="w-4 h-4 text-gray-600" />
+              Non-shifts visibles (texte libre)
+            </h3>
+            <div className="flex items-start gap-2">
+              <textarea
+                className="flex-1 mt-1 px-3 py-2 border border-gray-300 rounded-md text-sm"
+                rows={2}
+                placeholder="Auto (calculé)..."
+                value={formData.non_shifts_visibles ?? ''}
+                onChange={(e) => setFormData({...formData, non_shifts_visibles: e.target.value || null})}
+              />
+              {formData.non_shifts_visibles && (
+                <button type="button" onClick={() => setFormData({...formData, non_shifts_visibles: null})}
+                  className="mt-1 p-1 text-blue-500 hover:text-blue-700" title="Réinitialiser">
+                  <RotateCcw className="w-4 h-4" />
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Section 7: Notes */}
           <div className="border rounded-lg p-4">
             <Label className="text-xs text-gray-700">Notes / Commentaires</Label>
             <textarea
               className="w-full mt-1 px-3 py-2 border border-gray-300 rounded-md text-sm"
               rows={3}
               placeholder="Commentaires sur ce mois..."
-              value={formData.notes}
-              onChange={(e) => setFormData({...formData, notes: e.target.value})}
+              value={formData.notes ?? ''}
+              onChange={(e) => setFormData({...formData, notes: e.target.value || null})}
             />
           </div>
 
@@ -893,21 +917,21 @@ function EditMonthlyRecapDialog({
             <Button
               type="button"
               onClick={handleSave}
+              disabled={saveMutation.isPending}
               className="flex-1 bg-blue-600 hover:bg-blue-700"
             >
-              Enregistrer
+              {saveMutation.isPending ? 'Enregistrement...' : 'Enregistrer'}
             </Button>
-            {currentRecap && (
-              <Button
-                type="button"
-                onClick={() => deleteMutation.mutate()}
-                variant="outline"
-                className="border-red-300 text-red-700 hover:bg-red-50"
-              >
-                <RotateCcw className="w-4 h-4 mr-2" />
-                Tout réinitialiser
-              </Button>
-            )}
+            <Button
+              type="button"
+              onClick={() => deleteMutation.mutate()}
+              disabled={deleteMutation.isPending}
+              variant="outline"
+              className="border-red-300 text-red-700 hover:bg-red-50"
+            >
+              <RotateCcw className="w-4 h-4 mr-2" />
+              Tout réinitialiser
+            </Button>
             <Button
               type="button"
               onClick={() => onOpenChange(false)}
