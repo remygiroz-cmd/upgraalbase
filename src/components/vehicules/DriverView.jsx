@@ -110,7 +110,10 @@ export default function DriverView({ currentUser, currentEmployee }) {
         ) : (
           <>
             {/* Vehicle card */}
-            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+            <div 
+              className="rounded-2xl border shadow-sm overflow-hidden"
+              style={vehicle?.card_color ? { backgroundColor: vehicle.card_color + '22', borderColor: vehicle.card_color + '66' } : { backgroundColor: 'white', borderColor: '#e5e7eb' }}
+            >
               {vehicle?.photo_url && (
                 <img src={vehicle.photo_url} alt={vehicle.immatriculation}
                   className="w-full h-40 object-cover" />
