@@ -941,6 +941,7 @@ export default function PlanningV2() {
 
       {/* Calendar Grid - Direct scrolling, no zoom wrapper */}
       <div
+        id="planningGridScroll"
         className="planning-scroll-container bg-white border-2 border-gray-200 rounded-b-xl shadow-xl overflow-auto"
         style={{ height: 'calc(100vh - 240px)' }}
         ref={(el) => {
