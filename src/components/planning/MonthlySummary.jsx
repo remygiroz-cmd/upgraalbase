@@ -433,6 +433,11 @@ ${deductionDetails.length > 0 ? `  Détail: ${deductionDetails.map(d => `${d.dat
                         <div>+25%: {renderValue(complementaryHours25, 'complementaryHours25', 'h')}</div>
                       )}
                     </div>
+                    {calculatedRecap?.complementaryExcessWarning > 0 && (
+                      <div className="mt-1 text-[8px] text-orange-700 bg-orange-50 rounded px-1 py-0.5 leading-tight">
+                        ⚠️ +{calculatedRecap.complementaryExcessWarning.toFixed(1)}h au-delà du 1/3
+                      </div>
+                    )}
                   </div>
                 </HideableItem>
               )
