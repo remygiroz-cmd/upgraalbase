@@ -637,6 +637,78 @@ export default function PlanningV2() {
     }
   };
 
+  // Fonction unique : aller à aujourd'hui
+  const goToToday = React.useCallback((reason = 'manual') => {
+    const today = new Date();
+    console.log(`GO_TO_TODAY_REQUESTED { reason: "${reason}", isPlanningReady: ${isPlanningReady} }`);
+    
+    if (!isPlanningReady) {
+      console.log('Planning not ready yet, deferring goToToday');
+      setPendingGoToToday(reason);
+      return;
+    }
+
+    const monthKey = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
+    const todayKey = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+
+    // 1. Mettre à jour la date
+    setCurrentDate(today);
+    console.log(`GO_TO_TODAY_APPLIED { todayKey: "${todayKey}", monthKey: "${monthKey}" }`);
+
+    // 2. Scroller après rendu
+    setTimeout(() => {
+      const container = tableContainerRef.current;
+      const todayElement = document.querySelector(`[data-date="${todayKey}"]`);
+      
+      if (container && todayElement) {
+        todayElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        console.log('GO_TO_TODAY_SCROLL_OK');
+      } else {
+        console.warn('GO_TO_TODAY_SCROLL_FAIL', { container: !!container, todayElement: !!todayElement });
+      }
+    }, 100);
+  }, [isPlanningReady, tableContainerRef]);
+
+  // Exécuter goToToday si pending et maintenant prêt
+  useEffect(() => {
+    if (isPlanningReady && pendingGoToToday !== null) {
+      goToToday(pendingGoToToday);
+      setPendingGoToToday(null);
+    }
+  }, [isPlanningReady, pendingGoToToday, goToToday]);
+
+  // Détecter activation de l'onglet Planning (visibilité/focus)
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (!document.hidden) {
+        console.log('PLANNING_ACTIVATED { via: "visibilitychange" }');
+        goToToday('tab_visible');
+      }
+    };
+
+    const handleFocus = () => {
+      console.log('PLANNING_ACTIVATED { via: "window_focus" }');
+      goToToday('window_focus');
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('focus', handleFocus);
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('focus', handleFocus);
+    };
+  }, [goToToday]);
+
+  // Marquer Planning comme prêt quand les données clés sont là
+  useEffect(() => {
+    const isReady = !!monthKey && shifts.length >= 0 && daysArray.length > 0;
+    if (isReady && !isPlanningReady) {
+      console.log('PLANNING_READY');
+      setIsPlanningReady(true);
+    }
+  }, [monthKey, shifts, daysArray, isPlanningReady]);
+
   useEffect(() => {
     const handleKeyDown = (e) => {
       const target = e.target;
