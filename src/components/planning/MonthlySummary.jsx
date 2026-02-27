@@ -259,8 +259,7 @@ ${deductionDetails.length > 0 ? `  Détail: ${deductionDetails.map(d => `${d.dat
   // Use CP from calculation or fallback
   const displayCPDays = cpDays ?? autoCPDays ?? 0;
 
-  const hasExportOverride = exportOverrides.some(o => o.employee_id === employee.id);
-  const hasManualOverride = overriddenFields.length > 0 || !!monthlyRecap || hasExportOverride;
+  const hasManualOverride = recapWithOverrides.hasRecapOverride || !!monthlyRecap;
 
   // Mode badge colors
   const getModeColor = () => {
