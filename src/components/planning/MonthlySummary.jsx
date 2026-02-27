@@ -434,14 +434,14 @@ ${deductionDetails.length > 0 ? `  Détail: ${deductionDetails.map(d => `${d.dat
                       H. Complémentaires
                     </div>
                     <div className="text-sm font-bold text-green-700">
-                      {renderValue(totalComplementaryHours, 'totalComplementaryHours', 'h')}
+                      {renderValue(totalComplementaryHours, 'totalComplementaryHours', '', 0, true)}
                     </div>
                     <div className="text-[9px] text-green-600 space-y-0.5">
                       {complementaryHours10 > 0 && (
-                        <div>+10%: {renderValue(complementaryHours10, 'complementaryHours10', 'h')}</div>
+                        <div>+10%: {renderValue(complementaryHours10, 'complementaryHours10', '', 0, true)}</div>
                       )}
                       {complementaryHours25 > 0 && (
-                        <div>+25%: {renderValue(complementaryHours25, 'complementaryHours25', 'h')}</div>
+                        <div>+25%: {renderValue(complementaryHours25, 'complementaryHours25', '', 0, true)}</div>
                       )}
                     </div>
                     {calculatedRecap?.complementaryExcessWarning > 0 && (
