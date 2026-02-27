@@ -708,27 +708,24 @@ function EditMonthlyRecapDialog({
   // Get calculated value for display
   const getCalcValue = (fieldName) => {
     const mapping = {
-      manual_expected_days: 'expectedDays',
-      manual_days_worked: 'workedDays',
-      manual_extra_days: 'extraDays',
-      manual_contract_hours: 'contractMonthlyHours',
-      manual_adjusted_hours: 'adjustedContractHours',
-      manual_total_hours: 'workedHours',
-      manual_overtime_25: 'overtimeHours25',
-      manual_overtime_50: 'overtimeHours50',
-      manual_total_overtime: 'totalOvertimeHours',
-      manual_complementary_10: 'complementaryHours10',
-      manual_complementary_25: 'complementaryHours25',
-      manual_total_complementary: 'totalComplementaryHours',
-      manual_holidays_days: 'holidaysWorkedDays',
-      manual_holidays_hours: 'holidaysWorkedHours',
-      manual_cp_days: 'cpDays'
+      jours_prevus:         'expectedDays',
+      jours_travailles:     'workedDays',
+      jours_supp:           'extraDays',
+      worked_hours:         'workedHours',
+      complementary_10:     'complementaryHours10',
+      complementary_25:     'complementaryHours25',
+      overtime_25:          'overtimeHours25',
+      overtime_50:          'overtimeHours50',
+      ferie_jours:          'holidaysWorkedDays',
+      ferie_heures:         'holidaysWorkedHours',
+      cp_decomptes:         'cpDays',
+      payees_hors_sup_comp: 'workedHours'
     };
 
     const calcField = mapping[fieldName];
     const value = calculatedValues?.[calcField];
 
-    if (fieldName === 'manual_cp_days' && (value === null || value === undefined)) {
+    if (fieldName === 'cp_decomptes' && (value === null || value === undefined)) {
       return autoCPDays || 0;
     }
 
