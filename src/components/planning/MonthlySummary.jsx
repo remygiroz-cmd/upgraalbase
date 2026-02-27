@@ -684,9 +684,11 @@ function EditMonthlyRecapDialog({
       }
     },
     onSuccess: () => {
+      // Invalider TOUTES les queries utilisées par la carte récap ET l'export
       queryClient.invalidateQueries({ queryKey: ['recapExtrasOverride', monthKey] });
       queryClient.invalidateQueries({ queryKey: ['monthlyRecapsPersisted', monthKey] });
       queryClient.invalidateQueries({ queryKey: ['exportOverrides', monthKey] });
+      queryClient.invalidateQueries({ queryKey: ['monthlyExportOverrides', monthKey] });
       if (onRecapUpdate) onRecapUpdate();
       toast.success('Récapitulatif enregistré');
       onOpenChange(false);
@@ -701,6 +703,8 @@ function EditMonthlyRecapDialog({
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['recapExtrasOverride', monthKey] });
       queryClient.invalidateQueries({ queryKey: ['monthlyRecapsPersisted', monthKey] });
+      queryClient.invalidateQueries({ queryKey: ['exportOverrides', monthKey] });
+      queryClient.invalidateQueries({ queryKey: ['monthlyExportOverrides', monthKey] });
       if (onRecapUpdate) onRecapUpdate();
       toast.success('Modifications supprimées');
       onOpenChange(false);
