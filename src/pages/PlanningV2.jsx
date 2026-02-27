@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
+import { useSearchParams } from 'react-router-dom';
 import { Calendar, ChevronLeft, ChevronRight, Plus, Filter, GripVertical, Settings, MoreVertical, Copy, ArrowDown, FileText, X, EyeOff, Eye } from 'lucide-react';
 import PageHeader from '@/components/ui/PageHeader';
 import { Button } from '@/components/ui/button';
@@ -47,13 +48,15 @@ const DAYS = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dima
 const MONTHS = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'];
 
 export default function PlanningV2() {
+  const [searchParams] = useSearchParams();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [showShiftModal, setShowShiftModal] = useState(false);
   const [isPlanningReady, setIsPlanningReady] = useState(false);
   const [pendingGoToToday, setPendingGoToToday] = useState(null);
+  const [lastUrlToken, setLastUrlToken] = useState(null);
   const planningGridRef = useRef(null);
   const scrollAttemptRef = useRef(0);
-  const maxScrollAttemptsRef = useRef(10);
+  const maxScrollAttemptsRef = useRef(20);
   const [showPlanningSettings, setShowPlanningSettings] = useState(false);
   const [showExportComptaModal, setShowExportComptaModal] = useState(false);
   const [showApplyTemplatesModal, setShowApplyTemplatesModal] = useState(false);
