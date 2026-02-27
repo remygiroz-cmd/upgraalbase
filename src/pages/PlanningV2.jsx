@@ -1138,6 +1138,7 @@ export default function PlanningV2() {
                                     nonShiftEvents={nonShiftEvents}
                                     nonShiftTypes={nonShiftTypes}
                                     disabled={!canModifyPlanning}
+                                    clipToMonth={true}
                                   />
                                 </div>
                               );
