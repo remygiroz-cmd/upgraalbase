@@ -642,7 +642,7 @@ export default function PlanningV2() {
     }
   };
 
-  // Fonction unique : aller à aujourd'hui
+  // Fonction unique : aller à aujourd'hui avec scroll robuste
   const goToToday = React.useCallback((reason = 'manual') => {
     const today = new Date();
     console.log(`GO_TO_TODAY_REQUESTED { reason: "${reason}", isPlanningReady: ${isPlanningReady} }`);
@@ -653,26 +653,50 @@ export default function PlanningV2() {
       return;
     }
 
-    const monthKey = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
     const todayKey = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+    const monthKey = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
 
     // 1. Mettre à jour la date
     setCurrentDate(today);
     console.log(`GO_TO_TODAY_APPLIED { todayKey: "${todayKey}", monthKey: "${monthKey}" }`);
 
-    // 2. Scroller après rendu
-    setTimeout(() => {
+    // 2. Reset scroll attempts counter
+    scrollAttemptRef.current = 0;
+
+    // 3. Fonction robuste de scroll avec retry
+    const attemptScroll = () => {
       const container = tableContainerRef.current;
       const todayElement = document.querySelector(`[data-date="${todayKey}"]`);
       
       if (container && todayElement) {
-        todayElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        console.log('GO_TO_TODAY_SCROLL_OK');
+        try {
+          todayElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          console.log('GO_TO_TODAY_SCROLL_OK');
+        } catch (e) {
+          console.warn('GO_TO_TODAY_SCROLL_FAIL (exception)', { error: e.message });
+        }
       } else {
-        console.warn('GO_TO_TODAY_SCROLL_FAIL', { container: !!container, todayElement: !!todayElement });
+        scrollAttemptRef.current += 1;
+        if (scrollAttemptRef.current < maxScrollAttemptsRef.current) {
+          console.log(`TODAY_CELL_FOUND_ATTEMPT_${scrollAttemptRef.current}: not_found`);
+          // Retry avec RAF
+          if (scrollAttemptRef.current <= 2) {
+            requestAnimationFrame(() => requestAnimationFrame(attemptScroll));
+          } else {
+            setTimeout(attemptScroll, 150);
+          }
+        } else {
+          console.warn(`GO_TO_TODAY_SCROLL_FAIL (max_attempts, attempt_${scrollAttemptRef.current})`, { 
+            container: !!container, 
+            todayElement: !!todayElement 
+          });
+        }
       }
-    }, 100);
-  }, [isPlanningReady, tableContainerRef]);
+    };
+
+    // Lancer la première tentative
+    requestAnimationFrame(() => requestAnimationFrame(attemptScroll));
+  }, [isPlanningReady]);
 
   // Exécuter goToToday si pending et maintenant prêt
   useEffect(() => {
