@@ -245,7 +245,7 @@ export default function VehiclesAssignmentTab() {
       {/* Alert: no delivery drivers */}
       {nbLivreurs === 0 && (
         <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 text-sm text-gray-600 flex items-center gap-2">
-          <Users className="w-4 h-4" /> Aucun livreur planifié pour ce jour.
+          <Users className="w-4 h-4" /> Aucun shift LIVRAISON au planning aujourd'hui. L'auto-assignation est désactivée.
         </div>
       )}
 
