@@ -537,15 +537,20 @@ Weeks to process: ${weeks.length}
   ${isPartTime ? `Complementary: ${weekComplementary.toFixed(2)}h` : `Overtime: ${weekOvertime.toFixed(2)}h (25%: ${weekHS25.toFixed(2)}h, 50%: ${weekHS50.toFixed(2)}h)`}`);
   });
 
-  // For part-time: apply monthly split
+  // For part-time: apply monthly split (NO cap — count everything, warn if > 1/3)
   if (isPartTime) {
     const referenceContractHoursForPeriod = weekDetails.reduce((sum, w) => sum + w.baseHours, 0);
     const threshold10 = referenceContractHoursForPeriod * 0.10;
+    const maxAllowed = referenceContractHoursForPeriod / 3;
     
-    // Floor to 2 decimals to avoid micro-hours (0.004h → 0.00h instead of 0.01h)
+    // NO cap: tout le surplus va en comp, même au-delà de 1/3
     result.complementaryHours10 = Math.floor(Math.min(totalComplementaryBeforeSplit, threshold10) * 100) / 100;
     result.complementaryHours25 = Math.floor(Math.max(0, totalComplementaryBeforeSplit - threshold10) * 100) / 100;
     result.totalComplementaryHours = result.complementaryHours10 + result.complementaryHours25;
+
+    // Avertissement consultatif non bloquant
+    const excessOverMax = Math.max(0, totalComplementaryBeforeSplit - maxAllowed);
+    result.complementaryExcessWarning = excessOverMax > 0.01 ? excessOverMax : 0;
 
     console.log(`
 ───────────────────────────────────────────────────────────
