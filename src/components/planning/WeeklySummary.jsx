@@ -167,19 +167,15 @@ export default function WeeklySummary({
 
   // Calculer les heures travaillées (workedHours) - including non-shifts that generate hours
   const { workedHours, debugStrict, debugUsed } = useMemo(() => {
-    const weekEnd = new Date(weekStart);
-    weekEnd.setDate(weekEnd.getDate() + 6);
-    const weekEndStr = formatLocalDate(weekEnd);
-
     const weekShifts = shifts.filter(s => {
       if (s.employee_id !== employee.id) return false;
-      if (s.date < weekStartStr || s.date > weekEndStr) return false;
+      if (s.date < rangeStartStr || s.date > rangeEndStr) return false;
       if (s.status === 'cancelled') return false;
       return true;
     });
 
     const weekNonShifts = nonShiftEvents.filter(ns => 
-      ns.employee_id === employee.id && ns.date >= weekStartStr && ns.date <= weekEndStr
+      ns.employee_id === employee.id && ns.date >= rangeStartStr && ns.date <= rangeEndStr
     );
 
     // Group by date
