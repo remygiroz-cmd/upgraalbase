@@ -229,13 +229,22 @@ export default function ExportOverrideModal({
             <X className="w-4 h-4 mr-2" />
             Annuler
           </Button>
+          <Button
+            variant="outline"
+            onClick={() => resetAllMutation.mutate()}
+            disabled={resetAllMutation.isPending}
+            className="border-red-300 text-red-700 hover:bg-red-50"
+          >
+            <RotateCcw className="w-4 h-4 mr-2" />
+            Tout réinitialiser
+          </Button>
           <Button 
             onClick={handleSave}
             disabled={saveMutation.isPending}
             className="bg-orange-600 hover:bg-orange-700"
           >
             <Save className="w-4 h-4 mr-2" />
-            Enregistrer
+            {saveMutation.isPending ? 'Enregistrement...' : 'Enregistrer'}
           </Button>
         </DialogFooter>
       </DialogContent>
