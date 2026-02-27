@@ -20,7 +20,7 @@ import {
   calculateShiftDuration as calcShiftDuration,
   parseHoursString
 } from '@/components/utils/monthlyRecapCalculations';
-import { getFinalRecap } from './recapWithOverrides';
+import { resolveRecapFinal } from './resolveMonthlyPayrollValues';
 import { getRecapExtras, upsertRecapExtras, clearRecapExtras } from './monthlyRecapExtrasOverrideService';
 
 /**
