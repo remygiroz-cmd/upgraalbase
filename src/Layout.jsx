@@ -95,7 +95,12 @@ export default function Layout({ children, currentPageName }) {
   const NavLink = ({ to, icon: Icon, label, active }) => (
     <Link
       to={createPageUrl(to)}
-      onClick={() => setSidebarOpen(false)}
+      onClick={() => {
+        setSidebarOpen(false);
+        if (to === 'Planning') {
+          triggerPlanningOpen();
+        }
+      }}
       className={cn(
         "flex items-center gap-3 px-4 py-2.5 transition-all duration-200 relative",
         theme === 'professional-light' ? (
