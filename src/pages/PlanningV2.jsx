@@ -589,6 +589,8 @@ export default function PlanningV2() {
       await queryClient.invalidateQueries({ queryKey: ['shifts'] });
       await queryClient.invalidateQueries({ queryKey: ['allWeeklyRecaps'] });
       await queryClient.invalidateQueries({ queryKey: ['allMonthlyRecaps'] });
+      queryClient.invalidateQueries({ queryKey: ['monthlyRecapsPersisted', monthKey] });
+      queryClient.invalidateQueries({ queryKey: ['recapExtrasOverride', monthKey] });
       toast.success(`↩︎ ${action.label} annulé`);
     } catch (error) {
       toast.error('Impossible d\'annuler : ' + error.message);
