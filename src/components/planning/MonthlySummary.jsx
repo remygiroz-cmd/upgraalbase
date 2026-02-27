@@ -143,31 +143,9 @@ export default function MonthlySummary({
     };
   }, [recapResolved, calculatedRecap]);
 
-  // 🔄 Auto-persist the final UI values to MonthlyRecapPersisted
-  // Debounced to avoid spamming the backend on every render
-  const persistTimeoutRef = useRef(null);
-  useEffect(() => {
-    if (calculationMode === 'disabled' || !employee?.id) return;
-    const { complementaryHours10, complementaryHours25, overtimeHours25, overtimeHours50, workedHours } = recapWithOverrides;
-    const comp_ui = Math.round(((complementaryHours10 || 0) + (complementaryHours25 || 0)) * 100) / 100;
-    const ot_ui = Math.round(((overtimeHours25 || 0) + (overtimeHours50 || 0)) * 100) / 100;
-
-    if (persistTimeoutRef.current) clearTimeout(persistTimeoutRef.current);
-    persistTimeoutRef.current = setTimeout(() => {
-      base44.functions.invoke('saveSingleMonthlyRecap', {
-        month_key: monthKey,
-        employee_id: employee.id,
-        complementary_hours_ui: comp_ui,
-        overtime_hours_ui: ot_ui,
-        complementary_hours_10: complementaryHours10 || 0,
-        complementary_hours_25: complementaryHours25 || 0,
-        overtime_hours_25: overtimeHours25 || 0,
-        overtime_hours_50: overtimeHours50 || 0,
-        worked_hours: workedHours || 0
-      }).catch(() => {}); // Silent fail — non-blocking
-    }, 2000);
-    return () => { if (persistTimeoutRef.current) clearTimeout(persistTimeoutRef.current); };
-  }, [recapWithOverrides, employee?.id, monthKey, calculationMode]);
+  // ⚠️ Auto-persist SUPPRIMÉ intentionnellement.
+  // MonthlyRecapPersisted est écrit UNIQUEMENT via la modale de saisie manuelle.
+  // Le récap auto est toujours calculé live depuis les shifts (calculatedRecap via useMemo).
 
   // CP days from periods (for fallback in disabled mode)
   const autoCPDays = calculateMonthlyCPTotal(cpPeriods, monthStart, monthEnd);
