@@ -416,7 +416,7 @@ ${deductionDetails.length > 0 ? `  Détail: ${deductionDetails.map(d => `${d.dat
         {paidHours !== null && (
           <HideableItem itemKey="paidHours">
             <div className="text-[10px] text-gray-500">
-              Payées (hors sup/comp): {paidHours.toFixed(1)}h
+              Payées (hors sup/comp): {formatHours(paidHours, hoursMode)}
             </div>
           </HideableItem>
         )}
