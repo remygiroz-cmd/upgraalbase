@@ -4,6 +4,8 @@ import { Clock, Coffee, AlertTriangle, Trash2 } from 'lucide-react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { toast } from 'sonner';
+import { useHoursDisplayMode } from '@/components/planning/useHoursDisplayMode';
+import { formatMinutes } from '@/components/utils/hoursFormat';
 
 const hexToRgb = (hex) => {
   const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
