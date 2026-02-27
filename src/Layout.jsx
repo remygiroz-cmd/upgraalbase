@@ -31,6 +31,7 @@ import UserActivityTracker from '@/components/UserActivityTracker';
 
 export default function Layout({ children, currentPageName }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const { triggerPlanningOpen } = usePlanningContext();
 
   const { data: currentUser } = useQuery({
     queryKey: ['currentUser'],
