@@ -224,7 +224,7 @@ export default function WeeklySummary({
       totalHoursRounded: Math.round(totalMinutes) / 60
     });
 
-    return totalMinutes / 60;
+    return { workedHours: totalMinutes / 60, debugMinutes: totalMinutes };
   }, [shifts, employee.id, weekStart, weekStartStr, nonShiftEvents, nonShiftTypes, employee]);
 
   // Compter les shifts
