@@ -699,18 +699,22 @@ function EditMonthlyRecapDialog({
 
   const deleteMutation = useMutation({
     mutationFn: async () => {
-      await clearRecapExtras(monthKey, employee.id);
+      await Promise.all([
+        deleteRecapPersisted(monthKey, employee.id),
+        clearRecapExtras(monthKey, employee.id)
+      ]);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['recapExtrasOverride', monthKey] });
       queryClient.invalidateQueries({ queryKey: ['monthlyRecapsPersisted', monthKey] });
       queryClient.invalidateQueries({ queryKey: ['exportOverrides', monthKey] });
       queryClient.invalidateQueries({ queryKey: ['monthlyExportOverrides', monthKey] });
+      setFormData({});
       if (onRecapUpdate) onRecapUpdate();
       toast.success('Modifications supprimées');
       onOpenChange(false);
     },
-    onError: (e) => toast.error('Erreur: ' + e.message)
+    onError: (e) => toast.error('Erreur lors de la réinitialisation: ' + e.message)
   });
 
   const handleSave = () => {
