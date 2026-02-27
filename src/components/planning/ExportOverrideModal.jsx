@@ -79,14 +79,15 @@ export default function ExportOverrideModal({
   });
 
   const resetAllMutation = useMutation({
-    mutationFn: () => clearExportOverride(monthKey, employee.id),
+    mutationFn: () => deleteExportOverride(monthKey, employee.id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['exportOverrides', monthKey] });
       queryClient.invalidateQueries({ queryKey: ['monthlyExportOverrides', monthKey] });
       setOverrides(EMPTY_STATE);
       toast.success('Surcharges export supprimées');
       onOpenChange(false);
-    }
+    },
+    onError: (e) => toast.error('Erreur lors de la réinitialisation: ' + e.message)
   });
 
   const handleSave = () => saveMutation.mutate();
