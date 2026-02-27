@@ -1,7 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
-import { usePlanningContext } from '@/components/PlanningContext';
 import { Calendar, ChevronLeft, ChevronRight, Plus, Filter, GripVertical, Settings, MoreVertical, Copy, ArrowDown, FileText, X, EyeOff, Eye } from 'lucide-react';
 import PageHeader from '@/components/ui/PageHeader';
 import { Button } from '@/components/ui/button';
@@ -52,11 +51,9 @@ export default function PlanningV2() {
   const [showShiftModal, setShowShiftModal] = useState(false);
   const [isPlanningReady, setIsPlanningReady] = useState(false);
   const [pendingGoToToday, setPendingGoToToday] = useState(null);
-  const [lastSidebarToken, setLastSidebarToken] = useState(null);
   const planningGridRef = useRef(null);
   const scrollAttemptRef = useRef(0);
   const maxScrollAttemptsRef = useRef(10);
-  const { planningOpenToken } = usePlanningContext();
   const [showPlanningSettings, setShowPlanningSettings] = useState(false);
   const [showExportComptaModal, setShowExportComptaModal] = useState(false);
   const [showApplyTemplatesModal, setShowApplyTemplatesModal] = useState(false);
@@ -706,14 +703,13 @@ export default function PlanningV2() {
     }
   }, [isPlanningReady, pendingGoToToday, goToToday]);
 
-  // Écouter les clics sur le bouton Planning de la sidebar
+  // Aller à aujourd'hui au montage du composant
   useEffect(() => {
-    if (planningOpenToken !== null && planningOpenToken !== lastSidebarToken) {
-      console.log(`PLANNING_TOKEN_RECEIVED token=${planningOpenToken}`);
-      setLastSidebarToken(planningOpenToken);
-      goToToday('sidebar_click');
+    if (isPlanningReady) {
+      console.log('PLANNING_MOUNTED_READY');
+      goToToday('component_mounted');
     }
-  }, [planningOpenToken, lastSidebarToken, goToToday]);
+  }, []);
 
   // Marquer Planning comme prêt quand les données clés sont là
   useEffect(() => {
