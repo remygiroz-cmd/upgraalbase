@@ -251,7 +251,7 @@ export default function WeeklySummary({
 
     // FIX: Réalisé = strict real times, never base_hours_override
     return { workedHours: totalStrict / 60, debugStrict: totalStrict, debugUsed: totalUsed, debugShifts };
-  }, [shifts, employee.id, weekStart, weekStartStr, nonShiftEvents, nonShiftTypes, employee]);
+  }, [shifts, employee.id, rangeStartStr, rangeEndStr, nonShiftEvents, nonShiftTypes, employee]);
 
 
 
