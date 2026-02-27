@@ -740,17 +740,20 @@ Weeks to process: ${weeks.length}
   result.adjustedContractHours = calculatedMonthlyBase;
   
   if (isPartTime) {
-    // Part-time: complementary hours with monthly smoothing
+    // Part-time: complementary hours with monthly smoothing (NO cap — count everything, warn if > 1/3)
     const excess = Math.max(0, result.workedHours - result.contractMonthlyHours);
-    const maxComplementary = result.contractMonthlyHours / 3;
-    const actualComplementary = Math.min(excess, maxComplementary);
+    const maxAllowed = result.contractMonthlyHours / 3;
     
     const limit10 = result.contractMonthlyHours * 0.10;
     
-    // Floor to 2 decimals to avoid micro-hours (0.004h → 0.00h instead of 0.01h)
-    result.complementaryHours10 = Math.floor(Math.min(actualComplementary, limit10) * 100) / 100;
-    result.complementaryHours25 = Math.floor(Math.max(0, actualComplementary - limit10) * 100) / 100;
+    // NO cap: tout le surplus en comp, même au-delà de 1/3
+    result.complementaryHours10 = Math.floor(Math.min(excess, limit10) * 100) / 100;
+    result.complementaryHours25 = Math.floor(Math.max(0, excess - limit10) * 100) / 100;
     result.totalComplementaryHours = result.complementaryHours10 + result.complementaryHours25;
+
+    // Avertissement consultatif non bloquant
+    const excessOverMax = Math.max(0, excess - maxAllowed);
+    result.complementaryExcessWarning = excessOverMax > 0.01 ? excessOverMax : 0;
 
     console.log(`
 ───────────────────────────────────────────────────────────
