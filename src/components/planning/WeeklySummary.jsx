@@ -140,20 +140,6 @@ export default function WeeklySummary({
   const displayedBase = useMemo(() => {
     const value = baseOverrideFromDB !== null ? baseOverrideFromDB : baseDefault;
     
-    console.log('═══════════════════════════════════════════════════');
-    console.log('🎨 RENDER VALUE - VALEUR RÉELLEMENT AFFICHÉE');
-    console.log('═══════════════════════════════════════════════════');
-    console.log('employeeId:', employee.id);
-    console.log('employeeName:', employee.first_name + ' ' + employee.last_name);
-    console.log('weekStartStr:', weekStartStr);
-    console.log('baseOverrideFromDB:', baseOverrideFromDB);
-    console.log('baseDefault:', baseDefault);
-    console.log('isEditingBase:', isEditingBase);
-    console.log('baseDraft:', baseDraft);
-    console.log('weeklyRecap:', weeklyRecap);
-    console.log('VALEUR FINALE AFFICHÉE:', value);
-    console.log('═══════════════════════════════════════════════════\n');
-    
     return value;
   }, [baseOverrideFromDB, baseDefault, employee.id, weekStartStr, isEditingBase, baseDraft, weeklyRecap, employee.first_name, employee.last_name]);
 
