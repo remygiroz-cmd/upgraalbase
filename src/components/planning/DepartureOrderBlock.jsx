@@ -80,17 +80,28 @@ export default function DepartureOrderBlock({ date, currentUser }) {
               </span>
             ))}
           </p>
-          <div className="flex items-center gap-3 mt-2 text-xs text-emerald-600">
-            <span>Basé sur les heures du mois en cours</span>
-            {order.generated_at && (
-              <>
-                <span>•</span>
-                <span className="flex items-center gap-1">
-                  <Clock className="w-3 h-3" />
-                  Mis à jour à {new Date(order.generated_at).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
-                </span>
-              </>
-            )}
+          <div className="flex items-center justify-between mt-2">
+            <div className="flex items-center gap-3 text-xs text-emerald-600">
+              <span>Basé sur les heures du mois en cours</span>
+              {order.generated_at && (
+                <>
+                  <span>•</span>
+                  <span className="flex items-center gap-1">
+                    <Clock className="w-3 h-3" />
+                    Mis à jour à {new Date(order.generated_at).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
+                  </span>
+                </>
+              )}
+            </div>
+            <button
+              onClick={handleRefresh}
+              disabled={refreshing}
+              className="flex items-center gap-1 text-xs text-emerald-700 hover:text-emerald-900 transition-colors disabled:opacity-50"
+              title="Rafraîchir maintenant"
+            >
+              <RefreshCw className={`w-3 h-3 ${refreshing ? 'animate-spin' : ''}`} />
+              {refreshing ? 'Mise à jour...' : 'Rafraîchir'}
+            </button>
           </div>
         </div>
       ))}
