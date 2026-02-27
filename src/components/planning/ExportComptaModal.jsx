@@ -613,22 +613,44 @@ export default function ExportComptaModal({ open, onOpenChange, monthStart, mont
     enabled: open
   });
 
-  // 🎯 SOURCE DE VÉRITÉ: calcul LIVE depuis shifts + overrides manuels uniquement
+  // Fetch WeeklyRecaps — nécessaire pour que le calcul mensuel soit identique au récap affiché
+  const { data: allWeeklyRecaps = [] } = useQuery({
+    queryKey: ['allWeeklyRecaps', monthKey, activeResetVersion],
+    queryFn: async () => {
+      const firstDay = formatDate(new Date(monthStart.getFullYear(), monthStart.getMonth(), 1));
+      const startRange = new Date(monthStart.getFullYear(), monthStart.getMonth(), 1);
+      startRange.setDate(startRange.getDate() - 7);
+      const startRangeStr = formatDate(startRange);
+      const allRecaps = await base44.entities.WeeklyRecap.list();
+      return allRecaps.filter(r => r.week_start >= startRangeStr && r.week_start <= firstDay.slice(0, 8) + '31' && r.reset_version === activeResetVersion);
+    },
+    enabled: open && activeResetVersion !== undefined
+  });
+
+  // 🎯 SOURCE DE VÉRITÉ UNIQUE : même calcul que MonthlySummary
+  // Priorité : exportOverride > recapPersisted/recapExtras > auto (avec weeklyRecaps)
   const exportData = React.useMemo(() => {
     if (!employees.length || activeResetVersion === undefined) return [];
 
-    const monthIndex = monthStart.getMonth(); // 0-indexed
+    const monthIndex = monthStart.getMonth();
     const yearNum = monthStart.getFullYear();
+
+    const parseContractHoursLocal = (hoursStr) => {
+      if (!hoursStr) return null;
+      const cleanStr = String(hoursStr).trim().replace(/h/gi, '').replace(/,/g, '.');
+      const hours = parseFloat(cleanStr);
+      return isNaN(hours) ? null : hours;
+    };
 
     return employees
       .map(employee => {
         const employeeShifts = shifts.filter(s => s.employee_id === employee.id);
         const employeeNonShifts = nonShiftEvents.filter(e => e.employee_id === employee.id);
 
-        // Skip si aucune activité
         if (employeeShifts.length === 0 && employeeNonShifts.length === 0) return null;
 
-        // ── CALCUL LIVE depuis shifts (même moteur que MonthlySummary) ──
+        // ── MÊME CALCUL QUE MonthlySummary : avec weeklyRecaps pour cohérence ──
+        const employeeWeeklyRecaps = allWeeklyRecaps.filter(wr => wr.employee_id === employee.id);
         const autoRecap = calculateMonthlyRecap(
           calculationMode,
           employee,
@@ -637,60 +659,51 @@ export default function ExportComptaModal({ open, onOpenChange, monthStart, mont
           nonShiftTypes,
           holidayDates,
           yearNum,
-          monthIndex
+          monthIndex,
+          employeeWeeklyRecaps // ← CRITIQUE : même paramètre que MonthlySummary
         );
 
-        // ── Récap persisted = overrides MANUELS uniquement ──
+        // ── Overrides manuels (récap mensuel) ──
         const recapPersisted = recapsPersisted.find(r => r.employee_id === employee.id) || null;
         const recapExtras = recapExtrasOverrides.find(r => r.employee_id === employee.id) || null;
 
-        // resolveRecapFinal fusionne auto + overrides manuels
+        // Résoudre le récap final (même logique que MonthlySummary → resolveRecapFinal)
         const resolved = resolveRecapFinal(autoRecap, recapPersisted, recapExtras);
 
-        const complementary_hours_10 = resolved.complementary_hours_10 || 0;
-        const complementary_hours_25 = resolved.complementary_hours_25 || 0;
-        const overtime_hours_25 = resolved.overtime_hours_25 || 0;
-        const overtime_hours_50 = resolved.overtime_hours_50 || 0;
-        const worked_hours = resolved.worked_hours || autoRecap?.workedHours || 0;
+        // Valeurs résolues (récap mensuel final, sans export override)
+        const compl10_recap  = resolved.complementary_hours_10 || 0;
+        const compl25_recap  = resolved.complementary_hours_25 || 0;
+        const supp25_recap   = resolved.overtime_hours_25 || 0;
+        const supp50_recap   = resolved.overtime_hours_50 || 0;
+        const worked_hours   = resolved.worked_hours || autoRecap?.workedHours || 0;
 
-        // Skip si aucune heure travaillée
         if (worked_hours === 0 && employeeShifts.length === 0) return null;
 
-        const complementary_hours_ui = complementary_hours_10 + complementary_hours_25;
-        const overtime_hours_ui = overtime_hours_25 + overtime_hours_50;
-
-        // === PAYÉES (HORS SUP/COMP) ===
-        const parseContractHours = (hoursStr) => {
-          if (!hoursStr) return null;
-          const cleanStr = String(hoursStr).trim().replace(/h/gi, '').replace(/,/g, '.');
-          const hours = parseFloat(cleanStr);
-          return isNaN(hours) ? null : hours;
-        };
-
-        let payeesHorsSup = worked_hours - complementary_hours_ui - overtime_hours_ui;
-        const monthlyContractHours = parseContractHours(employee.contract_hours);
-        if (monthlyContractHours) {
-          const getDailyHoursForDate = (dateStr) => {
-            const date = new Date(dateStr);
-            const dayIndex = date.getDay();
-            const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
-            const dayName = dayNames[dayIndex];
-            if (employee.weekly_schedule?.[dayName]) {
-              return employee.weekly_schedule[dayName].worked ? (employee.weekly_schedule[dayName].hours || 0) : 0;
-            }
-            const weeklyHours = parseContractHours(employee.contract_hours_weekly);
-            return weeklyHours / (employee.work_days_per_week || 5);
-          };
-          let totalDeduction = 0;
-          employeeNonShifts.forEach(ns => {
-            const nsType = nonShiftTypes.find(t => t.id === ns.non_shift_type_id);
-            if (nsType?.impacts_payroll === true) totalDeduction += getDailyHoursForDate(ns.date);
-          });
-          payeesHorsSup = Math.max(0, monthlyContractHours - totalDeduction);
+        // === PAYÉES (HORS SUP/COMP) — depuis récap résolu ===
+        let payeesHorsSup = resolved.payees_hors_sup_comp ?? null;
+        if (payeesHorsSup === null) {
+          const monthlyContractHours = parseContractHoursLocal(employee.contract_hours);
+          if (monthlyContractHours) {
+            const getDailyHours = (dateStr) => {
+              const d = new Date(dateStr);
+              const dayName = ['sunday','monday','tuesday','wednesday','thursday','friday','saturday'][d.getDay()];
+              if (employee.weekly_schedule?.[dayName]) {
+                return employee.weekly_schedule[dayName].worked ? (employee.weekly_schedule[dayName].hours || 0) : 0;
+              }
+              return parseContractHoursLocal(employee.contract_hours_weekly) / (employee.work_days_per_week || 5);
+            };
+            let deduction = 0;
+            employeeNonShifts.forEach(ns => {
+              const nsType = nonShiftTypes.find(t => t.id === ns.non_shift_type_id);
+              if (nsType?.impacts_payroll === true) deduction += getDailyHours(ns.date);
+            });
+            payeesHorsSup = Math.max(0, monthlyContractHours - deduction);
+          } else {
+            payeesHorsSup = worked_hours - compl10_recap - compl25_recap - supp25_recap - supp50_recap;
+          }
         }
 
         // === NON-SHIFTS & CP ===
-        const nonShiftsVisible = [];
         const nonShiftsByType = {};
         employeeNonShifts.forEach(ns => {
           const nsType = nonShiftTypes.find(t => t.id === ns.non_shift_type_id);
@@ -699,19 +712,15 @@ export default function ExportComptaModal({ open, onOpenChange, monthStart, mont
             nonShiftsByType[nsType.id].dates.push(ns.date);
           }
         });
-        Object.values(nonShiftsByType).forEach(({ type, dates }) => {
+        const nonShiftsStr = Object.values(nonShiftsByType).map(({ type, dates }) => {
           const code = type.code || type.label?.substring(0, 3).toUpperCase();
-          nonShiftsVisible.push(`${code} ${dates.length}j le ${formatDateFR(dates.sort()[0])}`);
-        });
-        const nonShiftsStr = nonShiftsVisible.join('\n') || '';
+          return `${code} ${dates.length}j le ${formatDateFR(dates.sort()[0])}`;
+        }).join('\n') || '';
 
-        const cpLines = cpPeriods.filter(cp => cp.employee_id === employee.id).map(cp => {
+        const cpStr = cpPeriods.filter(cp => cp.employee_id === employee.id).map(cp => {
           const d = cp.cp_days_manual || cp.cp_days_auto || 0;
           return `${d} CP (départ le ${formatDateFR(cp.cp_start_date)}, reprise le ${formatDateFR(cp.return_date)})`;
-        });
-        const cpStr = cpLines.join('\n') || '';
-
-        const workedDays = employeeShifts.length;
+        }).join('\n') || '';
 
         // === OVERRIDES EXPORT (priorité max) ===
         const exportOverrideNew = monthlyExportOverrides.find(o => o.employee_id === employee.id);
@@ -723,13 +732,14 @@ export default function ExportComptaModal({ open, onOpenChange, monthStart, mont
           return autoVal;
         };
 
-        const finalNbJours    = r3(exportOverrideNew?.nb_jours_travailles, recapExtras?.jours_travailles, workedDays);
+        // Pour comp/supp : exportOverride > recapPersisted (surcharge manuelle mensuelle) > auto calculé
+        const finalNbJours    = r3(exportOverrideNew?.nb_jours_travailles, recapExtras?.jours_travailles, resolved.jours_travailles || 0);
         const finalJoursSupp  = r3(exportOverrideNew?.jours_supp, recapExtras?.jours_supp, 0);
         const finalPayees     = r3(exportOverrideNew?.payees_hors_sup_comp, recapExtras?.payees_hors_sup_comp, payeesHorsSup);
-        const finalCompl10    = r3(exportOverrideNew?.compl_10, recapPersisted?.complementary_hours_10 ?? null, complementary_hours_10);
-        const finalCompl25    = r3(exportOverrideNew?.compl_25, recapPersisted?.complementary_hours_25 ?? null, complementary_hours_25);
-        const finalSupp25     = r3(exportOverrideNew?.supp_25, recapPersisted?.overtime_hours_25 ?? null, overtime_hours_25);
-        const finalSupp50     = r3(exportOverrideNew?.supp_50, recapPersisted?.overtime_hours_50 ?? null, overtime_hours_50);
+        const finalCompl10    = r3(exportOverrideNew?.compl_10, recapPersisted?.complementary_hours_10 ?? null, compl10_recap);
+        const finalCompl25    = r3(exportOverrideNew?.compl_25, recapPersisted?.complementary_hours_25 ?? null, compl25_recap);
+        const finalSupp25     = r3(exportOverrideNew?.supp_25, recapPersisted?.overtime_hours_25 ?? null, supp25_recap);
+        const finalSupp50     = r3(exportOverrideNew?.supp_50, recapPersisted?.overtime_hours_50 ?? null, supp50_recap);
         const finalFerieJours = r3(exportOverrideNew?.ferie_jours, recapExtras?.ferie_jours, resolved.ferie_jours || null);
         const finalFerieHeures= r3(exportOverrideNew?.ferie_heures, recapExtras?.ferie_heures, resolved.ferie_heures || null);
         const finalNonShifts  = r3(exportOverrideNew?.non_shifts_visibles, recapExtras?.non_shifts_visibles, nonShiftsStr);
@@ -739,9 +749,12 @@ export default function ExportComptaModal({ open, onOpenChange, monthStart, mont
           ? `${finalFerieJours}j, ${finalFerieHeures % 1 === 0 ? finalFerieHeures.toFixed(0) : finalFerieHeures.toFixed(1)}h`
           : '';
 
-        const finalCompl_ui = finalCompl10 + finalCompl25;
+        const finalCompl_ui   = finalCompl10 + finalCompl25;
         const finalOvertime_ui = finalSupp25 + finalSupp50;
-        const finalTotalPaid = finalPayees + finalCompl_ui + finalOvertime_ui + (finalFerieStr ? (finalFerieHeures || 0) : 0);
+        const finalTotalPaid  = finalPayees + finalCompl_ui + finalOvertime_ui + (finalFerieStr ? (finalFerieHeures || 0) : 0);
+
+        // Source debug
+        const debugSource = exportOverrideNew ? 'exportOverride' : (recapPersisted || recapExtras) ? 'monthlyOverride' : 'auto';
 
         return {
           employee,
@@ -758,17 +771,19 @@ export default function ExportComptaModal({ open, onOpenChange, monthStart, mont
           ferieEligible: !!finalFerieStr,
           nonShiftsStr: finalNonShifts,
           cpStr: finalCp,
-          hasPersistedRecap: true, // toujours calculé live, indicateur plus pertinent
+          hasPersistedRecap: true,
           hasAnyOverride: !!(exportOverrideNew || recapExtras || recapPersisted),
           override: exportOverrideNew || legacyOverride,
+          debugSource,
+          debugMin: { compl10: Math.round(finalCompl10 * 60), compl25: Math.round(finalCompl25 * 60), supp25: Math.round(finalSupp25 * 60), supp50: Math.round(finalSupp50 * 60) },
           autoValues: {
-            nbJoursTravailles: workedDays,
+            nbJoursTravailles: resolved.jours_travailles || 0,
             joursSupp: 0,
             payeesHorsSup,
-            compl10: complementary_hours_10,
-            compl25: complementary_hours_25,
-            supp25: overtime_hours_25,
-            supp50: overtime_hours_50,
+            compl10: compl10_recap,
+            compl25: compl25_recap,
+            supp25: supp25_recap,
+            supp50: supp50_recap,
             ferieDays: resolved.ferie_jours || null,
             ferieHours: resolved.ferie_heures || null,
             nonShiftsStr,
@@ -779,7 +794,7 @@ export default function ExportComptaModal({ open, onOpenChange, monthStart, mont
       .filter(Boolean);
   }, [employees, shifts, nonShiftEvents, nonShiftTypes, cpPeriods, calculationMode, holidayDates,
       recapsPersisted, recapExtrasOverrides, monthlyExportOverrides, overrides,
-      activeResetVersion, monthStart]);
+      allWeeklyRecaps, activeResetVersion, monthStart]);
 
   // Calculate totals
   const totals = exportData.reduce((acc, row) => ({
