@@ -188,43 +188,68 @@ export default function WeeklySummary({
       dateMap.get(ns.date).nonShifts.push(ns);
     });
     
-    // Calculate total hours for the week — accumulate in minutes to avoid float drift
-    let totalMinutes = 0;
-    const debugDays = [];
+    // Calculate total hours for the week — STRICT: always use real times (end-start), never override
+    let totalStrict = 0; // minutes from raw end-start times only
+    let totalUsed = 0;   // minutes from current calculation (for debug comparison)
+    const debugShifts = [];
+
     dateMap.forEach((dayData, date) => {
-      // Accumulate shift minutes directly (bypass calculateDayHours float return)
-      let dayMinutes = 0;
+      let dayStrict = 0;
+      let dayUsed = 0;
+
       if (dayData.shifts.length > 0) {
         dayData.shifts.forEach(shift => {
-          let shiftMinutes;
-          if (shift.base_hours_override !== null && shift.base_hours_override !== undefined) {
-            shiftMinutes = Math.round(shift.base_hours_override * 60);
+          // STRICT: always raw end-start
+          const [sh, sm] = shift.start_time.split(':').map(Number);
+          const [eh, em] = shift.end_time.split(':').map(Number);
+          let rawMins = (eh * 60 + em) - (sh * 60 + sm);
+          if (rawMins < 0) rawMins += 24 * 60;
+          rawMins -= (shift.break_minutes || 0);
+          const strictMins = Math.max(0, rawMins);
+
+          // USED: what we used to use (with override)
+          let usedMins;
+          const hasOverride = shift.base_hours_override !== null && shift.base_hours_override !== undefined;
+          if (hasOverride) {
+            usedMins = Math.round(shift.base_hours_override * 60);
           } else {
-            const [sh, sm] = shift.start_time.split(':').map(Number);
-            const [eh, em] = shift.end_time.split(':').map(Number);
-            let mins = (eh * 60 + em) - (sh * 60 + sm);
-            if (mins < 0) mins += 24 * 60;
-            mins -= (shift.break_minutes || 0);
-            shiftMinutes = Math.max(0, mins);
+            usedMins = strictMins;
           }
-          dayMinutes += shiftMinutes;
+
+          dayStrict += strictMins;
+          dayUsed += usedMins;
+
+          debugShifts.push({
+            date,
+            time: `${shift.start_time}-${shift.end_time}`,
+            break: shift.break_minutes || 0,
+            strict: strictMins,
+            used: usedMins,
+            override: hasOverride ? `base_hours_override=${shift.base_hours_override}` : 'none',
+            delta: usedMins - strictMins
+          });
         });
       } else {
         const { hours } = calculateDayHours([], dayData.nonShifts, nonShiftTypes, employee, calculateShiftDuration);
-        dayMinutes = Math.round(hours * 60);
+        const nonShiftMins = Math.round(hours * 60);
+        dayStrict += nonShiftMins;
+        dayUsed += nonShiftMins;
       }
-      totalMinutes += dayMinutes;
-      debugDays.push({ date, dayMinutes });
+
+      totalStrict += dayStrict;
+      totalUsed += dayUsed;
     });
 
-    console.log(`[WeeklySummary DEBUG] ${employee.first_name} ${employee.last_name} ${weekStartStr}`, {
-      debugDays,
-      totalMinutes,
-      totalHoursRaw: totalMinutes / 60,
-      totalHoursRounded: Math.round(totalMinutes) / 60
+    console.log(`[WeeklySummary] ${employee.first_name} ${employee.last_name} ${weekStartStr}`, {
+      shifts: debugShifts,
+      totalStrict,
+      totalUsed,
+      delta: totalUsed - totalStrict,
+      conclusion: totalUsed === totalStrict ? '✅ no drift' : `⚠️ +${totalUsed - totalStrict}min from overrides`
     });
 
-    return { workedHours: totalMinutes / 60, debugMinutes: totalMinutes };
+    // FIX: Réalisé = strict real times, never base_hours_override
+    return { workedHours: totalStrict / 60, debugStrict: totalStrict, debugUsed: totalUsed, debugShifts };
   }, [shifts, employee.id, weekStart, weekStartStr, nonShiftEvents, nonShiftTypes, employee]);
 
   // Compter les shifts
