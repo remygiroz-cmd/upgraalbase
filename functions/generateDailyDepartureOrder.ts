@@ -71,16 +71,17 @@ Deno.serve(async (req) => {
   // Today shifts already in allMonthShifts
   const allTodayShifts = allMonthShifts.filter(s => s.date === todayStr);
 
-  // ─── Helper: get score from persisted recap (source of truth = UI values) ──
-  function getScoreFromPersisted(empId, hoursTypeParam) {
-    const recap = allPersistedRecaps.find(r => r.employee_id === empId);
+  // ─── Helper: get score from persisted recap (SOURCE DE VÉRITÉ UNIQUE) ──
+  function getScoreFromPersisted(empId) {
+    const recap = allPersistedRecaps.find(r => r.employee_id === empId && r.reset_version === activeResetVersion);
     if (!recap) {
-      console.log(`  [WARN] No persisted recap for ${empId} — score=0`);
-      return { comp: 0, ot: 0 };
+      console.warn("No MonthlyRecapPersisted found for employee", empId);
+      return { comp: 0, ot: 0, workedHours: 0 };
     }
     return {
       comp: recap.complementary_hours_ui || 0,
-      ot: recap.overtime_hours_ui || 0
+      ot: recap.overtime_hours_ui || 0,
+      workedHours: recap.worked_hours || 0
     };
   }
 
