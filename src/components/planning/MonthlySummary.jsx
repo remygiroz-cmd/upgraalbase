@@ -71,6 +71,7 @@ export default function MonthlySummary({
   });
 
   const calculationMode = calculationSettings[0]?.planning_calculation_mode || 'disabled';
+  const hoursMode = useHoursDisplayMode();
 
   // Fetch MonthlyRecapPersisted (heures override)
   const { data: recapPersistedList = [] } = useQuery({
