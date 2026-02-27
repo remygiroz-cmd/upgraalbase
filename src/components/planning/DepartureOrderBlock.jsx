@@ -7,6 +7,21 @@ import { toast } from 'sonner';
 
 export default function DepartureOrderBlock({ date, currentUser }) {
   const today = date || formatLocalDate(new Date());
+  const queryClient = useQueryClient();
+  const [refreshing, setRefreshing] = useState(false);
+
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    try {
+      await base44.functions.invoke('generateDailyDepartureOrder', {});
+      await queryClient.invalidateQueries({ queryKey: ['departureOrders', today] });
+      toast.success('Ordre de départ mis à jour');
+    } catch {
+      toast.error('Erreur lors de la mise à jour');
+    } finally {
+      setRefreshing(false);
+    }
+  };
 
   const { data: settingsArr = [] } = useQuery({
     queryKey: ['optimisationSettings'],
