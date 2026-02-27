@@ -260,15 +260,23 @@ ${deductionDetails.length > 0 ? `  Détail: ${deductionDetails.map(d => `${d.dat
   const isOverridden = (fieldName) => overriddenFields.includes(fieldName);
 
   // Render value with override indicator
-  const renderValue = (value, fieldName, unit = '', decimals = 1) => {
+  // isHours: if true, format with hoursMode; otherwise plain number
+  const renderValue = (value, fieldName, unit = '', decimals = 0, isHours = false) => {
     const isOvr = isOverridden(fieldName);
-    const displayVal = value !== null && value !== undefined
-      ? (typeof value === 'number' ? value.toFixed(decimals) : value)
-      : '-';
+    let displayVal;
+    if (value === null || value === undefined) {
+      displayVal = '-';
+    } else if (isHours && typeof value === 'number') {
+      displayVal = formatHours(value, hoursMode);
+    } else if (typeof value === 'number') {
+      displayVal = value.toFixed(decimals) + unit;
+    } else {
+      displayVal = value + unit;
+    }
 
     return (
       <span className={cn(isOvr && 'text-blue-700 font-semibold')}>
-        {displayVal}{unit}
+        {displayVal}
         {isOvr && <span className="text-[8px] ml-0.5 text-blue-500">*</span>}
       </span>
     );
