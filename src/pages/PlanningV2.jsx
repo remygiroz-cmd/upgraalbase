@@ -642,59 +642,56 @@ export default function PlanningV2() {
     }
   };
 
-  // Fonction unique : aller à aujourd'hui avec scroll robuste
+  // Fonction robuste : aller à aujourd'hui avec scroll fiable
   const goToToday = React.useCallback((reason = 'manual') => {
     const today = new Date();
-    console.log(`GO_TO_TODAY_REQUESTED { reason: "${reason}", isPlanningReady: ${isPlanningReady} }`);
     
     if (!isPlanningReady) {
-      console.log('Planning not ready yet, deferring goToToday');
+      console.log(`[GO_TO_TODAY] not ready yet, deferring (reason=${reason})`);
       setPendingGoToToday(reason);
       return;
     }
 
     const todayKey = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
-    const monthKey = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
 
-    // 1. Mettre à jour la date
+    // 1. METTRE À JOUR L'ÉTAT (date logique)
     setCurrentDate(today);
-    console.log(`GO_TO_TODAY_APPLIED { todayKey: "${todayKey}", monthKey: "${monthKey}" }`);
+    console.log(`GO_TO_TODAY_SET_STATE todayKey=${todayKey} reason=${reason}`);
 
-    // 2. Reset scroll attempts counter
+    // 2. SCROLL : attendre que le DOM soit prêt et scroller vers [data-today="true"]
     scrollAttemptRef.current = 0;
 
-    // 3. Fonction robuste de scroll avec retry
     const attemptScroll = () => {
+      const todayRowElement = document.querySelector('[data-today="true"]');
       const container = tableContainerRef.current;
-      const todayElement = document.querySelector(`[data-date="${todayKey}"]`);
       
-      if (container && todayElement) {
+      const found = !!todayRowElement;
+      console.log(`SCROLL_TRY n=${scrollAttemptRef.current + 1} found=${found}`);
+      
+      if (found && container) {
         try {
-          todayElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
-          console.log('GO_TO_TODAY_SCROLL_OK');
+          todayRowElement.scrollIntoView({ behavior: 'auto', block: 'start' });
+          console.log('SCROLL_DONE');
         } catch (e) {
-          console.warn('GO_TO_TODAY_SCROLL_FAIL (exception)', { error: e.message });
+          console.warn(`SCROLL_EXCEPTION ${e.message}`);
+        }
+        return;
+      }
+
+      scrollAttemptRef.current += 1;
+      if (scrollAttemptRef.current < maxScrollAttemptsRef.current) {
+        // RAF x2 au début, puis setTimeout
+        if (scrollAttemptRef.current <= 2) {
+          requestAnimationFrame(() => requestAnimationFrame(attemptScroll));
+        } else {
+          setTimeout(attemptScroll, 100);
         }
       } else {
-        scrollAttemptRef.current += 1;
-        if (scrollAttemptRef.current < maxScrollAttemptsRef.current) {
-          console.log(`TODAY_CELL_FOUND_ATTEMPT_${scrollAttemptRef.current}: not_found`);
-          // Retry avec RAF
-          if (scrollAttemptRef.current <= 2) {
-            requestAnimationFrame(() => requestAnimationFrame(attemptScroll));
-          } else {
-            setTimeout(attemptScroll, 150);
-          }
-        } else {
-          console.warn(`GO_TO_TODAY_SCROLL_FAIL (max_attempts, attempt_${scrollAttemptRef.current})`, { 
-            container: !!container, 
-            todayElement: !!todayElement 
-          });
-        }
+        console.warn(`SCROLL_FAILED max_attempts=${maxScrollAttemptsRef.current}`);
       }
     };
 
-    // Lancer la première tentative
+    // Lancer la première tentative (RAF x2 + scroll)
     requestAnimationFrame(() => requestAnimationFrame(attemptScroll));
   }, [isPlanningReady]);
 
