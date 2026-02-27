@@ -87,9 +87,13 @@ export function calculateDayHours(shifts, nonShifts, nonShiftTypes, employee, ca
   const warnings = [];
 
   // If there are real shifts, count only shift hours
+  // Accumulate in minutes (integers) to avoid floating-point drift, then convert back
   if (shifts && shifts.length > 0) {
-    const shiftHours = shifts.reduce((sum, shift) => sum + calculateShiftDuration(shift), 0);
-    return { hours: shiftHours, warnings };
+    const totalMinutes = shifts.reduce((sum, shift) => {
+      const h = calculateShiftDuration(shift);
+      return sum + Math.round(h * 60);
+    }, 0);
+    return { hours: totalMinutes / 60, warnings };
   }
 
   // No shifts - check for non-shifts that generate hours
