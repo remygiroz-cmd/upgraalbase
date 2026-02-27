@@ -703,13 +703,20 @@ export default function PlanningV2() {
     }
   }, [isPlanningReady, pendingGoToToday, goToToday]);
 
-  // Aller à aujourd'hui au montage du composant
+  // Écouter les changements d'URL params (focus + token)
   useEffect(() => {
-    if (isPlanningReady) {
-      console.log('PLANNING_MOUNTED_READY');
-      goToToday('component_mounted');
+    const focus = searchParams.get('focus');
+    const token = searchParams.get('t');
+    
+    if (focus && token) {
+      console.log(`PLANNING_ROUTE_PARAMS focus=${focus} t=${token}`);
+      
+      if (focus === 'today' && token !== lastUrlToken) {
+        setLastUrlToken(token);
+        goToToday('sidebar_click');
+      }
     }
-  }, []);
+  }, [searchParams, lastUrlToken, goToToday]);
 
   // Marquer Planning comme prêt quand les données clés sont là
   useEffect(() => {
