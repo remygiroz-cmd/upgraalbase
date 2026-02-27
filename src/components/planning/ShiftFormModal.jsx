@@ -632,9 +632,10 @@ export default function ShiftFormModal({
                 )}
                 <Button
                   type="submit"
-                  className="flex-1 bg-orange-600 hover:bg-orange-700 text-white font-semibold h-12"
+                  disabled={isSubmitting}
+                  className="flex-1 bg-orange-600 hover:bg-orange-700 text-white font-semibold h-12 disabled:opacity-60"
                 >
-                  {selectedEditShift ? '✏️ Modifier' : <><Plus className="w-5 h-5 mr-2" /> Ajouter</>}
+                  {isSubmitting ? 'Enregistrement...' : selectedEditShift ? '✏️ Modifier' : <><Plus className="w-5 h-5 mr-2" /> Ajouter</>}
                 </Button>
               </div>
             </form>
