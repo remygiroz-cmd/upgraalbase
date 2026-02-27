@@ -541,11 +541,13 @@ export default function WeeklySummary({
       <div className="mb-1">
         <div className="text-[9px] text-gray-500 uppercase font-semibold">Réalisé</div>
         <div className="text-lg font-bold text-gray-900">
-          {workedHours.toFixed(2)}h
+          {toHHMM(workedHours)}
         </div>
-        <div className="text-[7px] text-red-500 font-mono">
-          debug: min={debugMinutes} raw={(debugMinutes/60).toFixed(4)}
-        </div>
+        {debugUsed !== debugStrict && (
+          <div className="text-[7px] text-red-500 font-mono">
+            strict={debugStrict} used={debugUsed} Δ=+{debugUsed - debugStrict}
+          </div>
+        )}
       </div>
 
       {/* HEURES + / HEURES - (toujours positifs dans l'affichage) */}
