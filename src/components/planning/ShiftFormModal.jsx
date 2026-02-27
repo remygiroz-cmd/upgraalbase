@@ -194,8 +194,12 @@ export default function ShiftFormModal({
     if (!validateShift()) return;
     if (isSubmitting) return;
 
+    const baseHours = formData.base_hours_override;
     const shiftData = {
       ...formData,
+      base_hours_override: baseHours === '' || baseHours === null || baseHours === undefined
+        ? undefined
+        : Number(baseHours),
       date: selectedCell.date,
       employee_id: selectedCell.employeeId,
       employee_name: selectedCell.employeeName,
