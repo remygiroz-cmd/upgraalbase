@@ -28,10 +28,18 @@ function parseContractHours(val) {
 }
 
 /**
- * Durée en MINUTES ENTIÈRES (shiftStrictMinutes — jamais base_hours_override)
+ * Durée effective d'un shift en MINUTES, IDENTIQUE à calculateShiftDuration de l'UI :
+ * - Si base_hours_override est défini → utiliser cette valeur (en heures → convertir en minutes)
+ * - Sinon → calculer depuis start/end times
+ * 
+ * C'est ce que l'UI utilise pour calculer les HC affichées à l'écran.
  */
-function shiftStrictMinutes(shift) {
+function shiftMinutes(shift) {
   if (!shift.start_time || !shift.end_time) return 0;
+  // L'UI utilise base_hours_override si défini (calculateShiftDuration)
+  if (shift.base_hours_override !== null && shift.base_hours_override !== undefined) {
+    return Math.round(shift.base_hours_override * 60);
+  }
   const [sh, sm] = shift.start_time.split(':').map(Number);
   const [eh, em] = shift.end_time.split(':').map(Number);
   let mins = (eh * 60 + em) - (sh * 60 + sm);
