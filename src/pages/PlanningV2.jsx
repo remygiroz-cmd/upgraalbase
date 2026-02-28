@@ -313,6 +313,13 @@ export default function PlanningV2() {
   }, [paidLeavePeriods]);
 
   // Mutations
+  const { data: calculationSettings = [] } = useQuery({
+    queryKey: ['appSettings', 'planning_calculation_mode'],
+    queryFn: () => base44.entities.AppSettings.filter({ setting_key: 'planning_calculation_mode' }),
+    staleTime: 5 * 60 * 1000
+  });
+  const calculationMode = calculationSettings[0]?.planning_calculation_mode || 'disabled';
+
   const saveShiftMutation = useMutation({
     mutationFn: async ({ id, data, captureForUndo = false, beforeData = null }) => {
       let before = beforeData;
@@ -340,7 +347,7 @@ export default function PlanningV2() {
 
       return result;
     },
-    onSuccess: async () => {
+    onSuccess: async (result, variables) => {
       await queryClient.invalidateQueries({ queryKey: ['shifts'] });
       await queryClient.invalidateQueries({ queryKey: ['allWeeklyRecaps'] });
       await queryClient.invalidateQueries({ queryKey: ['allMonthlyRecaps'] });
@@ -349,6 +356,11 @@ export default function PlanningV2() {
       queryClient.invalidateQueries({ queryKey: ['exportOverrides', monthKey] });
       queryClient.invalidateQueries({ queryKey: ['monthlyExportOverrides', monthKey] });
       if (!undoStack.isUndoingRef.current && !undoStack.isRedoingRef.current) toast.success('Shift enregistré');
+      // Mise à jour immédiate de MonthlyRecapFinal pour l'optimisation
+      const empId = variables.data?.employee_id || result?.employee_id;
+      if (empId) {
+        recomputeAndUpsertForEmployees(monthKey, [empId], resetVersion, calculationMode).catch(() => {});
+      }
     },
     onError: (error) => {
       toast.error('Erreur lors de l\'enregistrement : ' + error.message);
