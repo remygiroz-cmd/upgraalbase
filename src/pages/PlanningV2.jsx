@@ -391,10 +391,6 @@ export default function PlanningV2() {
       if (!undoStack.isUndoingRef.current && !undoStack.isRedoingRef.current) {
         toast.success('Shift supprimé');
       }
-      // Mise à jour immédiate de MonthlyRecapFinal
-      if (result?.employeeId) {
-        recomputeAndUpsertForEmployees(monthKey, [result.employeeId], resetVersion, calculationMode).catch(() => {});
-      }
     },
     onError: (error) => {
       toast.error('Erreur lors de la suppression : ' + error.message);
