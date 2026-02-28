@@ -3,211 +3,12 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
 /**
  * generateDailyDepartureOrder
  *
- * RÈGLE SIMPLE : trier sur la valeur VISUELLE affichée dans la carte "Récap Mois"
- * = même resolver que l'UI : resolveRecapFinal(autoRecap, recapPersisted, recapExtras)
- * = la valeur "H. Complémentaires" (ou "H. Supplémentaires") affichée à l'écran.
+ * SOURCE CANONIQUE UNIQUE : MonthlyRecapFinal
+ * Ce record est écrit par MonthlySummary à chaque rendu/recalcul.
+ * Il contient EXACTEMENT les valeurs affichées dans la carte "Récap Mois".
  *
- * Resolver FINAL (identique à resolveMonthlyPayrollValues.js côté UI) :
- *   - recapPersisted.is_manual_override === true → utiliser ses valeurs d'heures
- *   - MonthlyExportOverride → utilisé pour compl_10/25/supp_25/50 si présent
- *   - sinon → calcul auto depuis les shifts (même logique que calculateMonthlyRecap)
+ * Ce backend NE CALCULE PLUS RIEN. Il lit, trie, sauvegarde.
  */
-
-// ─── Helpers (mêmes que l'UI) ─────────────────────────────────────────────────
-
-function parseContractHours(val) {
-  if (typeof val === 'number') return val;
-  if (!val) return 0;
-  const str = String(val).trim();
-  if (str.includes(':')) {
-    const [h, m] = str.split(':').map(s => parseInt(s, 10) || 0);
-    return h + m / 60;
-  }
-  const n = parseFloat(str.replace(',', '.'));
-  return isNaN(n) ? 0 : n;
-}
-
-/**
- * Durée effective d'un shift en MINUTES, IDENTIQUE à calculateShiftDuration de l'UI :
- * - Si base_hours_override est défini → utiliser cette valeur (en heures → convertir en minutes)
- * - Sinon → calculer depuis start/end times
- * 
- * C'est ce que l'UI utilise pour calculer les HC affichées à l'écran.
- */
-function shiftMinutes(shift) {
-  if (!shift.start_time || !shift.end_time) return 0;
-  // L'UI utilise base_hours_override si défini (calculateShiftDuration)
-  if (shift.base_hours_override !== null && shift.base_hours_override !== undefined) {
-    return Math.round(shift.base_hours_override * 60);
-  }
-  const [sh, sm] = shift.start_time.split(':').map(Number);
-  const [eh, em] = shift.end_time.split(':').map(Number);
-  let mins = (eh * 60 + em) - (sh * 60 + sm);
-  if (mins < 0) mins += 24 * 60;
-  mins -= (shift.break_minutes || 0);
-  return Math.max(0, mins);
-}
-
-function getFullWeekDates(mondayStr) {
-  const dates = [];
-  for (let i = 0; i < 7; i++) {
-    const d = new Date(mondayStr + 'T00:00:00');
-    d.setDate(d.getDate() + i);
-    dates.push(`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`);
-  }
-  return dates;
-}
-
-function getWeeksTouchingMonth(year, month) {
-  const weeksSet = new Set();
-  const lastDay = new Date(year, month + 1, 0).getDate();
-  for (let day = 1; day <= lastDay; day++) {
-    const d = new Date(year, month, day);
-    const dow = d.getDay();
-    const diff = dow === 0 ? -6 : 1 - dow;
-    const mon = new Date(year, month, day + diff);
-    const monStr = `${mon.getFullYear()}-${String(mon.getMonth()+1).padStart(2,'0')}-${String(mon.getDate()).padStart(2,'0')}`;
-    weeksSet.add(monStr);
-  }
-  return [...weeksSet];
-}
-
-/**
- * Calcul AUTO live depuis les shifts (mode weekly — même logique que calculateMonthlyRecap).
- * Retourne les minutes finales de complémentaires et supplémentaires.
- */
-function calcAutoMinutes(emp, empShifts, year, month, monthStart, monthEnd) {
-  const contractHoursWeekly = parseContractHours(emp.contract_hours_weekly) || 0;
-  const isPartTime = emp.work_time_type === 'part_time';
-  const workDaysPerWeek = emp.work_days_per_week || 5;
-
-  const weeklySchedule = emp.weekly_schedule || {};
-  const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
-  const workedDaysOfWeek = new Set();
-  dayNames.forEach((name, idx) => { if (weeklySchedule[name]?.worked) workedDaysOfWeek.add(idx); });
-  if (workedDaysOfWeek.size === 0) {
-    for (let i = 0; i < workDaysPerWeek; i++) workedDaysOfWeek.add((i + 1) % 7);
-  }
-
-  const dailyHours = contractHoursWeekly / (workedDaysOfWeek.size || workDaysPerWeek);
-  const weeks = getWeeksTouchingMonth(year, month);
-
-  let totalBaseMin = 0, totalCompMin = 0, totalOt25Min = 0, totalOt50Min = 0;
-
-  for (const mondayStr of weeks) {
-    const allWeekDates = getFullWeekDates(mondayStr);
-    const visibleDates = allWeekDates.filter(d => d >= monthStart && d <= monthEnd);
-    if (visibleDates.length === 0) continue;
-
-    let contractDays = 0;
-    for (const d of visibleDates) {
-      if (workedDaysOfWeek.has(new Date(d + 'T00:00:00').getDay())) contractDays++;
-    }
-    const weekBaseMin = Math.round(contractDays * dailyHours * 60);
-    totalBaseMin += weekBaseMin;
-
-    let weekWorkedMin = 0;
-    for (const d of visibleDates) {
-      const dayShifts = empShifts.filter(s =>
-        s.date === d && s.status !== 'absent' && s.status !== 'leave' && s.status !== 'cancelled'
-      );
-      weekWorkedMin += dayShifts.reduce((sum, s) => sum + shiftMinutes(s), 0);
-    }
-
-    const diffMin = weekWorkedMin - weekBaseMin;
-    if (diffMin <= 0) continue;
-
-    if (isPartTime) {
-      totalCompMin += diffMin;
-    } else {
-      totalOt25Min += Math.min(diffMin, 480);
-      if (diffMin > 480) totalOt50Min += diffMin - 480;
-    }
-  }
-
-  // Ventilation comp 10%/25% (temps partiel)
-  let comp10Min = 0, comp25Min = 0;
-  if (isPartTime) {
-    const limit10 = Math.round(totalBaseMin * 0.10);
-    comp10Min = Math.min(totalCompMin, limit10);
-    comp25Min = Math.max(0, totalCompMin - limit10);
-  }
-
-  return {
-    comp10: comp10Min / 60,
-    comp25: comp25Min / 60,
-    ot25: totalOt25Min / 60,
-    ot50: totalOt50Min / 60,
-    // Total minutes pour le tri
-    compTotalMin: comp10Min + comp25Min,
-    otTotalMin: totalOt25Min + totalOt50Min,
-  };
-}
-
-/**
- * Resolver FINAL — SOURCE DE VÉRITÉ = valeurs affichées dans la carte Récap Mois.
- * 
- * Priorité pour les heures (identique à resolveRecapFinal dans l'UI) :
- *   1. MonthlyExportOverride (compl_10/25, supp_25/50)
- *   2. MonthlyRecapPersisted is_manual_override=true (saisie manuelle)
- *   3. MonthlyRecapPersisted is_manual_override=false (cache UI — valeurs calculées par l'UI)
- *   4. Calcul auto live (fallback si aucun record persisté)
- * 
- * IMPORTANT : on utilise MonthlyRecapPersisted même non-manuel car il contient
- * les valeurs exactes calculées par l'UI (incluant weeklyRecaps overrides, etc.)
- * que le backend ne peut pas reproduire parfaitement.
- * 
- * Retourne { scoreMinutes, src, comp10, comp25, ot25, ot50 }
- */
-function resolveScore(empId, autoValues, allPersisted, allExtras, allExportOvr, hoursType) {
-  const persisted = allPersisted.find(r => r.employee_id === empId) || null;
-  const expOvr    = allExportOvr.find(r => r.employee_id === empId) || null;
-  const isManual  = persisted?.is_manual_override === true;
-
-  let scoreMinutes, compTotalMin, otTotalMin, src;
-
-  // Priorité 1 : MonthlyExportOverride — surcharge explicite compta
-  if (expOvr && (expOvr.compl_10 != null || expOvr.compl_25 != null || expOvr.supp_25 != null)) {
-    const comp10 = expOvr.compl_10 ?? (persisted?.complementary_hours_10 ?? autoValues.comp10);
-    const comp25 = expOvr.compl_25 ?? (persisted?.complementary_hours_25 ?? autoValues.comp25);
-    const ot25   = expOvr.supp_25  ?? (persisted?.overtime_hours_25      ?? autoValues.ot25);
-    const ot50   = expOvr.supp_50  ?? (persisted?.overtime_hours_50      ?? autoValues.ot50);
-    compTotalMin = Math.round((comp10 + comp25) * 60);
-    otTotalMin   = Math.round((ot25   + ot50)   * 60);
-    src = 'exportOverride';
-  }
-  // Priorité 2 : MonthlyRecapPersisted is_manual_override=true (saisie manuelle)
-  else if (isManual) {
-    const comp10 = persisted.complementary_hours_10 ?? autoValues.comp10;
-    const comp25 = persisted.complementary_hours_25 ?? autoValues.comp25;
-    const ot25   = persisted.overtime_hours_25      ?? autoValues.ot25;
-    const ot50   = persisted.overtime_hours_50      ?? autoValues.ot50;
-    compTotalMin = Math.round((comp10 + comp25) * 60);
-    otTotalMin   = Math.round((ot25   + ot50)   * 60);
-    src = 'manualOverride';
-  }
-  // Priorité 3 : MonthlyRecapPersisted cache (écrit par l'UI — utilise complementary_hours_ui directement)
-  // C'est la valeur EXACTE que la carte affiche à l'écran !
-  else if (persisted && persisted.complementary_hours_ui != null) {
-    compTotalMin = Math.round(persisted.complementary_hours_ui * 60);
-    otTotalMin   = Math.round((persisted.overtime_hours_ui ?? 0) * 60);
-    src = 'cachedUI';
-  }
-  // Priorité 4 : calcul auto live (fallback si aucun record persisté)
-  else {
-    compTotalMin = Math.round((autoValues.comp10 + autoValues.comp25) * 60);
-    otTotalMin   = Math.round((autoValues.ot25   + autoValues.ot50)   * 60);
-    src = 'auto';
-  }
-
-  if (hoursType === 'complementary') scoreMinutes = compTotalMin;
-  else if (hoursType === 'overtime')  scoreMinutes = otTotalMin;
-  else                                scoreMinutes = compTotalMin + otTotalMin;
-
-  return { compTotalMin, otTotalMin, scoreMinutes, src };
-}
-
-// ─── Main handler ─────────────────────────────────────────────────────────────
 
 Deno.serve(async (req) => {
   const base44 = createClientFromRequest(req);
@@ -243,44 +44,34 @@ Deno.serve(async (req) => {
 
   const today = new Date();
   const pad = n => String(n).padStart(2, '0');
-  const todayStr  = `${today.getFullYear()}-${pad(today.getMonth()+1)}-${pad(today.getDate())}`;
-  const monthKey  = todayStr.substring(0, 7);
-  const year      = today.getFullYear();
-  const month     = today.getMonth(); // 0-indexed
-  const monthStart = `${monthKey}-01`;
-  const lastDay   = new Date(year, month + 1, 0).getDate();
-  const monthEnd  = `${monthKey}-${pad(lastDay)}`;
+  const todayStr = `${today.getFullYear()}-${pad(today.getMonth()+1)}-${pad(today.getDate())}`;
+  const monthKey = todayStr.substring(0, 7);
+
+  console.log(`📅 Génération ordre de départ — ${todayStr} (${monthKey})`);
+  console.log(`⚙️  hoursType=${hoursType}, services=${services.join(',')}`);
+  console.log(`ℹ️  SOURCE: MonthlyRecapFinal (valeurs canoniques = exactement ce qu'affiche la carte)`);
 
   const planningMonths = await b.entities.PlanningMonth.filter({ month_key: monthKey });
   const resetVersion   = planningMonths[0]?.reset_version ?? 0;
 
-  console.log(`📅 Génération ordre de départ — ${todayStr} (${monthKey} v${resetVersion})`);
-  console.log(`⚙️  hoursType=${hoursType}, services=${services.join(',')}`);
-  console.log(`ℹ️  Resolver : exportOverride > manualPersisted > auto (IDENTIQUE à l'UI)`);
-
-  // Chargement parallèle
+  // Chargement parallèle — uniquement ce dont on a besoin
   const [
     allTodayNonShifts,
-    allMonthShifts,
-    allPersisted,
-    allExtras,
-    allExportOvr,
+    allTodayShifts,
+    allRecapFinal,
     allEmployees,
     allTeams
   ] = await Promise.all([
     b.entities.NonShiftEvent.filter({ date: todayStr }),
-    b.entities.Shift.filter({ month_key: monthKey, reset_version: resetVersion }),
-    b.entities.MonthlyRecapPersisted.filter({ month_key: monthKey }),
-    b.entities.MonthlyRecapExtrasOverride.filter({ month_key: monthKey }),
-    b.entities.MonthlyExportOverride.filter({ month_key: monthKey }),
+    b.entities.Shift.filter({ date: todayStr, reset_version: resetVersion }),
+    b.entities.MonthlyRecapFinal.filter({ month_key: monthKey }),
     b.entities.Employee.filter({ is_active: true }),
     b.entities.Team.filter({ is_active: true })
   ]);
 
-  const nonShiftEmpIds  = new Set(allTodayNonShifts.map(ns => ns.employee_id));
-  const allTodayShifts  = allMonthShifts.filter(s => s.date === todayStr);
+  const nonShiftEmpIds = new Set(allTodayNonShifts.map(ns => ns.employee_id));
 
-  console.log(`📋 Shifts mois: ${allMonthShifts.length} | Persisted (manual): ${allPersisted.filter(r => r.is_manual_override).length}/${allPersisted.length} | ExportOvr: ${allExportOvr.length}`);
+  console.log(`📋 RecapFinal disponibles: ${allRecapFinal.length} | Shifts aujourd'hui: ${allTodayShifts.length}`);
 
   const results = [];
 
@@ -300,7 +91,9 @@ Deno.serve(async (req) => {
     if (serviceShifts.length === 0) {
       const existing = await b.entities.DepartureOrder.filter({ date: todayStr, service });
       for (const e of existing) await b.entities.DepartureOrder.delete(e.id);
-      await b.entities.DepartureOrder.create({ date: todayStr, service, ordered_employees: [], message: '', generated_at: new Date().toISOString(), status: 'empty' });
+      await b.entities.DepartureOrder.create({
+        date: todayStr, service, ordered_employees: [], message: '', generated_at: new Date().toISOString(), status: 'empty'
+      });
       results.push({ service, status: 'empty' });
       continue;
     }
@@ -312,15 +105,27 @@ Deno.serve(async (req) => {
       const emp = allEmployees.find(e => e.id === empId);
       if (!emp) return null;
 
-      // Calcul auto live depuis les shifts du mois
-      const empShifts  = allMonthShifts.filter(s => s.employee_id === empId);
-      const autoValues = calcAutoMinutes(emp, empShifts, year, month, monthStart, monthEnd);
+      // SOURCE CANONIQUE : MonthlyRecapFinal écrit par l'UI
+      const recap = allRecapFinal.find(r => r.employee_id === empId) || null;
 
-      // Resolver FINAL (même règle que l'UI)
-      const { compTotalMin, otTotalMin, scoreMinutes, src } =
-        resolveScore(empId, autoValues, allPersisted, allExtras, allExportOvr, hoursType);
+      let scoreMinutes, compTotalMin, otTotalMin, src;
 
-      console.log(`  ${emp.first_name} ${emp.last_name}: comp=${compTotalMin}min ot=${otTotalMin}min score=${scoreMinutes}min src=${src}`);
+      if (recap) {
+        compTotalMin = recap.final_compl_total_min ?? 0;
+        otTotalMin   = recap.final_supp_total_min  ?? 0;
+        src = recap.final_source ?? 'final';
+      } else {
+        // Pas encore de record final (UI pas encore rendu ce mois) → score 0
+        compTotalMin = 0;
+        otTotalMin   = 0;
+        src = 'noData';
+      }
+
+      if (hoursType === 'complementary') scoreMinutes = compTotalMin;
+      else if (hoursType === 'overtime')  scoreMinutes = otTotalMin;
+      else                                scoreMinutes = compTotalMin + otTotalMin;
+
+      console.log(`  ${emp.first_name} ${emp.last_name}: comp=${compTotalMin}min supp=${otTotalMin}min score=${scoreMinutes}min src=${src}`);
 
       return {
         employee_id: empId,
