@@ -384,8 +384,9 @@ export default function PlanningV2() {
           after: null
         });
       }
+      return { employeeId: before?.employee_id };
     },
-    onSuccess: () => {
+    onSuccess: (result) => {
       queryClient.invalidateQueries({ queryKey: ['shifts'] });
       queryClient.invalidateQueries({ queryKey: ['allWeeklyRecaps'] });
       queryClient.invalidateQueries({ queryKey: ['allMonthlyRecaps'] });
@@ -395,6 +396,10 @@ export default function PlanningV2() {
       queryClient.invalidateQueries({ queryKey: ['monthlyExportOverrides', monthKey] });
       if (!undoStack.isUndoingRef.current && !undoStack.isRedoingRef.current) {
         toast.success('Shift supprimé');
+      }
+      // Mise à jour immédiate de MonthlyRecapFinal
+      if (result?.employeeId) {
+        recomputeAndUpsertForEmployees(monthKey, [result.employeeId], resetVersion, calculationMode).catch(() => {});
       }
     },
     onError: (error) => {
