@@ -1,34 +1,17 @@
 import { useQuery } from '@tanstack/react-query';
-import { base44 } from '@/api/base44Client';
+import { getActiveMonthContext } from './monthContext';
 
 /**
  * Hook to get current planning month version for reset/versioning system
- * Returns the current reset_version for filtering all planning data
+ * Délègue à getActiveMonthContext pour partager le cache et éviter le rate-limit.
  */
 export function usePlanningVersion(year, month) {
   const monthKey = `${year}-${String(month + 1).padStart(2, '0')}`;
 
   const { data: planningMonth, isLoading } = useQuery({
-    queryKey: ['planningMonth', year, month],
-    queryFn: async () => {
-      const months = await base44.entities.PlanningMonth.filter({ 
-        year, 
-        month 
-      });
-      
-      if (months.length > 0) {
-        return months[0];
-      }
-      
-      // Create initial month record if doesn't exist
-      return await base44.entities.PlanningMonth.create({
-        year,
-        month,
-        month_key: monthKey,
-        reset_version: 0
-      });
-    },
-    staleTime: 30000, // Cache for 30s
+    queryKey: ['planningMonth', monthKey],
+    queryFn: () => getActiveMonthContext(monthKey),
+    staleTime: 60_000, // Aligné sur le cache de monthContext
     retry: 1
   });
 
