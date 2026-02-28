@@ -557,11 +557,11 @@ export default function PlanningV2() {
     return lookup;
   }, [nonShiftEvents]);
 
-  const getShiftsForEmployeeAndDate = React.useCallback((employeeId, dateStr) => {
+  const getShiftsForEmployeeAndDate = useCallback((employeeId, dateStr) => {
     return shiftsLookup.get(`${employeeId}_${dateStr}`) || [];
   }, [shiftsLookup]);
 
-  const getNonShiftsForEmployeeAndDate = React.useCallback((employeeId, dateStr) => {
+  const getNonShiftsForEmployeeAndDate = useCallback((employeeId, dateStr) => {
     return nonShiftsLookup.get(`${employeeId}_${dateStr}`) || [];
   }, [nonShiftsLookup]);
 
