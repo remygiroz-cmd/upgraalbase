@@ -19,7 +19,7 @@ import UrgentAnnouncementModal from '@/components/messaging/UrgentAnnouncementMo
 import CreateUrgentAnnouncementModal from '@/components/messaging/CreateUrgentAnnouncementModal';
 import { cn } from '@/lib/utils';
 import { calculatePresenceStatus } from '@/components/utils/presenceUtils';
-import DepartureOrderHomeBlock from '@/components/planning/DepartureOrderHomeBlock';
+import DepartureOrderPlanningBlock from '@/components/planning/DepartureOrderPlanningBlock';
 import HomeVehicleAlertsWidget from '@/components/vehicules/HomeVehicleAlertsWidget';
 
 export default function Home() {
