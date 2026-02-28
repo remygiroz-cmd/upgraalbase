@@ -164,40 +164,42 @@ function resolveScore(empId, autoValues, allPersisted, allExtras, allExportOvr, 
   const expOvr    = allExportOvr.find(r => r.employee_id === empId) || null;
   const isManual  = persisted?.is_manual_override === true;
 
-  let comp10, comp25, ot25, ot50, src;
+  let scoreMinutes, compTotalMin, otTotalMin, src;
 
-  // Priorité 1 : MonthlyExportOverride
-  if (expOvr && (expOvr.compl_10 != null || expOvr.compl_25 != null)) {
-    comp10 = expOvr.compl_10 ?? (persisted?.complementary_hours_10 ?? autoValues.comp10);
-    comp25 = expOvr.compl_25 ?? (persisted?.complementary_hours_25 ?? autoValues.comp25);
-    ot25   = expOvr.supp_25  ?? (persisted?.overtime_hours_25      ?? autoValues.ot25);
-    ot50   = expOvr.supp_50  ?? (persisted?.overtime_hours_50      ?? autoValues.ot50);
+  // Priorité 1 : MonthlyExportOverride — surcharge explicite compta
+  if (expOvr && (expOvr.compl_10 != null || expOvr.compl_25 != null || expOvr.supp_25 != null)) {
+    const comp10 = expOvr.compl_10 ?? (persisted?.complementary_hours_10 ?? autoValues.comp10);
+    const comp25 = expOvr.compl_25 ?? (persisted?.complementary_hours_25 ?? autoValues.comp25);
+    const ot25   = expOvr.supp_25  ?? (persisted?.overtime_hours_25      ?? autoValues.ot25);
+    const ot50   = expOvr.supp_50  ?? (persisted?.overtime_hours_50      ?? autoValues.ot50);
+    compTotalMin = Math.round((comp10 + comp25) * 60);
+    otTotalMin   = Math.round((ot25   + ot50)   * 60);
     src = 'exportOverride';
   }
-  // Priorité 2 : MonthlyRecapPersisted (manuel ou cache UI)
-  // IMPORTANT : même un record is_manual_override=false est fiable car il est écrit
-  // par persistMonthlyRecaps qui utilise exactement le même calcul que l'UI
-  // (incluant base_hours_override, weeklyRecaps overrides, etc.)
-  else if (persisted && persisted.complementary_hours_ui != null) {
-    comp10 = persisted.complementary_hours_10 ?? autoValues.comp10;
-    comp25 = persisted.complementary_hours_25 ?? autoValues.comp25;
-    ot25   = persisted.overtime_hours_25      ?? autoValues.ot25;
-    ot50   = persisted.overtime_hours_50      ?? autoValues.ot50;
-    src = isManual ? 'manualOverride' : 'cachedUI';
+  // Priorité 2 : MonthlyRecapPersisted is_manual_override=true (saisie manuelle)
+  else if (isManual) {
+    const comp10 = persisted.complementary_hours_10 ?? autoValues.comp10;
+    const comp25 = persisted.complementary_hours_25 ?? autoValues.comp25;
+    const ot25   = persisted.overtime_hours_25      ?? autoValues.ot25;
+    const ot50   = persisted.overtime_hours_50      ?? autoValues.ot50;
+    compTotalMin = Math.round((comp10 + comp25) * 60);
+    otTotalMin   = Math.round((ot25   + ot50)   * 60);
+    src = 'manualOverride';
   }
-  // Priorité 3 : calcul auto live (fallback — résultats identiques à l'UI si pas de base_hours_override)
+  // Priorité 3 : MonthlyRecapPersisted cache (écrit par l'UI — utilise complementary_hours_ui directement)
+  // C'est la valeur EXACTE que la carte affiche à l'écran !
+  else if (persisted && persisted.complementary_hours_ui != null) {
+    compTotalMin = Math.round(persisted.complementary_hours_ui * 60);
+    otTotalMin   = Math.round((persisted.overtime_hours_ui ?? 0) * 60);
+    src = 'cachedUI';
+  }
+  // Priorité 4 : calcul auto live (fallback si aucun record persisté)
   else {
-    comp10 = autoValues.comp10;
-    comp25 = autoValues.comp25;
-    ot25   = autoValues.ot25;
-    ot50   = autoValues.ot50;
+    compTotalMin = Math.round((autoValues.comp10 + autoValues.comp25) * 60);
+    otTotalMin   = Math.round((autoValues.ot25   + autoValues.ot50)   * 60);
     src = 'auto';
   }
 
-  const compTotalMin = Math.round((comp10 + comp25) * 60);
-  const otTotalMin   = Math.round((ot25   + ot50)   * 60);
-
-  let scoreMinutes;
   if (hoursType === 'complementary') scoreMinutes = compTotalMin;
   else if (hoursType === 'overtime')  scoreMinutes = otTotalMin;
   else                                scoreMinutes = compTotalMin + otTotalMin;
