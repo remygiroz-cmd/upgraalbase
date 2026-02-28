@@ -23,6 +23,7 @@ import {
 import { resolveRecapFinal } from './resolveMonthlyPayrollValues';
 import { getRecapExtras, upsertRecapExtras, clearRecapExtras } from './monthlyRecapExtrasOverrideService';
 import { deleteRecapPersisted } from './monthlyRecapPersistedService';
+import { upsertMonthlyRecapFinal } from './monthlyRecapFinalService';
 import { useHoursDisplayMode } from '@/components/planning/useHoursDisplayMode';
 import { formatHours } from '@/components/utils/hoursFormat';
 
