@@ -76,6 +76,7 @@ Deno.serve(async (req) => {
           month_key,
           employee_id: emp.id,
           reset_version,
+          is_manual_override: false, // Cache auto → ignoré par le resolver
           complementary_hours_ui: 0,
           overtime_hours_ui: 0,
           complementary_hours_10: 0,
