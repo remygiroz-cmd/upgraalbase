@@ -2,8 +2,11 @@
  * SOURCE DE VÉRITÉ UNIQUE pour la fusion des valeurs de paie mensuelles.
  *
  * RÈGLE DE PRIORITÉ :
- * - Pour le récap planning  : recapExtras/recapPersisted > autoRecap
- * - Pour l'export compta    : exportOverride > recapExtras/recapPersisted > autoExport
+ * - Pour le récap planning  : recapExtras/recapPersisted (MANUAL ONLY) > autoRecap
+ * - Pour l'export compta    : exportOverride > recapExtras/recapPersisted (MANUAL ONLY) > autoExport
+ *
+ * IMPORTANT : recapPersisted n'est utilisé comme override QUE si is_manual_override === true.
+ * Les enregistrements auto (is_manual_override absent/false) sont ignorés : on repart du calcul live.
  *
  * Auto = null/undefined = ne jamais convertir en 0.
  */
@@ -11,6 +14,24 @@
 /** Résout la valeur finale : override > auto (null si aucun) */
 function resolve(overrideVal, autoVal) {
   return overrideVal !== null && overrideVal !== undefined ? overrideVal : autoVal;
+}
+
+/**
+ * Vérifie si un recapPersisted est un vrai override manuel (saisi par l'utilisateur).
+ * Un record sans is_manual_override (ou false) est un cache auto → ignoré.
+ */
+function isManualPersisted(recapPersisted) {
+  return recapPersisted?.is_manual_override === true;
+}
+
+/**
+ * Vérifie si un recapExtras contient au moins un champ réellement saisi.
+ * Un record avec tous champs null/undefined est ignoré.
+ */
+function hasAnyExtrasOverride(recapExtras) {
+  if (!recapExtras) return false;
+  const fields = ['jours_travailles', 'jours_prevus', 'jours_supp', 'ferie_jours', 'ferie_heures', 'cp_decomptes', 'payees_hors_sup_comp', 'non_shifts_visibles', 'notes'];
+  return fields.some(f => recapExtras[f] !== null && recapExtras[f] !== undefined && recapExtras[f] !== '');
 }
 
 /**
