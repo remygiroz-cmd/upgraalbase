@@ -73,13 +73,19 @@ export default function DepartureOrderBlock({ date, currentUser }) {
             <TrendingDown className="w-4 h-4 text-emerald-700" />
             <span className="text-sm font-bold text-emerald-900">Optimisation masse salariale — {order.service}</span>
           </div>
-          <p className="text-sm text-emerald-800 font-medium">
+          <div className="text-sm text-emerald-800 font-medium space-y-0.5">
             {order.ordered_employees.map((emp, i) => (
-              <span key={emp.employee_id}>
-                <span className="font-bold">{i + 1}.</span> {emp.employee_name}{i < order.ordered_employees.length - 1 ? ', ' : ''}
-              </span>
+              <div key={emp.employee_id} className="flex items-baseline gap-1.5">
+                <span className="font-bold">{i + 1}.</span>
+                <span>{emp.employee_name}</span>
+                {emp.score_minutes !== undefined && (
+                  <span className="text-[10px] text-emerald-600 font-mono">
+                    + = {emp.score_minutes} min ({emp.src || 'auto'})
+                  </span>
+                )}
+              </div>
             ))}
-          </p>
+          </div>
           <div className="flex items-center justify-between mt-2">
             <div className="flex items-center gap-3 text-xs text-emerald-600">
               <span>Basé sur les heures du mois en cours</span>
