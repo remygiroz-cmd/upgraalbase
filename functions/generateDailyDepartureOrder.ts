@@ -111,7 +111,7 @@ function calcAutoMinutes(emp, empShifts, year, month, monthStart, monthEnd) {
       const dayShifts = empShifts.filter(s =>
         s.date === d && s.status !== 'absent' && s.status !== 'leave' && s.status !== 'cancelled'
       );
-      weekWorkedMin += dayShifts.reduce((sum, s) => sum + shiftStrictMinutes(s), 0);
+      weekWorkedMin += dayShifts.reduce((sum, s) => sum + shiftMinutes(s), 0);
     }
 
     const diffMin = weekWorkedMin - weekBaseMin;
