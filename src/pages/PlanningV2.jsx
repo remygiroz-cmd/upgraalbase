@@ -914,6 +914,10 @@ export default function PlanningV2() {
         monthKey={monthKey}
         shifts={shifts}
         employees={sortedEmployees}
+        nonShiftEvents={nonShiftEvents}
+        nonShiftTypes={nonShiftTypes}
+        holidayDates={holidayDates}
+        weeklyRecaps={allWeeklyRecaps}
         currentUser={currentUser}
       />
 
