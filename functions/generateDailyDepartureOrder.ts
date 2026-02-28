@@ -143,20 +143,29 @@ Deno.serve(async (req) => {
       const emp = allEmployees.find(e => e.id === empId);
       if (!emp) return null;
 
-      const { comp, ot, workedHours } = getScoreFromPersisted(empId);
+      const { comp, ot, workedHours, comp10, comp25, ot25, ot50, isManual } = getScoreFromPersisted(empId);
 
-      // Score selon le type d'heures configuré
+      // Score selon le type d'heures configuré + contrat de l'employé
+      const isPartTime = emp.work_time_type === 'part_time';
+      const compMinutes = Math.round((comp10 + comp25) * 60);
+      const otMinutes   = Math.round((ot25 + ot50) * 60);
+      const plusMinutes = isPartTime ? compMinutes : otMinutes;
+
       let score = 0;
-      if (hoursType === 'complementary') score = comp;
-      else if (hoursType === 'overtime') score = ot;
-      else score = comp + ot; // 'both' ou par défaut
+      let scoreMinutes = 0;
+      if (hoursType === 'complementary') { score = comp; scoreMinutes = compMinutes; }
+      else if (hoursType === 'overtime')  { score = ot;   scoreMinutes = otMinutes; }
+      else { score = comp + ot; scoreMinutes = compMinutes + otMinutes; }
+
+      const src = isManual ? 'manualOverride' : 'auto';
 
       console.log("OPTIM DEBUG", {
         employee: `${emp.first_name} ${emp.last_name}`,
-        complementary_hours_ui: comp,
-        overtime_hours_ui: ot,
-        score,
-        workedHours,
+        comp10, comp25, ot25, ot50,
+        compMinutes, otMinutes, plusMinutes,
+        score, scoreMinutes,
+        isPartTime,
+        src,
         hoursType,
         month_key: monthKey,
         reset_version: activeResetVersion
@@ -167,9 +176,12 @@ Deno.serve(async (req) => {
         first_name: emp.first_name,
         last_name: emp.last_name,
         score,
+        scoreMinutes,
+        plusMinutes,
         comp,
         ot,
-        workedHours
+        workedHours,
+        src
       };
     }).filter(Boolean);
 
