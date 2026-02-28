@@ -209,6 +209,8 @@ Deno.serve(async (req) => {
         employee_id: e.employee_id,
         employee_name: `${e.first_name} ${e.last_name}`,
         score: e.score,
+        score_minutes: e.scoreMinutes,
+        src: e.src,
         rank: i + 1
       })),
       message,
