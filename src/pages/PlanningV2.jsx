@@ -908,8 +908,14 @@ export default function PlanningV2() {
         </div>
       </div>
 
-      {/* Departure Order Block */}
-      <DepartureOrderBlock date={formatLocalDate(new Date(currentYear, currentMonth, new Date().getDate()))} currentUser={currentUser} />
+      {/* Departure Order Block — front-only, basé sur les shifts du jour + MonthlyRecapPersisted */}
+      <DepartureOrderPlanningBlock
+        date={formatLocalDate(new Date())}
+        monthKey={monthKey}
+        shifts={shifts}
+        employees={sortedEmployees}
+        currentUser={currentUser}
+      />
 
       {/* Today Summary */}
       <TodaySummary
