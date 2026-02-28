@@ -818,9 +818,12 @@ function EditMonthlyRecapDialog({
             Saisissez une valeur pour la remplacer. L'icône <RotateCcw className="w-3 h-3 inline" /> réinitialise au calcul.
           </div>
 
-          {loadingExtras && (
-            <div className="text-center py-4 text-gray-400 text-sm">Chargement des surcharges...</div>
-          )}
+          {/* DEBUG temporaire — clés + source */}
+          <div className="bg-gray-50 border border-dashed border-gray-300 rounded p-2 text-[9px] text-gray-500 font-mono space-y-0.5">
+            <div>key: {monthKey} / {employee?.id?.substring(0,8)}</div>
+            <div>persisted: {recapPersisted ? `id=${recapPersisted.id?.substring(0,8)} manual=${recapPersisted.is_manual_override}` : 'null'}</div>
+            <div>extras: {recapExtras ? `id=${recapExtras.id?.substring(0,8)}` : 'null'}</div>
+          </div>
 
           {/* Section 1: Days */}
           <div className="border rounded-lg p-4">
