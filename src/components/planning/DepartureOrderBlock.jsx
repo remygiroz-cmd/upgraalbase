@@ -79,7 +79,7 @@ export default function DepartureOrderBlock({ date, currentUser }) {
             <span className="font-bold">{i + 1}.</span>
             <span>{emp.employee_name}</span>
             <span className="text-[10px] text-emerald-600 font-mono">
-              (final={emp.score_minutes ?? 0}min · {emp.src ?? '?'})
+              ({emp.score_minutes ?? 0} min)
             </span>
             </div>
             ))}
