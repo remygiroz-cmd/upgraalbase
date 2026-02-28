@@ -685,8 +685,8 @@ export default function Home() {
             employees={sortedEmployees}
             nonShiftEvents={currentMonthNonShiftEvents}
             nonShiftTypes={nonShiftTypes}
-            holidayDates={[]}
-            weeklyRecaps={[]}
+            holidayDates={holidayDates}
+            weeklyRecaps={allWeeklyRecaps}
             currentUser={currentUser}
           />
         )}
