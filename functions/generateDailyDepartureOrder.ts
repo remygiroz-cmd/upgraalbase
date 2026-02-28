@@ -93,33 +93,42 @@ function calcAutoLive(emp, empShifts, year, month, monthStart, monthEnd) {
     const weekBase = contractDaysVisible * dailyContractHours;
     totalWeeklyBase += weekBase;
 
-    let weekHours = 0;
+    // En MINUTES ENTIÈRES (identique à l'UI — shiftStrictMinutes)
+    let weekMinutes = 0;
     for (const dateStr of visibleDates) {
       const dayShifts = empShifts.filter(s =>
         s.date === dateStr && s.status !== 'absent' && s.status !== 'leave' && s.status !== 'cancelled'
       );
-      weekHours += dayShifts.reduce((sum, s) => sum + shiftDuration(s), 0);
+      weekMinutes += dayShifts.reduce((sum, s) => sum + shiftStrictMinutes(s), 0);
     }
-    totalWorkedHours += weekHours;
+    totalWorkedHours += weekMinutes / 60;
 
-    const diff = weekHours - weekBase;
+    const weekBaseMinutes = Math.round(weekBase * 60);
+    const diffMin = weekMinutes - weekBaseMinutes;
+
     if (isPartTime) {
-      totalComp += Math.max(0, diff);
+      totalComp += Math.max(0, diffMin);
     } else {
-      const weekOt = Math.max(0, diff);
-      totalOt25 += Math.min(weekOt, 8);
-      if (weekOt > 8) totalOt50 += weekOt - 8;
+      const weekOtMin = Math.max(0, diffMin);
+      // HS25 = jusqu'à 480 min (8h) au-delà de la base, HS50 au-delà
+      totalOt25 += Math.min(weekOtMin, 480);
+      if (weekOtMin > 480) totalOt50 += weekOtMin - 480;
     }
   }
 
   let comp10 = 0, comp25 = 0;
   if (isPartTime) {
-    const threshold10 = totalWeeklyBase * 0.10;
-    comp10 = Math.min(totalComp, threshold10);
-    comp25 = Math.max(0, totalComp - threshold10);
+    // totalWeeklyBase est en heures → convertir en minutes pour le calcul
+    const totalBaseMin = Math.round(totalWeeklyBase * 60);
+    const limit10Min = Math.round(totalBaseMin * 0.10);
+    comp10 = Math.min(totalComp, limit10Min) / 60;
+    comp25 = Math.max(0, totalComp - limit10Min) / 60;
   }
 
-  return { comp10, comp25, ot25: totalOt25, ot50: totalOt50, workedHours: totalWorkedHours };
+  const ot25 = totalOt25 / 60;
+  const ot50 = totalOt50 / 60;
+
+  return { comp10, comp25, ot25, ot50, workedHours: totalWorkedHours };
 }
 
 /**
