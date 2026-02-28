@@ -466,6 +466,23 @@ export default function PlanningV2() {
     return days;
   }, [currentYear, currentMonth]);
 
+  // Prefetch mois adjacent dès que les données courantes sont prêtes
+  useEffect(() => {
+    if (resetVersion === undefined) return;
+    const prefetchAdjacentMonth = async (yr, mo) => {
+      const mk = computeMonthKey(yr, mo);
+      // Prefetch shifts du mois adjacent
+      queryClient.prefetchQuery({
+        queryKey: shiftsQueryKey(yr, mo, resetVersion),
+        queryFn: () => getActiveShiftsForMonth(mk, resetVersion),
+        staleTime: 30 * 1000
+      });
+    };
+    // Mois suivant et précédent
+    prefetchAdjacentMonth(currentYear, currentMonth + 1);
+    prefetchAdjacentMonth(currentYear, currentMonth - 1);
+  }, [currentYear, currentMonth, resetVersion]);
+
   // Navigation
   const previousMonth = () => {
     setCurrentDate(new Date(currentYear, currentMonth - 1, 1));
