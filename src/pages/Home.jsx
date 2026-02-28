@@ -651,8 +651,20 @@ export default function Home() {
       </div>
 
       <div className="max-w-4xl mx-auto px-4 py-6 space-y-6">
-        {/* Departure Order Home Block */}
-        <DepartureOrderHomeBlock currentUser={currentUser} currentEmployee={currentEmployee} />
+        {/* Departure Order Block — calcul live identique au planning */}
+        {isManagerOrAdmin && (
+          <DepartureOrderPlanningBlock
+            date={formatLocalDate(new Date())}
+            monthKey={`${currentYear}-${String(currentMonth + 1).padStart(2, '0')}`}
+            shifts={currentMonthShifts}
+            employees={sortedEmployees}
+            nonShiftEvents={currentMonthNonShiftEvents}
+            nonShiftTypes={nonShiftTypes}
+            holidayDates={[]}
+            weeklyRecaps={[]}
+            currentUser={currentUser}
+          />
+        )}
 
         {/* Vehicle Alerts Widget - managers only */}
         {isManagerOrAdmin && <HomeVehicleAlertsWidget />}
