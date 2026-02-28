@@ -572,7 +572,8 @@ export default function MonthlySummary({
         calculationMode={calculationMode}
         autoCPDays={autoCPDays}
         monthKey={monthKey}
-        resetVersion={undefined}
+        recapPersisted={recapPersisted}
+        recapExtras={recapExtras}
       />
     </>
   );
