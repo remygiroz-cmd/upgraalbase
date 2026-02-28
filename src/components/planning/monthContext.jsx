@@ -59,9 +59,14 @@ export async function getActiveMonthContext(monthKey) {
     };
 
     _contextCache.set(monthKey, { context, ts: Date.now() });
-    _inflight.delete(monthKey);
     return context;
-  })();
+  })().catch(err => {
+    // En cas d'erreur, retirer l'inflight pour permettre une nouvelle tentative
+    _inflight.delete(monthKey);
+    throw err;
+  }).finally(() => {
+    _inflight.delete(monthKey);
+  });
 
   _inflight.set(monthKey, promise);
   return promise;
