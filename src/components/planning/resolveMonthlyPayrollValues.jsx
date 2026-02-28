@@ -100,27 +100,31 @@ export function resolveRecapFinal(autoRecap, recapPersisted, recapExtras) {
  * @param {Object|null} exportOverride - MonthlyExportOverride (priorité max)
  */
 export function resolveExportFinal(autoExport, recapPersisted, recapExtras, exportOverride) {
-  // Helper local : exportOverride > recap override > auto
-  const r3 = (expVal, recapVal, autoVal) => {
+  // Même logique stricte : recapPersisted uniquement si manuel, recapExtras si non vide
+  const usePersistedOverride = isManualPersisted(recapPersisted);
+  const useExtrasOverride = hasAnyExtrasOverride(recapExtras);
+
+  // Helper local : exportOverride > recap override (manuel seulement) > auto
+  const r3 = (expVal, recapVal, useRecap, autoVal) => {
     if (expVal !== null && expVal !== undefined) return expVal;
-    if (recapVal !== null && recapVal !== undefined) return recapVal;
+    if (useRecap && recapVal !== null && recapVal !== undefined) return recapVal;
     return autoVal;
   };
 
   return {
-    nb_jours_travailles:  r3(exportOverride?.nb_jours_travailles, recapExtras?.jours_travailles, autoExport?.nbJoursTravailles),
-    jours_supp:           r3(exportOverride?.jours_supp, recapExtras?.jours_supp, autoExport?.joursSupp),
-    payees_hors_sup_comp: r3(exportOverride?.payees_hors_sup_comp, recapExtras?.payees_hors_sup_comp, autoExport?.payeesHorsSup),
-    compl_10:             r3(exportOverride?.compl_10, recapPersisted?.complementary_hours_10, autoExport?.compl10),
-    compl_25:             r3(exportOverride?.compl_25, recapPersisted?.complementary_hours_25, autoExport?.compl25),
-    supp_25:              r3(exportOverride?.supp_25, recapPersisted?.overtime_hours_25, autoExport?.supp25),
-    supp_50:              r3(exportOverride?.supp_50, recapPersisted?.overtime_hours_50, autoExport?.supp50),
-    ferie_jours:          r3(exportOverride?.ferie_jours, recapExtras?.ferie_jours, autoExport?.ferieDays),
-    ferie_heures:         r3(exportOverride?.ferie_heures, recapExtras?.ferie_heures, autoExport?.ferieHours),
-    non_shifts_visibles:  r3(exportOverride?.non_shifts_visibles, recapExtras?.non_shifts_visibles, autoExport?.nonShiftsStr),
-    cp_decomptes:         r3(exportOverride?.cp_decomptes, recapExtras?.cp_decomptes != null ? String(recapExtras.cp_decomptes) : null, autoExport?.cpStr),
+    nb_jours_travailles:  r3(exportOverride?.nb_jours_travailles, recapExtras?.jours_travailles, useExtrasOverride, autoExport?.nbJoursTravailles),
+    jours_supp:           r3(exportOverride?.jours_supp, recapExtras?.jours_supp, useExtrasOverride, autoExport?.joursSupp),
+    payees_hors_sup_comp: r3(exportOverride?.payees_hors_sup_comp, recapExtras?.payees_hors_sup_comp, useExtrasOverride, autoExport?.payeesHorsSup),
+    compl_10:             r3(exportOverride?.compl_10, recapPersisted?.complementary_hours_10, usePersistedOverride, autoExport?.compl10),
+    compl_25:             r3(exportOverride?.compl_25, recapPersisted?.complementary_hours_25, usePersistedOverride, autoExport?.compl25),
+    supp_25:              r3(exportOverride?.supp_25, recapPersisted?.overtime_hours_25, usePersistedOverride, autoExport?.supp25),
+    supp_50:              r3(exportOverride?.supp_50, recapPersisted?.overtime_hours_50, usePersistedOverride, autoExport?.supp50),
+    ferie_jours:          r3(exportOverride?.ferie_jours, recapExtras?.ferie_jours, useExtrasOverride, autoExport?.ferieDays),
+    ferie_heures:         r3(exportOverride?.ferie_heures, recapExtras?.ferie_heures, useExtrasOverride, autoExport?.ferieHours),
+    non_shifts_visibles:  r3(exportOverride?.non_shifts_visibles, recapExtras?.non_shifts_visibles, useExtrasOverride, autoExport?.nonShiftsStr),
+    cp_decomptes:         r3(exportOverride?.cp_decomptes, recapExtras?.cp_decomptes != null ? String(recapExtras.cp_decomptes) : null, useExtrasOverride, autoExport?.cpStr),
 
     hasExportOverride: !!exportOverride,
-    hasRecapOverride:  !!(recapPersisted || recapExtras),
+    hasRecapOverride:  usePersistedOverride || useExtrasOverride,
   };
 }
