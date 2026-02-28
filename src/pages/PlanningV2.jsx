@@ -1257,6 +1257,7 @@ export default function PlanningV2() {
                                           shift={shift}
                                           positions={positions}
                                           swapInfo={swapInfo}
+                                          currentUser={currentUser}
                                           onClick={(e) => {
                                             e.stopPropagation();
                                             if (!canModifyPlanning) {
