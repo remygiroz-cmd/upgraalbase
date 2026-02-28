@@ -1,3 +1,4 @@
+
 import { base44 } from '@/api/base44Client';
 
 /**
@@ -7,10 +8,11 @@ import { base44 } from '@/api/base44Client';
  * Appeler à chaque fois que la carte recalcule ou qu'un override est sauvegardé/réinitialisé.
  */
 export async function upsertMonthlyRecapFinal(monthKey, employeeId, recapResolved) {
-  const compl10Min = Math.round((recapResolved.complementary_hours_10 ?? 0) * 60);
-  const compl25Min = Math.round((recapResolved.complementary_hours_25 ?? 0) * 60);
-  const supp25Min  = Math.round((recapResolved.overtime_hours_25      ?? 0) * 60);
-  const supp50Min  = Math.round((recapResolved.overtime_hours_50      ?? 0) * 60);
+  // Tolérance : les valeurs peuvent être null/undefined (temps plein sans HC, etc.)
+  const compl10Min = Math.round(((recapResolved.complementary_hours_10 ?? 0) || 0) * 60);
+  const compl25Min = Math.round(((recapResolved.complementary_hours_25 ?? 0) || 0) * 60);
+  const supp25Min  = Math.round(((recapResolved.overtime_hours_25      ?? 0) || 0) * 60);
+  const supp50Min  = Math.round(((recapResolved.overtime_hours_50      ?? 0) || 0) * 60);
 
   const payload = {
     month_key:             monthKey,
