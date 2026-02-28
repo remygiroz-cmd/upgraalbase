@@ -204,7 +204,7 @@ function resolveScore(empId, autoValues, allPersisted, allExtras, allExportOvr, 
   else if (hoursType === 'overtime')  scoreMinutes = otTotalMin;
   else                                scoreMinutes = compTotalMin + otTotalMin;
 
-  return { comp10, comp25, ot25, ot50, compTotalMin, otTotalMin, scoreMinutes, src };
+  return { compTotalMin, otTotalMin, scoreMinutes, src };
 }
 
 // ─── Main handler ─────────────────────────────────────────────────────────────
