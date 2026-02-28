@@ -547,6 +547,7 @@ export default function MonthlySummary({
 
         {/* DEBUG — source des données (temporaire) */}
         <div className="mt-2 pt-1 border-t border-dashed border-gray-300 text-[8px] text-gray-400 text-left space-y-0.5">
+          <div>key: <span className="font-mono text-gray-500">{monthKey} / {employee.id?.substring(0,8)}</span></div>
           <div>src: <span className={cn(
             "font-mono",
             recapResolved._source === 'auto' ? 'text-gray-400' : 'text-blue-600 font-bold'
