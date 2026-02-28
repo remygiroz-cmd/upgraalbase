@@ -317,7 +317,7 @@ Deno.serve(async (req) => {
       const autoValues = calcAutoMinutes(emp, empShifts, year, month, monthStart, monthEnd);
 
       // Resolver FINAL (même règle que l'UI)
-      const { comp10, comp25, ot25, ot50, compTotalMin, otTotalMin, scoreMinutes, src } =
+      const { compTotalMin, otTotalMin, scoreMinutes, src } =
         resolveScore(empId, autoValues, allPersisted, allExtras, allExportOvr, hoursType);
 
       console.log(`  ${emp.first_name} ${emp.last_name}: comp=${compTotalMin}min ot=${otTotalMin}min score=${scoreMinutes}min src=${src}`);
