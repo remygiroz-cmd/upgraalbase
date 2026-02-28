@@ -170,7 +170,8 @@ Deno.serve(async (req) => {
       status: 'success'
     });
 
-    results.push({ service, status: 'success', count: employeeData.length, debug: debugStr });
+    const hasStale = employeeData.some(e => e.src === 'stale');
+    results.push({ service, status: 'success', count: employeeData.length, debug: debugStr, stale: hasStale || undefined });
   }
 
   return Response.json({ success: true, date: todayStr, results });
