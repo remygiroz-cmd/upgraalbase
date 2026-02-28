@@ -320,13 +320,16 @@ const ShiftCard = React.memo(function ShiftCard({
                 <button
                    onClick={handleSetEndNow}
                    disabled={isSettingEndNow || disabled}
-                   className="p-0.5 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed hover:bg-green-100"
+                   className={cn(
+                     "p-0.5 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed",
+                     shift.clock_clicked ? "hover:bg-red-100" : "hover:bg-green-100"
+                   )}
                    title={disabled ? "Lecture seule" : "Mettre fin maintenant"}
                  >
                   {isSettingEndNow ? (
-                    <div className="w-3 h-3 border-2 border-green-600 border-t-transparent rounded-full animate-spin" />
+                    <div className={cn("w-3 h-3 border-2 border-t-transparent rounded-full animate-spin", shift.clock_clicked ? "border-red-600" : "border-green-600")} />
                   ) : (
-                    <Clock className="w-3 h-3 text-green-600" />
+                    <Clock className={cn("w-3 h-3", shift.clock_clicked ? "text-red-600" : "text-green-600")} />
                   )}
                 </button>
               </div>
