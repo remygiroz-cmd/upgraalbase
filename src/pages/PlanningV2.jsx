@@ -138,11 +138,19 @@ export default function PlanningV2() {
     queryFn: () => base44.entities.Team.filter({ is_active: true })
   });
 
-  // Fetch shifts for current month
-  const { data: shifts = [] } = useQuery({
+  // Fetch shifts for current month — keepPreviousData pour éviter l'écran vide au changement de mois
+  const { data: shifts = [], isFetching: isFetchingShifts } = useQuery({
     queryKey: shiftsQueryKey(currentYear, currentMonth, resetVersion),
-    queryFn: () => getActiveShiftsForMonth(monthKey, resetVersion),
-    enabled: resetVersion !== undefined
+    queryFn: () => {
+      console.time('[Planning] fetch shifts');
+      return getActiveShiftsForMonth(monthKey, resetVersion).then(r => {
+        console.timeEnd('[Planning] fetch shifts');
+        return r;
+      });
+    },
+    enabled: resetVersion !== undefined,
+    placeholderData: keepPreviousData,
+    staleTime: 30 * 1000
   });
 
   // Filter and sort employees
