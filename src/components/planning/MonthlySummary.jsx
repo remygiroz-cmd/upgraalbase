@@ -73,20 +73,26 @@ export default function MonthlySummary({
   const calculationMode = calculationSettings[0]?.planning_calculation_mode || 'disabled';
   const hoursMode = useHoursDisplayMode();
 
-  // Fetch MonthlyRecapPersisted (heures override manuelles uniquement)
-  const { data: recapPersistedList = [] } = useQuery({
-    queryKey: ['monthlyRecapsPersisted', monthKey],
-    queryFn: () => base44.entities.MonthlyRecapPersisted.filter({ month_key: monthKey }),
-    staleTime: 0, // Toujours frais pour éviter les données stale
-    enabled: !!employee?.id
+  // Fetch MonthlyRecapPersisted — clé UNIQUE par (monthKey, employee.id) pour éviter les caches partagés
+  const { data: recapPersisted = null } = useQuery({
+    queryKey: ['monthlyRecapPersisted', monthKey, employee.id],
+    queryFn: async () => {
+      const results = await base44.entities.MonthlyRecapPersisted.filter({ month_key: monthKey, employee_id: employee.id });
+      return results[0] || null;
+    },
+    staleTime: 0,
+    enabled: !!employee?.id && !!monthKey
   });
 
-  // Fetch MonthlyRecapExtrasOverride (jours / CP / fériés / payées)
-  const { data: recapExtrasList = [] } = useQuery({
-    queryKey: ['recapExtrasOverride', monthKey],
-    queryFn: () => base44.entities.MonthlyRecapExtrasOverride.filter({ month_key: monthKey }),
-    staleTime: 0, // Toujours frais pour éviter les données stale
-    enabled: !!employee?.id
+  // Fetch MonthlyRecapExtrasOverride — clé UNIQUE par (monthKey, employee.id)
+  const { data: recapExtras = null } = useQuery({
+    queryKey: ['recapExtrasOverride', monthKey, employee.id],
+    queryFn: async () => {
+      const results = await base44.entities.MonthlyRecapExtrasOverride.filter({ month_key: monthKey, employee_id: employee.id });
+      return results[0] || null;
+    },
+    staleTime: 0,
+    enabled: !!employee?.id && !!monthKey
   });
 
   // Calculate automatic values using the calculation engine
