@@ -174,15 +174,16 @@ function resolveScore(empId, autoValues, allPersisted, allExtras, allExportOvr, 
     ot50   = expOvr.supp_50  ?? (persisted?.overtime_hours_50      ?? autoValues.ot50);
     src = 'exportOverride';
   }
-  // Priorité 2+3 : MonthlyRecapPersisted (manuel OU cache UI)
-  else if (persisted) {
+  // Priorité 2 : MonthlyRecapPersisted is_manual_override=true (saisie manuelle)
+  else if (isManual) {
     comp10 = persisted.complementary_hours_10 ?? autoValues.comp10;
     comp25 = persisted.complementary_hours_25 ?? autoValues.comp25;
     ot25   = persisted.overtime_hours_25      ?? autoValues.ot25;
     ot50   = persisted.overtime_hours_50      ?? autoValues.ot50;
-    src    = isManual ? 'manualOverride' : 'persistedUI';
+    src = 'manualOverride';
   }
-  // Priorité 4 : calcul auto live
+  // Priorité 3 : calcul auto live (IDENTIQUE à l'UI — ignore le cache auto non-manuel)
+  // L'UI fait de même : resolveRecapFinal ignore les records is_manual_override=false
   else {
     comp10 = autoValues.comp10;
     comp25 = autoValues.comp25;
