@@ -77,7 +77,7 @@ function calcAutoLive(emp, empShifts, year, month, monthStart, monthEnd) {
     for (let i = 0; i < workDaysPerWeek; i++) workedDaysOfWeek.add((i + 1) % 7);
   }
 
-  const dailyContractHours = contractHoursWeekly / (workedDaysOfWeek.size || workDaysPerWeek);
+  const dailyContractHoursDecimal = contractHoursWeekly / (workedDaysOfWeek.size || workDaysPerWeek);
   const weeks = getWeeksTouchingMonth(year, month);
 
   let totalComp = 0, totalOt25 = 0, totalOt50 = 0, totalWorkedHours = 0, totalWeeklyBase = 0;
