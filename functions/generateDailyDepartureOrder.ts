@@ -185,15 +185,15 @@ Deno.serve(async (req) => {
       };
     }).filter(Boolean);
 
-    // Tri : 1) score DESC, 2) workedHours DESC, 3) nom alphabétique
+    // Tri : 1) scoreMinutes DESC, 2) workedHours DESC, 3) nom alphabétique
     employeeData.sort((a, b) => {
-      if (Math.abs(b.score - a.score) > 0.001) return b.score - a.score;
+      if (b.scoreMinutes !== a.scoreMinutes) return b.scoreMinutes - a.scoreMinutes;
       if (Math.abs(b.workedHours - a.workedHours) > 0.001) return b.workedHours - a.workedHours;
       return a.last_name.localeCompare(b.last_name, 'fr');
     });
 
     const orderStr = employeeData.map((emp, i) => `${i + 1}. ${emp.first_name} ${emp.last_name}`).join(', ');
-    const debugStr = employeeData.map(e => `${e.first_name}=${e.score.toFixed(1)}h`).join(' | ');
+    const debugStr = employeeData.map(e => `${e.first_name}=${e.scoreMinutes}min(${e.src})`).join(' | ');
     const message = `Ordre de départ pour le service ${service} aujourd'hui :\n${orderStr}\nDEBUG scores: ${debugStr}`;
 
     console.log(`📋 Final order: ${orderStr}`);
