@@ -679,9 +679,10 @@ function EditMonthlyRecapDialog({
       }
     },
     onSuccess: () => {
-      // Invalider TOUTES les queries utilisées par la carte récap ET l'export
-      queryClient.invalidateQueries({ queryKey: ['recapExtrasOverride', monthKey] });
-      queryClient.invalidateQueries({ queryKey: ['monthlyRecapsPersisted', monthKey] });
+      // Invalider la query EXACTE utilisée par la carte (clé fine par employé)
+      queryClient.invalidateQueries({ queryKey: ['monthlyRecapPersisted', monthKey, employee.id] });
+      queryClient.invalidateQueries({ queryKey: ['recapExtrasOverride', monthKey, employee.id] });
+      // Invalider aussi les queries larges pour d'autres composants (export, optimisation)
       queryClient.invalidateQueries({ queryKey: ['exportOverrides', monthKey] });
       queryClient.invalidateQueries({ queryKey: ['monthlyExportOverrides', monthKey] });
       if (onRecapUpdate) onRecapUpdate();
