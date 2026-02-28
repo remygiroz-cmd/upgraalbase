@@ -58,11 +58,12 @@ Deno.serve(async (req) => {
   console.log(`📅 Month shifts: ${allMonthShifts.length} (month_key=${monthKey}, reset_version=${activeResetVersion})`);
 
   // Load non-shift events for today (to exclude absent/leave employees)
-  // Load persisted recap data (source of truth = UI values)
+  // Load persisted recap data + extras overrides (source of truth = UI values + manual overrides)
   // Load all active employees + teams in parallel
-  const [allNonShifts, allPersistedRecapsRaw, allEmployees, allTeams] = await Promise.all([
+  const [allNonShifts, allPersistedRecapsRaw, allRecapExtras, allEmployees, allTeams] = await Promise.all([
     b.entities.NonShiftEvent.filter({ date: todayStr }),
     b.entities.MonthlyRecapPersisted.filter({ month_key: monthKey, reset_version: activeResetVersion }),
+    b.entities.MonthlyRecapExtrasOverride.filter({ month_key: monthKey }),
     b.entities.Employee.filter({ is_active: true }),
     b.entities.Team.filter({ is_active: true })
   ]);
@@ -72,22 +73,44 @@ Deno.serve(async (req) => {
 
   const employeeIdsOnNonShift = new Set(allNonShifts.map(ns => ns.employee_id));
   console.log(`📋 Persisted recaps loaded: ${allPersistedRecaps.length} for ${monthKey} v${activeResetVersion}`);
+  console.log(`📋 Extras overrides loaded: ${allRecapExtras.length} for ${monthKey}`);
 
   // Today shifts already in allMonthShifts
   const allTodayShifts = allMonthShifts.filter(s => s.date === todayStr);
 
-  // ─── Helper: get score from persisted recap (SOURCE DE VÉRITÉ UNIQUE) ──
+  // ─── Helper: get score from persisted recap avec priorité overrides manuels ──
+  // Règle : is_manual_override=true → utiliser ses valeurs d'heures
+  //         sinon → utiliser le calcul auto du record persisté (complementary/overtime_hours_10/25)
   function getScoreFromPersisted(empId) {
-    const recap = allPersistedRecaps.find(r => r.employee_id === empId && r.reset_version === activeResetVersion);
-    if (!recap) {
+    const recap = allPersistedRecaps.find(r => r.employee_id === empId);
+    
+    // Score en heures décimales
+    let comp10 = 0, comp25 = 0, ot25 = 0, ot50 = 0, workedHours = 0;
+
+    if (recap) {
+      workedHours = recap.worked_hours || 0;
+      if (recap.is_manual_override === true) {
+        // Override manuel : utiliser directement les valeurs saisies
+        comp10  = recap.complementary_hours_10 || 0;
+        comp25  = recap.complementary_hours_25 || 0;
+        ot25    = recap.overtime_hours_25 || 0;
+        ot50    = recap.overtime_hours_50 || 0;
+        console.log(`⚡ MANUAL OVERRIDE for ${empId}: comp10=${comp10} comp25=${comp25} ot25=${ot25} ot50=${ot50}`);
+      } else {
+        // Cache auto : utiliser les champs détaillés
+        comp10  = recap.complementary_hours_10 || 0;
+        comp25  = recap.complementary_hours_25 || 0;
+        ot25    = recap.overtime_hours_25 || 0;
+        ot50    = recap.overtime_hours_50 || 0;
+      }
+    } else {
       console.warn("No MonthlyRecapPersisted found for employee", empId);
-      return { comp: 0, ot: 0, workedHours: 0 };
     }
-    return {
-      comp: recap.complementary_hours_ui || 0,
-      ot: recap.overtime_hours_ui || 0,
-      workedHours: recap.worked_hours || 0
-    };
+
+    const comp = comp10 + comp25;
+    const ot   = ot25 + ot50;
+
+    return { comp, ot, workedHours, comp10, comp25, ot25, ot50, isManual: recap?.is_manual_override === true };
   }
 
   const results = [];
