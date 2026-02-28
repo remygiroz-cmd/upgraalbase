@@ -151,9 +151,20 @@ export default function MonthlySummary({
     };
   }, [recapResolved, calculatedRecap]);
 
-  // ⚠️ Auto-persist SUPPRIMÉ intentionnellement.
-  // MonthlyRecapPersisted est écrit UNIQUEMENT via la modale de saisie manuelle.
-  // Le récap auto est toujours calculé live depuis les shifts (calculatedRecap via useMemo).
+  // ✅ Sync vers MonthlyRecapFinal — SOURCE CANONIQUE pour l'optimisation masse salariale.
+  // Déclenché à chaque fois que la valeur résolue change (shifts, overrides, etc.)
+  // Fire-and-forget : on ne bloque pas l'UI.
+  useEffect(() => {
+    if (!employee?.id || !monthKey || !recapResolved) return;
+    upsertMonthlyRecapFinal(monthKey, employee.id, recapResolved).catch(() => {});
+  }, [
+    monthKey, employee.id,
+    recapResolved.complementary_hours_10,
+    recapResolved.complementary_hours_25,
+    recapResolved.overtime_hours_25,
+    recapResolved.overtime_hours_50,
+    recapResolved._source,
+  ]);
 
   // CP days from periods (for fallback in disabled mode)
   const autoCPDays = calculateMonthlyCPTotal(cpPeriods, monthStart, monthEnd);
