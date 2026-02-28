@@ -1,22 +1,30 @@
 /**
  * DepartureOrderPlanningBlock
  *
- * Affiche l'ordre de départ basé sur MonthlyRecapPersisted (complementary_hours_ui),
- * entièrement côté front, sans aucun upsert ni backend.
+ * Calcule les heures complémentaires EXACTEMENT comme MonthlySummary :
+ * calculateMonthlyRecap → resolveRecapFinal (priorité manuel > auto)
+ * Puis trie les employés ayant un shift Livraison aujourd'hui.
  *
- * Props:
- *  - date: string "YYYY-MM-DD" (jour affiché)
- *  - monthKey: string "YYYY-MM"
- *  - shifts: Shift[] (shifts du mois, déjà chargés dans PlanningV2)
- *  - employees: Employee[] (employés visibles)
- *  - currentUser: object
+ * Aucun upsert, aucune écriture, 100% front.
  */
-import React from 'react';
+import React, { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { TrendingDown } from 'lucide-react';
+import { calculateMonthlyRecap } from '@/components/utils/monthlyRecapCalculations';
+import { resolveRecapFinal } from './resolveMonthlyPayrollValues';
 
-export default function DepartureOrderPlanningBlock({ date, monthKey, shifts, employees, currentUser }) {
+export default function DepartureOrderPlanningBlock({
+  date,         // "YYYY-MM-DD" — aujourd'hui
+  monthKey,     // "YYYY-MM"
+  shifts,       // Shift[] du mois (déjà chargés dans PlanningV2)
+  employees,    // Employee[] (tous actifs visibles)
+  nonShiftEvents = [],
+  nonShiftTypes = [],
+  holidayDates = [],
+  weeklyRecaps = [],
+  currentUser
+}) {
   const { data: settingsArr = [] } = useQuery({
     queryKey: ['optimisationSettings'],
     queryFn: () => base44.entities.AppSettings.filter({ setting_key: 'optimisation_masse_salariale' }),
@@ -29,18 +37,73 @@ export default function DepartureOrderPlanningBlock({ date, monthKey, shifts, em
     staleTime: 10 * 60 * 1000
   });
 
+  const { data: calculationSettingsArr = [] } = useQuery({
+    queryKey: ['appSettings', 'planning_calculation_mode'],
+    queryFn: () => base44.entities.AppSettings.filter({ setting_key: 'planning_calculation_mode' }),
+    staleTime: 5 * 60 * 1000
+  });
+
+  // MonthlyRecapPersisted — pour prendre en compte les overrides manuels (is_manual_override=true)
   const { data: persistedRecaps = [] } = useQuery({
     queryKey: ['monthlyRecapsPersisted', monthKey],
     queryFn: () => base44.entities.MonthlyRecapPersisted.filter({ month_key: monthKey }),
     enabled: !!monthKey,
-    staleTime: 60 * 1000
+    staleTime: 30 * 1000
+  });
+
+  // MonthlyRecapExtrasOverride
+  const { data: extrasOverrides = [] } = useQuery({
+    queryKey: ['recapExtrasOverride', monthKey],
+    queryFn: () => base44.entities.MonthlyRecapExtrasOverride.filter({ month_key: monthKey }),
+    enabled: !!monthKey,
+    staleTime: 30 * 1000
   });
 
   const settings = settingsArr[0];
+  const calculationMode = calculationSettingsArr[0]?.planning_calculation_mode || 'disabled';
 
+  // Extraire year/month depuis monthKey
+  const [year, monthNum] = (monthKey || '2026-01').split('-').map(Number);
+  const month = monthNum - 1; // 0-indexed
+
+  // Shifts du jour
+  const shiftsToday = useMemo(() => (shifts || []).filter(s => s.date === date), [shifts, date]);
+
+  // Calcul des H.complémentaires pour chaque employé (même logique que MonthlySummary)
+  const holidayDateStrings = useMemo(() => holidayDates.map(h => h.date || h), [holidayDates]);
+
+  const employeeCompl = useMemo(() => {
+    if (!employees?.length) return {};
+    const map = {};
+    for (const emp of employees) {
+      const empShifts = (shifts || []).filter(s => s.employee_id === emp.id);
+      const empNonShifts = nonShiftEvents.filter(ns => ns.employee_id === emp.id);
+      const empWeeklyRecaps = weeklyRecaps.filter(wr => wr.employee_id === emp.id);
+      const recapPersisted = persistedRecaps.find(r => r.employee_id === emp.id) || null;
+      const recapExtras = extrasOverrides.find(r => r.employee_id === emp.id) || null;
+
+      const autoRecap = calculateMonthlyRecap(
+        calculationMode,
+        emp,
+        empShifts,
+        empNonShifts,
+        nonShiftTypes,
+        holidayDateStrings,
+        year,
+        month,
+        empWeeklyRecaps
+      );
+
+      const resolved = resolveRecapFinal(autoRecap, recapPersisted, recapExtras);
+      // Utiliser complementary_hours_ui exactement comme la carte
+      map[emp.id] = resolved.complementary_hours_ui ?? 0;
+    }
+    return map;
+  }, [employees, shifts, nonShiftEvents, nonShiftTypes, holidayDateStrings, weeklyRecaps, persistedRecaps, extrasOverrides, calculationMode, year, month]);
+
+  // ── Guard ───────────────────────────────────────────────────────────────────
   if (!settings?.enabled || !settings?.show_in_planning) return null;
 
-  // Vérification des rôles
   const allowedRoleIds = settings.home_roles || [];
   const isAdmin = currentUser?.role === 'admin';
   if (!isAdmin && allowedRoleIds.length > 0) {
@@ -50,49 +113,33 @@ export default function DepartureOrderPlanningBlock({ date, monthKey, shifts, em
     return null;
   }
 
-  // Services configurés (ex: ["Livraison"])
   const configuredServices = (settings.services || []).map(s => s.toLowerCase());
   if (configuredServices.length === 0) return null;
 
-  // Shifts du jour pour la date affichée
-  const shiftsToday = (shifts || []).filter(s => s.date === date);
-
-  // Pour chaque service configuré, calculer la liste triée
+  // ── Construction des blocs par service ─────────────────────────────────────
   const blocks = configuredServices.map(serviceLower => {
-    // Dédoublonner les employee_id dont la position match le service
     const empIdsSet = new Set(
       shiftsToday
         .filter(s => (s.position || '').toLowerCase() === serviceLower)
         .map(s => s.employee_id)
     );
 
-    if (empIdsSet.size === 0) return { service: serviceLower, entries: [] };
-
     const entries = [...empIdsSet].map(empId => {
       const emp = employees.find(e => e.id === empId);
-      const recap = persistedRecaps.find(r => r.employee_id === empId);
-      const complHours = recap?.complementary_hours_ui ?? 0;
       return {
         employee_id: empId,
         name: emp ? `${emp.first_name} ${emp.last_name}` : empId,
-        complementary_hours: complHours
+        complementary_hours: employeeCompl[empId] ?? 0
       };
     });
 
-    // Tri décroissant par heures complémentaires
     entries.sort((a, b) => b.complementary_hours - a.complementary_hours);
-
     return { service: serviceLower, entries };
   });
 
-  // N'afficher que les services qui ont au moins un livreur OU afficher "aucun" si settings actif
-  const visibleBlocks = blocks.filter(b => configuredServices.includes(b.service));
-  if (visibleBlocks.length === 0) return null;
-
-  // Formater heures : nombre décimal → "3h30" ou "0h"
+  // ── Formatage heures décimal → "1h20" ──────────────────────────────────────
   const formatHours = (h) => {
-    if (!h && h !== 0) return '0h';
-    const totalMin = Math.round(h * 60);
+    const totalMin = Math.round((h || 0) * 60);
     const hh = Math.floor(totalMin / 60);
     const mm = totalMin % 60;
     if (mm === 0) return `${hh}h`;
@@ -101,7 +148,7 @@ export default function DepartureOrderPlanningBlock({ date, monthKey, shifts, em
 
   return (
     <div className="space-y-2 mb-4">
-      {visibleBlocks.map(block => (
+      {blocks.map(block => (
         <div key={block.service} className="bg-emerald-50 border border-emerald-300 rounded-xl p-4">
           <div className="flex items-center gap-2 mb-2">
             <TrendingDown className="w-4 h-4 text-emerald-700" />
