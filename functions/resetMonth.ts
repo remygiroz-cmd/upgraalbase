@@ -152,6 +152,26 @@ Deno.serve(async (req) => {
       })
     );
 
+    // 🧹 Overrides récap mensuel (heures + extras)
+    deleteTasks.push(
+      batchDelete('MonthlyRecapPersisted', 'month_key', monthKey).then(count => {
+        stats.deleted.monthlyRecapPersisted = count;
+        console.log(`  ✓ ${count} MonthlyRecapPersisted`);
+      })
+    );
+    deleteTasks.push(
+      batchDelete('MonthlyRecapExtrasOverride', 'month_key', monthKey).then(count => {
+        stats.deleted.monthlyRecapExtras = count;
+        console.log(`  ✓ ${count} MonthlyRecapExtrasOverride`);
+      })
+    );
+    deleteTasks.push(
+      batchDelete('MonthlyExportOverride', 'month_key', monthKey).then(count => {
+        stats.deleted.monthlyExportOverrides = count;
+        console.log(`  ✓ ${count} MonthlyExportOverride`);
+      })
+    );
+
     // MonthlyRecap par year/month
     deleteTasks.push(
       (async () => {
