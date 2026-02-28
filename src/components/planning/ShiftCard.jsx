@@ -337,29 +337,29 @@ const ShiftCard = React.memo(function ShiftCard({
                   {shift.end_time}
                 </span>
                 <button
-                   onClick={handleSetEndNow}
+                   onClick={async (e) => {
+                     if (clockClicked) return; // déjà pointé, ne rien faire
+                     // Logique originale : enregistrer heure de fin
+                     await handleSetEndNow(e);
+                     // Marquer clock_clicked de façon persistante (optimistic déjà fait via setClockClicked)
+                     setClockClicked(true);
+                     base44.entities.Shift.update(shift.id, {
+                       clock_clicked: true,
+                       clock_clicked_at: new Date().toISOString(),
+                       clock_clicked_by: currentUser?.id || currentUser?.email || 'unknown'
+                     }).catch(() => {
+                       setClockClicked(false);
+                     });
+                   }}
                    disabled={isSettingEndNow || disabled}
                    className="p-0.5 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed hover:bg-green-100"
-                   title={disabled ? "Lecture seule" : "Mettre fin maintenant"}
+                   title={clockClicked ? clockTooltip : (disabled ? "Lecture seule" : "Mettre fin maintenant")}
                  >
                   {isSettingEndNow ? (
                     <div className="w-3 h-3 border-2 border-green-600 border-t-transparent rounded-full animate-spin" />
                   ) : (
-                    <Clock className="w-3 h-3 text-green-600" />
+                    <Clock className={cn("w-3 h-3", clockClicked ? "text-red-500" : "text-green-600")} />
                   )}
-                </button>
-                {/* Bouton horloge pointage */}
-                <button
-                  onClick={handleClockClick}
-                  title={clockTooltip}
-                  className={cn(
-                    "p-0.5 rounded transition-colors",
-                    clockClicked
-                      ? "cursor-default"
-                      : "hover:bg-red-50 cursor-pointer"
-                  )}
-                >
-                  <Clock className={cn("w-3 h-3", clockClicked ? "text-red-500" : "text-green-600")} />
                 </button>
               </div>
             )}
