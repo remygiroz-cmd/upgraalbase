@@ -32,45 +32,14 @@ const ShiftCard = React.memo(function ShiftCard({
   hasOvertimeWarning,
   onSave,
   disabled = false,
-  swapInfo = null,
-  currentUser = null
+  swapInfo = null
 }) {
   const [editingField, setEditingField] = useState(null); // 'start' | 'end' | null
   const [tempValue, setTempValue] = useState('');
   const [isSettingEndNow, setIsSettingEndNow] = useState(false);
-  // Optimistic state for clock_clicked
-  const [clockClicked, setClockClicked] = useState(shift.clock_clicked || false);
   const inputRef = useRef(null);
   const queryClient = useQueryClient();
   const hoursMode = useHoursDisplayMode();
-
-  // Sync if shift prop changes (e.g. after refetch)
-  React.useEffect(() => {
-    setClockClicked(shift.clock_clicked || false);
-  }, [shift.clock_clicked]);
-
-  const handleClockClick = async (e) => {
-    e.stopPropagation();
-    if (clockClicked) return; // déjà cliqué, ne rien faire
-    // Optimistic update
-    setClockClicked(true);
-    try {
-      await base44.entities.Shift.update(shift.id, {
-        clock_clicked: true,
-        clock_clicked_at: new Date().toISOString(),
-        clock_clicked_by: currentUser?.id || currentUser?.email || 'unknown'
-      });
-      queryClient.invalidateQueries({ queryKey: ['shifts'] });
-    } catch (err) {
-      // Rollback
-      setClockClicked(false);
-      toast.error('Erreur lors de la mise à jour de l\'horloge');
-    }
-  };
-
-  const clockTooltip = clockClicked && shift.clock_clicked_at
-    ? `Pointé le ${new Date(shift.clock_clicked_at).toLocaleString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}${shift.clock_clicked_by ? ` par ${shift.clock_clicked_by}` : ''}`
-    : 'Marquer comme pointé';
 
   const calculateDuration = () => {
     const [startH, startM] = shift.start_time.split(':').map(Number);
@@ -337,28 +306,15 @@ const ShiftCard = React.memo(function ShiftCard({
                   {shift.end_time}
                 </span>
                 <button
-                   onClick={async (e) => {
-                     if (clockClicked) return; // déjà pointé, ne rien faire
-                     // Logique originale : enregistrer heure de fin
-                     await handleSetEndNow(e);
-                     // Marquer clock_clicked de façon persistante (optimistic déjà fait via setClockClicked)
-                     setClockClicked(true);
-                     base44.entities.Shift.update(shift.id, {
-                       clock_clicked: true,
-                       clock_clicked_at: new Date().toISOString(),
-                       clock_clicked_by: currentUser?.id || currentUser?.email || 'unknown'
-                     }).catch(() => {
-                       setClockClicked(false);
-                     });
-                   }}
+                   onClick={handleSetEndNow}
                    disabled={isSettingEndNow || disabled}
                    className="p-0.5 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed hover:bg-green-100"
-                   title={clockClicked ? clockTooltip : (disabled ? "Lecture seule" : "Mettre fin maintenant")}
+                   title={disabled ? "Lecture seule" : "Mettre fin maintenant"}
                  >
                   {isSettingEndNow ? (
                     <div className="w-3 h-3 border-2 border-green-600 border-t-transparent rounded-full animate-spin" />
                   ) : (
-                    <Clock className={cn("w-3 h-3", clockClicked ? "text-red-500" : "text-green-600")} />
+                    <Clock className="w-3 h-3 text-green-600" />
                   )}
                 </button>
               </div>
