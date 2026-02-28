@@ -1060,7 +1060,22 @@ export default function PlanningV2() {
 
             {/* Body */}
             <div>
-              {daysArray.length === 0 ? (
+              {isLoading ? (
+                /* Skeleton grid — montre immédiatement la structure */
+                <div className="animate-pulse">
+                  {Array.from({ length: 8 }).map((_, i) => (
+                    <div key={i} className="flex border-b border-gray-200 h-16">
+                      <div className="w-[120px] flex-shrink-0 bg-gray-100 border-r-2 border-gray-300" />
+                      {Array.from({ length: Math.max(visibleEmployees.length, 4) }).map((_, j) => (
+                        <div key={j} className="min-w-[180px] w-[180px] border-r border-gray-200 bg-gray-50 p-2">
+                          <div className="h-3 bg-gray-200 rounded mb-1.5" style={{ width: `${60 + Math.random() * 30}%` }} />
+                          <div className="h-2 bg-gray-100 rounded" style={{ width: `${40 + Math.random() * 20}%` }} />
+                        </div>
+                      ))}
+                    </div>
+                  ))}
+                </div>
+              ) : daysArray.length === 0 ? (
                 <div className="px-4 py-16 text-center text-gray-500">
                   <Calendar className="w-12 h-12 mx-auto mb-4 text-gray-300" />
                   <p className="text-lg">Aucun jour à afficher</p>
