@@ -239,7 +239,7 @@ export default function MonthlySummary({
   // Use CP from calculation or fallback
   const displayCPDays = cpDays ?? autoCPDays ?? 0;
 
-  const hasManualOverride = recapWithOverrides.hasRecapOverride || !!monthlyRecap;
+  const hasManualOverride = recapResolved.hasRecapOverride;
 
   // Mode badge colors
   const getModeColor = () => {
