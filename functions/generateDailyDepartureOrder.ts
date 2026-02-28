@@ -1,5 +1,175 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
 
+/**
+ * generateDailyDepartureOrder
+ *
+ * Calcule l'ordre de départ en utilisant la MÊME source de vérité que l'UI et l'export :
+ *   MonthlyExportOverride > MonthlyRecapPersisted (is_manual_override=true) > MonthlyRecapExtrasOverride > calcul auto live
+ *
+ * PAS d'appel à persistMonthlyRecaps : les données sont calculées live depuis les shifts.
+ */
+
+// ─── Helpers (mêmes que l'UI) ─────────────────────────────────────────────────
+
+function parseContractHours(val) {
+  if (typeof val === 'number') return val;
+  if (!val) return 0;
+  const str = String(val).trim();
+  if (str.includes(':')) {
+    const [h, m] = str.split(':').map(s => parseInt(s, 10) || 0);
+    return h + m / 60;
+  }
+  const n = parseFloat(str.replace(',', '.'));
+  return isNaN(n) ? 0 : n;
+}
+
+function shiftDuration(shift) {
+  if (!shift.start_time || !shift.end_time) return 0;
+  if (shift.base_hours_override !== null && shift.base_hours_override !== undefined) {
+    return shift.base_hours_override;
+  }
+  const [sh, sm] = shift.start_time.split(':').map(Number);
+  const [eh, em] = shift.end_time.split(':').map(Number);
+  let mins = (eh * 60 + em) - (sh * 60 + sm);
+  if (mins < 0) mins += 24 * 60;
+  mins -= (shift.break_minutes || 0);
+  return Math.max(0, mins / 60);
+}
+
+function getFullWeekDates(mondayStr) {
+  const dates = [];
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(mondayStr + 'T00:00:00');
+    d.setDate(d.getDate() + i);
+    dates.push(`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`);
+  }
+  return dates;
+}
+
+function getWeeksTouchingMonth(year, month) {
+  const weeksSet = new Set();
+  const lastDay = new Date(year, month + 1, 0).getDate();
+  for (let day = 1; day <= lastDay; day++) {
+    const d = new Date(year, month, day);
+    const dow = d.getDay();
+    const diff = dow === 0 ? -6 : 1 - dow;
+    const mon = new Date(year, month, day + diff);
+    const monStr = `${mon.getFullYear()}-${String(mon.getMonth()+1).padStart(2,'0')}-${String(mon.getDate()).padStart(2,'0')}`;
+    weeksSet.add(monStr);
+  }
+  return [...weeksSet];
+}
+
+/**
+ * Calcul AUTO live (même logique que calculateMonthlyRecap en mode weekly)
+ */
+function calcAutoLive(emp, empShifts, year, month, monthStart, monthEnd) {
+  const contractHoursWeekly = parseContractHours(emp.contract_hours_weekly) || 0;
+  const isPartTime = emp.work_time_type === 'part_time';
+  const workDaysPerWeek = emp.work_days_per_week || 5;
+
+  const weeklySchedule = emp.weekly_schedule || {};
+  const dayMapNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+  const workedDaysOfWeek = new Set();
+  dayMapNames.forEach((name, idx) => { if (weeklySchedule[name]?.worked) workedDaysOfWeek.add(idx); });
+  if (workedDaysOfWeek.size === 0) {
+    for (let i = 0; i < workDaysPerWeek; i++) workedDaysOfWeek.add((i + 1) % 7);
+  }
+
+  const dailyContractHours = contractHoursWeekly / (workedDaysOfWeek.size || workDaysPerWeek);
+  const weeks = getWeeksTouchingMonth(year, month);
+
+  let totalComp = 0, totalOt25 = 0, totalOt50 = 0, totalWorkedHours = 0, totalWeeklyBase = 0;
+
+  for (const mondayStr of weeks) {
+    const allWeekDates = getFullWeekDates(mondayStr);
+    const visibleDates = allWeekDates.filter(d => d >= monthStart && d <= monthEnd);
+
+    let contractDaysVisible = 0;
+    for (const dateStr of visibleDates) {
+      if (workedDaysOfWeek.has(new Date(dateStr + 'T00:00:00').getDay())) contractDaysVisible++;
+    }
+    const weekBase = contractDaysVisible * dailyContractHours;
+    totalWeeklyBase += weekBase;
+
+    let weekHours = 0;
+    for (const dateStr of visibleDates) {
+      const dayShifts = empShifts.filter(s =>
+        s.date === dateStr && s.status !== 'absent' && s.status !== 'leave' && s.status !== 'cancelled'
+      );
+      weekHours += dayShifts.reduce((sum, s) => sum + shiftDuration(s), 0);
+    }
+    totalWorkedHours += weekHours;
+
+    const diff = weekHours - weekBase;
+    if (isPartTime) {
+      totalComp += Math.max(0, diff);
+    } else {
+      const weekOt = Math.max(0, diff);
+      totalOt25 += Math.min(weekOt, 8);
+      if (weekOt > 8) totalOt50 += weekOt - 8;
+    }
+  }
+
+  let comp10 = 0, comp25 = 0;
+  if (isPartTime) {
+    const threshold10 = totalWeeklyBase * 0.10;
+    comp10 = Math.min(totalComp, threshold10);
+    comp25 = Math.max(0, totalComp - threshold10);
+  }
+
+  return { comp10, comp25, ot25: totalOt25, ot50: totalOt50, workedHours: totalWorkedHours };
+}
+
+/**
+ * Resolver FINAL — même règle que resolveRecapFinal + resolveExportFinal :
+ *   exportOverride > recapPersisted (manual only) > auto
+ * Retourne { comp10, comp25, ot25, ot50, scoreMinutes, src }
+ */
+function resolveFinalScore(empId, autoValues, allPersistedRecaps, allRecapExtras, allExportOverrides, hoursType) {
+  const persisted = allPersistedRecaps.find(r => r.employee_id === empId) || null;
+  const extras    = allRecapExtras.find(r => r.employee_id === empId) || null;
+  const expOvr    = allExportOverrides.find(r => r.employee_id === empId) || null;
+
+  const isManualPersisted = persisted?.is_manual_override === true;
+
+  // Priorité : exportOverride > manualPersisted > auto
+  let comp10, comp25, ot25, ot50, src;
+
+  if (expOvr && (expOvr.compl_10 !== null && expOvr.compl_10 !== undefined ||
+                  expOvr.compl_25 !== null && expOvr.compl_25 !== undefined)) {
+    comp10 = expOvr.compl_10  ?? autoValues.comp10;
+    comp25 = expOvr.compl_25  ?? autoValues.comp25;
+    ot25   = expOvr.supp_25   ?? (isManualPersisted ? (persisted.overtime_hours_25 ?? autoValues.ot25) : autoValues.ot25);
+    ot50   = expOvr.supp_50   ?? (isManualPersisted ? (persisted.overtime_hours_50 ?? autoValues.ot50) : autoValues.ot50);
+    src = 'exportOverride';
+  } else if (isManualPersisted) {
+    comp10 = persisted.complementary_hours_10 ?? autoValues.comp10;
+    comp25 = persisted.complementary_hours_25 ?? autoValues.comp25;
+    ot25   = persisted.overtime_hours_25       ?? autoValues.ot25;
+    ot50   = persisted.overtime_hours_50       ?? autoValues.ot50;
+    src = 'manualOverride';
+  } else {
+    comp10 = autoValues.comp10;
+    comp25 = autoValues.comp25;
+    ot25   = autoValues.ot25;
+    ot50   = autoValues.ot50;
+    src = 'auto';
+  }
+
+  const compMinutes = Math.round((comp10 + comp25) * 60);
+  const otMinutes   = Math.round((ot25   + ot50)   * 60);
+
+  let scoreMinutes = 0;
+  if (hoursType === 'complementary') scoreMinutes = compMinutes;
+  else if (hoursType === 'overtime')  scoreMinutes = otMinutes;
+  else scoreMinutes = compMinutes + otMinutes;
+
+  return { comp10, comp25, ot25, ot50, compMinutes, otMinutes, scoreMinutes, src };
+}
+
+// ─── Main handler ─────────────────────────────────────────────────────────────
+
 Deno.serve(async (req) => {
   const base44 = createClientFromRequest(req);
 
@@ -34,84 +204,48 @@ Deno.serve(async (req) => {
 
   const today = new Date();
   const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
-  const monthKey = todayStr.substring(0, 7); // YYYY-MM
+  const monthKey = todayStr.substring(0, 7);
   const year = today.getFullYear();
   const month = today.getMonth(); // 0-indexed
 
-  // Month boundaries for filtering shifts
   const monthStart = `${monthKey}-01`;
   const lastDay = new Date(year, month + 1, 0).getDate();
   const monthEnd = `${monthKey}-${String(lastDay).padStart(2, '0')}`;
 
-  // Load the active reset version for this month
+  // Load planning version
   const planningMonths = await b.entities.PlanningMonth.filter({ month_key: monthKey });
   const activeResetVersion = planningMonths[0]?.reset_version ?? 0;
 
-  console.log(`🔄 Triggering persistMonthlyRecaps before scoring (month=${monthKey}, v=${activeResetVersion})`);
-  // Toujours re-persister avant de scorer pour s'assurer que les données sont à jour
-  await base44.asServiceRole.functions.invoke('persistMonthlyRecaps', { month_key: monthKey });
-  console.log(`✅ persistMonthlyRecaps done`);
+  console.log(`📅 Génération ordre de départ — ${todayStr} (month=${monthKey} v${activeResetVersion})`);
+  console.log(`⚙️  hoursType=${hoursType}, services=${services.join(',')}`);
+  console.log(`ℹ️  Source de vérité : calcul live + resolver FINAL (exportOverride > manualPersisted > auto)`);
 
-  // Load shifts for current month using month_key + active reset_version
-  const allShiftsRaw = await b.entities.Shift.filter({ month_key: monthKey, reset_version: activeResetVersion });
-  const allMonthShifts = allShiftsRaw;
-  console.log(`📅 Month shifts: ${allMonthShifts.length} (month_key=${monthKey}, reset_version=${activeResetVersion})`);
-
-  // Load non-shift events for today (to exclude absent/leave employees)
-  // Load persisted recap data + extras overrides (source of truth = UI values + manual overrides)
-  // Load all active employees + teams in parallel
-  const [allNonShifts, allPersistedRecapsRaw, allRecapExtras, allEmployees, allTeams] = await Promise.all([
+  // Chargement parallèle de toutes les données nécessaires
+  const [
+    allNonShifts,
+    allMonthShifts,
+    allPersistedRecaps,
+    allRecapExtras,
+    allExportOverrides,
+    allEmployees,
+    allTeams
+  ] = await Promise.all([
     b.entities.NonShiftEvent.filter({ date: todayStr }),
+    b.entities.Shift.filter({ month_key: monthKey, reset_version: activeResetVersion }),
     b.entities.MonthlyRecapPersisted.filter({ month_key: monthKey, reset_version: activeResetVersion }),
     b.entities.MonthlyRecapExtrasOverride.filter({ month_key: monthKey }),
+    b.entities.MonthlyExportOverride.filter({ month_key: monthKey }),
     b.entities.Employee.filter({ is_active: true }),
     b.entities.Team.filter({ is_active: true })
   ]);
 
-  // Filtrage strict sur reset_version active (double sécurité)
-  const allPersistedRecaps = allPersistedRecapsRaw.filter(r => r.reset_version === activeResetVersion);
+  // Filtrage strict reset_version
+  const persistedFiltered = allPersistedRecaps.filter(r => r.reset_version === activeResetVersion);
 
   const employeeIdsOnNonShift = new Set(allNonShifts.map(ns => ns.employee_id));
-  console.log(`📋 Persisted recaps loaded: ${allPersistedRecaps.length} for ${monthKey} v${activeResetVersion}`);
-  console.log(`📋 Extras overrides loaded: ${allRecapExtras.length} for ${monthKey}`);
-
-  // Today shifts already in allMonthShifts
   const allTodayShifts = allMonthShifts.filter(s => s.date === todayStr);
 
-  // ─── Helper: get score from persisted recap avec priorité overrides manuels ──
-  // Règle : is_manual_override=true → utiliser ses valeurs d'heures
-  //         sinon → utiliser le calcul auto du record persisté (complementary/overtime_hours_10/25)
-  function getScoreFromPersisted(empId) {
-    const recap = allPersistedRecaps.find(r => r.employee_id === empId);
-    
-    // Score en heures décimales
-    let comp10 = 0, comp25 = 0, ot25 = 0, ot50 = 0, workedHours = 0;
-
-    if (recap) {
-      workedHours = recap.worked_hours || 0;
-      if (recap.is_manual_override === true) {
-        // Override manuel : utiliser directement les valeurs saisies
-        comp10  = recap.complementary_hours_10 || 0;
-        comp25  = recap.complementary_hours_25 || 0;
-        ot25    = recap.overtime_hours_25 || 0;
-        ot50    = recap.overtime_hours_50 || 0;
-        console.log(`⚡ MANUAL OVERRIDE for ${empId}: comp10=${comp10} comp25=${comp25} ot25=${ot25} ot50=${ot50}`);
-      } else {
-        // Cache auto : utiliser les champs détaillés
-        comp10  = recap.complementary_hours_10 || 0;
-        comp25  = recap.complementary_hours_25 || 0;
-        ot25    = recap.overtime_hours_25 || 0;
-        ot50    = recap.overtime_hours_50 || 0;
-      }
-    } else {
-      console.warn("No MonthlyRecapPersisted found for employee", empId);
-    }
-
-    const comp = comp10 + comp25;
-    const ot   = ot25 + ot50;
-
-    return { comp, ot, workedHours, comp10, comp25, ot25, ot50, isManual: recap?.is_manual_override === true };
-  }
+  console.log(`📋 Shifts mois: ${allMonthShifts.length} | Persisted (manual): ${persistedFiltered.filter(r => r.is_manual_override).length}/${persistedFiltered.length} | ExportOverrides: ${allExportOverrides.length}`);
 
   const results = [];
 
@@ -136,67 +270,47 @@ Deno.serve(async (req) => {
     }
 
     const employeeIds = [...new Set(serviceShifts.map(s => s.employee_id))];
-
-    console.log(`\n🏷️  Service: ${service} | ${employeeIds.length} employees on shift today`);
+    console.log(`\n🏷️  Service: ${service} | ${employeeIds.length} employés présents`);
 
     const employeeData = employeeIds.map(empId => {
       const emp = allEmployees.find(e => e.id === empId);
       if (!emp) return null;
 
-      const { comp, ot, workedHours, comp10, comp25, ot25, ot50, isManual } = getScoreFromPersisted(empId);
+      // Calcul auto live (depuis les shifts du mois)
+      const empShifts = allMonthShifts.filter(s => s.employee_id === empId);
+      const autoValues = calcAutoLive(emp, empShifts, year, month, monthStart, monthEnd);
 
-      // Score selon le type d'heures configuré + contrat de l'employé
-      const isPartTime = emp.work_time_type === 'part_time';
-      const compMinutes = Math.round((comp10 + comp25) * 60);
-      const otMinutes   = Math.round((ot25 + ot50) * 60);
-      const plusMinutes = isPartTime ? compMinutes : otMinutes;
+      // Resolver FINAL : exportOverride > manualPersisted > auto
+      const { comp10, comp25, ot25, ot50, compMinutes, otMinutes, scoreMinutes, src } =
+        resolveFinalScore(empId, autoValues, persistedFiltered, allRecapExtras, allExportOverrides, hoursType);
 
-      let score = 0;
-      let scoreMinutes = 0;
-      if (hoursType === 'complementary') { score = comp; scoreMinutes = compMinutes; }
-      else if (hoursType === 'overtime')  { score = ot;   scoreMinutes = otMinutes; }
-      else { score = comp + ot; scoreMinutes = compMinutes + otMinutes; }
-
-      const src = isManual ? 'manualOverride' : 'auto';
-
-      console.log("OPTIM DEBUG", {
-        employee: `${emp.first_name} ${emp.last_name}`,
-        comp10, comp25, ot25, ot50,
-        compMinutes, otMinutes, plusMinutes,
-        score, scoreMinutes,
-        isPartTime,
-        src,
-        hoursType,
-        month_key: monthKey,
-        reset_version: activeResetVersion
-      });
+      console.log(`  SCORE ${emp.first_name} ${emp.last_name}: comp=${compMinutes}min ot=${otMinutes}min score=${scoreMinutes}min src=${src}`);
 
       return {
         employee_id: empId,
         first_name: emp.first_name,
         last_name: emp.last_name,
-        score,
+        score: comp10 + comp25 + ot25 + ot50,
         scoreMinutes,
-        plusMinutes,
-        comp,
-        ot,
-        workedHours,
+        compMinutes,
+        otMinutes,
+        workedHours: autoValues.workedHours,
         src
       };
     }).filter(Boolean);
 
-    // Tri : 1) scoreMinutes DESC, 2) workedHours DESC, 3) nom alphabétique
+    // Tri : scoreMinutes DESC, workedHours DESC, nom alphabétique
     employeeData.sort((a, b) => {
       if (b.scoreMinutes !== a.scoreMinutes) return b.scoreMinutes - a.scoreMinutes;
       if (Math.abs(b.workedHours - a.workedHours) > 0.001) return b.workedHours - a.workedHours;
       return a.last_name.localeCompare(b.last_name, 'fr');
     });
 
-    const orderStr = employeeData.map((emp, i) => `${i + 1}. ${emp.first_name} ${emp.last_name}`).join(', ');
+    const orderStr = employeeData.map((e, i) => `${i + 1}. ${e.first_name} ${e.last_name}`).join(', ');
     const debugStr = employeeData.map(e => `${e.first_name}=${e.scoreMinutes}min(${e.src})`).join(' | ');
     const message = `Ordre de départ pour le service ${service} aujourd'hui :\n${orderStr}\nDEBUG scores: ${debugStr}`;
 
-    console.log(`📋 Final order: ${orderStr}`);
+    console.log(`📋 Ordre final: ${orderStr}`);
     console.log(`📊 Debug: ${debugStr}`);
 
     const existing = await b.entities.DepartureOrder.filter({ date: todayStr, service });
