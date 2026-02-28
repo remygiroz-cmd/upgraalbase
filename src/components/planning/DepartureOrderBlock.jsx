@@ -76,11 +76,11 @@ export default function DepartureOrderBlock({ date, currentUser }) {
           <div className="text-sm text-emerald-800 font-medium space-y-0.5">
             {order.ordered_employees.map((emp, i) => (
             <div key={emp.employee_id} className="flex items-baseline gap-1.5">
-              <span className="font-bold">{i + 1}.</span>
-              <span>{emp.employee_name}</span>
-              <span className="text-[10px] text-emerald-600 font-mono">
-                (+ = {emp.score_minutes ?? 0} min{emp.src && emp.src !== 'auto' ? ` · ${emp.src}` : ''})
-              </span>
+            <span className="font-bold">{i + 1}.</span>
+            <span>{emp.employee_name}</span>
+            <span className="text-[10px] text-emerald-600 font-mono">
+              (final={emp.score_minutes ?? 0}min · {emp.src ?? '?'})
+            </span>
             </div>
             ))}
           </div>
