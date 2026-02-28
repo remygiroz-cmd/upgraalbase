@@ -1,5 +1,5 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
+import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { useSearchParams } from 'react-router-dom';
 import { Calendar, ChevronLeft, ChevronRight, Plus, Filter, GripVertical, Settings, MoreVertical, Copy, ArrowDown, FileText, X, EyeOff, Eye } from 'lucide-react';
