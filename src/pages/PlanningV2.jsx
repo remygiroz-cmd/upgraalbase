@@ -793,8 +793,17 @@ export default function PlanningV2() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [undoStack.canUndo, undoStack.canRedo, isUndoing, isRedoing]);
 
+  // Skeleton grid — affiché pendant le chargement du premier rendu
+  const isLoading = isFetchingShifts && shifts.length === 0;
+
   return (
     <div className="space-y-2">
+      {/* Indicateur discret de chargement en haut lors des changements de mois */}
+      {isFetchingShifts && shifts.length > 0 && (
+        <div className="fixed top-0 left-0 right-0 z-[100] h-0.5">
+          <div className="h-full bg-orange-500 animate-pulse" style={{ width: '100%' }} />
+        </div>
+      )}
       {/* Header - responsive mobile */}
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-2 min-w-0 flex-1">
