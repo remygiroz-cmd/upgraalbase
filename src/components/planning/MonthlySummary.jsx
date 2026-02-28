@@ -110,11 +110,16 @@ export default function MonthlySummary({
     );
   }, [calculationMode, employee, shifts, nonShiftEvents, nonShiftTypes, holidayDates, year, month, weeklyRecaps]);
 
-  // 🎯 SOURCE DE VÉRITÉ : Récap final = recapPersisted/recapExtras > auto
+  // 🎯 SOURCE DE VÉRITÉ : Récap final = recapPersisted (manuel) / recapExtras > auto
   const recapResolved = useMemo(() => {
     const recapPersisted = recapPersistedList.find(r => r.employee_id === employee.id) || null;
     const recapExtras = recapExtrasList.find(r => r.employee_id === employee.id) || null;
-    return resolveRecapFinal(calculatedRecap, recapPersisted, recapExtras);
+    const resolved = resolveRecapFinal(calculatedRecap, recapPersisted, recapExtras);
+    // Debug temporaire
+    if (process.env.NODE_ENV !== 'production') {
+      console.log(`[MonthlySummary] ${employee.first_name} ${employee.last_name} source=${resolved._source} hasOverride=${resolved.hasRecapOverride} HC10=${resolved.complementary_hours_10} HC25=${resolved.complementary_hours_25} HS25=${resolved.overtime_hours_25} HS50=${resolved.overtime_hours_50} persisted.is_manual=${recapPersisted?.is_manual_override}`);
+    }
+    return resolved;
   }, [calculatedRecap, recapPersistedList, recapExtrasList, employee.id]);
 
   // Adapter recapResolved vers la structure attendue par l'UI (noms camelCase legacy)
