@@ -96,7 +96,7 @@ const ShiftCard = React.memo(function ShiftCard({
     setTempValue('');
   };
 
-  // Bouton "Fin maintenant" - met l'heure de fin à maintenant
+  // Bouton "Fin maintenant" - met l'heure de fin à maintenant + marque clock_clicked
   const handleSetEndNow = async (e) => {
     e.stopPropagation();
     
@@ -118,7 +118,6 @@ const ShiftCard = React.memo(function ShiftCard({
     const startMinutes = startH * 60 + startM;
     const nowMinutes = nowH * 60 + nowM;
     
-    // Gérer le cas où le shift ne passe pas minuit
     if (nowMinutes <= startMinutes) {
       toast.error('L\'heure de fin doit être après l\'heure de début');
       return;
@@ -126,9 +125,22 @@ const ShiftCard = React.memo(function ShiftCard({
     
     setIsSettingEndNow(true);
     
+    // Optimistic update — icône devient rouge immédiatement
+    queryClient.setQueriesData(
+      { predicate: (q) => q.queryKey[0] === 'shifts' },
+      (old) => Array.isArray(old)
+        ? old.map(s => s.id === shift.id ? { ...s, clock_clicked: true, clock_clicked_at: new Date().toISOString() } : s)
+        : old
+    );
+
     try {
-      // Utiliser exactement la même logique que l'édition inline
+      // Logique existante : enregistrement de l'heure de fin
       handleSaveTime(shift.start_time, currentTime);
+      // En plus : persiste clock_clicked
+      await base44.entities.Shift.update(shift.id, {
+        clock_clicked: true,
+        clock_clicked_at: new Date().toISOString()
+      });
       toast.success(`Heure de fin mise à jour: ${currentTime}`);
     } catch (error) {
       toast.error(`Erreur: ${error.message}`);
