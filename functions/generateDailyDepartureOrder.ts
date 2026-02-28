@@ -137,12 +137,17 @@ function calcAutoMinutes(emp, empShifts, year, month, monthStart, monthEnd) {
 }
 
 /**
- * Resolver FINAL — IDENTIQUE à resolveRecapFinal + resolveExportFinal de l'UI.
+ * Resolver FINAL — SOURCE DE VÉRITÉ = valeurs affichées dans la carte Récap Mois.
  * 
- * Priorité pour les heures :
- *   1. MonthlyExportOverride (compl_10, compl_25, supp_25, supp_50)
- *   2. MonthlyRecapPersisted si is_manual_override === true
- *   3. Calcul auto live
+ * Priorité pour les heures (identique à resolveRecapFinal dans l'UI) :
+ *   1. MonthlyExportOverride (compl_10/25, supp_25/50)
+ *   2. MonthlyRecapPersisted is_manual_override=true (saisie manuelle)
+ *   3. MonthlyRecapPersisted is_manual_override=false (cache UI — valeurs calculées par l'UI)
+ *   4. Calcul auto live (fallback si aucun record persisté)
+ * 
+ * IMPORTANT : on utilise MonthlyRecapPersisted même non-manuel car il contient
+ * les valeurs exactes calculées par l'UI (incluant weeklyRecaps overrides, etc.)
+ * que le backend ne peut pas reproduire parfaitement.
  * 
  * Retourne { scoreMinutes, src, comp10, comp25, ot25, ot50 }
  */
@@ -155,21 +160,21 @@ function resolveScore(empId, autoValues, allPersisted, allExtras, allExportOvr, 
 
   // Priorité 1 : MonthlyExportOverride
   if (expOvr && (expOvr.compl_10 != null || expOvr.compl_25 != null)) {
-    comp10 = expOvr.compl_10  ?? autoValues.comp10;
-    comp25 = expOvr.compl_25  ?? autoValues.comp25;
-    ot25   = expOvr.supp_25   ?? (isManual ? (persisted.overtime_hours_25  ?? autoValues.ot25) : autoValues.ot25);
-    ot50   = expOvr.supp_50   ?? (isManual ? (persisted.overtime_hours_50  ?? autoValues.ot50) : autoValues.ot50);
+    comp10 = expOvr.compl_10 ?? (persisted?.complementary_hours_10 ?? autoValues.comp10);
+    comp25 = expOvr.compl_25 ?? (persisted?.complementary_hours_25 ?? autoValues.comp25);
+    ot25   = expOvr.supp_25  ?? (persisted?.overtime_hours_25      ?? autoValues.ot25);
+    ot50   = expOvr.supp_50  ?? (persisted?.overtime_hours_50      ?? autoValues.ot50);
     src = 'exportOverride';
   }
-  // Priorité 2 : MonthlyRecapPersisted manuel
-  else if (isManual) {
+  // Priorité 2+3 : MonthlyRecapPersisted (manuel OU cache UI)
+  else if (persisted) {
     comp10 = persisted.complementary_hours_10 ?? autoValues.comp10;
     comp25 = persisted.complementary_hours_25 ?? autoValues.comp25;
     ot25   = persisted.overtime_hours_25      ?? autoValues.ot25;
     ot50   = persisted.overtime_hours_50      ?? autoValues.ot50;
-    src = 'manualOverride';
+    src    = isManual ? 'manualOverride' : 'persistedUI';
   }
-  // Priorité 3 : auto
+  // Priorité 4 : calcul auto live
   else {
     comp10 = autoValues.comp10;
     comp25 = autoValues.comp25;
