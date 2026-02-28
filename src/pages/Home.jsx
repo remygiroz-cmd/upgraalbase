@@ -145,6 +145,31 @@ export default function Home() {
     staleTime: 10 * 60 * 1000
   });
 
+  // Fetch weekly recaps for current month (needed for DepartureOrderPlanningBlock)
+  const { data: allWeeklyRecaps = [] } = useQuery({
+    queryKey: ['allWeeklyRecaps', `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}`, resetVersion],
+    queryFn: async () => {
+      const monthKey = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}`;
+      const all = await base44.entities.WeeklyRecap.filter({ month_key: monthKey });
+      return all.filter(wr => (wr.reset_version ?? 0) >= resetVersion);
+    },
+    enabled: !!currentEmployee,
+    staleTime: 5 * 60 * 1000
+  });
+
+  // Fetch holiday dates for current month (needed for DepartureOrderPlanningBlock)
+  const { data: holidayDates = [] } = useQuery({
+    queryKey: ['holidayDates', currentYear, currentMonth],
+    queryFn: async () => {
+      const firstDay = formatLocalDate(new Date(currentYear, currentMonth, 1));
+      const lastDay = formatLocalDate(new Date(currentYear, currentMonth + 1, 0));
+      const all = await base44.entities.HolidayDate.list();
+      return all.filter(h => h.date >= firstDay && h.date <= lastDay);
+    },
+    enabled: !!currentEmployee,
+    staleTime: 60 * 60 * 1000
+  });
+
   // Fetch positions (SAME as Planning)
   const { data: positions = [] } = useQuery({
     queryKey: ['positions'],
