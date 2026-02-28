@@ -2,67 +2,69 @@ import { base44 } from '@/api/base44Client';
 
 /**
  * SOURCE DE VÉRITÉ UNIQUE pour (month_key, reset_version)
- * 
- * Garantit que tous les writes et reads utilisent exactement le même reset_version actif
- * Élimine les divergences entre modules (ApplyTemplate vs Export vs Planning UI)
  */
+
+// Cache en mémoire pour éviter les appels répétés (rate limit)
+// Invalidé explicitement lors du bumpMonthVersion
+const _contextCache = new Map(); // monthKey -> { context, ts }
+const CACHE_TTL_MS = 60_000; // 60 secondes
+
+// Dédoublonnage des requêtes en cours (promise sharing)
+const _inflight = new Map(); // monthKey -> Promise
+
+export function invalidateMonthContextCache(monthKey) {
+  _contextCache.delete(monthKey);
+  _inflight.delete(monthKey);
+}
 
 /**
  * Récupère ou crée le contexte du mois actif
- * 
+ * Résultats mis en cache 60s pour éviter le rate-limit.
+ *
  * @param {string} monthKey - Format "YYYY-MM" (ex: "2026-02")
  * @returns {Promise<{month_key: string, reset_version: number}>}
  */
 export async function getActiveMonthContext(monthKey) {
-  console.log('\n═══════════════════════════════════════════════════════════');
-  console.log('📅 MONTH CONTEXT - Getting active version');
-  console.log('═══════════════════════════════════════════════════════════');
-  console.log(`Input month_key: "${monthKey}"`);
-  
-  // Parse monthKey to extract year and month
-  const [yearStr, monthStr] = monthKey.split('-');
-  if (!yearStr || !monthStr) {
-    throw new Error(`Invalid monthKey format: "${monthKey}". Expected "YYYY-MM".`);
+  // Cache hit
+  const cached = _contextCache.get(monthKey);
+  if (cached && Date.now() - cached.ts < CACHE_TTL_MS) {
+    return cached.context;
   }
-  const year = parseInt(yearStr, 10);
-  const month = parseInt(monthStr, 10) - 1; // Convert to 0-indexed
-  
-  // Validate parsed values
-  if (isNaN(year) || isNaN(month)) {
-    throw new Error(`Failed to parse monthKey: "${monthKey}". Got year=${year}, month=${month}`);
+
+  // Dédoublonnage : si une requête est déjà en cours pour ce mois, on attend son résultat
+  if (_inflight.has(monthKey)) {
+    return _inflight.get(monthKey);
   }
-  
-  // Chercher l'entité PlanningMonth pour ce mois
-  const planningMonths = await base44.entities.PlanningMonth.filter({ month_key: monthKey });
-  
-  let planningMonth;
-  
-  if (planningMonths.length === 0) {
-    // Créer une nouvelle entrée avec reset_version = 0
-    console.log('⚠️ No PlanningMonth found - Creating with reset_version=0');
-    planningMonth = await base44.entities.PlanningMonth.create({
-      year,
-      month,
-      month_key: monthKey,
-      reset_version: 0
-    });
-    console.log(`✓ Created PlanningMonth (ID: ${planningMonth.id})`);
-  } else {
-    planningMonth = planningMonths[0];
-    console.log(`✓ Found existing PlanningMonth (ID: ${planningMonth.id})`);
-  }
-  
-  const context = {
-    month_key: planningMonth.month_key,
-    reset_version: planningMonth.reset_version
-  };
-  
-  console.log(`📊 ACTIVE CONTEXT:`);
-  console.log(`   month_key: "${context.month_key}"`);
-  console.log(`   reset_version: ${context.reset_version}`);
-  console.log('═══════════════════════════════════════════════════════════\n');
-  
-  return context;
+
+  const promise = (async () => {
+    const [yearStr, monthStr] = monthKey.split('-');
+    if (!yearStr || !monthStr) throw new Error(`Invalid monthKey format: "${monthKey}".`);
+    const year = parseInt(yearStr, 10);
+    const month = parseInt(monthStr, 10) - 1;
+
+    const planningMonths = await base44.entities.PlanningMonth.filter({ month_key: monthKey });
+
+    let planningMonth;
+    if (planningMonths.length === 0) {
+      planningMonth = await base44.entities.PlanningMonth.create({
+        year, month, month_key: monthKey, reset_version: 0
+      });
+    } else {
+      planningMonth = planningMonths[0];
+    }
+
+    const context = {
+      month_key: planningMonth.month_key,
+      reset_version: planningMonth.reset_version
+    };
+
+    _contextCache.set(monthKey, { context, ts: Date.now() });
+    _inflight.delete(monthKey);
+    return context;
+  })();
+
+  _inflight.set(monthKey, promise);
+  return promise;
 }
 
 /**
