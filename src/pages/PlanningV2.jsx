@@ -355,11 +355,6 @@ export default function PlanningV2() {
       queryClient.invalidateQueries({ queryKey: ['exportOverrides', monthKey] });
       queryClient.invalidateQueries({ queryKey: ['monthlyExportOverrides', monthKey] });
       if (!undoStack.isUndoingRef.current && !undoStack.isRedoingRef.current) toast.success('Shift enregistré');
-      // Mise à jour immédiate de MonthlyRecapFinal pour l'optimisation
-      const empId = variables.data?.employee_id || result?.employee_id;
-      if (empId) {
-        recomputeAndUpsertForEmployees(monthKey, [empId], resetVersion, calculationMode).catch(() => {});
-      }
     },
     onError: (error) => {
       toast.error('Erreur lors de l\'enregistrement : ' + error.message);
