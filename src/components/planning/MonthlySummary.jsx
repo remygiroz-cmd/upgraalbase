@@ -700,11 +700,10 @@ function EditMonthlyRecapDialog({
       ]);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['recapExtrasOverride', monthKey] });
-      queryClient.invalidateQueries({ queryKey: ['monthlyRecapsPersisted', monthKey] });
+      queryClient.invalidateQueries({ queryKey: ['monthlyRecapPersisted', monthKey, employee.id] });
+      queryClient.invalidateQueries({ queryKey: ['recapExtrasOverride', monthKey, employee.id] });
       queryClient.invalidateQueries({ queryKey: ['exportOverrides', monthKey] });
       queryClient.invalidateQueries({ queryKey: ['monthlyExportOverrides', monthKey] });
-      // Forcer recalcul auto : invalider aussi shifts + weekly recaps
       queryClient.invalidateQueries({ queryKey: ['shifts'] });
       queryClient.invalidateQueries({ queryKey: ['allWeeklyRecaps'] });
       queryClient.invalidateQueries({ queryKey: ['allMonthlyRecaps'] });
