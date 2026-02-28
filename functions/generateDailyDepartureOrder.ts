@@ -90,7 +90,7 @@ function calcAutoLive(emp, empShifts, year, month, monthStart, monthEnd) {
     for (const dateStr of visibleDates) {
       if (workedDaysOfWeek.has(new Date(dateStr + 'T00:00:00').getDay())) contractDaysVisible++;
     }
-    const weekBase = contractDaysVisible * dailyContractHours;
+    const weekBase = contractDaysVisible * dailyContractHoursDecimal;
     totalWeeklyBase += weekBase;
 
     // En MINUTES ENTIÈRES (identique à l'UI — shiftStrictMinutes)
