@@ -592,53 +592,39 @@ function EditMonthlyRecapDialog({
   calculationMode,
   autoCPDays,
   monthKey,
-  resetVersion
+  recapPersisted,   // Passé depuis MonthlySummary — MÊME source que la carte
+  recapExtras       // Passé depuis MonthlySummary — MÊME source que la carte
 }) {
   const queryClient = useQueryClient();
   const [formData, setFormData] = useState({});
-  const [loadingExtras, setLoadingExtras] = useState(false);
 
-  // Clé pour invalider les queries après save
-  const queryKey = ['recapExtrasOverride', monthKey, employee?.id];
-
+  // Initialiser le formulaire depuis les données déjà chargées par la carte (MÊME source)
   React.useEffect(() => {
-    if (!open || !employee?.id) return;
-    setLoadingExtras(true);
+    if (!open) return;
 
-    // Charger en parallèle : MonthlyRecap (legacy heures) + MonthlyRecapExtrasOverride (jours/CP/fériés)
-    Promise.all([
-      base44.entities.MonthlyRecapExtrasOverride.filter({ month_key: monthKey, employee_id: employee.id }),
-      base44.entities.MonthlyRecapPersisted.filter({ month_key: monthKey, employee_id: employee.id })
-    ]).then(([extrasArr, persistedArr]) => {
-      const extras = extrasArr[0] || null;
-      const persisted = persistedArr[0] || null;
-
-      setFormData({
-        // Jours (depuis extras override)
-        jours_prevus:   extras?.jours_prevus ?? '',
-        jours_travailles: extras?.jours_travailles ?? '',
-        jours_supp:     extras?.jours_supp ?? '',
-        // Heures (depuis persisted override)
-        worked_hours:   persisted?.worked_hours ?? '',
-        // Complémentaires
-        complementary_10: persisted?.complementary_hours_10 ?? '',
-        complementary_25: persisted?.complementary_hours_25 ?? '',
-        // Supplémentaires
-        overtime_25:    persisted?.overtime_hours_25 ?? '',
-        overtime_50:    persisted?.overtime_hours_50 ?? '',
-        // Fériés
-        ferie_jours:    extras?.ferie_jours ?? '',
-        ferie_heures:   extras?.ferie_heures ?? '',
-        // CP
-        cp_decomptes:   extras?.cp_decomptes ?? '',
-        // Payées
-        payees_hors_sup_comp: extras?.payees_hors_sup_comp ?? '',
-        // Non-shifts / Notes
-        non_shifts_visibles: extras?.non_shifts_visibles ?? '',
-        notes: extras?.notes || ''
-      });
-    }).finally(() => setLoadingExtras(false));
-  }, [open, employee?.id, monthKey]);
+    setFormData({
+      // Jours (depuis extras override)
+      jours_prevus:         recapExtras?.jours_prevus ?? '',
+      jours_travailles:     recapExtras?.jours_travailles ?? '',
+      jours_supp:           recapExtras?.jours_supp ?? '',
+      // Heures (depuis persisted override — seulement si manuel)
+      worked_hours:         (recapPersisted?.is_manual_override === true) ? (recapPersisted?.worked_hours ?? '') : '',
+      complementary_10:     (recapPersisted?.is_manual_override === true) ? (recapPersisted?.complementary_hours_10 ?? '') : '',
+      complementary_25:     (recapPersisted?.is_manual_override === true) ? (recapPersisted?.complementary_hours_25 ?? '') : '',
+      overtime_25:          (recapPersisted?.is_manual_override === true) ? (recapPersisted?.overtime_hours_25 ?? '') : '',
+      overtime_50:          (recapPersisted?.is_manual_override === true) ? (recapPersisted?.overtime_hours_50 ?? '') : '',
+      // Fériés
+      ferie_jours:          recapExtras?.ferie_jours ?? '',
+      ferie_heures:         recapExtras?.ferie_heures ?? '',
+      // CP
+      cp_decomptes:         recapExtras?.cp_decomptes ?? '',
+      // Payées
+      payees_hors_sup_comp: recapExtras?.payees_hors_sup_comp ?? '',
+      // Non-shifts / Notes
+      non_shifts_visibles:  recapExtras?.non_shifts_visibles ?? '',
+      notes:                recapExtras?.notes || ''
+    });
+  }, [open, recapPersisted, recapExtras]);
 
   const saveMutation = useMutation({
     mutationFn: async () => {
