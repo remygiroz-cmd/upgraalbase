@@ -147,6 +147,8 @@ Deno.serve(async (req) => {
     });
 
     const debugStr = employeeData.map(e => `${e.first_name}=${e.scoreMinutes}min(${e.src})`).join(' | ');
+    const staleCount = employeeData.filter(e => e.src === 'stale').length;
+    if (staleCount > 0) console.warn(`⚠️  ${staleCount} employé(s) sans MonthlyRecapFinal — ouvrir le Planning pour initialiser`);
     console.log(`📋 Ordre: ${employeeData.map((e,i) => `${i+1}.${e.first_name}`).join(' ')}`);
     console.log(`📊 Debug: ${debugStr}`);
 
