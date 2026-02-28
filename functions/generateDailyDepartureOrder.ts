@@ -23,17 +23,18 @@ function parseContractHours(val) {
   return isNaN(n) ? 0 : n;
 }
 
-function shiftDuration(shift) {
+/**
+ * Durée en MINUTES ENTIÈRES — même logique que shiftStrictMinutes dans l'UI :
+ * jamais base_hours_override, toujours start/end times brutes.
+ */
+function shiftStrictMinutes(shift) {
   if (!shift.start_time || !shift.end_time) return 0;
-  if (shift.base_hours_override !== null && shift.base_hours_override !== undefined) {
-    return shift.base_hours_override;
-  }
   const [sh, sm] = shift.start_time.split(':').map(Number);
   const [eh, em] = shift.end_time.split(':').map(Number);
   let mins = (eh * 60 + em) - (sh * 60 + sm);
   if (mins < 0) mins += 24 * 60;
   mins -= (shift.break_minutes || 0);
-  return Math.max(0, mins / 60);
+  return Math.max(0, mins);
 }
 
 function getFullWeekDates(mondayStr) {
