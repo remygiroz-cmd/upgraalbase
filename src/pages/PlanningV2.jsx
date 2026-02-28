@@ -205,7 +205,9 @@ export default function PlanningV2() {
       const monthEvents = allEvents.filter(e => e.date >= firstDay && e.date <= lastDay);
       return filterByVersion(monthEvents, resetVersion);
     },
-    enabled: resetVersion !== undefined
+    enabled: resetVersion !== undefined,
+    placeholderData: keepPreviousData,
+    staleTime: 30 * 1000
   });
 
   const { data: nonShiftTypes = [] } = useQuery({
@@ -213,7 +215,8 @@ export default function PlanningV2() {
     queryFn: async () => {
       const types = await base44.entities.NonShiftType.filter({ is_active: true });
       return types.sort((a, b) => (a.order || 0) - (b.order || 0));
-    }
+    },
+    staleTime: 10 * 60 * 1000
   });
 
   const { data: positions = [] } = useQuery({
@@ -221,7 +224,8 @@ export default function PlanningV2() {
     queryFn: async () => {
       const all = await base44.entities.Position.filter({ is_active: true });
       return all.sort((a, b) => (a.order || 0) - (b.order || 0));
-    }
+    },
+    staleTime: 10 * 60 * 1000
   });
 
   const { data: paidLeavePeriods = [] } = useQuery({
@@ -233,13 +237,16 @@ export default function PlanningV2() {
       const monthPeriods = allPeriods.filter(p => p.end_cp >= firstDay && p.start_cp <= lastDay);
       return filterByVersion(monthPeriods, resetVersion);
     },
-    enabled: resetVersion !== undefined
+    enabled: resetVersion !== undefined,
+    placeholderData: keepPreviousData,
+    staleTime: 30 * 1000
   });
 
   const { data: approvedSwaps = [] } = useQuery({
     queryKey: ['approvedSwaps', monthKey],
     queryFn: () => base44.entities.ShiftSwapRequest.filter({ status: 'APPROVED', month_key: monthKey }),
-    enabled: !!monthKey
+    enabled: !!monthKey,
+    staleTime: 60 * 1000
   });
 
   const { data: holidayDates = [] } = useQuery({
@@ -249,13 +256,14 @@ export default function PlanningV2() {
       const lastDay = formatLocalDate(new Date(currentYear, currentMonth + 1, 0));
       const allHolidays = await base44.entities.HolidayDate.list();
       return allHolidays.filter(h => h.date >= firstDay && h.date <= lastDay);
-    }
+    },
+    placeholderData: keepPreviousData,
+    staleTime: 5 * 60 * 1000
   });
 
   const { data: allWeeklyRecaps = [] } = useQuery({
     queryKey: ['allWeeklyRecaps', currentYear, currentMonth, resetVersion],
     queryFn: async () => {
-      const firstDay = formatLocalDate(new Date(currentYear, currentMonth, 1));
       const lastDay = formatLocalDate(new Date(currentYear, currentMonth + 1, 0));
       const startRange = new Date(currentYear, currentMonth, 1);
       startRange.setDate(startRange.getDate() - 7);
@@ -264,7 +272,9 @@ export default function PlanningV2() {
       const monthRecaps = allRecaps.filter(r => r.week_start >= startRangeStr && r.week_start <= lastDay);
       return filterByVersion(monthRecaps, resetVersion);
     },
-    enabled: resetVersion !== undefined
+    enabled: resetVersion !== undefined,
+    placeholderData: keepPreviousData,
+    staleTime: 30 * 1000
   });
 
   const { data: allMonthlyRecaps = [] } = useQuery({
@@ -276,7 +286,9 @@ export default function PlanningV2() {
       });
       return filterByVersion(allRecaps, resetVersion);
     },
-    enabled: resetVersion !== undefined
+    enabled: resetVersion !== undefined,
+    placeholderData: keepPreviousData,
+    staleTime: 30 * 1000
   });
 
   // Lookups
