@@ -43,39 +43,49 @@ function hasAnyExtrasOverride(recapExtras) {
  * @param {Object|null} recapExtras    - MonthlyRecapExtrasOverride (jours, CP, fériés…)
  */
 export function resolveRecapFinal(autoRecap, recapPersisted, recapExtras) {
+  // ─── Décider si les overrides sont actifs ───────────────────────────────────
+  // recapPersisted n'est utilisé QUE si l'utilisateur a manuellement saisi (is_manual_override=true)
+  const usePersistedOverride = isManualPersisted(recapPersisted);
+  // recapExtras n'est utilisé QUE s'il contient au moins un vrai champ saisi
+  const useExtrasOverride = hasAnyExtrasOverride(recapExtras);
+
+  // Source debug
+  const source = usePersistedOverride ? 'manualOverride' : (useExtrasOverride ? 'extrasOverride' : 'auto');
+
   return {
-    // ── Heures (depuis recapPersisted override > auto) ──
-    worked_hours:           resolve(recapPersisted?.worked_hours, autoRecap?.workedHours),
-    complementary_hours_10: resolve(recapPersisted?.complementary_hours_10, autoRecap?.complementaryHours10),
-    complementary_hours_25: resolve(recapPersisted?.complementary_hours_25, autoRecap?.complementaryHours25),
-    overtime_hours_25:      resolve(recapPersisted?.overtime_hours_25, autoRecap?.overtimeHours25),
-    overtime_hours_50:      resolve(recapPersisted?.overtime_hours_50, autoRecap?.overtimeHours50),
-    complementary_hours_ui: resolve(recapPersisted?.complementary_hours_ui, autoRecap?.totalComplementaryHours),
-    overtime_hours_ui:      resolve(recapPersisted?.overtime_hours_ui, autoRecap?.totalOvertimeHours),
+    // ── Heures : override MANUEL UNIQUEMENT > auto ──
+    worked_hours:           usePersistedOverride ? resolve(recapPersisted?.worked_hours, autoRecap?.workedHours) : autoRecap?.workedHours,
+    complementary_hours_10: usePersistedOverride ? resolve(recapPersisted?.complementary_hours_10, autoRecap?.complementaryHours10) : autoRecap?.complementaryHours10,
+    complementary_hours_25: usePersistedOverride ? resolve(recapPersisted?.complementary_hours_25, autoRecap?.complementaryHours25) : autoRecap?.complementaryHours25,
+    overtime_hours_25:      usePersistedOverride ? resolve(recapPersisted?.overtime_hours_25, autoRecap?.overtimeHours25) : autoRecap?.overtimeHours25,
+    overtime_hours_50:      usePersistedOverride ? resolve(recapPersisted?.overtime_hours_50, autoRecap?.overtimeHours50) : autoRecap?.overtimeHours50,
+    complementary_hours_ui: usePersistedOverride ? resolve(recapPersisted?.complementary_hours_ui, autoRecap?.totalComplementaryHours) : autoRecap?.totalComplementaryHours,
+    overtime_hours_ui:      usePersistedOverride ? resolve(recapPersisted?.overtime_hours_ui, autoRecap?.totalOvertimeHours) : autoRecap?.totalOvertimeHours,
 
     // ── Jours (depuis recapExtras override > auto) ──
-    jours_travailles:       resolve(recapExtras?.jours_travailles, autoRecap?.workedDays),
-    jours_prevus:           resolve(recapExtras?.jours_prevus, autoRecap?.expectedDays),
-    jours_supp:             resolve(recapExtras?.jours_supp, autoRecap?.extraDays),
+    jours_travailles:       useExtrasOverride ? resolve(recapExtras?.jours_travailles, autoRecap?.workedDays) : autoRecap?.workedDays,
+    jours_prevus:           useExtrasOverride ? resolve(recapExtras?.jours_prevus, autoRecap?.expectedDays) : autoRecap?.expectedDays,
+    jours_supp:             useExtrasOverride ? resolve(recapExtras?.jours_supp, autoRecap?.extraDays) : autoRecap?.extraDays,
 
     // ── Fériés (depuis recapExtras override > auto) ──
-    ferie_jours:            resolve(recapExtras?.ferie_jours, autoRecap?.holidaysWorkedDays),
-    ferie_heures:           resolve(recapExtras?.ferie_heures, autoRecap?.holidaysWorkedHours),
+    ferie_jours:            useExtrasOverride ? resolve(recapExtras?.ferie_jours, autoRecap?.holidaysWorkedDays) : autoRecap?.holidaysWorkedDays,
+    ferie_heures:           useExtrasOverride ? resolve(recapExtras?.ferie_heures, autoRecap?.holidaysWorkedHours) : autoRecap?.holidaysWorkedHours,
 
     // ── CP (depuis recapExtras override > auto) ──
-    cp_decomptes:           resolve(recapExtras?.cp_decomptes, autoRecap?.cpDays),
+    cp_decomptes:           useExtrasOverride ? resolve(recapExtras?.cp_decomptes, autoRecap?.cpDays) : autoRecap?.cpDays,
 
     // ── Payées (depuis recapExtras override > auto) ──
-    payees_hors_sup_comp:   resolve(recapExtras?.payees_hors_sup_comp, autoRecap?.paidHours),
+    payees_hors_sup_comp:   useExtrasOverride ? resolve(recapExtras?.payees_hors_sup_comp, autoRecap?.paidHours) : autoRecap?.paidHours,
 
     // ── Non-shifts visibles ──
-    non_shifts_visibles:    resolve(recapExtras?.non_shifts_visibles, autoRecap?.nonShiftsStr),
+    non_shifts_visibles:    useExtrasOverride ? resolve(recapExtras?.non_shifts_visibles, autoRecap?.nonShiftsStr) : autoRecap?.nonShiftsStr,
 
     // ── Notes ──
-    notes:                  recapExtras?.notes || null,
+    notes: useExtrasOverride ? (recapExtras?.notes || null) : null,
 
     // Métadonnées
-    hasRecapOverride: !!(recapPersisted || recapExtras),
+    hasRecapOverride: usePersistedOverride || useExtrasOverride,
+    _source: source, // debug
   };
 }
 
