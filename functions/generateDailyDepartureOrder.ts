@@ -174,16 +174,18 @@ function resolveScore(empId, autoValues, allPersisted, allExtras, allExportOvr, 
     ot50   = expOvr.supp_50  ?? (persisted?.overtime_hours_50      ?? autoValues.ot50);
     src = 'exportOverride';
   }
-  // Priorité 2 : MonthlyRecapPersisted is_manual_override=true (saisie manuelle)
-  else if (isManual) {
+  // Priorité 2 : MonthlyRecapPersisted (manuel ou cache UI)
+  // IMPORTANT : même un record is_manual_override=false est fiable car il est écrit
+  // par persistMonthlyRecaps qui utilise exactement le même calcul que l'UI
+  // (incluant base_hours_override, weeklyRecaps overrides, etc.)
+  else if (persisted && persisted.complementary_hours_ui != null) {
     comp10 = persisted.complementary_hours_10 ?? autoValues.comp10;
     comp25 = persisted.complementary_hours_25 ?? autoValues.comp25;
     ot25   = persisted.overtime_hours_25      ?? autoValues.ot25;
     ot50   = persisted.overtime_hours_50      ?? autoValues.ot50;
-    src = 'manualOverride';
+    src = isManual ? 'manualOverride' : 'cachedUI';
   }
-  // Priorité 3 : calcul auto live (IDENTIQUE à l'UI — ignore le cache auto non-manuel)
-  // L'UI fait de même : resolveRecapFinal ignore les records is_manual_override=false
+  // Priorité 3 : calcul auto live (fallback — résultats identiques à l'UI si pas de base_hours_override)
   else {
     comp10 = autoValues.comp10;
     comp25 = autoValues.comp25;
