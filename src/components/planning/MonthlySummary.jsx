@@ -73,11 +73,11 @@ export default function MonthlySummary({
   const calculationMode = calculationSettings[0]?.planning_calculation_mode || 'disabled';
   const hoursMode = useHoursDisplayMode();
 
-  // Fetch MonthlyRecapPersisted (heures override)
+  // Fetch MonthlyRecapPersisted (heures override manuelles uniquement)
   const { data: recapPersistedList = [] } = useQuery({
     queryKey: ['monthlyRecapsPersisted', monthKey],
     queryFn: () => base44.entities.MonthlyRecapPersisted.filter({ month_key: monthKey }),
-    staleTime: 30 * 1000,
+    staleTime: 0, // Toujours frais pour éviter les données stale
     enabled: !!employee?.id
   });
 
@@ -85,7 +85,7 @@ export default function MonthlySummary({
   const { data: recapExtrasList = [] } = useQuery({
     queryKey: ['recapExtrasOverride', monthKey],
     queryFn: () => base44.entities.MonthlyRecapExtrasOverride.filter({ month_key: monthKey }),
-    staleTime: 30 * 1000,
+    staleTime: 0, // Toujours frais pour éviter les données stale
     enabled: !!employee?.id
   });
 
