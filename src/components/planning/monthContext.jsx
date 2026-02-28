@@ -74,47 +74,24 @@ export async function getActiveMonthContext(monthKey) {
  * @returns {Promise<number>} - Nouvelle reset_version
  */
 export async function bumpMonthVersion(monthKey) {
-  console.log('\n═══════════════════════════════════════════════════════════');
-  console.log('🔄 MONTH CONTEXT - Bumping version (RESET)');
-  console.log('═══════════════════════════════════════════════════════════');
-  console.log(`Month: "${monthKey}"`);
-  
-  // Parse monthKey to extract year and month
+  // Invalider le cache avant le bump
+  invalidateMonthContextCache(monthKey);
+
   const [yearStr, monthStr] = monthKey.split('-');
   const year = parseInt(yearStr, 10);
-  const month = parseInt(monthStr, 10) - 1; // Convert to 0-indexed
-  
-  // Validate parsed values
-  if (isNaN(year) || isNaN(month)) {
-    throw new Error(`Failed to parse monthKey: "${monthKey}". Got year=${year}, month=${month}`);
-  }
-  
+  const month = parseInt(monthStr, 10) - 1;
+
   const planningMonths = await base44.entities.PlanningMonth.filter({ month_key: monthKey });
-  
+
   if (planningMonths.length === 0) {
-    console.log('⚠️ No PlanningMonth found - Creating with reset_version=1');
     const newMonth = await base44.entities.PlanningMonth.create({
-      year,
-      month,
-      month_key: monthKey,
-      reset_version: 1
+      year, month, month_key: monthKey, reset_version: 1
     });
-    console.log(`✓ Created PlanningMonth with version 1 (ID: ${newMonth.id})`);
-    console.log('═══════════════════════════════════════════════════════════\n');
     return 1;
   }
-  
+
   const planningMonth = planningMonths[0];
-  const oldVersion = planningMonth.reset_version;
-  const newVersion = oldVersion + 1;
-  
-  await base44.entities.PlanningMonth.update(planningMonth.id, {
-    reset_version: newVersion
-  });
-  
-  console.log(`✓ Version bumped: ${oldVersion} → ${newVersion}`);
-  console.log(`   PlanningMonth ID: ${planningMonth.id}`);
-  console.log('═══════════════════════════════════════════════════════════\n');
-  
+  const newVersion = (planningMonth.reset_version || 0) + 1;
+  await base44.entities.PlanningMonth.update(planningMonth.id, { reset_version: newVersion });
   return newVersion;
 }
