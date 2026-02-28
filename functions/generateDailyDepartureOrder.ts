@@ -113,12 +113,14 @@ Deno.serve(async (req) => {
       if (recap) {
         compTotalMin = recap.final_compl_total_min ?? 0;
         otTotalMin   = recap.final_supp_total_min  ?? 0;
-        src = recap.final_source ?? 'final';
+        src = `${recap.final_source ?? 'final'}@${recap.updated_at ? recap.updated_at.substring(11, 16) : '?'}`;
       } else {
-        // Pas encore de record final (UI pas encore rendu ce mois) → score 0
+        // Aucun record MonthlyRecapFinal — le planning n'a pas encore été affiché ce mois
+        // ou le recompute n'a pas encore tourné. Retourner staleData pour alerter.
         compTotalMin = 0;
         otTotalMin   = 0;
-        src = 'noData';
+        src = 'stale';
+        console.warn(`⚠️  MonthlyRecapFinal manquant pour emp=${empId} (${emp.first_name} ${emp.last_name}) — résultat peut être incorrect`);
       }
 
       if (hoursType === 'complementary') scoreMinutes = compTotalMin;
