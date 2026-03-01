@@ -85,91 +85,89 @@ export default function Home() {
 
   // Fetch current planning version
   const { data: planningMonth } = useQuery({
-    queryKey: ['planningMonth', currentYear, currentMonth],
+    queryKey: QK.planningMonth(currentYear, currentMonth),
     queryFn: async () => {
       const months = await perfFetch('planningMonth', () => base44.entities.PlanningMonth.filter({ month_key: monthKey }), { monthKey });
       return months[0] || null;
     },
     enabled: !!currentEmployee,
-    staleTime: 5 * 60 * 1000
+    staleTime: STALE.PLANNING,
   });
 
   const resetVersion = planningMonth?.reset_version ?? 0;
 
   // Fetch shifts for CURRENT MONTH — filtrés côté serveur (month_key + reset_version)
   const { data: currentMonthShifts = [] } = useQuery({
-    queryKey: ['shifts', currentYear, currentMonth, resetVersion],
+    queryKey: QK.shifts(currentYear, currentMonth, resetVersion),
     queryFn: () => perfFetch('Home:shifts', () => getActiveShiftsForMonth(monthKey, resetVersion), { monthKey, resetVersion }),
     enabled: !!currentEmployee && resetVersion !== undefined,
-    staleTime: 5 * 60 * 1000,
-    refetchInterval: 5 * 60 * 1000
+    staleTime: STALE.SHIFTS,
+    // Pas de refetchInterval sur Home — le planning est la source de vérité
   });
 
-  // Fetch non-shift events for CURRENT MONTH — filtrés côté serveur par month_key
+  // Fetch non-shift events for CURRENT MONTH
   const { data: currentMonthNonShiftEvents = [] } = useQuery({
-    queryKey: ['nonShiftEvents', currentYear, currentMonth, resetVersion],
+    queryKey: QK.nonShiftEvents(currentYear, currentMonth, resetVersion),
     queryFn: async () => {
       const allEvents = await perfFetch('Home:nonShiftEvents', () => base44.entities.NonShiftEvent.filter({ month_key: monthKey }), { monthKey, resetVersion });
       return allEvents.filter(e => (e.reset_version ?? 0) >= resetVersion);
     },
     enabled: !!currentEmployee && resetVersion !== undefined,
-    staleTime: 5 * 60 * 1000,
-    refetchInterval: 5 * 60 * 1000
+    staleTime: STALE.SHIFTS,
   });
 
-  // Fetch teams (SAME as Planning)
+  // Teams — données stables partagées avec Planning (même queryKey → cache commun)
   const { data: allTeams = [] } = useQuery({
-    queryKey: ['teams'],
+    queryKey: QK.teams(),
     queryFn: () => perfFetch('teams', () => base44.entities.Team.filter({ is_active: true })),
     enabled: !!currentEmployee,
-    staleTime: 10 * 60 * 1000
+    staleTime: STALE.STABLE,
   });
 
-  // Fetch non-shift types (SAME as Planning)
+  // Non-shift types — données stables
   const { data: nonShiftTypes = [] } = useQuery({
-    queryKey: ['nonShiftTypes'],
+    queryKey: QK.nonShiftTypes(),
     queryFn: async () => {
       const types = await base44.entities.NonShiftType.filter({ is_active: true });
       return types.sort((a, b) => (a.order || 0) - (b.order || 0));
     },
     enabled: !!currentEmployee,
-    staleTime: 10 * 60 * 1000
+    staleTime: STALE.STABLE,
   });
 
-  // Fetch weekly recaps for current month (needed for DepartureOrderPlanningBlock)
+  // Weekly recaps for current month
   const { data: allWeeklyRecaps = [] } = useQuery({
-    queryKey: ['allWeeklyRecaps', monthKey, resetVersion],
+    queryKey: QK.weeklyRecaps(monthKey, resetVersion),
     queryFn: async () => {
       const all = await base44.entities.WeeklyRecap.filter({ month_key: monthKey });
       return all.filter(wr => (wr.reset_version ?? 0) >= resetVersion);
     },
     enabled: !!currentEmployee,
-    staleTime: 5 * 60 * 1000
+    staleTime: STALE.PLANNING,
   });
 
-  // Fetch holiday dates for current month — filtrés côté serveur
+  // Holiday dates — très stables
   const { data: holidayDates = [] } = useQuery({
-    queryKey: ['holidayDates', currentYear, currentMonth],
+    queryKey: QK.holidayDates(currentYear, currentMonth),
     queryFn: async () => {
       const firstDay = formatLocalDate(new Date(currentYear, currentMonth, 1));
       const lastDay = formatLocalDate(new Date(currentYear, currentMonth + 1, 0));
-      // Filter server-side by year to reduce payload (HolidayDate has no month_key)
       const all = await base44.entities.HolidayDate.filter({ year: currentYear }, 'date', 50);
       return all.filter(h => h.date >= firstDay && h.date <= lastDay);
     },
     enabled: !!currentEmployee,
-    staleTime: 60 * 60 * 1000
+    staleTime: STALE.HOLIDAYS,
   });
 
-  // Fetch positions (SAME as Planning)
+  // Positions — données stables
   const { data: positions = [] } = useQuery({
-    queryKey: ['positions'],
+    queryKey: QK.positions(),
     queryFn: async () => {
       const all = await base44.entities.Position.filter({ is_active: true });
       return all.sort((a, b) => (a.order || 0) - (b.order || 0));
     },
     enabled: !!currentEmployee,
-    staleTime: 10 * 60 * 1000
+    staleTime: STALE.STABLE,
   });
 
   // Employee filtering — Home only needs active employees (already filtered by server)
