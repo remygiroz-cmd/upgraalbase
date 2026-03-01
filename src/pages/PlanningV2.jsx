@@ -801,8 +801,9 @@ export default function PlanningV2() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [undoStack.canUndo, undoStack.canRedo, isUndoing, isRedoing]);
 
-  // Skeleton grid — affiché pendant le chargement du premier rendu
-  const isLoading = isFetchingShifts && shifts.length === 0;
+  // Skeleton grid — affiché pendant le chargement initial (version OU shifts)
+  // CRITIQUE : ne jamais afficher le planning avant d'avoir la bonne version
+  const isLoading = resetVersion === undefined || (isFetchingShifts && shifts.length === 0);
 
   return (
     <div className="space-y-2">
