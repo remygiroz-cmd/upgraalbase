@@ -195,15 +195,34 @@ export default function PlanningV2() {
     );
   }, [filteredEmployees, globalColumnOrder, layout]);
 
+  // Bornes du mois — stables, partagées par toutes les requêtes dépendantes
+  const monthFirstDay = React.useMemo(() => formatLocalDate(new Date(currentYear, currentMonth, 1)), [currentYear, currentMonth]);
+  const monthLastDay = React.useMemo(() => formatLocalDate(new Date(currentYear, currentMonth + 1, 0)), [currentYear, currentMonth]);
+
+  // ✅ shiftsReady : les shifts sont chargés ET appartiennent tous à la bonne version
+  const shiftsReady = React.useMemo(() => {
+    if (resetVersion === undefined) return false;
+    if (isFetchingShifts) return false;
+    // Tous les shifts retournés doivent avoir la reset_version attendue (sauf si mois vide)
+    if (shifts.length > 0 && shifts.some(s => (s.reset_version ?? 0) !== resetVersion)) return false;
+    return true;
+  }, [resetVersion, isFetchingShifts, shifts]);
+
   // Fetch other data (non-shift events, types, positions, etc.)
-  const { data: nonShiftEvents = [] } = useQuery({
-    queryKey: ['nonShiftEvents', currentYear, currentMonth, resetVersion],
+  const { data: nonShiftEvents = [], isFetching: isFetchingNonShifts } = useQuery({
+    queryKey: ['nonShiftEvents', monthKey, resetVersion],
     queryFn: async () => {
-      const firstDay = formatLocalDate(new Date(currentYear, currentMonth, 1));
-      const lastDay = formatLocalDate(new Date(currentYear, currentMonth + 1, 0));
-      const allEvents = await base44.entities.NonShiftEvent.list();
-      const monthEvents = allEvents.filter(e => e.date >= firstDay && e.date <= lastDay);
-      return filterByVersion(monthEvents, resetVersion);
+      const allEvents = await base44.entities.NonShiftEvent.filter({ month_key: monthKey });
+      // Fallback: si aucun non-shift avec month_key, récupérer par date
+      if (allEvents.length === 0) {
+        const byDate = await base44.entities.NonShiftEvent.list();
+        const filtered = byDate.filter(e => e.date >= monthFirstDay && e.date <= monthLastDay);
+        console.log(`[Planning] nonShiftEvents fallback by date: ${filtered.length} events`);
+        return filterByVersion(filtered, resetVersion);
+      }
+      const versioned = filterByVersion(allEvents, resetVersion);
+      console.log(`[Planning] nonShiftEvents: ${versioned.length} / ${allEvents.length} (v${resetVersion})`);
+      return versioned;
     },
     enabled: resetVersion !== undefined,
     placeholderData: keepPreviousData,
