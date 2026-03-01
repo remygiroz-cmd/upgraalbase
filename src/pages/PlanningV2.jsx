@@ -353,9 +353,9 @@ export default function PlanningV2() {
 
   // Mutations
   const { data: calculationSettings = [] } = useQuery({
-    queryKey: ['appSettings', 'planning_calculation_mode'],
+    queryKey: QK.appSettings('planning_calculation_mode'),
     queryFn: () => base44.entities.AppSettings.filter({ setting_key: 'planning_calculation_mode' }),
-    staleTime: 5 * 60 * 1000
+    staleTime: STALE.CONFIG,
   });
   const calculationMode = calculationSettings[0]?.planning_calculation_mode || 'disabled';
 
