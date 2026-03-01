@@ -200,14 +200,7 @@ export default function PlanningV2() {
   const monthFirstDay = React.useMemo(() => formatLocalDate(new Date(currentYear, currentMonth, 1)), [currentYear, currentMonth]);
   const monthLastDay = React.useMemo(() => formatLocalDate(new Date(currentYear, currentMonth + 1, 0)), [currentYear, currentMonth]);
 
-  // ✅ shiftsReady : les shifts sont chargés ET appartiennent tous à la bonne version
-  const shiftsReady = React.useMemo(() => {
-    if (resetVersion === undefined) return false;
-    if (isFetchingShifts) return false;
-    // Tous les shifts retournés doivent avoir la reset_version attendue (sauf si mois vide)
-    if (shifts.length > 0 && shifts.some(s => (s.reset_version ?? 0) !== resetVersion)) return false;
-    return true;
-  }, [resetVersion, isFetchingShifts, shifts]);
+
 
   // Fetch other data (non-shift events, types, positions, etc.)
   const { data: nonShiftEvents = [], isFetching: isFetchingNonShifts } = useQuery({
