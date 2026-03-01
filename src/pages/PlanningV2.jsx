@@ -434,21 +434,33 @@ export default function PlanningV2() {
           after: null
         });
       }
-      return { employeeId: before?.employee_id };
+      return { employeeId: before?.employee_id, shiftId };
+    },
+    onMutate: async ({ shiftId }) => {
+      // Optimistic update: remove from cache immediately
+      const queryKey = shiftsQueryKey(currentYear, currentMonth, resetVersion);
+      const previous = queryClient.getQueryData(queryKey);
+      if (previous) {
+        queryClient.setQueryData(queryKey, (old) => old.filter(s => s.id !== shiftId));
+      }
+      return { previous };
     },
     onSuccess: (result) => {
-      queryClient.invalidateQueries({ queryKey: QK.shifts(currentYear, currentMonth, resetVersion) });
+      // Minimal invalidation: only invalidate recaps that need recalculation
       queryClient.invalidateQueries({ queryKey: QK.weeklyRecaps(monthKey, resetVersion) });
       queryClient.invalidateQueries({ queryKey: QK.monthlyRecaps(monthKey, resetVersion) });
       queryClient.invalidateQueries({ queryKey: ['monthlyRecapsPersisted', monthKey] });
       queryClient.invalidateQueries({ queryKey: ['recapExtrasOverride', monthKey] });
-      queryClient.invalidateQueries({ queryKey: ['exportOverrides', monthKey] });
-      queryClient.invalidateQueries({ queryKey: ['monthlyExportOverrides', monthKey] });
       if (!undoStack.isUndoingRef.current && !undoStack.isRedoingRef.current) {
         toast.success('Shift supprimé');
       }
     },
-    onError: (error) => {
+    onError: (error, variables, context) => {
+      // Rollback on error
+      if (context?.previous) {
+        const queryKey = shiftsQueryKey(currentYear, currentMonth, resetVersion);
+        queryClient.setQueryData(queryKey, context.previous);
+      }
       toast.error('Erreur lors de la suppression : ' + error.message);
     }
   });
