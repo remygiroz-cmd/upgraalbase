@@ -146,20 +146,20 @@ const PlanningExportCapture = React.forwardRef(function PlanningExportCapture(
             const dayColor = isHoliday ? '#7c3aed' : isWeekend ? '#ea580c' : '#374151';
 
             return (
-              <tr key={day} style={{ background: rowBg }}>
+              <tr key={day}>
                 {/* Colonne jour */}
                 <td style={{
-                  border: '1px solid #e5e7eb',
-                  padding: '3px 5px',
+                  border: '1px solid #dfe3ea',
+                  padding: '0 6px',
+                  height: 28,
                   fontWeight: 'bold',
                   whiteSpace: 'nowrap',
-                  fontSize: fontSizeSmall,
+                  fontSize: 10,
                   color: dayColor,
+                  background: rowBg,
+                  verticalAlign: 'middle',
                 }}>
-                  {dayLabel} {day}
-                  {isHoliday && (
-                    <span style={{ fontSize: fontSizeXS, marginLeft: 3 }}>★</span>
-                  )}
+                  {dayLabel} {day}{isHoliday ? ' ★' : ''}
                 </td>
 
                 {/* Colonnes employés */}
@@ -167,61 +167,88 @@ const PlanningExportCapture = React.forwardRef(function PlanningExportCapture(
                   const dayShifts = shiftsLookup[`${emp.id}_${dateStr}`] || [];
                   const dayNonShifts = nonShiftLookup[`${emp.id}_${dateStr}`] || [];
 
+                  // Contenu unique : priorité non-shift, sinon 1er shift (cas rare multi-shifts → concat)
+                  if (dayNonShifts.length > 0) {
+                    const ns = dayNonShifts[0];
+                    const type = (nonShiftTypes || []).find(t => t.id === ns.non_shift_type_id);
+                    const bg = type?.color || '#fee2e2';
+                    const label = type?.code || type?.label?.substring(0, 4) || 'ABS';
+                    return (
+                      <td key={emp.id} style={{
+                        border: '1px solid #dfe3ea',
+                        padding: 0,
+                        height: 28,
+                        verticalAlign: 'middle',
+                        textAlign: 'center',
+                        background: bg,
+                      }}>
+                        <span style={{
+                          fontSize: 10,
+                          fontWeight: 'bold',
+                          color: '#1f2937',
+                          whiteSpace: 'nowrap',
+                          fontVariantNumeric: 'tabular-nums',
+                        }}>{label}</span>
+                      </td>
+                    );
+                  }
+
+                  if (dayShifts.length === 0) {
+                    return (
+                      <td key={emp.id} style={{
+                        border: '1px solid #dfe3ea',
+                        padding: 0,
+                        height: 28,
+                        background: '#ffffff',
+                      }} />
+                    );
+                  }
+
+                  // 1 ou plusieurs shifts
+                  const pos = (positions || []).find(p => p.id === dayShifts[0].position || p.name === dayShifts[0].position);
+                  const bg = pos?.color || '#dbeafe';
+
+                  if (dayShifts.length === 1) {
+                    const s = dayShifts[0];
+                    return (
+                      <td key={emp.id} style={{
+                        border: '1px solid #dfe3ea',
+                        padding: 0,
+                        height: 28,
+                        verticalAlign: 'middle',
+                        textAlign: 'center',
+                        background: bg,
+                      }}>
+                        <span style={{
+                          fontSize: 10,
+                          color: '#1f2937',
+                          whiteSpace: 'nowrap',
+                          fontVariantNumeric: 'tabular-nums',
+                        }}>{s.start_time?.substring(0, 5)}–{s.end_time?.substring(0, 5)}</span>
+                      </td>
+                    );
+                  }
+
+                  // Multi-shifts : empiler sur 2 lignes, hauteur auto
                   return (
                     <td key={emp.id} style={{
-                      border: '1px solid #e5e7eb',
-                      padding: '2px 2px',
-                      verticalAlign: 'top',
-                      overflow: 'visible',
+                      border: '1px solid #dfe3ea',
+                      padding: 0,
+                      verticalAlign: 'middle',
+                      textAlign: 'center',
+                      background: bg,
                     }}>
-                      {/* Non-shifts */}
-                      {dayNonShifts.map(ns => {
-                        const type = (nonShiftTypes || []).find(t => t.id === ns.non_shift_type_id);
-                        const bg = type?.color || '#fee2e2';
-                        return (
-                          <div key={ns.id} style={{
-                            display: 'block',
-                            width: '100%',
-                            boxSizing: 'border-box',
-                            background: bg,
-                            borderRadius: 2,
-                            padding: '1px 3px',
-                            marginBottom: 1,
-                            fontSize: fontSizeSmall,
-                            fontWeight: 'bold',
-                            whiteSpace: 'nowrap',
-                            overflow: 'visible',
-                            color: '#1f2937',
-                            fontVariantNumeric: 'tabular-nums',
-                          }}>
-                            {type?.code || type?.label?.substring(0, 4) || 'ABS'}
-                          </div>
-                        );
-                      })}
-
-                      {/* Shifts */}
-                      {dayShifts.map(s => {
-                        const pos = (positions || []).find(p => p.id === s.position || p.name === s.position);
-                        const bg = pos?.color || '#dbeafe';
-                        return (
-                          <div key={s.id} style={{
-                            display: 'block',
-                            width: '100%',
-                            boxSizing: 'border-box',
-                            background: bg,
-                            borderRadius: 2,
-                            padding: '1px 3px',
-                            marginBottom: 1,
-                            fontSize: fontSizeSmall,
-                            whiteSpace: 'nowrap',
-                            overflow: 'visible',
-                            color: '#1f2937',
-                            fontVariantNumeric: 'tabular-nums',
-                          }}>
-                            {s.start_time?.substring(0, 5)}–{s.end_time?.substring(0, 5)}
-                          </div>
-                        );
-                      })}
+                      {dayShifts.map((s, i) => (
+                        <div key={s.id} style={{
+                          fontSize: 9,
+                          color: '#1f2937',
+                          whiteSpace: 'nowrap',
+                          fontVariantNumeric: 'tabular-nums',
+                          lineHeight: '14px',
+                        }}>
+                          {s.start_time?.substring(0, 5)}–{s.end_time?.substring(0, 5)}
+                        </div>
+                      ))}
                     </td>
                   );
                 })}
