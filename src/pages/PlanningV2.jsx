@@ -269,17 +269,26 @@ export default function PlanningV2() {
     staleTime: STALE.DECISIONS,
   });
 
-  const { data: holidayDates = [] } = useQuery({
-    queryKey: QK.holidayDates(currentYear, currentMonth),
+  const { data: allYearHolidayDates = [] } = useQuery({
+    queryKey: ['holidayDates', 'year', currentYear],
     queryFn: async () => {
-      const firstDay = formatLocalDate(new Date(currentYear, currentMonth, 1));
-      const lastDay = formatLocalDate(new Date(currentYear, currentMonth + 1, 0));
-      const allHolidays = await perfFetch('Planning:holidayDates', () => base44.entities.HolidayDate.list(), { monthKey });
-      return allHolidays.filter(h => h.date >= firstDay && h.date <= lastDay);
+      const yearStart = `${currentYear}-01-01`;
+      const yearEnd = `${currentYear}-12-31`;
+      return perfFetch('Planning:holidayDates', () =>
+        base44.entities.HolidayDate.filter({ date: { $gte: yearStart, $lte: yearEnd } }),
+        { year: currentYear }
+      );
     },
-    placeholderData: keepPreviousData,
-    staleTime: STALE.HOLIDAYS,
+    staleTime: 7 * 24 * 60 * 60 * 1000, // 7 jours — les jours fériés ne changent pas
+    gcTime: 7 * 24 * 60 * 60 * 1000,
   });
+
+  // Filtre côté client pour le mois courant — gratuit car données déjà en cache
+  const holidayDates = React.useMemo(() => {
+    const firstDay = formatLocalDate(new Date(currentYear, currentMonth, 1));
+    const lastDay = formatLocalDate(new Date(currentYear, currentMonth + 1, 0));
+    return allYearHolidayDates.filter(h => h.date >= firstDay && h.date <= lastDay);
+  }, [allYearHolidayDates, currentYear, currentMonth]);
 
   const { data: allWeeklyRecaps = [] } = useQuery({
     queryKey: QK.weeklyRecaps(monthKey, resetVersion),
