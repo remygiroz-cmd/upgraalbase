@@ -200,8 +200,6 @@ export default function PlanningV2() {
   const monthFirstDay = React.useMemo(() => formatLocalDate(new Date(currentYear, currentMonth, 1)), [currentYear, currentMonth]);
   const monthLastDay = React.useMemo(() => formatLocalDate(new Date(currentYear, currentMonth + 1, 0)), [currentYear, currentMonth]);
 
-
-
   // Fetch other data (non-shift events, types, positions, etc.)
   const { data: nonShiftEvents = [], isFetching: isFetchingNonShifts } = useQuery({
     queryKey: ['nonShiftEvents', monthKey, resetVersion],
