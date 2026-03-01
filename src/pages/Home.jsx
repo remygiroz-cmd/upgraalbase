@@ -425,11 +425,11 @@ export default function Home() {
     }
   });
 
-  // Get urgent announcements
+  // Get urgent announcements — filtrées côté serveur par is_active
   const { data: urgentAnnouncements = [] } = useQuery({
     queryKey: ['urgentAnnouncements'],
     queryFn: async () => {
-      const all = await perfFetch('urgentAnnouncements', () => base44.entities.UrgentAnnouncement.list());
+      const all = await perfFetch('urgentAnnouncements', () => base44.entities.UrgentAnnouncement.filter({ is_active: true }, '-created_date', 20));
       const now = new Date();
       
       const activeAnnouncements = all.filter(ann => {
