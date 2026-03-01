@@ -95,7 +95,6 @@ export default function Home() {
   const resetVersion = planningMonth?.reset_version ?? 0;
 
   // Fetch shifts for CURRENT MONTH — filtrés côté serveur (month_key + reset_version)
-  const monthKey = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}`;
   const { data: currentMonthShifts = [] } = useQuery({
     queryKey: ['shifts', currentYear, currentMonth, resetVersion],
     queryFn: () => perfFetch('Home:shifts', () => getActiveShiftsForMonth(monthKey, resetVersion), { monthKey, resetVersion }),
