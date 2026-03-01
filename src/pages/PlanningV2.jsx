@@ -636,6 +636,35 @@ export default function PlanningV2() {
     }
   }, [deleteShiftMutation]);
 
+  const handleDeleteWeek = useCallback(async (employeeId, weekStart) => {
+    const weekStartStr = formatLocalDate(weekStart);
+    const weekEnd = new Date(weekStart);
+    weekEnd.setDate(weekEnd.getDate() + 6);
+    const weekEndStr = formatLocalDate(weekEnd);
+
+    const shiftsToDelete = shifts.filter(s =>
+      s.employee_id === employeeId &&
+      s.date >= weekStartStr &&
+      s.date <= weekEndStr &&
+      s.status !== 'cancelled'
+    );
+
+    if (shiftsToDelete.length === 0) {
+      toast.info('Aucun shift à supprimer');
+      return;
+    }
+
+    try {
+      await Promise.all(shiftsToDelete.map(shift => base44.entities.Shift.delete(shift.id)));
+      await queryClient.invalidateQueries({ queryKey: QK.shifts(currentYear, currentMonth, resetVersion) });
+      await queryClient.invalidateQueries({ queryKey: QK.weeklyRecaps(monthKey, resetVersion) });
+      await queryClient.invalidateQueries({ queryKey: QK.monthlyRecaps(monthKey, resetVersion) });
+      toast.success(`${shiftsToDelete.length} shift(s) supprimé(s)`);
+    } catch (error) {
+      toast.error(`Erreur lors de la suppression: ${error.message}`);
+    }
+  }, [shifts, currentYear, currentMonth, resetVersion, monthKey, queryClient]);
+
   const handleToggleHoliday = useCallback((dateStr) => {
     const isCurrentlyHoliday = holidayDates.some(h => h.date === dateStr);
     toggleHolidayMutation.mutate({ date: dateStr, isHoliday: isCurrentlyHoliday });
