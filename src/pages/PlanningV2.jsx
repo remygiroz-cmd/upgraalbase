@@ -269,7 +269,7 @@ export default function PlanningV2() {
   });
 
   const { data: holidayDates = [] } = useQuery({
-    queryKey: ['holidayDates', currentYear, currentMonth],
+    queryKey: QK.holidayDates(currentYear, currentMonth),
     queryFn: async () => {
       const firstDay = formatLocalDate(new Date(currentYear, currentMonth, 1));
       const lastDay = formatLocalDate(new Date(currentYear, currentMonth + 1, 0));
@@ -277,7 +277,7 @@ export default function PlanningV2() {
       return allHolidays.filter(h => h.date >= firstDay && h.date <= lastDay);
     },
     placeholderData: keepPreviousData,
-    staleTime: 5 * 60 * 1000
+    staleTime: STALE.HOLIDAYS,
   });
 
   const { data: allWeeklyRecaps = [] } = useQuery({
