@@ -554,10 +554,10 @@ export default function Home() {
     return currentUser?.role === 'admin' || currentEmployee.permission_level === 'manager' || isGerant;
   }, [currentUser, currentEmployee, userRole]);
 
-  // Get urgent announcements history for managers
+  // Get urgent announcements history for managers — limité aux 50 plus récentes
   const { data: allUrgentAnnouncements = [] } = useQuery({
     queryKey: ['allUrgentAnnouncements'],
-    queryFn: () => base44.entities.UrgentAnnouncement.list(),
+    queryFn: () => base44.entities.UrgentAnnouncement.list('-created_date', 50),
     enabled: isManagerOrAdmin,
     staleTime: 60000
   });
