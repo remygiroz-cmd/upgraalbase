@@ -147,13 +147,14 @@ export default function Home() {
     staleTime: 5 * 60 * 1000
   });
 
-  // Fetch holiday dates for current month (needed for DepartureOrderPlanningBlock)
+  // Fetch holiday dates for current month — filtrés côté serveur
   const { data: holidayDates = [] } = useQuery({
     queryKey: ['holidayDates', currentYear, currentMonth],
     queryFn: async () => {
       const firstDay = formatLocalDate(new Date(currentYear, currentMonth, 1));
       const lastDay = formatLocalDate(new Date(currentYear, currentMonth + 1, 0));
-      const all = await base44.entities.HolidayDate.list();
+      // Filter server-side by year to reduce payload (HolidayDate has no month_key)
+      const all = await base44.entities.HolidayDate.filter({ year: currentYear }, 'date', 50);
       return all.filter(h => h.date >= firstDay && h.date <= lastDay);
     },
     enabled: !!currentEmployee,
