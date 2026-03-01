@@ -110,27 +110,32 @@ const PlanningExportCapture = React.forwardRef(function PlanningExportCapture(
 
         {/* En-tête employés */}
         <thead>
-          <tr style={{ background: '#f3f4f6' }}>
+          <tr style={{ background: '#f1f3f6' }}>
             <th style={{
-              border: '1px solid #d1d5db',
-              padding: '4px 5px',
+              border: '1px solid #dfe3ea',
+              padding: '0 6px',
+              height: 30,
               textAlign: 'left',
-              fontSize: fontSizeSmall,
+              fontSize: 10,
               fontWeight: 'bold',
               color: '#374151',
               whiteSpace: 'nowrap',
+              verticalAlign: 'middle',
             }}>
               Jour
             </th>
             {employees.map(emp => (
               <th key={emp.id} style={{
-                border: '1px solid #d1d5db',
-                padding: '3px 3px',
+                border: '1px solid #dfe3ea',
+                padding: 0,
+                height: 30,
                 textAlign: 'center',
+                verticalAlign: 'middle',
                 fontWeight: 'bold',
-                fontSize: fontSizeSmall,
+                fontSize: 10,
                 color: '#1f2937',
                 whiteSpace: 'nowrap',
+                background: '#f1f3f6',
               }}>
                 {empLabel(emp)}
               </th>
