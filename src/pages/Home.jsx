@@ -136,9 +136,8 @@ export default function Home() {
 
   // Fetch weekly recaps for current month (needed for DepartureOrderPlanningBlock)
   const { data: allWeeklyRecaps = [] } = useQuery({
-    queryKey: ['allWeeklyRecaps', `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}`, resetVersion],
+    queryKey: ['allWeeklyRecaps', monthKey, resetVersion],
     queryFn: async () => {
-      const monthKey = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}`;
       const all = await base44.entities.WeeklyRecap.filter({ month_key: monthKey });
       return all.filter(wr => (wr.reset_version ?? 0) >= resetVersion);
     },
