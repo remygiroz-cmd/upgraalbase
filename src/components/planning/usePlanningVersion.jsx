@@ -15,7 +15,9 @@ export function usePlanningVersion(year, month) {
     retry: 1
   });
 
-  const resetVersion = planningMonth?.reset_version ?? 0;
+  // CRITIQUE : undefined tant que non chargé → les queries restent disabled
+  // Ne jamais tomber à 0 par défaut, sinon on charge les shifts de la version 0
+  const resetVersion = isLoading ? undefined : (planningMonth?.reset_version ?? 0);
 
   return {
     resetVersion,
