@@ -294,10 +294,10 @@ export default function PlanningV2() {
   const { data: allMonthlyRecaps = [] } = useQuery({
     queryKey: ['allMonthlyRecaps', monthKey, resetVersion],
     queryFn: async () => {
-      const allRecaps = await base44.entities.MonthlyRecap.filter({
+      const allRecaps = await perfFetch('Planning:monthlyRecaps', () => base44.entities.MonthlyRecap.filter({
         year: currentYear,
         month: currentMonth + 1
-      });
+      }), { monthKey, resetVersion });
       return filterByVersion(allRecaps, resetVersion);
     },
     // Attendre que les shifts soient prêts avant de charger les recaps mensuels
