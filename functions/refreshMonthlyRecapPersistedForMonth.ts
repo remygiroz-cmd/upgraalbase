@@ -23,13 +23,12 @@ Deno.serve(async (req) => {
   }
 
   const b = base44.asServiceRole;
-  let body = {};
-  try { body = await req.json(); } catch {}
-  
-  // Si month_key absent (appel depuis automation), utiliser le mois courant
-  const now = new Date();
-  const defaultMonthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-  const month_key = body.month_key || defaultMonthKey;
+  const body = await req.json();
+  const { month_key } = body;
+
+  if (!month_key) {
+    return Response.json({ error: 'month_key requis' }, { status: 400 });
+  }
 
   const [year, monthStr] = month_key.split('-');
   const monthNum = parseInt(monthStr, 10);
