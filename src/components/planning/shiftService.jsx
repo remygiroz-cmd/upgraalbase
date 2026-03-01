@@ -174,8 +174,11 @@ export async function upsertShiftByDedupeKey(payload, cache = null) {
   if (cache) {
     candidates = cache;
   } else {
-    // Narrow the fetch to date + employee when possible (cheaper than list())
-    candidates = await base44.entities.Shift.list();
+    // Fetch only by dedupe_key for this specific shift (server-filtered)
+    const { results } = await fetchAllPages(
+      (skip, limit) => base44.entities.Shift.filter({ dedupe_key: dedupeKey }, '-created_date', limit, skip)
+    );
+    candidates = results;
   }
 
   const existing = candidates.find(
