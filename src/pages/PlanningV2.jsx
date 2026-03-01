@@ -665,9 +665,9 @@ export default function PlanningV2() {
         default:
           break;
       }
-      await queryClient.invalidateQueries({ queryKey: ['shifts'] });
-      await queryClient.invalidateQueries({ queryKey: ['allWeeklyRecaps'] });
-      await queryClient.invalidateQueries({ queryKey: ['allMonthlyRecaps'] });
+      await queryClient.invalidateQueries({ queryKey: QK.shifts(currentYear, currentMonth, resetVersion) });
+      await queryClient.invalidateQueries({ queryKey: QK.weeklyRecaps(monthKey, resetVersion) });
+      await queryClient.invalidateQueries({ queryKey: QK.monthlyRecaps(monthKey, resetVersion) });
       queryClient.invalidateQueries({ queryKey: ['monthlyRecapsPersisted', monthKey] });
       queryClient.invalidateQueries({ queryKey: ['recapExtrasOverride', monthKey] });
       toast.success(`↩︎ ${action.label} annulé`);
