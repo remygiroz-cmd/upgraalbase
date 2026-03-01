@@ -262,10 +262,10 @@ export default function PlanningV2() {
   });
 
   const { data: approvedSwaps = [] } = useQuery({
-    queryKey: ['approvedSwaps', monthKey],
+    queryKey: QK.approvedSwaps(monthKey),
     queryFn: () => base44.entities.ShiftSwapRequest.filter({ status: 'APPROVED', month_key: monthKey }),
     enabled: !!monthKey,
-    staleTime: 60 * 1000
+    staleTime: STALE.DECISIONS,
   });
 
   const { data: holidayDates = [] } = useQuery({
