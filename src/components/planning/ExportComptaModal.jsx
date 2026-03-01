@@ -1080,6 +1080,57 @@ export default function ExportComptaModal({ open, onOpenChange, monthStart, mont
     return doc;
   };
 
+  // ─── Génération PNG du planning ────────────────────────────────────────────
+  const generatePlanningImageBlob = async () => {
+    const el = planningCaptureRef.current;
+    if (!el) throw new Error('Composant capture introuvable');
+
+    // Attendre 2 frames pour que le DOM soit stable
+    await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
+
+    const canvas = await html2canvas(el, {
+      scale: 2.5,
+      useCORS: true,
+      backgroundColor: '#ffffff',
+      logging: false,
+      width: el.scrollWidth,
+      height: el.scrollHeight,
+    });
+
+    // Choisir PNG ou JPEG selon le poids
+    return new Promise((resolve) => {
+      canvas.toBlob((blob) => {
+        if (blob && blob.size > 4 * 1024 * 1024) {
+          // Trop lourd → JPEG 0.85
+          canvas.toBlob((jpgBlob) => resolve({ blob: jpgBlob, ext: 'jpg', mime: 'image/jpeg' }), 'image/jpeg', 0.85);
+        } else {
+          resolve({ blob, ext: 'png', mime: 'image/png' });
+        }
+      }, 'image/png');
+    });
+  };
+
+  const handleDownloadPlanningImage = async () => {
+    setIsCapturing(true);
+    toast.info('📸 Génération du planning…', { duration: 8000 });
+    try {
+      const { blob, ext } = await generatePlanningImageBlob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `Planning_${monthName}_${year}.${ext}`;
+      document.body.appendChild(a);
+      a.click();
+      URL.revokeObjectURL(url);
+      a.remove();
+      toast.success('✅ Planning téléchargé');
+    } catch (err) {
+      toast.error('Erreur capture : ' + err.message);
+    } finally {
+      setIsCapturing(false);
+    }
+  };
+
   const handleDownloadPDF = async () => {
     setIsGenerating(true);
     setError(null);
@@ -1096,6 +1147,33 @@ export default function ExportComptaModal({ open, onOpenChange, monthStart, mont
       console.error('ExportCompta error:', error);
     } finally {
       setIsGenerating(false);
+    }
+  };
+
+  const handleDownloadBoth = async () => {
+    setIsGenerating(true);
+    setIsCapturing(true);
+    toast.info('⏳ Génération des 2 fichiers…', { duration: 10000 });
+    try {
+      const [doc, imgResult] = await Promise.all([
+        generatePDF(),
+        generatePlanningImageBlob(),
+      ]);
+      doc.save(`Export_Compta_${monthName}_${year}.pdf`);
+      const url = URL.createObjectURL(imgResult.blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `Planning_${monthName}_${year}.${imgResult.ext}`;
+      document.body.appendChild(a);
+      a.click();
+      URL.revokeObjectURL(url);
+      a.remove();
+      toast.success('✅ PDF + Planning téléchargés');
+    } catch (err) {
+      toast.error('Erreur : ' + err.message);
+    } finally {
+      setIsGenerating(false);
+      setIsCapturing(false);
     }
   };
 
