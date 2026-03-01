@@ -47,18 +47,23 @@ const PlanningExportCapture = React.forwardRef(function PlanningExportCapture(
 
   const holidaySet = new Set((holidayDates || []).map(h => h.date || h));
 
-  // Taille naturelle : 130px par colonne employé, min 110, max 160
   const empCount = employees.length;
-  const colW = Math.max(110, Math.min(160, Math.floor(1400 / Math.max(empCount, 1))));
+  // Largeur colonne : assez large pour "18:45–21:55" en police 11px
+  const colW = Math.max(120, Math.min(180, Math.floor(1600 / Math.max(empCount, 1))));
 
-  // Police fixe lisible — jamais en dessous de 11px
-  const fontSize = 12;
+  const fontSize = 11;
   const fontSizeSmall = 11;
   const fontSizeXS = 10;
 
-  // Largeur totale = col jour + (nb employés × colW) + padding
   const dayColW = 58;
   const totalWidth = dayColW + empCount * colW + 24;
+
+  // Format export : "L. BAKRI"
+  const empLabel = (emp) => {
+    const initial = emp.first_name?.trim()?.[0]?.toUpperCase();
+    const nom = emp.last_name?.trim()?.toUpperCase() || '';
+    return initial ? `${initial}. ${nom}` : nom;
+  };
 
   return (
     <div
