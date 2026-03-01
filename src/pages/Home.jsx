@@ -20,6 +20,7 @@ import CreateUrgentAnnouncementModal from '@/components/messaging/CreateUrgentAn
 import { cn } from '@/lib/utils';
 import { calculatePresenceStatus } from '@/components/utils/presenceUtils';
 import { perfFetch } from '@/components/utils/perfLogger';
+import { getActiveShiftsForMonth } from '@/components/planning/shiftService';
 import DepartureOrderPlanningBlock from '@/components/planning/DepartureOrderPlanningBlock';
 import HomeVehicleAlertsWidget from '@/components/vehicules/HomeVehicleAlertsWidget';
 
