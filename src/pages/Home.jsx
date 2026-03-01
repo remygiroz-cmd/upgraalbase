@@ -437,7 +437,7 @@ export default function Home() {
   const { data: urgentAnnouncements = [] } = useQuery({
     queryKey: ['urgentAnnouncements'],
     queryFn: async () => {
-      const all = await base44.entities.UrgentAnnouncement.list();
+      const all = await perfFetch('urgentAnnouncements', () => base44.entities.UrgentAnnouncement.list());
       const now = new Date();
       
       const activeAnnouncements = all.filter(ann => {
