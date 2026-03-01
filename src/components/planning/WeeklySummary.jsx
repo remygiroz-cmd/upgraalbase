@@ -314,7 +314,7 @@ export default function WeeklySummary({
       setIsEditingBase(false);
       setBaseDraft('');
       
-      queryClient.invalidateQueries({ queryKey: ['allWeeklyRecaps'] });
+      queryClient.invalidateQueries({ queryKey: ['weeklyRecaps'] });
       if (onRecapUpdate) {
         await onRecapUpdate();
       }
