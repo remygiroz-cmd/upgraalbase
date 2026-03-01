@@ -1484,50 +1484,67 @@ Cordialement"
             </p>
           </div>
 
-          <div className="flex gap-3 pt-4 border-t">
+          <div className="flex flex-wrap gap-2 pt-4 border-t">
             <Button
               onClick={handleDownloadPDF}
-              disabled={isGenerating || isSending}
+              disabled={isGenerating || isSending || isCapturing}
               variant="outline"
-              className="flex-1"
+              className="flex-1 min-w-[140px]"
             >
               {isGenerating ? (
-                <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Génération...
-                </>
+                <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Génération...</>
               ) : (
-                <>
-                  <Download className="w-4 h-4 mr-2" />
-                  Télécharger le PDF
-                </>
+                <><Download className="w-4 h-4 mr-2" />Télécharger le PDF</>
+              )}
+            </Button>
+            <Button
+              onClick={handleDownloadPlanningImage}
+              disabled={isGenerating || isSending || isCapturing}
+              variant="outline"
+              className="flex-1 min-w-[160px]"
+            >
+              {isCapturing ? (
+                <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Capture…</>
+              ) : (
+                <><Image className="w-4 h-4 mr-2" />Télécharger le planning (PNG)</>
+              )}
+            </Button>
+            <Button
+              onClick={handleDownloadBoth}
+              disabled={isGenerating || isSending || isCapturing}
+              variant="outline"
+              className="flex-1 min-w-[130px] border-orange-300 text-orange-700 hover:bg-orange-50"
+            >
+              {isGenerating || isCapturing ? (
+                <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Génération…</>
+              ) : (
+                <><Download className="w-4 h-4 mr-2" />Télécharger les 2</>
               )}
             </Button>
             <Button
               onClick={handleSendEmail}
-              disabled={!hasRequiredSettings || isGenerating || isSending}
-              className="flex-1 bg-orange-600 hover:bg-orange-700"
+              disabled={!hasRequiredSettings || isGenerating || isSending || isCapturing}
+              className="flex-1 min-w-[160px] bg-orange-600 hover:bg-orange-700"
             >
               {isSending ? (
-                <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Envoi en cours...
-                </>
+                <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Envoi en cours...</>
               ) : (
-                <>
-                  <Send className="w-4 h-4 mr-2" />
-                  Envoyer à la compta
-                </>
+                <><Send className="w-4 h-4 mr-2" />Envoyer à la compta</>
               )}
             </Button>
             <Button
               onClick={() => onOpenChange(false)}
               variant="outline"
-              disabled={isGenerating || isSending}
+              disabled={isGenerating || isSending || isCapturing}
             >
               Fermer
             </Button>
           </div>
+
+          {/* Hint 2 PJ */}
+          <p className="text-xs text-gray-400 mt-1">
+            💡 "Envoyer à la compta" joint automatiquement le PDF et le planning en image.
+          </p>
         </div>
 
         {/* Contrôle de cohérence (Admin/Manager only) */}
