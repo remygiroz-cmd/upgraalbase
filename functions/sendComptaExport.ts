@@ -47,6 +47,26 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'PDF URL manquant' }, { status: 400 });
     }
 
+    // Télécharger l'image du planning si fournie
+    let planningBase64 = null;
+    let planningMime = 'image/png';
+    if (planningImageUrl) {
+      console.log('[INFO] Fetching planning image...');
+      const imgResp = await fetch(planningImageUrl);
+      if (imgResp.ok) {
+        const imgBuf = await imgResp.arrayBuffer();
+        const imgArr = new Uint8Array(imgBuf);
+        planningMime = planningImageFilename?.endsWith('.jpg') || planningImageFilename?.endsWith('.jpeg') ? 'image/jpeg' : 'image/png';
+        let b64 = '';
+        const chunk = 8192;
+        for (let i = 0; i < imgArr.length; i += chunk) {
+          b64 += String.fromCharCode.apply(null, Array.from(imgArr.slice(i, i + chunk)));
+        }
+        planningBase64 = btoa(b64);
+        console.log(`[INFO] Planning image ready: ${imgBuf.byteLength} bytes`);
+      }
+    }
+
     // Log sécurisé (sans données sensibles)
     console.log(`[INFO] Sending compta export for ${monthName} ${year}`);
     console.log(`[DEBUG] PDF URL: ${pdfUrl}`);
