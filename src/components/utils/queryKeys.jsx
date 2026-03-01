@@ -63,8 +63,8 @@ export const STALE = {
   PLANNING: 30 * 1000,
   /** Shift-level data — 30s */
   SHIFTS: 30 * 1000,
-  /** Holiday dates — 1 hour */
-  HOLIDAYS: 60 * 60 * 1000,
+  /** Holiday dates — 7 jours (jours fériés quasi-immuables) */
+  HOLIDAYS: 7 * 24 * 60 * 60 * 1000,
   /** Live messaging — always fresh */
   LIVE: 0,
   /** Notification data — 30s */
