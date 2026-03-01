@@ -16,15 +16,24 @@ Deno.serve(async (req) => {
   let body = {};
   try { body = await req.json(); } catch { /* pas de body */ }
 
-  // month_key OBLIGATOIRE — l'automation doit toujours le passer explicitement
-  if (!body.month_key) {
-    console.error('[refreshRecaps] ❌ month_key manquant dans le payload');
-    return Response.json({ error: 'month_key requis (YYYY-MM)' }, { status: 400 });
+  // Calculer month_key en Europe/Paris si demandé (pour les automations)
+  let resolvedMonthKey = body.month_key;
+  if (!resolvedMonthKey || body.use_current_month_paris) {
+    // Calculer l'heure courante en Europe/Paris pour éviter les décalages UTC
+    const nowParis = new Date(new Date().toLocaleString('en-US', { timeZone: 'Europe/Paris' }));
+    resolvedMonthKey = `${nowParis.getFullYear()}-${String(nowParis.getMonth() + 1).padStart(2, '0')}`;
+    console.log(`[refreshRecaps] 📅 month_key calculé (Europe/Paris): ${resolvedMonthKey}`);
   }
 
-  const monthKeys = [body.month_key];
+  const [ky, km] = resolvedMonthKey.split('-');
+  if (!ky || !km || isNaN(parseInt(km)) || parseInt(km) < 1 || parseInt(km) > 12) {
+    console.error(`[refreshRecaps] ❌ month_key invalide: ${resolvedMonthKey}`);
+    return Response.json({ error: 'month_key invalide (YYYY-MM)' }, { status: 400 });
+  }
+
+  const monthKeys = [resolvedMonthKey];
   if (body.also_previous_month) {
-    const [y, m] = body.month_key.split('-').map(Number);
+    const [y, m] = resolvedMonthKey.split('-').map(Number);
     const prevDate = new Date(y, m - 2, 1); // mois précédent
     const prevKey = `${prevDate.getFullYear()}-${String(prevDate.getMonth() + 1).padStart(2, '0')}`;
     monthKeys.push(prevKey);
