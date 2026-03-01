@@ -29,121 +29,107 @@ function formatDate(date) {
 }
 
 /**
- * Filter shifts for a given version (including legacy shifts without month_key/reset_version).
+ * Fetch all pages of a filtered entity query (handles Base44 pagination).
+ * Base44 returns up to `limit` records per call; we loop until exhausted.
  */
-function filterByVersion(shifts, monthKey, resetVersion) {
-  return shifts.filter(s => {
-    const noVersion = s.month_key === undefined || s.month_key === null;
-    const noResetV  = s.reset_version === undefined || s.reset_version === null;
-    if (noVersion && noResetV) return true; // legacy shift — always include
-    if (s.month_key !== monthKey) return false;
-    if (s.reset_version !== resetVersion) return false;
-    return true;
-  });
+async function fetchAllPages(filterFn, pageSize = 500) {
+  const results = [];
+  let skip = 0;
+  let requests = 0;
+  while (true) {
+    const page = await filterFn(skip, pageSize);
+    requests++;
+    results.push(...page);
+    if (page.length < pageSize) break; // last page
+    skip += pageSize;
+  }
+  return { results, requests };
 }
 
 /**
  * Fetch all shifts for the active planning context of a given month.
  *
- * Fallback: if the requested reset_version yields 0 versioned shifts for this month,
- * automatically falls back to the highest reset_version that has at least 1 shift.
- * Logs a warning when fallback is triggered.
+ * ✅ Uses server-side filters (month_key + reset_version) — NO global Shift.list().
+ * ✅ Handles pagination in case count > pageSize.
+ * ✅ Fallback: if the requested reset_version has 0 shifts, queries each candidate
+ *    version (descending) until one is non-empty — still server-filtered.
  *
  * @param {string} monthKey      - "YYYY-MM" of the month to load
  * @param {number} resetVersion  - active reset_version for this month (from PlanningMonth)
  * @param {object} [options]
  * @param {string} [options.employeeId]  - restrict to a single employee
- * @returns {Promise<{ shifts: Array, effectiveVersion: number }>}  NOTE: returns shifts array directly for backward compat
+ * @returns {Promise<Array>}  array of shifts
  */
 export async function getActiveShiftsForMonth(monthKey, resetVersion, options = {}) {
-  const [year, month] = monthKey.split('-').map(Number);
-  const firstDay = `${monthKey}-01`;
-  const lastDayDate = new Date(year, month, 0); // last day of month
-  const lastDay = formatDate(lastDayDate);
+  const t0 = performance.now();
 
-  console.log(`[ShiftService] Fetching | month_key=${monthKey} | requested reset_version=${resetVersion}`);
+  console.log(`[ShiftService] ▶ Fetching | month_key=${monthKey} | reset_version=${resetVersion}`);
 
-  const allShifts = await base44.entities.Shift.list();
+  // Build server-side filter (month_key + reset_version)
+  const buildFilter = (mk, rv) => {
+    const f = { month_key: mk, reset_version: rv };
+    if (options.employeeId) f.employee_id = options.employeeId;
+    return f;
+  };
 
-  // Step 1: restrict to date range
-  const dateFiltered = allShifts.filter(s => s.date >= firstDay && s.date <= lastDay);
+  // Primary fetch: exact version requested
+  const primaryFilter = buildFilter(monthKey, resetVersion);
+  const { results: primaryShifts, requests: req1 } = await fetchAllPages(
+    (skip, limit) => base44.entities.Shift.filter(primaryFilter, '-date', limit, skip),
+  );
 
-  // Step 2: restrict to active version
-  let versionFiltered = filterByVersion(dateFiltered, monthKey, resetVersion);
+  const elapsed1 = (performance.now() - t0).toFixed(0);
+  console.log(
+    `[ShiftService] Primary fetch | ${primaryShifts.length} shifts | ${req1} req | ${elapsed1}ms`
+  );
 
-  // --- FALLBACK: if 0 versioned shifts for this month, find last non-empty version ---
-  // Count only shifts that actually have this month_key (exclude legacy)
-  const versionedInMonth = versionFiltered.filter(s => s.month_key === monthKey);
-  if (versionedInMonth.length === 0 && dateFiltered.some(s => s.month_key === monthKey)) {
-    // Build map of reset_version → count for this month_key
-    const versionCounts = {};
-    for (const s of dateFiltered) {
-      if (s.month_key !== monthKey) continue;
-      const v = s.reset_version ?? 0;
-      versionCounts[v] = (versionCounts[v] || 0) + 1;
-    }
-
-    // Find the highest version with at least 1 shift
-    const nonEmptyVersions = Object.entries(versionCounts)
-      .filter(([, count]) => count > 0)
-      .map(([v]) => Number(v))
-      .sort((a, b) => b - a); // descending
-
-    if (nonEmptyVersions.length > 0) {
-      const fallbackVersion = nonEmptyVersions[0];
-      console.warn(
-        `[ShiftService] ⚠️ FALLBACK TRIGGERED for month_key=${monthKey}` +
-        ` | requested v${resetVersion} has 0 shifts` +
-        ` | falling back to v${fallbackVersion}` +
-        ` | available non-empty versions: [${nonEmptyVersions.join(', ')}]` +
-        ` | version counts:`, versionCounts
-      );
-      versionFiltered = filterByVersion(dateFiltered, monthKey, fallbackVersion);
-    } else {
-      console.warn(
-        `[ShiftService] ⚠️ month_key=${monthKey} has 0 shifts for v${resetVersion} and NO other non-empty version exists.`
-      );
-    }
-  } else {
-    console.log(
-      `[ShiftService] ✅ month_key=${monthKey} | reset_version=${resetVersion}` +
-      ` | ${versionedInMonth.length} versioned shifts loaded` +
-      (versionFiltered.length > versionedInMonth.length
-        ? ` + ${versionFiltered.length - versionedInMonth.length} legacy shifts`
-        : '')
-    );
+  if (primaryShifts.length > 0) {
+    log(`✅ month_key=${monthKey} v${resetVersion} → ${primaryShifts.length} shifts`);
+    return primaryShifts;
   }
 
-  // Step 3: optional employee filter
-  const result = options.employeeId
-    ? versionFiltered.filter(s => s.employee_id === options.employeeId)
-    : versionFiltered;
+  // --- FALLBACK: v0 has 0 shifts → scan candidate versions server-side ---
+  // First, discover which versions exist for this month_key (without loading all shifts)
+  console.warn(`[ShiftService] ⚠️ v${resetVersion} has 0 shifts for ${monthKey} — checking fallback versions`);
 
-  // Extended debug diagnostics (only when PLANNING_DEBUG=1)
-  if (DEBUG()) {
-    const outOfRange = allShifts.filter(s => s.date < firstDay || s.date > lastDay);
-    const wrongVersion = dateFiltered.filter(s => {
-      if (!s.month_key) return false;
-      // After potential fallback, these are shifts with a different version than what we ended up using
-      return !versionFiltered.includes(s);
-    });
+  // Fetch a small sample of ANY version for this month_key to discover candidates
+  const { results: anySample } = await fetchAllPages(
+    (skip, limit) => base44.entities.Shift.filter({ month_key: monthKey }, '-reset_version', limit, skip),
+  );
 
-    log(`Total in DB: ${allShifts.length}`);
-    log(`In date range [${firstDay}..${lastDay}]: ${dateFiltered.length}`);
-    log(`After version filter: ${versionFiltered.length}`);
-    log(`Returned to UI: ${result.length}`);
-
-    if (wrongVersion.length > 0) {
-      warn(`⚠️ ${wrongVersion.length} shifts in range but excluded (other versions):`,
-        wrongVersion.map(s => ({ id: s.id, date: s.date, month_key: s.month_key, reset_version: s.reset_version }))
-      );
-    }
-    if (outOfRange.length > 0) {
-      log(`ℹ️ ${outOfRange.length} shifts outside date range — excluded`);
-    }
+  const versionCounts = {};
+  for (const s of anySample) {
+    const v = s.reset_version ?? 0;
+    versionCounts[v] = (versionCounts[v] || 0) + 1;
   }
 
-  return result;
+  const candidateVersions = Object.entries(versionCounts)
+    .filter(([v, count]) => Number(v) !== resetVersion && count > 0)
+    .map(([v]) => Number(v))
+    .sort((a, b) => b - a); // highest first
+
+  if (candidateVersions.length === 0) {
+    console.warn(`[ShiftService] ⚠️ No other version found for ${monthKey} — returning []`);
+    return [];
+  }
+
+  // Use the sample data we already have for the best candidate (avoid extra fetch)
+  const fallbackVersion = candidateVersions[0];
+  const fallbackShifts = anySample.filter(s => {
+    const v = s.reset_version ?? 0;
+    return v === fallbackVersion && (!options.employeeId || s.employee_id === options.employeeId);
+  });
+
+  const elapsed2 = (performance.now() - t0).toFixed(0);
+  console.warn(
+    `[ShiftService] ⚠️ FALLBACK | month_key=${monthKey}` +
+    ` | requested v${resetVersion} (0 shifts)` +
+    ` | using v${fallbackVersion} (${fallbackShifts.length} shifts)` +
+    ` | candidates: [${candidateVersions.join(', ')}]` +
+    ` | total elapsed: ${elapsed2}ms`
+  );
+
+  return fallbackShifts;
 }
 
 /**
