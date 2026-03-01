@@ -130,7 +130,7 @@ export default function Home() {
   // Fetch teams (SAME as Planning)
   const { data: allTeams = [] } = useQuery({
     queryKey: ['teams'],
-    queryFn: () => base44.entities.Team.filter({ is_active: true }),
+    queryFn: () => perfFetch('teams', () => base44.entities.Team.filter({ is_active: true })),
     enabled: !!currentEmployee,
     staleTime: 10 * 60 * 1000
   });
