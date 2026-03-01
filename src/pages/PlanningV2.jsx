@@ -1338,6 +1338,7 @@ export default function PlanningV2() {
                                     weekStart={weekStartDate}
                                     weeklyRecap={weeklyRecap}
                                     onDeleteWeek={handleDeleteWeek}
+                                    onCopyFromAbove={() => handleCopyWeekFromAbove(employee.id, weekStartDate)}
                                     onRecapUpdate={() => queryClient.invalidateQueries({ queryKey: QK.weeklyRecaps(monthKey, resetVersion) })}
                                     currentMonth={currentMonth}
                                     currentYear={currentYear}
