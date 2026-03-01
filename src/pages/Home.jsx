@@ -84,7 +84,7 @@ export default function Home() {
     queryKey: ['planningMonth', currentYear, currentMonth],
     queryFn: async () => {
       const monthKey = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}`;
-      const months = await base44.entities.PlanningMonth.filter({ month_key: monthKey });
+      const months = await perfFetch('planningMonth', () => base44.entities.PlanningMonth.filter({ month_key: monthKey }), { monthKey });
       return months[0] || null;
     },
     enabled: !!currentEmployee,
