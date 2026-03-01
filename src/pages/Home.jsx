@@ -530,19 +530,29 @@ export default function Home() {
   });
   const myPendingSwapRequests = isPlanningManager ? pendingSwapRequests : [];
 
-  // My swap decisions (as employee A or B)
+  // My swap decisions (as employee A or B) — deux requêtes filtrées côté serveur
   const { data: mySwapDecisions = [] } = useQuery({
     queryKey: ['mySwapDecisions', currentEmployee?.id],
     queryFn: async () => {
       if (!currentEmployee?.id) return [];
-      const all = await base44.entities.ShiftSwapRequest.list();
-      return all.filter(r =>
-        (r.employee_a_id === currentEmployee.id || r.employee_b_id === currentEmployee.id) &&
-        r.status !== 'PENDING' &&
-        r.status !== 'CANCELED' &&
-        new Date(r.decided_at) > new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) &&
-        !(r.dismissed_by_employee_ids || []).includes(currentEmployee.id)
-      ).sort((a, b) => new Date(b.decided_at) - new Date(a.decided_at));
+      const cutoff = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+      const [asA, asB] = await Promise.all([
+        base44.entities.ShiftSwapRequest.filter({ employee_a_id: currentEmployee.id }, '-decided_at', 20),
+        base44.entities.ShiftSwapRequest.filter({ employee_b_id: currentEmployee.id }, '-decided_at', 20)
+      ]);
+      const combined = [...asA, ...asB];
+      // Dedupe by id
+      const seen = new Set();
+      return combined
+        .filter(r => {
+          if (seen.has(r.id)) return false;
+          seen.add(r.id);
+          return r.status !== 'PENDING' &&
+            r.status !== 'CANCELED' &&
+            new Date(r.decided_at) > cutoff &&
+            !(r.dismissed_by_employee_ids || []).includes(currentEmployee.id);
+        })
+        .sort((a, b) => new Date(b.decided_at) - new Date(a.decided_at));
     },
     enabled: !!currentEmployee?.id
   });
