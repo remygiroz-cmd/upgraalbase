@@ -1260,6 +1260,7 @@ export default function PlanningV2() {
                                     shifts={shifts}
                                     weekStart={weekStartDate}
                                     weeklyRecap={weeklyRecap}
+                                    onDeleteWeek={handleDeleteWeek}
                                     onRecapUpdate={() => queryClient.invalidateQueries({ queryKey: QK.weeklyRecaps(monthKey, resetVersion) })}
                                     currentMonth={currentMonth}
                                     currentYear={currentYear}
