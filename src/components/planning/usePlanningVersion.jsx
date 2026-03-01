@@ -10,9 +10,18 @@ export function usePlanningVersion(year, month) {
 
   const { data: planningMonth, isLoading } = useQuery({
     queryKey: ['planningMonth', monthKey],
-    queryFn: () => getActiveMonthContext(monthKey),
-    staleTime: 60_000, // Aligné sur le cache de monthContext
-    retry: 1
+    queryFn: async () => {
+      // Toujours invalider le cache mémoire au rechargement de page pour éviter
+      // de servir une version périmée après F5
+      const { invalidateMonthContextCache, getActiveMonthContext: fetchContext } = await import('./monthContext');
+      invalidateMonthContextCache(monthKey);
+      const ctx = await fetchContext(monthKey);
+      console.log(`[usePlanningVersion] ${monthKey} → reset_version=${ctx.reset_version}`);
+      return ctx;
+    },
+    staleTime: 0, // Toujours refetch après F5 (queryFn = source de vérité)
+    gcTime: 5 * 60_000,
+    retry: 2
   });
 
   // CRITIQUE : undefined tant que non chargé → les queries restent disabled
