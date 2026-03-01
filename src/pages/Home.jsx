@@ -36,13 +36,13 @@ export default function Home() {
   // Get current user
   const { data: currentUser } = useQuery({
     queryKey: ['currentUser'],
-    queryFn: () => base44.auth.me()
+    queryFn: () => perfFetch('currentUser', () => base44.auth.me())
   });
 
   // Get current employee record
   const { data: employees = [] } = useQuery({
     queryKey: ['allEmployees'],
-    queryFn: () => base44.entities.Employee.list(),
+    queryFn: () => perfFetch('employees', () => base44.entities.Employee.list()),
     enabled: !!currentUser
   });
 
