@@ -38,6 +38,7 @@ import { useGlobalColumnOrder } from '@/components/planning/useGlobalColumnOrder
 import { isDateInCPPeriod } from '@/components/planning/paidLeaveCalculations';
 import { usePlanningVersion, withPlanningVersion, filterByVersion } from '@/components/planning/usePlanningVersion';
 import { getActiveShiftsForMonth, shiftsQueryKey } from '@/components/planning/shiftService';
+import { perfFetch } from '@/components/utils/perfLogger';
 import { useUndoStack } from '@/components/planning/useUndoStack';
 import UndoRedoButtons from '@/components/planning/UndoRedoButtons';
 import PinchZoomContainer from '@/components/planning/PinchZoomContainer';
