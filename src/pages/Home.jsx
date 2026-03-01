@@ -57,7 +57,7 @@ export default function Home() {
     queryKey: ['activeAnnouncements'],
     queryFn: async () => {
       const now = new Date().toISOString();
-      const all = await base44.entities.Announcement.list();
+      const all = await perfFetch('announcements', () => base44.entities.Announcement.list());
       
       return all
         .filter(a => {
