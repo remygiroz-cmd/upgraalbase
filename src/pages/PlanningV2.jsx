@@ -1797,17 +1797,21 @@ export default function PlanningV2() {
 
                <button
                  onClick={() => {
+                   if (!allDataReady) { toast.warning('Données en cours de chargement, veuillez patienter…'); return; }
                    setShowExportComptaModal(true);
                    setShowFab(false);
                  }}
-                 className="w-full flex items-center gap-3 px-4 py-3 hover:bg-gray-50 rounded-lg transition-colors group"
+                 className={cn(
+                   "w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors group",
+                   allDataReady ? "hover:bg-gray-50" : "opacity-50 cursor-not-allowed"
+                 )}
                >
                  <div className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center group-hover:bg-gray-200 transition-colors">
                    <FileText className="w-5 h-5 text-gray-600" />
                  </div>
                  <div className="text-left flex-1">
                    <div className="font-semibold text-sm text-gray-900">Export compta</div>
-                   <div className="text-xs text-gray-500">Envoi comptabilité</div>
+                   <div className="text-xs text-gray-500">{allDataReady ? 'Envoi comptabilité' : 'Chargement…'}</div>
                  </div>
                </button>
              </div>
