@@ -396,15 +396,13 @@ export default function Home() {
 
   // Get urgent announcements — filtrées côté serveur par is_active
   const { data: urgentAnnouncements = [] } = useQuery({
-    queryKey: ['urgentAnnouncements'],
+    queryKey: QK.urgentAnnouncements(),
     queryFn: async () => {
       const all = await perfFetch('urgentAnnouncements', () => base44.entities.UrgentAnnouncement.filter({ is_active: true }, '-created_date', 20));
       const now = new Date();
-      
       const activeAnnouncements = all.filter(ann => {
         const startsAt = ann.starts_at ? new Date(ann.starts_at) : new Date(0);
         const startsOk = now >= startsAt;
-        
         let endsAt;
         if (ann.ends_at) {
           endsAt = new Date(ann.ends_at);
@@ -412,32 +410,30 @@ export default function Home() {
           endsAt = new Date(new Date(ann.created_date).getTime() + 24 * 60 * 60 * 1000);
         }
         const endsOk = now <= endsAt;
-        
         return startsOk && endsOk;
       });
-      
       const severityOrder = { critique: 3, important: 2, info: 1 };
       activeAnnouncements.sort((a, b) => {
         const severityDiff = (severityOrder[b.severity] || 0) - (severityOrder[a.severity] || 0);
         if (severityDiff !== 0) return severityDiff;
         return new Date(b.created_date) - new Date(a.created_date);
       });
-      
       return activeAnnouncements;
     },
     enabled: !!currentEmployee?.id,
-    staleTime: 0,
-    refetchOnMount: 'always'
+    staleTime: STALE.NOTIFICATIONS,
+    refetchOnMount: true,
   });
 
   // Get acks for current employee
   const { data: myAcks = [] } = useQuery({
-    queryKey: ['urgentAnnouncementAcks', currentEmployee?.id],
+    queryKey: QK.urgentAnnouncementAcks(currentEmployee?.id),
     queryFn: () => base44.entities.UrgentAnnouncementAck.filter({ 
       employee_id: currentEmployee.id 
     }),
     enabled: !!currentEmployee?.id,
-    staleTime: 0
+    staleTime: STALE.NOTIFICATIONS,
+    refetchOnMount: true,
   });
 
   // Find unacknowledged urgent announcement for current employee
