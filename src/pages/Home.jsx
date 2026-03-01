@@ -52,12 +52,12 @@ export default function Home() {
     return employees.find(emp => normalizeEmail(emp.email) === normalizeEmail(currentUser.email));
   }, [currentUser, employees]);
 
-  // Get active announcements
+  // Get active announcements — filtrées côté serveur sur is_active
   const { data: announcements = [] } = useQuery({
     queryKey: ['activeAnnouncements'],
     queryFn: async () => {
       const now = new Date().toISOString();
-      const all = await perfFetch('announcements', () => base44.entities.Announcement.list());
+      const all = await perfFetch('announcements', () => base44.entities.Announcement.filter({ is_active: true }, '-created_date', 50));
       
       return all
         .filter(a => {
