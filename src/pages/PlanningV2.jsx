@@ -281,23 +281,23 @@ export default function PlanningV2() {
   });
 
   const { data: allWeeklyRecaps = [] } = useQuery({
-    queryKey: ['allWeeklyRecaps', currentYear, currentMonth, resetVersion],
+    queryKey: ['allWeeklyRecaps', monthKey, resetVersion],
     queryFn: async () => {
-      const lastDay = formatLocalDate(new Date(currentYear, currentMonth + 1, 0));
       const startRange = new Date(currentYear, currentMonth, 1);
       startRange.setDate(startRange.getDate() - 7);
       const startRangeStr = formatLocalDate(startRange);
       const allRecaps = await base44.entities.WeeklyRecap.list();
-      const monthRecaps = allRecaps.filter(r => r.week_start >= startRangeStr && r.week_start <= lastDay);
+      const monthRecaps = allRecaps.filter(r => r.week_start >= startRangeStr && r.week_start <= monthLastDay);
       return filterByVersion(monthRecaps, resetVersion);
     },
-    enabled: resetVersion !== undefined,
+    // Attendre que les shifts soient prêts avant de charger les recaps hebdos
+    enabled: shiftsReady,
     placeholderData: keepPreviousData,
     staleTime: 30 * 1000
   });
 
   const { data: allMonthlyRecaps = [] } = useQuery({
-    queryKey: ['allMonthlyRecaps', currentYear, currentMonth, resetVersion],
+    queryKey: ['allMonthlyRecaps', monthKey, resetVersion],
     queryFn: async () => {
       const allRecaps = await base44.entities.MonthlyRecap.filter({
         year: currentYear,
@@ -305,7 +305,8 @@ export default function PlanningV2() {
       });
       return filterByVersion(allRecaps, resetVersion);
     },
-    enabled: resetVersion !== undefined,
+    // Attendre que les shifts soient prêts avant de charger les recaps mensuels
+    enabled: shiftsReady,
     placeholderData: keepPreviousData,
     staleTime: 30 * 1000
   });
