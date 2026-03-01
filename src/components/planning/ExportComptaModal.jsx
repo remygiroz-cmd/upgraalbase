@@ -1088,24 +1088,36 @@ export default function ExportComptaModal({ open, onOpenChange, monthStart, mont
     // Attendre 2 frames pour que le DOM soit stable
     await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
 
+    const w = el.scrollWidth;
+    const h = el.scrollHeight;
+
     const canvas = await html2canvas(el, {
       scale: 2.5,
       useCORS: true,
       backgroundColor: '#ffffff',
       logging: false,
-      width: el.scrollWidth,
-      height: el.scrollHeight,
+      width: w,
+      height: h,
+      windowWidth: w,
+      windowHeight: h,
     });
 
-    // Choisir PNG ou JPEG selon le poids
+    // Optimisation poids : PNG → JPEG 0.85 → JPEG 0.80
     return new Promise((resolve) => {
-      canvas.toBlob((blob) => {
-        if (blob && blob.size > 4 * 1024 * 1024) {
-          // Trop lourd → JPEG 0.85
-          canvas.toBlob((jpgBlob) => resolve({ blob: jpgBlob, ext: 'jpg', mime: 'image/jpeg' }), 'image/jpeg', 0.85);
-        } else {
-          resolve({ blob, ext: 'png', mime: 'image/png' });
+      canvas.toBlob((pngBlob) => {
+        if (pngBlob && pngBlob.size <= 4 * 1024 * 1024) {
+          return resolve({ blob: pngBlob, ext: 'png', mime: 'image/png' });
         }
+        // PNG trop lourd → JPEG 0.85
+        canvas.toBlob((jpg85Blob) => {
+          if (jpg85Blob && jpg85Blob.size <= 4 * 1024 * 1024) {
+            return resolve({ blob: jpg85Blob, ext: 'jpg', mime: 'image/jpeg' });
+          }
+          // Toujours trop lourd → JPEG 0.80
+          canvas.toBlob((jpg80Blob) => {
+            resolve({ blob: jpg80Blob, ext: 'jpg', mime: 'image/jpeg' });
+          }, 'image/jpeg', 0.80);
+        }, 'image/jpeg', 0.85);
       }, 'image/png');
     });
   };
