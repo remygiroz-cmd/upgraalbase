@@ -821,9 +821,32 @@ export default function PlanningV2() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [undoStack.canUndo, undoStack.canRedo, isUndoing, isRedoing]);
 
-  // Skeleton grid — affiché pendant le chargement initial (version OU shifts)
-  // CRITIQUE : ne jamais afficher le planning avant d'avoir la bonne version
-  const isLoading = resetVersion === undefined || (isFetchingShifts && shifts.length === 0);
+  // ✅ Barrière de chargement complète — toutes les sources doivent être prêtes
+  // Tant que ce n'est pas vrai, on affiche un loader et on bloque les calculs
+  const allDataReady = React.useMemo(() => {
+    if (resetVersion === undefined) return false;   // (a) version connue
+    if (!shiftsReady) return false;                  // (b) shifts chargés et versionnés
+    if (isFetchingCP) return false;                  // (c) CP chargés
+    if (isFetchingNonShifts) return false;           // (c) absences chargées
+    return true;
+  }, [resetVersion, shiftsReady, isFetchingCP, isFetchingNonShifts]);
+
+  // Log "data ready" pour debug
+  React.useEffect(() => {
+    if (allDataReady) {
+      const versionCounts = {};
+      for (const s of shifts) { const v = s.reset_version ?? 0; versionCounts[v] = (versionCounts[v] || 0) + 1; }
+      console.log(
+        `[Planning] ✅ DATA READY @ ${new Date().toISOString()}` +
+        `\n  month_key=${monthKey} resetVersion=${resetVersion}` +
+        `\n  shifts=${shifts.length} nonShifts=${nonShiftEvents.length} CP=${paidLeavePeriods.length}` +
+        `\n  shift versions:`, versionCounts
+      );
+    }
+  }, [allDataReady]);
+
+  // Skeleton grid — affiché jusqu'à ce que TOUTES les données soient cohérentes
+  const isLoading = !allDataReady;
 
   return (
     <div className="space-y-2">
