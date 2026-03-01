@@ -142,13 +142,7 @@ export default function PlanningV2() {
   // Fetch shifts for current month — keepPreviousData pour éviter l'écran vide au changement de mois
   const { data: shifts = [], isFetching: isFetchingShifts } = useQuery({
     queryKey: shiftsQueryKey(currentYear, currentMonth, resetVersion),
-    queryFn: () => {
-      console.time('[Planning] fetch shifts');
-      return getActiveShiftsForMonth(monthKey, resetVersion).then(r => {
-        console.timeEnd('[Planning] fetch shifts');
-        return r;
-      });
-    },
+    queryFn: () => perfFetch('Planning:shifts', () => getActiveShiftsForMonth(monthKey, resetVersion), { monthKey, resetVersion }),
     enabled: resetVersion !== undefined,
     placeholderData: keepPreviousData,
     staleTime: 30 * 1000
