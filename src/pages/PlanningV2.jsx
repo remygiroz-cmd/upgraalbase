@@ -281,7 +281,7 @@ export default function PlanningV2() {
       const startRange = new Date(currentYear, currentMonth, 1);
       startRange.setDate(startRange.getDate() - 7);
       const startRangeStr = formatLocalDate(startRange);
-      const allRecaps = await base44.entities.WeeklyRecap.list();
+      const allRecaps = await perfFetch('Planning:weeklyRecaps', () => base44.entities.WeeklyRecap.list(), { monthKey, resetVersion });
       const monthRecaps = allRecaps.filter(r => r.week_start >= startRangeStr && r.week_start <= monthLastDay);
       return filterByVersion(monthRecaps, resetVersion);
     },
