@@ -521,7 +521,8 @@ export default function Home() {
         })
         .sort((a, b) => new Date(b.decided_at) - new Date(a.decided_at));
     },
-    enabled: !!currentEmployee?.id
+    enabled: !!currentEmployee?.id,
+    staleTime: STALE.DECISIONS,
   });
 
   const isManagerOrAdmin = useMemo(() => {
