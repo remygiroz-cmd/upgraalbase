@@ -1612,23 +1612,23 @@ Cordialement"
          />
         )}
         </DialogContent>
-        </Dialog>
+      </Dialog>
 
-        {/* Composant de capture offscreen - toujours monté quand la modal est ouverte */}
-        {open && (
-          <PlanningExportCapture
-            ref={planningCaptureRef}
-            year={year}
-            month={month - 1}
-            monthName={monthName}
-            employees={employeesFromPlanning.length > 0 ? employeesFromPlanning : employees}
-            shifts={shiftsFromPlanning.length > 0 ? shiftsFromPlanning : shifts}
-            nonShiftEvents={nonShiftEventsFromPlanning.length > 0 ? nonShiftEventsFromPlanning : nonShiftEvents}
-            nonShiftTypes={nonShiftTypesFromPlanning.length > 0 ? nonShiftTypesFromPlanning : nonShiftTypes}
-            positions={positionsFromPlanning}
-            holidayDates={holidayDatesFromPlanning}
-          />
-        )}
-        </>
-        );
-        }
+      {/* Composant de capture offscreen - toujours monté quand la modal est ouverte */}
+      {open && (
+        <PlanningExportCapture
+          ref={planningCaptureRef}
+          year={year}
+          month={month - 1}
+          monthName={monthName}
+          employees={employeesFromPlanning.length > 0 ? employeesFromPlanning : employees}
+          shifts={shiftsFromPlanning.length > 0 ? shiftsFromPlanning : shifts}
+          nonShiftEvents={nonShiftEventsFromPlanning.length > 0 ? nonShiftEventsFromPlanning : nonShiftEvents}
+          nonShiftTypes={nonShiftTypesFromPlanning.length > 0 ? nonShiftTypesFromPlanning : nonShiftTypes}
+          positions={positionsFromPlanning}
+          holidayDates={holidayDatesFromPlanning}
+        />
+      )}
+    </>
+  );
+}
