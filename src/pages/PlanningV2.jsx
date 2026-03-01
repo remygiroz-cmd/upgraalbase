@@ -631,20 +631,23 @@ export default function PlanningV2() {
     setShowShiftModal(true);
   };
 
-  const handleDeleteShift = (shift) => {
+  const handleDeleteShift = useCallback((shift) => {
     if (window.confirm(`Supprimer ce shift de ${shift.start_time} à ${shift.end_time} ?`)) {
       deleteShiftMutation.mutate({ shiftId: shift.id, captureForUndo: true });
     }
-  };
+  }, [deleteShiftMutation]);
 
-  const handleToggleHoliday = (dateStr) => {
+  const handleToggleHoliday = useCallback((dateStr) => {
     const isCurrentlyHoliday = holidayDates.some(h => h.date === dateStr);
     toggleHolidayMutation.mutate({ date: dateStr, isHoliday: isCurrentlyHoliday });
-  };
+  }, [holidayDates, toggleHolidayMutation]);
 
-  const isHolidayDate = (dateStr) => {
+  const isHolidayDate = useCallback((dateStr) => {
     return holidayDates.some(h => h.date === dateStr);
-  };
+  }, [holidayDates]);
+
+  // Set pour O(1) lookup (évite le .some() O(n) dans chaque cellule)
+  const holidayDateSet = useMemo(() => new Set(holidayDates.map(h => h.date)), [holidayDates]);
 
   const handleUndo = async () => {
     if (!undoStack.canUndo) return;
