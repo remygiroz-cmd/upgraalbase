@@ -176,35 +176,8 @@ export default function Home() {
   const sortedEmployees = useMemo(() => {
     if (!employees.length || !allTeams.length) return [];
 
-    const today = new Date();
-    const currentMonthDate = new Date(currentYear, currentMonth, 1);
-    
-    // Déterminer si le mois affiché est passé, présent ou futur
-    const isPastMonth = currentMonthDate < new Date(today.getFullYear(), today.getMonth(), 1);
-    const isCurrentMonth = currentMonthDate.getFullYear() === today.getFullYear() && 
-                           currentMonthDate.getMonth() === today.getMonth();
-    const isFutureMonth = currentMonthDate > new Date(today.getFullYear(), today.getMonth(), 1);
-    
-    // Filtrer les employés selon la règle (EXACT same as Planning)
-    let filteredEmployees = employees;
-    
-    if (isFutureMonth) {
-      // Mois futur: uniquement employés actifs
-      filteredEmployees = employees.filter(emp => emp.is_active === true);
-    } else if (isCurrentMonth) {
-      // Mois en cours: employés actifs + archivés avec au moins 1 shift ce mois
-      filteredEmployees = employees.filter(emp => {
-        if (emp.is_active === true) return true;
-        
-        // Employé archivé: vérifier s'il a au moins 1 shift ce mois
-        const hasShiftsThisMonth = currentMonthShifts.some(s => s.employee_id === emp.id);
-        return hasShiftsThisMonth;
-      });
-    }
-    // Si mois passé (isPastMonth): afficher tous les employés (pas de filtre)
-    
-    // Trier par équipe puis par nom (EXACT same as Planning)
-    return [...filteredEmployees].sort((a, b) => {
+    // Home affiche toujours le mois courant — employés actifs (déjà filtrés par le serveur)
+    return [...employees].sort((a, b) => {
       const teamA = allTeams.find(t => t.id === a.team_id);
       const teamB = allTeams.find(t => t.id === b.team_id);
       
