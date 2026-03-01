@@ -43,17 +43,19 @@ Deno.serve(async (req) => {
 
     const startTime = Date.now();
 
-    // PHASE A: LOCK IMMÉDIAT - Incrémenter version pour invalider les données existantes
+    // PHASE A: LOCK IMMÉDIAT
+    // On remet reset_version à 1 (déterministe, peu importe l'historique d'incréments)
+    // pour éviter l'accumulation de versions fantômes (1, 3, 5, 7...).
+    const newVersion = 1;
+
     const planningMonths = await base44.asServiceRole.entities.PlanningMonth.filter({ 
       year: parseInt(year),
       month: parseInt(month)
     });
 
     let planningMonth = planningMonths[0];
-    let newVersion = 1;
 
     if (planningMonth) {
-      newVersion = (planningMonth.reset_version || 0) + 1;
       await base44.asServiceRole.entities.PlanningMonth.update(planningMonth.id, {
         reset_version: newVersion,
         reset_in_progress: true,
@@ -62,11 +64,11 @@ Deno.serve(async (req) => {
         reset_by_name: user.full_name
       });
     } else {
-      await base44.asServiceRole.entities.PlanningMonth.create({
+      planningMonth = await base44.asServiceRole.entities.PlanningMonth.create({
         year: parseInt(year),
         month: parseInt(month),
         month_key: monthKey,
-        reset_version: 1,
+        reset_version: newVersion,
         reset_in_progress: true,
         reset_at: new Date().toISOString(),
         reset_by: user.email,
@@ -74,7 +76,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    console.log(`  ✓ LOCK activé - version ${newVersion}`);
+    console.log(`  ✓ LOCK activé - reset_version forcée à ${newVersion} (déterministe)`);
 
     // PHASE B: PURGE BATCH PARALLÉLISÉE (Promise.all pour gagner du temps)
     const deleteTasks = [];
