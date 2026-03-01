@@ -677,6 +677,71 @@ export default function PlanningV2() {
     }
   }, [shifts, currentYear, currentMonth, resetVersion, monthKey, queryClient]);
 
+  const handleCopyWeekFromAbove = useCallback(async (employeeId, weekStart) => {
+    const weekStartStr = formatLocalDate(weekStart);
+    const weekEnd = new Date(weekStart);
+    weekEnd.setDate(weekEnd.getDate() + 6);
+    const weekEndStr = formatLocalDate(weekEnd);
+
+    // Get the week above
+    const weekAboveStart = new Date(weekStart);
+    weekAboveStart.setDate(weekAboveStart.getDate() - 7);
+    const weekAboveStartStr = formatLocalDate(weekAboveStart);
+    const weekAboveEnd = new Date(weekAboveStart);
+    weekAboveEnd.setDate(weekAboveEnd.getDate() + 6);
+    const weekAboveEndStr = formatLocalDate(weekAboveEnd);
+
+    // Get shifts from week above
+    const shiftsAbove = shifts.filter(s =>
+      s.employee_id === employeeId &&
+      s.date >= weekAboveStartStr &&
+      s.date <= weekAboveEndStr &&
+      s.status !== 'cancelled'
+    );
+
+    if (shiftsAbove.length === 0) {
+      toast.info('Aucun shift à copier');
+      return;
+    }
+
+    try {
+      // Delete existing shifts in target week
+      const existingShifts = shifts.filter(s =>
+        s.employee_id === employeeId &&
+        s.date >= weekStartStr &&
+        s.date <= weekEndStr &&
+        s.status !== 'cancelled'
+      );
+
+      if (existingShifts.length > 0) {
+        await Promise.all(existingShifts.map(shift => base44.entities.Shift.delete(shift.id)));
+      }
+
+      // Create new shifts from week above
+      const newShifts = shiftsAbove.map(shift => ({
+        employee_id: shift.employee_id,
+        employee_name: shift.employee_name,
+        date: formatLocalDate(new Date(parseLocalDate(weekStartStr).getTime() + (parseLocalDate(shift.date).getTime() - parseLocalDate(weekAboveStartStr).getTime()))),
+        start_time: shift.start_time,
+        end_time: shift.end_time,
+        break_minutes: shift.break_minutes,
+        position: shift.position,
+        team: shift.team,
+        status: 'planned',
+        notes: shift.notes
+      }));
+
+      await Promise.all(newShifts.map(s => saveShiftMutation.mutateAsync({ id: null, data: s, captureForUndo: false })));
+      
+      await queryClient.invalidateQueries({ queryKey: QK.shifts(currentYear, currentMonth, resetVersion) });
+      await queryClient.invalidateQueries({ queryKey: QK.weeklyRecaps(monthKey, resetVersion) });
+      await queryClient.invalidateQueries({ queryKey: QK.monthlyRecaps(monthKey, resetVersion) });
+      toast.success('Semaine copiée avec succès');
+    } catch (error) {
+      toast.error(`Erreur lors de la copie: ${error.message}`);
+    }
+  }, [shifts, currentYear, currentMonth, resetVersion, monthKey, queryClient, saveShiftMutation]);
+
   const handleToggleHoliday = useCallback((dateStr) => {
     const isCurrentlyHoliday = holidayDates.some(h => h.date === dateStr);
     toggleHolidayMutation.mutate({ date: dateStr, isHoliday: isCurrentlyHoliday });
