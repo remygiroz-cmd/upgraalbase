@@ -45,6 +45,7 @@ import UndoRedoButtons from '@/components/planning/UndoRedoButtons';
 import PinchZoomContainer from '@/components/planning/PinchZoomContainer';
 import TodaySummary from '@/components/planning/TodaySummary';
 import DepartureOrderPlanningBlock from '@/components/planning/DepartureOrderPlanningBlock';
+import PlanningDayRow from '@/components/planning/PlanningDayRow';
 
 const DAYS = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche'];
 const MONTHS = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'];
