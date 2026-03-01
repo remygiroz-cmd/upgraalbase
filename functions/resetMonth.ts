@@ -252,7 +252,14 @@ Deno.serve(async (req) => {
     stats.duration = Date.now() - startTime;
     const totalDeleted = Object.values(stats.deleted).reduce((sum, val) => sum + val, 0);
 
-    console.log(`✅ [RESET ATOMIQUE] ${monthKey} terminé en ${stats.duration}ms - ${totalDeleted} éléments`);
+    console.log(
+      `✅ [RESET ATOMIQUE] ${monthKey} terminé en ${stats.duration}ms\n` +
+      `   month_key=${monthKey} | nouvelle reset_version=${newVersion} (forcée à 1)\n` +
+      `   Shifts supprimés: ${stats.deleted.shifts} | Non-shifts: ${stats.deleted.nonShifts} | CP: ${stats.deleted.cpPeriods}\n` +
+      `   Récaps hebdo: ${stats.deleted.weeklyRecaps} | Récaps mensuels: ${stats.deleted.monthlyRecaps}\n` +
+      `   Total: ${totalDeleted} éléments\n` +
+      `   → Planning prêt à recevoir de nouveaux templates (version v${newVersion})`
+    );
 
     return Response.json({
       success: true,
