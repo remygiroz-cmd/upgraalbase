@@ -98,10 +98,8 @@ Deno.serve(async (req) => {
       return items.length;
     };
 
-    // Lancer toutes les suppressions en parallèle
-    // 🔴 WIPE TOTAL shifts : on ne peut pas filtrer par month_key uniquement car
-    // les shifts legacy n'ont pas month_key. On doit lister TOUS les shifts du mois
-    // par date, sans filtrer reset_version ni status.
+    // 🔴 WIPE TOTAL shifts : toutes versions confondues (1, 3, 5, 7, 9...) + legacy
+    // On filtre par date range pour ne rien oublier quelle que soit la reset_version.
     deleteTasks.push(
       (async () => {
         const [y, m] = monthKey.split('-').map(Number);
@@ -109,11 +107,18 @@ Deno.serve(async (req) => {
         const lastDayDate = new Date(y, m, 0);
         const lastDay = `${monthKey}-${String(lastDayDate.getDate()).padStart(2, '0')}`;
 
-        // Fetch ALL shifts, filter by date range (catches legacy + versioned)
+        // Fetch ALL shifts, filter by date range (catches ALL versions + legacy)
         const allShifts = await base44.asServiceRole.entities.Shift.list();
         const inRange = allShifts.filter(s => s.date >= firstDay && s.date <= lastDay);
 
-        console.log(`  🔍 Shifts trouvés dans la plage [${firstDay}..${lastDay}]: ${inRange.length}`);
+        // Log par version pour traçabilité
+        const byVersion = {};
+        for (const s of inRange) {
+          const v = s.reset_version ?? 'legacy';
+          byVersion[v] = (byVersion[v] || 0) + 1;
+        }
+        console.log(`  🔍 Shifts à supprimer [${firstDay}..${lastDay}]: ${inRange.length} total`);
+        console.log(`     Par reset_version:`, JSON.stringify(byVersion));
 
         const chunkSize = 10;
         for (let i = 0; i < inRange.length; i += chunkSize) {
