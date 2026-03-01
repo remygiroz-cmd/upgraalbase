@@ -9,7 +9,6 @@ import { FileText, Send, Download, Loader2, AlertCircle, Edit3 } from 'lucide-re
 import { toast } from 'sonner';
 import { jsPDF } from 'jspdf';
 import 'jspdf-autotable';
-import html2canvas from 'html2canvas';
 import { calculateMonthlyRecap } from '@/components/utils/monthlyRecapCalculations';
 import { resolveRecapFinal, resolveExportFinal } from './resolveMonthlyPayrollValues';
 import { getActiveMonthContext } from './monthContext';
