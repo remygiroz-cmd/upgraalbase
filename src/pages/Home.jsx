@@ -146,18 +146,25 @@ export default function Home() {
     staleTime: STALE.PLANNING,
   });
 
-  // Holiday dates — très stables
-  const { data: holidayDates = [] } = useQuery({
-    queryKey: ['holidayDates', 'year', currentYear, currentMonth),
+  // Holiday dates — scoped par année, cache 7 jours (même clé que PlanningV2 → cache partagé)
+  const { data: allYearHolidayDates = [] } = useQuery({
+    queryKey: ['holidayDates', 'year', currentYear],
     queryFn: async () => {
-      const firstDay = formatLocalDate(new Date(currentYear, currentMonth, 1));
-      const lastDay = formatLocalDate(new Date(currentYear, currentMonth + 1, 0));
-      const all = await base44.entities.HolidayDate.filter({ year: currentYear }, 'date', 50);
-      return all.filter(h => h.date >= firstDay && h.date <= lastDay);
+      const yearStart = `${currentYear}-01-01`;
+      const yearEnd = `${currentYear}-12-31`;
+      return base44.entities.HolidayDate.filter({ date: { $gte: yearStart, $lte: yearEnd } });
     },
     enabled: !!currentEmployee,
-    staleTime: STALE.HOLIDAYS,
+    staleTime: 7 * 24 * 60 * 60 * 1000,
+    gcTime: 7 * 24 * 60 * 60 * 1000,
   });
+
+  // Filtre côté client pour le mois courant — gratuit car en cache
+  const holidayDates = useMemo(() => {
+    const firstDay = formatLocalDate(new Date(currentYear, currentMonth, 1));
+    const lastDay = formatLocalDate(new Date(currentYear, currentMonth + 1, 0));
+    return allYearHolidayDates.filter(h => h.date >= firstDay && h.date <= lastDay);
+  }, [allYearHolidayDates, currentYear, currentMonth]);
 
   // Positions — données stables
   const { data: positions = [] } = useQuery({
