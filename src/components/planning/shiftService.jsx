@@ -29,13 +29,31 @@ function formatDate(date) {
 }
 
 /**
+ * Filter shifts for a given version (including legacy shifts without month_key/reset_version).
+ */
+function filterByVersion(shifts, monthKey, resetVersion) {
+  return shifts.filter(s => {
+    const noVersion = s.month_key === undefined || s.month_key === null;
+    const noResetV  = s.reset_version === undefined || s.reset_version === null;
+    if (noVersion && noResetV) return true; // legacy shift — always include
+    if (s.month_key !== monthKey) return false;
+    if (s.reset_version !== resetVersion) return false;
+    return true;
+  });
+}
+
+/**
  * Fetch all shifts for the active planning context of a given month.
  *
+ * Fallback: if the requested reset_version yields 0 versioned shifts for this month,
+ * automatically falls back to the highest reset_version that has at least 1 shift.
+ * Logs a warning when fallback is triggered.
+ *
  * @param {string} monthKey      - "YYYY-MM" of the month to load
- * @param {number} resetVersion  - active reset_version for this month
+ * @param {number} resetVersion  - active reset_version for this month (from PlanningMonth)
  * @param {object} [options]
  * @param {string} [options.employeeId]  - restrict to a single employee
- * @returns {Promise<Array>}
+ * @returns {Promise<{ shifts: Array, effectiveVersion: number }>}  NOTE: returns shifts array directly for backward compat
  */
 export async function getActiveShiftsForMonth(monthKey, resetVersion, options = {}) {
   const [year, month] = monthKey.split('-').map(Number);
@@ -43,7 +61,7 @@ export async function getActiveShiftsForMonth(monthKey, resetVersion, options = 
   const lastDayDate = new Date(year, month, 0); // last day of month
   const lastDay = formatDate(lastDayDate);
 
-  log(`Fetching shifts | month_key=${monthKey} | reset_version=${resetVersion}`);
+  console.log(`[ShiftService] Fetching | month_key=${monthKey} | requested reset_version=${resetVersion}`);
 
   const allShifts = await base44.entities.Shift.list();
 
@@ -51,36 +69,72 @@ export async function getActiveShiftsForMonth(monthKey, resetVersion, options = 
   const dateFiltered = allShifts.filter(s => s.date >= firstDay && s.date <= lastDay);
 
   // Step 2: restrict to active version
-  // Shifts without month_key / reset_version (legacy) are always included
-  const versionFiltered = dateFiltered.filter(s => {
-    const noVersion = s.month_key === undefined || s.month_key === null;
-    const noResetV  = s.reset_version === undefined || s.reset_version === null;
-    if (noVersion && noResetV) return true; // legacy shift — keep
-    if (s.month_key !== monthKey) return false;
-    if (s.reset_version !== resetVersion) return false;
-    return true;
-  });
+  let versionFiltered = filterByVersion(dateFiltered, monthKey, resetVersion);
+
+  // --- FALLBACK: if 0 versioned shifts for this month, find last non-empty version ---
+  // Count only shifts that actually have this month_key (exclude legacy)
+  const versionedInMonth = versionFiltered.filter(s => s.month_key === monthKey);
+  if (versionedInMonth.length === 0 && dateFiltered.some(s => s.month_key === monthKey)) {
+    // Build map of reset_version → count for this month_key
+    const versionCounts = {};
+    for (const s of dateFiltered) {
+      if (s.month_key !== monthKey) continue;
+      const v = s.reset_version ?? 0;
+      versionCounts[v] = (versionCounts[v] || 0) + 1;
+    }
+
+    // Find the highest version with at least 1 shift
+    const nonEmptyVersions = Object.entries(versionCounts)
+      .filter(([, count]) => count > 0)
+      .map(([v]) => Number(v))
+      .sort((a, b) => b - a); // descending
+
+    if (nonEmptyVersions.length > 0) {
+      const fallbackVersion = nonEmptyVersions[0];
+      console.warn(
+        `[ShiftService] ⚠️ FALLBACK TRIGGERED for month_key=${monthKey}` +
+        ` | requested v${resetVersion} has 0 shifts` +
+        ` | falling back to v${fallbackVersion}` +
+        ` | available non-empty versions: [${nonEmptyVersions.join(', ')}]` +
+        ` | version counts:`, versionCounts
+      );
+      versionFiltered = filterByVersion(dateFiltered, monthKey, fallbackVersion);
+    } else {
+      console.warn(
+        `[ShiftService] ⚠️ month_key=${monthKey} has 0 shifts for v${resetVersion} and NO other non-empty version exists.`
+      );
+    }
+  } else {
+    console.log(
+      `[ShiftService] ✅ month_key=${monthKey} | reset_version=${resetVersion}` +
+      ` | ${versionedInMonth.length} versioned shifts loaded` +
+      (versionFiltered.length > versionedInMonth.length
+        ? ` + ${versionFiltered.length - versionedInMonth.length} legacy shifts`
+        : '')
+    );
+  }
 
   // Step 3: optional employee filter
   const result = options.employeeId
     ? versionFiltered.filter(s => s.employee_id === options.employeeId)
     : versionFiltered;
 
-  // Debug diagnostics
+  // Extended debug diagnostics (only when PLANNING_DEBUG=1)
   if (DEBUG()) {
     const outOfRange = allShifts.filter(s => s.date < firstDay || s.date > lastDay);
     const wrongVersion = dateFiltered.filter(s => {
-      if (s.month_key === undefined || s.month_key === null) return false;
-      return s.month_key !== monthKey || s.reset_version !== resetVersion;
+      if (!s.month_key) return false;
+      // After potential fallback, these are shifts with a different version than what we ended up using
+      return !versionFiltered.includes(s);
     });
 
     log(`Total in DB: ${allShifts.length}`);
     log(`In date range [${firstDay}..${lastDay}]: ${dateFiltered.length}`);
-    log(`After version filter (v${resetVersion}): ${versionFiltered.length}`);
+    log(`After version filter: ${versionFiltered.length}`);
     log(`Returned to UI: ${result.length}`);
 
     if (wrongVersion.length > 0) {
-      warn(`⚠️ ${wrongVersion.length} shifts in range but WRONG version — excluded:`, 
+      warn(`⚠️ ${wrongVersion.length} shifts in range but excluded (other versions):`,
         wrongVersion.map(s => ({ id: s.id, date: s.date, month_key: s.month_key, reset_version: s.reset_version }))
       );
     }
