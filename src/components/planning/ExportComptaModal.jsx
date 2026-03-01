@@ -1,11 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { FileText, Send, Download, Loader2, AlertCircle, Edit3 } from 'lucide-react';
+import { FileText, Send, Download, Loader2, AlertCircle, Edit3, Image } from 'lucide-react';
 import { toast } from 'sonner';
 import { jsPDF } from 'jspdf';
 import 'jspdf-autotable';
@@ -14,6 +14,7 @@ import { calculateMonthlyRecap } from '@/components/utils/monthlyRecapCalculatio
 import { resolveRecapFinal, resolveExportFinal } from './resolveMonthlyPayrollValues';
 import { getActiveMonthContext } from './monthContext';
 import ExportOverrideModal from './ExportOverrideModal';
+import PlanningExportCapture from './PlanningExportCapture';
 import { useQueryClient } from '@tanstack/react-query';
 import { cn } from '@/lib/utils';
 
