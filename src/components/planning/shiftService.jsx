@@ -88,48 +88,13 @@ export async function getActiveShiftsForMonth(monthKey, resetVersion, options = 
     return primaryShifts;
   }
 
-  // --- FALLBACK: v0 has 0 shifts → scan candidate versions server-side ---
-  // First, discover which versions exist for this month_key (without loading all shifts)
-  console.warn(`[ShiftService] ⚠️ v${resetVersion} has 0 shifts for ${monthKey} — checking fallback versions`);
-
-  // Fetch a small sample of ANY version for this month_key to discover candidates
-  const { results: anySample } = await fetchAllPages(
-    (skip, limit) => base44.entities.Shift.filter({ month_key: monthKey }, '-reset_version', limit, skip),
-  );
-
-  const versionCounts = {};
-  for (const s of anySample) {
-    const v = s.reset_version ?? 0;
-    versionCounts[v] = (versionCounts[v] || 0) + 1;
-  }
-
-  const candidateVersions = Object.entries(versionCounts)
-    .filter(([v, count]) => Number(v) !== resetVersion && count > 0)
-    .map(([v]) => Number(v))
-    .sort((a, b) => b - a); // highest first
-
-  if (candidateVersions.length === 0) {
-    console.warn(`[ShiftService] ⚠️ No other version found for ${monthKey} — returning []`);
-    return [];
-  }
-
-  // Use the sample data we already have for the best candidate (avoid extra fetch)
-  const fallbackVersion = candidateVersions[0];
-  const fallbackShifts = anySample.filter(s => {
-    const v = s.reset_version ?? 0;
-    return v === fallbackVersion && (!options.employeeId || s.employee_id === options.employeeId);
-  });
-
+  // ⛔ FALLBACK SUPPRIMÉ : retourner les shifts d'une version différente était
+  // la source du bug "chargement partiel après F5".
+  // Si la version demandée n'a pas de shifts, c'est un mois vide — on retourne [].
+  // C'est monthContext (getActiveMonthContext) qui garantit la bonne reset_version.
   const elapsed2 = (performance.now() - t0).toFixed(0);
-  console.warn(
-    `[ShiftService] ⚠️ FALLBACK | month_key=${monthKey}` +
-    ` | requested v${resetVersion} (0 shifts)` +
-    ` | using v${fallbackVersion} (${fallbackShifts.length} shifts)` +
-    ` | candidates: [${candidateVersions.join(', ')}]` +
-    ` | total elapsed: ${elapsed2}ms`
-  );
-
-  return fallbackShifts;
+  console.log(`[ShiftService] ✅ v${resetVersion} — mois vide (0 shifts) | ${elapsed2}ms`);
+  return [];
 }
 
 /**
