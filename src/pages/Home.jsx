@@ -297,10 +297,10 @@ export default function Home() {
     });
   }, [allConversations, myConversationMembers]);
 
-  // Get all messages for unread count
+  // Get all messages — limité aux 300 plus récents pour le décompte non-lus
   const { data: allMessages = [] } = useQuery({
     queryKey: ['allMessages'],
-    queryFn: () => perfFetch('messages', () => base44.entities.Message.list()),
+    queryFn: () => perfFetch('messages', () => base44.entities.Message.filter({ is_deleted: false }, '-created_date', 300)),
     enabled: !!currentEmployee?.id,
     staleTime: 0,
     refetchOnMount: 'always'
