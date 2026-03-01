@@ -290,6 +290,7 @@ export default function PlanningV2() {
     return allYearHolidayDates.filter(h => h.date >= firstDay && h.date <= lastDay);
   }, [allYearHolidayDates, currentYear, currentMonth]);
 
+  // Recaps: lazy-load AFTER allDataReady (not part of the main readiness gate)
   const { data: allWeeklyRecaps = [] } = useQuery({
     queryKey: QK.weeklyRecaps(monthKey, resetVersion),
     queryFn: async () => {
@@ -300,9 +301,9 @@ export default function PlanningV2() {
       const monthRecaps = allRecaps.filter(r => r.week_start >= startRangeStr && r.week_start <= monthLastDay);
       return filterByVersion(monthRecaps, resetVersion);
     },
-    enabled: shiftsReady,
+    enabled: allDataReady, // lazy: wait for shifts/nonShifts/CP ready
     placeholderData: keepPreviousData,
-    staleTime: STALE.PLANNING,
+    staleTime: 90 * 1000 // 90s — longer cache window
   });
 
   const { data: allMonthlyRecaps = [] } = useQuery({
@@ -314,9 +315,9 @@ export default function PlanningV2() {
       }), { monthKey, resetVersion });
       return filterByVersion(allRecaps, resetVersion);
     },
-    enabled: shiftsReady,
+    enabled: allDataReady, // lazy: wait for shifts/nonShifts/CP ready
     placeholderData: keepPreviousData,
-    staleTime: STALE.PLANNING,
+    staleTime: 90 * 1000 // 90s — longer cache window
   });
 
   // Lookups
