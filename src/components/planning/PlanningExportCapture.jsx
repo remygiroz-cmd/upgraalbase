@@ -180,16 +180,19 @@ const PlanningExportCapture = React.forwardRef(function PlanningExportCapture(
                         const bg = type?.color || '#fee2e2';
                         return (
                           <div key={ns.id} style={{
+                            display: 'block',
+                            width: '100%',
+                            boxSizing: 'border-box',
                             background: bg,
-                            borderRadius: 3,
-                            padding: '1px 4px',
-                            marginBottom: 2,
+                            borderRadius: 2,
+                            padding: '1px 3px',
+                            marginBottom: 1,
                             fontSize: fontSizeSmall,
                             fontWeight: 'bold',
                             whiteSpace: 'nowrap',
-                            overflow: 'hidden',
-                            textOverflow: 'ellipsis',
+                            overflow: 'visible',
                             color: '#1f2937',
+                            fontVariantNumeric: 'tabular-nums',
                           }}>
                             {type?.code || type?.label?.substring(0, 4) || 'ABS'}
                           </div>
@@ -202,14 +205,18 @@ const PlanningExportCapture = React.forwardRef(function PlanningExportCapture(
                         const bg = pos?.color || '#dbeafe';
                         return (
                           <div key={s.id} style={{
+                            display: 'block',
+                            width: '100%',
+                            boxSizing: 'border-box',
                             background: bg,
-                            borderRadius: 3,
-                            padding: '1px 4px',
-                            marginBottom: 2,
+                            borderRadius: 2,
+                            padding: '1px 3px',
+                            marginBottom: 1,
                             fontSize: fontSizeSmall,
                             whiteSpace: 'nowrap',
-                            overflow: 'hidden',
+                            overflow: 'visible',
                             color: '#1f2937',
+                            fontVariantNumeric: 'tabular-nums',
                           }}>
                             {s.start_time?.substring(0, 5)}–{s.end_time?.substring(0, 5)}
                           </div>
