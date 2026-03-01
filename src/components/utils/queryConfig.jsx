@@ -4,10 +4,10 @@ import { QueryClient } from '@tanstack/react-query';
 export const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      staleTime: 5 * 60 * 1000, // 5 minutes - données considérées fraîches
-      cacheTime: 10 * 60 * 1000, // 10 minutes - cache conservé
-      refetchOnWindowFocus: false, // Éviter les refetch automatiques
-      refetchOnMount: false, // Éviter les refetch au montage si données en cache
+      staleTime: 5 * 60 * 1000, // 5 min default — overridden per-query via QK/STALE
+      gcTime: 15 * 60 * 1000,   // 15 min: garde le cache même après unmount
+      refetchOnWindowFocus: false,
+      refetchOnMount: false,     // Ne refetch que si stale
       retry: (failureCount, error) => {
         // Ne retry que sur les rate limits ou erreurs réseau
         if (error?.status === 429 || error?.message?.includes('Rate limit')) {
