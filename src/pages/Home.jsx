@@ -310,7 +310,7 @@ export default function Home() {
   // Get all messages for unread count
   const { data: allMessages = [] } = useQuery({
     queryKey: ['allMessages'],
-    queryFn: () => base44.entities.Message.list(),
+    queryFn: () => perfFetch('messages', () => base44.entities.Message.list()),
     enabled: !!currentEmployee?.id,
     staleTime: 0,
     refetchOnMount: 'always'
