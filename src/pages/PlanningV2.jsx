@@ -230,21 +230,21 @@ export default function PlanningV2() {
   });
 
   const { data: nonShiftTypes = [] } = useQuery({
-    queryKey: ['nonShiftTypes'],
+    queryKey: QK.nonShiftTypes(),
     queryFn: async () => {
       const types = await base44.entities.NonShiftType.filter({ is_active: true });
       return types.sort((a, b) => (a.order || 0) - (b.order || 0));
     },
-    staleTime: 10 * 60 * 1000
+    staleTime: STALE.STABLE,
   });
 
   const { data: positions = [] } = useQuery({
-    queryKey: ['positions'],
+    queryKey: QK.positions(),
     queryFn: async () => {
       const all = await base44.entities.Position.filter({ is_active: true });
       return all.sort((a, b) => (a.order || 0) - (b.order || 0));
     },
-    staleTime: 10 * 60 * 1000
+    staleTime: STALE.STABLE,
   });
 
   const { data: paidLeavePeriods = [], isFetching: isFetchingCP } = useQuery({
