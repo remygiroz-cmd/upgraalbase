@@ -23,6 +23,7 @@ import { perfFetch } from '@/components/utils/perfLogger';
 import { getActiveShiftsForMonth } from '@/components/planning/shiftService';
 import DepartureOrderPlanningBlock from '@/components/planning/DepartureOrderPlanningBlock';
 import HomeVehicleAlertsWidget from '@/components/vehicules/HomeVehicleAlertsWidget';
+import { QK, STALE } from '@/components/utils/queryKeys';
 
 export default function Home() {
   const [showNewConversation, setShowNewConversation] = useState(false);
