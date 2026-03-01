@@ -1189,36 +1189,41 @@ export default function ExportComptaModal({ open, onOpenChange, monthStart, mont
     toast.info('📄 Génération PDF...', { duration: 5000 });
     
     try {
-      console.log('🔄 Génération PDF en cours...');
+      console.log('🔄 Génération PDF + Planning image...');
+      
+      toast.info('📄 Génération PDF...', { duration: 4000 });
       const doc = await generatePDF();
       
+      toast.info('📸 Capture du planning...', { duration: 4000 });
+      setIsCapturing(true);
+      const imgResult = await generatePlanningImageBlob();
+      setIsCapturing(false);
+
       toast.info('📤 Upload en cours...', { duration: 5000 });
       
-      console.log('✅ PDF généré, extraction blob...');
       const pdfBlob = doc.output('blob');
-      console.log('📦 PDF blob size:', pdfBlob.size, 'bytes');
-
-      if (!pdfBlob || pdfBlob.size === 0) {
-        throw new Error('PDF non généré ou vide');
-      }
+      if (!pdfBlob || pdfBlob.size === 0) throw new Error('PDF non généré ou vide');
 
       const pdfFilename = `Export_Compta_${monthName}_${year}.pdf`;
+      const imgFilename = `Planning_${monthName}_${year}.${imgResult.ext}`;
       const pdfFile = new File([pdfBlob], pdfFilename, { type: 'application/pdf' });
+      const imgFile = new File([imgResult.blob], imgFilename, { type: imgResult.mime });
 
-      console.log('📤 Upload du PDF vers storage...');
-      const uploadResult = await base44.integrations.Core.UploadFile({ file: pdfFile });
-      console.log('✅ Upload terminé, URL:', uploadResult?.file_url);
-      
-      if (!uploadResult || !uploadResult.file_url) {
-        throw new Error('Upload échoué: aucune URL retournée');
-      }
+      const [uploadPdf, uploadImg] = await Promise.all([
+        base44.integrations.Core.UploadFile({ file: pdfFile }),
+        base44.integrations.Core.UploadFile({ file: imgFile }),
+      ]);
+
+      if (!uploadPdf?.file_url) throw new Error('Upload PDF échoué');
+      if (!uploadImg?.file_url) throw new Error('Upload image planning échoué');
 
       toast.info('📧 Envoi email...', { duration: 5000 });
       
-      console.log('📧 Envoi de l\'email via backend function...');
       const response = await base44.functions.invoke('sendComptaExport', {
-        pdfUrl: uploadResult.file_url,
+        pdfUrl: uploadPdf.file_url,
         pdfFilename,
+        planningImageUrl: uploadImg.file_url,
+        planningImageFilename: imgFilename,
         monthName,
         year,
         settings: {
