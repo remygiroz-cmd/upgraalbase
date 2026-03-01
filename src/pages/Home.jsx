@@ -490,16 +490,16 @@ export default function Home() {
 
   // Pending shift swap requests for manager
   const { data: pendingSwapRequests = [] } = useQuery({
-    queryKey: ['shiftSwapRequests', 'PENDING'],
+    queryKey: QK.pendingSwapRequests(),
     queryFn: () => base44.entities.ShiftSwapRequest.filter({ status: 'PENDING' }),
     enabled: !!isPlanningManager,
-    staleTime: 0
+    staleTime: STALE.DECISIONS,
   });
   const myPendingSwapRequests = isPlanningManager ? pendingSwapRequests : [];
 
   // My swap decisions (as employee A or B) — deux requêtes filtrées côté serveur
   const { data: mySwapDecisions = [] } = useQuery({
-    queryKey: ['mySwapDecisions', currentEmployee?.id],
+    queryKey: QK.mySwapDecisions(currentEmployee?.id),
     queryFn: async () => {
       if (!currentEmployee?.id) return [];
       const cutoff = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
