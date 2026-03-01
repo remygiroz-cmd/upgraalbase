@@ -340,14 +340,14 @@ export default function Home() {
 
   // Get leave requests for manager
   const { data: pendingLeaveRequests = [] } = useQuery({
-    queryKey: ['pendingLeaveRequests'],
+    queryKey: QK.pendingLeaveRequests(),
     queryFn: () => base44.entities.LeaveRequest.filter({ status: 'PENDING' }),
-    staleTime: 0
+    staleTime: STALE.DECISIONS,
   });
 
   // Get my leave request decisions — filtrées côté serveur par employee_id
   const { data: myLeaveRequestDecisions = [] } = useQuery({
-    queryKey: ['myLeaveRequestDecisions', currentEmployee?.id],
+    queryKey: QK.myLeaveRequestDecisions(currentEmployee?.id),
     queryFn: async () => {
       if (!currentEmployee?.id) return [];
       const requests = await base44.entities.LeaveRequest.filter(
@@ -362,7 +362,8 @@ export default function Home() {
         !(req.dismissed_by_employee_ids || []).includes(currentEmployee.id)
       ).sort((a, b) => new Date(b.decision_at) - new Date(a.decision_at));
     },
-    enabled: !!currentEmployee?.id
+    enabled: !!currentEmployee?.id,
+    staleTime: STALE.DECISIONS,
   });
 
   const dismissDecisionMutation = useMutation({
