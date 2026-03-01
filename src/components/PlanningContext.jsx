@@ -1,18 +1,25 @@
-import React, { createContext, useContext, useState } from 'react';
+import React, { createContext, useContext, useState, useMemo, useCallback } from 'react';
 
 const PlanningContext = createContext();
 
 export function PlanningContextProvider({ children }) {
   const [planningOpenToken, setPlanningOpenToken] = useState(null);
 
-  const triggerPlanningOpen = () => {
+  const triggerPlanningOpen = useCallback(() => {
     const token = Date.now();
     console.log(`PLANNING_SIDEBAR_CLICK token=${token}`);
     setPlanningOpenToken(token);
-  };
+  }, []);
+
+  // Stabiliser la valeur du contexte pour éviter que tous les consumers
+  // re-rendent à chaque render du provider
+  const value = useMemo(
+    () => ({ planningOpenToken, triggerPlanningOpen }),
+    [planningOpenToken, triggerPlanningOpen]
+  );
 
   return (
-    <PlanningContext.Provider value={{ planningOpenToken, triggerPlanningOpen }}>
+    <PlanningContext.Provider value={value}>
       {children}
     </PlanningContext.Provider>
   );
