@@ -419,9 +419,9 @@ export default function PlanningV2() {
       return { employeeId: before?.employee_id };
     },
     onSuccess: (result) => {
-      queryClient.invalidateQueries({ queryKey: ['shifts'] });
-      queryClient.invalidateQueries({ queryKey: ['allWeeklyRecaps'] });
-      queryClient.invalidateQueries({ queryKey: ['allMonthlyRecaps'] });
+      queryClient.invalidateQueries({ queryKey: QK.shifts(currentYear, currentMonth, resetVersion) });
+      queryClient.invalidateQueries({ queryKey: QK.weeklyRecaps(monthKey, resetVersion) });
+      queryClient.invalidateQueries({ queryKey: QK.monthlyRecaps(monthKey, resetVersion) });
       queryClient.invalidateQueries({ queryKey: ['monthlyRecapsPersisted', monthKey] });
       queryClient.invalidateQueries({ queryKey: ['recapExtrasOverride', monthKey] });
       queryClient.invalidateQueries({ queryKey: ['exportOverrides', monthKey] });
