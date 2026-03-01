@@ -228,17 +228,13 @@ export default function Home() {
     staleTime: 0
   });
 
-  // Get conversations (active and archived separately)
+  // Get conversations — filtrées côté serveur sur status actif, limitées aux 60 plus récentes
   const { data: allConversations = [] } = useQuery({
     queryKey: ['myConversations', currentEmployee?.id],
     queryFn: async () => {
       if (!currentEmployee?.id) return [];
-      
-      const all = await base44.entities.Conversation.list();
-      
-      // Filter out deleted conversations
+      const all = await base44.entities.Conversation.filter({ status: 'active' }, '-last_message_at', 60);
       return all
-        .filter(conv => conv.status !== 'deleted')
         .filter(conv => {
           if (conv.type === 'entreprise') return true;
           return conv.participant_employee_ids?.includes(currentEmployee.id);
