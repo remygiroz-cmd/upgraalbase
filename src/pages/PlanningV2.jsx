@@ -457,8 +457,8 @@ export default function PlanningV2() {
       }
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['holidayDates'] });
-      queryClient.invalidateQueries({ queryKey: ['shifts'] });
+      queryClient.invalidateQueries({ queryKey: ['holidayDates', 'year', currentYear] });
+      queryClient.invalidateQueries({ queryKey: QK.shifts(currentYear, currentMonth, resetVersion) });
       toast.success('Jour férié mis à jour');
     }
   });
