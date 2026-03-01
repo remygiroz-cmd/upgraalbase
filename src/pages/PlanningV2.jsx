@@ -467,18 +467,26 @@ export default function PlanningV2() {
   }, [currentYear, currentMonth]);
 
   // Prefetch mois adjacent dès que les données courantes sont prêtes
+  // IMPORTANT: chaque mois a sa propre reset_version → on doit la lire depuis PlanningMonth
   useEffect(() => {
     if (resetVersion === undefined) return;
     const prefetchAdjacentMonth = async (yr, mo) => {
       const mk = computeMonthKey(yr, mo);
-      // Prefetch shifts du mois adjacent
-      queryClient.prefetchQuery({
-        queryKey: shiftsQueryKey(yr, mo, resetVersion),
-        queryFn: () => getActiveShiftsForMonth(mk, resetVersion),
-        staleTime: 30 * 1000
-      });
+      try {
+        // Lire la reset_version propre au mois adjacent (ne pas réutiliser celle du mois courant)
+        const { getActiveMonthContext } = await import('@/components/planning/monthContext');
+        const ctx = await getActiveMonthContext(mk);
+        const adjResetVersion = ctx.reset_version;
+        console.log(`[Prefetch] ${mk} reset_version=${adjResetVersion}`);
+        queryClient.prefetchQuery({
+          queryKey: shiftsQueryKey(yr, mo, adjResetVersion),
+          queryFn: () => getActiveShiftsForMonth(mk, adjResetVersion),
+          staleTime: 30 * 1000
+        });
+      } catch (e) {
+        // Prefetch silencieux — pas critique
+      }
     };
-    // Mois suivant et précédent
     prefetchAdjacentMonth(currentYear, currentMonth + 1);
     prefetchAdjacentMonth(currentYear, currentMonth - 1);
   }, [currentYear, currentMonth, resetVersion]);
