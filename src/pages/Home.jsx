@@ -172,7 +172,7 @@ export default function Home() {
     staleTime: 10 * 60 * 1000
   });
 
-  // EXACT same employee filtering logic as Planning's sortedEmployees
+  // Employee filtering — Home only needs active employees (already filtered by server)
   const sortedEmployees = useMemo(() => {
     if (!employees.length || !allTeams.length) return [];
 
