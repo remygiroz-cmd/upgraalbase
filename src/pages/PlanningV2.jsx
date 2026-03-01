@@ -1156,15 +1156,6 @@ export default function PlanningV2() {
                 <>
                   {daysArray.map((dayInfo, index) => {
                     const dateStr = formatLocalDate(dayInfo.date);
-                    const todayStr = formatLocalDate(new Date());
-                    const maxEventsInRow = Math.max(
-                      1,
-                      ...visibleEmployees.map(emp => {
-                        const shifts = getShiftsForEmployeeAndDate(emp.id, dateStr);
-                        const nonShifts = getNonShiftsForEmployeeAndDate(emp.id, dateStr);
-                        return shifts.length + nonShifts.length;
-                      })
-                    );
 
                     // Is this the last visible day of this week (Sunday or last day of month)?
                     const isLastDayOfWeekInMonth = dayInfo.isLastDayOfWeek || index === daysArray.length - 1;
@@ -1176,193 +1167,28 @@ export default function PlanningV2() {
 
                     return (
                       <>
-                      <div 
-                        className={cn(
-                          "flex border-b border-gray-200 hover:bg-gray-50/50 transition-colors",
-                          dayInfo.isWeekend && "bg-orange-50/30",
-                          dayInfo.isToday && "bg-blue-50/80"
-                        )}
-                        data-day={dateStr}
-                        data-today={dayInfo.isToday ? "true" : undefined}
-                      >
-                        <div className={cn(
-                          "sticky left-0 z-20 border-r-2 border-gray-300 px-2 lg:px-4 py-2 lg:py-3 shadow-sm w-[80px] lg:w-[120px] flex flex-col justify-center bg-white",
-                          dayInfo.isWeekend && "bg-orange-50/30",
-                          dayInfo.isToday && "bg-gradient-to-r from-blue-100 to-blue-50 border-l-4 border-l-blue-500"
-                        )}>
-                          <div className={cn(
-                            "font-bold text-[9px] lg:text-xs uppercase tracking-wide",
-                            dayInfo.isToday ? "text-blue-900" : "text-gray-600"
-                          )}>
-                            {dayInfo.dayName.substring(0, 3)}
-                          </div>
-                          <div className={cn(
-                            "text-xl lg:text-2xl font-bold",
-                            dayInfo.isToday ? "text-blue-700" : "text-gray-900"
-                          )}>
-                            {dayInfo.day}
-                          </div>
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              if (!canModifyPlanning) {
-                                toast.error('Lecture seule — vous n\'avez pas la permission de modifier le planning', {
-                                  duration: 3000,
-                                  icon: '🔒'
-                                });
-                                return;
-                              }
-                              handleToggleHoliday(dateStr);
-                            }}
-                            disabled={!canModifyPlanning}
-                            className={cn(
-                              "mt-1 text-[8px] lg:text-[9px] px-1 lg:px-1.5 py-0.5 rounded-full font-semibold transition-all",
-                              !canModifyPlanning
-                                ? "bg-gray-200 text-gray-400 cursor-not-allowed opacity-60"
-                                : isHolidayDate(dateStr)
-                                ? "bg-purple-600 text-white hover:bg-purple-700 cursor-pointer"
-                                : "bg-gray-200 text-gray-600 hover:bg-purple-100 hover:text-purple-700 cursor-pointer"
-                            )}
-                            title={!canModifyPlanning ? "Lecture seule" : (isHolidayDate(dateStr) ? "Retirer jour férié" : "Marquer jour férié")}
-                          >
-                            {isHolidayDate(dateStr) ? "🎉" : "+F"}
-                          </button>
-                        </div>
-                        <div className="flex flex-1">
-                          {visibleEmployees.map(employee => {
-                            const employeeShifts = getShiftsForEmployeeAndDate(employee.id, dateStr);
-                            const employeeNonShifts = getNonShiftsForEmployeeAndDate(employee.id, dateStr);
-                            const totalEvents = employeeShifts.length + employeeNonShifts.length;
-                            
-                            const employeeCPPeriods = paidLeavePeriods.filter(p => p.employee_id === employee.id);
-                            const cpPeriod = isDateInCPPeriod(dateStr, employeeCPPeriods);
-                            const isCPDay = !!cpPeriod;
-                            
-                            let isDisplayDateForCPBadge = false;
-                            if (cpPeriod) {
-                              const monthStart = formatLocalDate(new Date(currentYear, currentMonth, 1));
-                              const monthEnd = formatLocalDate(new Date(currentYear, currentMonth + 1, 0));
-                              const periodEnd = cpPeriod.end_cp;
-                              const displayDate = periodEnd <= monthEnd ? periodEnd : monthEnd;
-                              isDisplayDateForCPBadge = dateStr === displayDate;
-                            }
-
-                            return (
-                              <div
-                                key={employee.id}
-                                onClick={() => handleCellClick(employee.id, dateStr, dayInfo)}
-                                data-employee-date={`${employee.id}-${dateStr}`}
-                                className={cn(
-                                  "border-r border-gray-200 px-1.5 lg:px-2 py-1.5 lg:py-2 cursor-pointer hover:bg-orange-50 transition-all group relative min-w-[150px] w-[150px] lg:min-w-[180px] lg:w-[180px] flex",
-                                  dayInfo.isWeekend && "bg-orange-50/20",
-                                  isCPDay && "bg-green-100/40"
-                                )}
-                              >
-                                <div className="space-y-1.5 w-full flex flex-col relative" style={{ minHeight: `${Math.max(60, maxEventsInRow * 52)}px` }}>
-                                  {isDisplayDateForCPBadge && cpPeriod && (
-                                   <div 
-                                     onClick={(e) => {
-                                       e.stopPropagation();
-                                       if (!canModifyPlanning) {
-                                         toast.error('Lecture seule — vous n\'avez pas la permission de modifier le planning', {
-                                           duration: 3000,
-                                           icon: '🔒'
-                                         });
-                                         return;
-                                       }
-                                       setModalState({
-                                         isOpen: true,
-                                         actionType: 'DELETE_CP',
-                                         selectedEmployee: employee
-                                       });
-                                       setSelectedCPPeriod(cpPeriod);
-                                     }}
-                                     className={cn(
-                                       "absolute -top-1 -right-1 z-10 text-[9px] font-bold px-1.5 py-0.5 rounded-full shadow-md transition-colors",
-                                       canModifyPlanning
-                                         ? "bg-green-600 text-white cursor-pointer hover:bg-red-600"
-                                         : "bg-gray-400 text-gray-200 cursor-not-allowed opacity-60"
-                                     )}
-                                     title={canModifyPlanning ? "Cliquer pour supprimer" : "Lecture seule"}
-                                   >
-                                     🟢 {cpPeriod.cp_days_manual || cpPeriod.cp_days_auto} CP
-                                   </div>
-                                  )}
-                                  
-                                  {employeeNonShifts.map((nonShift) => {
-                                    const type = nonShiftTypes.find(t => t.id === nonShift.non_shift_type_id);
-                                    return (
-                                      <div key={nonShift.id} className={totalEvents === 1 ? "flex-1" : ""}>
-                                        <NonShiftCard
-                                          nonShift={nonShift}
-                                          nonShiftType={type}
-                                          onClick={(e) => {
-                                            e.stopPropagation();
-                                            if (!canModifyPlanning) {
-                                              toast.error('Vous n\'avez pas la permission de modifier le planning');
-                                              return;
-                                            }
-                                            handleCellClick(employee.id, dateStr, dayInfo);
-                                          }}
-                                          onDelete={(ns) => {
-                                            if (!canModifyPlanning) {
-                                              toast.error('Vous n\'avez pas la permission de modifier le planning');
-                                              return;
-                                            }
-                                            if (window.confirm('Supprimer cet événement ?')) {
-                                              base44.entities.NonShiftEvent.delete(ns.id).then(() => {
-                                                queryClient.invalidateQueries({ queryKey: ['nonShiftEvents'] });
-                                                toast.success('Événement supprimé');
-                                              });
-                                            }
-                                          }}
-                                          disabled={!canModifyPlanning}
-                                        />
-                                      </div>
-                                    );
-                                  })}
-                                  {employeeShifts.map((shift) => {
-                                    const swapInfo = swapLookup.get(`${shift.employee_id}_${shift.date}`) || null;
-                                    return (
-                                      <div key={shift.id} className={totalEvents === 1 ? "flex-1" : ""}>
-                                        <ShiftCard
-                                          shift={shift}
-                                          positions={positions}
-                                          swapInfo={swapInfo}
-                                          onClick={(e) => {
-                                            e.stopPropagation();
-                                            if (!canModifyPlanning) {
-                                              toast.error('Vous n\'avez pas la permission de modifier le planning');
-                                              return;
-                                            }
-                                            handleCellClick(employee.id, dateStr, dayInfo);
-                                          }}
-                                          onDelete={(s) => {
-                                            if (!canModifyPlanning) {
-                                              toast.error('Vous n\'avez pas la permission de modifier le planning');
-                                              return;
-                                            }
-                                            handleDeleteShift(s);
-                                          }}
-                                          hasRestWarning={false}
-                                          hasOvertimeWarning={false}
-                                          onSave={canModifyPlanning ? (id, data) => saveShiftMutation.mutate({ id, data, captureForUndo: true }) : null}
-                                          disabled={!canModifyPlanning}
-                                        />
-                                      </div>
-                                    );
-                                  })}
-                                  {employeeShifts.length === 0 && employeeNonShifts.length === 0 && (
-                                    <div className="flex items-center justify-center flex-1 text-gray-300 group-hover:text-orange-400 transition-colors">
-                                      <Plus className="w-6 h-6" />
-                                    </div>
-                                  )}
-                                </div>
-                              </div>
-                            );
-                          })}
-                        </div>
-                      </div>
+                      <PlanningDayRow
+                        key={dateStr}
+                        dayInfo={dayInfo}
+                        dateStr={dateStr}
+                        visibleEmployees={visibleEmployees}
+                        getShiftsForEmployeeAndDate={getShiftsForEmployeeAndDate}
+                        getNonShiftsForEmployeeAndDate={getNonShiftsForEmployeeAndDate}
+                        paidLeavePeriods={paidLeavePeriods}
+                        currentYear={currentYear}
+                        currentMonth={currentMonth}
+                        positions={positions}
+                        nonShiftTypes={nonShiftTypes}
+                        swapLookup={swapLookup}
+                        canModifyPlanning={canModifyPlanning}
+                        isHoliday={holidayDateSet.has(dateStr)}
+                        onCellClick={handleCellClick}
+                        onDeleteShift={handleDeleteShift}
+                        onSaveShift={handleSaveShift}
+                        onToggleHoliday={handleToggleHoliday}
+                        onSetModalState={handleSetModalState}
+                        onSetSelectedCPPeriod={handleSetSelectedCPPeriod}
+                      />
                       {/* Weekly Summary Row - shown after Sunday or last day of month */}
                       {isLastDayOfWeekInMonth && (
                         <div className="bg-gradient-to-r from-purple-50 to-indigo-50 border-t-2 border-purple-300 flex">
