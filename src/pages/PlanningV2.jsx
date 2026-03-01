@@ -1474,6 +1474,11 @@ export default function PlanningV2() {
          monthStart={new Date(currentYear, currentMonth, 1)}
          monthEnd={new Date(currentYear, currentMonth + 1, 0)}
          holidayDates={holidayDates}
+         employees={sortedEmployees}
+         shifts={shifts}
+         nonShiftEvents={nonShiftEvents}
+         nonShiftTypes={nonShiftTypes}
+         positions={positions}
        />
 
        {/* Clear Month Modal */}
