@@ -1628,5 +1628,6 @@ Cordialement"
             holidayDates={holidayDatesFromPlanning}
           />
         )}
+        </>
         );
         }
