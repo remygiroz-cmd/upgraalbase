@@ -19,6 +19,7 @@ import UrgentAnnouncementModal from '@/components/messaging/UrgentAnnouncementMo
 import CreateUrgentAnnouncementModal from '@/components/messaging/CreateUrgentAnnouncementModal';
 import { cn } from '@/lib/utils';
 import { calculatePresenceStatus } from '@/components/utils/presenceUtils';
+import { perfFetch } from '@/components/utils/perfLogger';
 import DepartureOrderPlanningBlock from '@/components/planning/DepartureOrderPlanningBlock';
 import HomeVehicleAlertsWidget from '@/components/vehicules/HomeVehicleAlertsWidget';
 
