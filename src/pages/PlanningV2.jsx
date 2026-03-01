@@ -402,17 +402,50 @@ export default function PlanningV2() {
 
       return result;
     },
+    onMutate: async (variables) => {
+      const { id, data } = variables;
+      const queryKey = shiftsQueryKey(currentYear, currentMonth, resetVersion);
+      const previous = queryClient.getQueryData(queryKey);
+      
+      // Optimistic update
+      if (id) {
+        // Update existing shift
+        queryClient.setQueryData(queryKey, (old) => 
+          old.map(s => s.id === id ? { ...s, ...data } : s)
+        );
+      } else {
+        // Add new shift with temp ID
+        const tempShift = { ...data, id: `temp-${Date.now()}` };
+        queryClient.setQueryData(queryKey, (old) => [...old, tempShift]);
+      }
+      
+      return { previous };
+    },
     onSuccess: async (result, variables) => {
-      await queryClient.invalidateQueries({ queryKey: QK.shifts(currentYear, currentMonth, resetVersion) });
-      await queryClient.invalidateQueries({ queryKey: QK.weeklyRecaps(monthKey, resetVersion) });
-      await queryClient.invalidateQueries({ queryKey: QK.monthlyRecaps(monthKey, resetVersion) });
+      const queryKey = shiftsQueryKey(currentYear, currentMonth, resetVersion);
+      
+      // Replace temp shift with real result if it's a create
+      if (!variables.id) {
+        queryClient.setQueryData(queryKey, (old) => {
+          const filtered = old.filter(s => !s.id.startsWith('temp-'));
+          return [...filtered, result];
+        });
+      }
+      
+      // Minimal invalidation: only recaps
+      queryClient.invalidateQueries({ queryKey: QK.weeklyRecaps(monthKey, resetVersion) });
+      queryClient.invalidateQueries({ queryKey: QK.monthlyRecaps(monthKey, resetVersion) });
       queryClient.invalidateQueries({ queryKey: ['monthlyRecapsPersisted', monthKey] });
       queryClient.invalidateQueries({ queryKey: ['recapExtrasOverride', monthKey] });
-      queryClient.invalidateQueries({ queryKey: ['exportOverrides', monthKey] });
-      queryClient.invalidateQueries({ queryKey: ['monthlyExportOverrides', monthKey] });
+      
       if (!undoStack.isUndoingRef.current && !undoStack.isRedoingRef.current) toast.success('Shift enregistré');
     },
-    onError: (error) => {
+    onError: (error, variables, context) => {
+      // Rollback on error
+      if (context?.previous) {
+        const queryKey = shiftsQueryKey(currentYear, currentMonth, resetVersion);
+        queryClient.setQueryData(queryKey, context.previous);
+      }
       toast.error('Erreur lors de l\'enregistrement : ' + error.message);
     }
   });
