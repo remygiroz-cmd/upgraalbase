@@ -608,7 +608,7 @@ export default function PlanningV2() {
     return null;
   };
 
-  const handleCellClick = (employeeId, dateStr, dayInfo) => {
+  const handleCellClick = useCallback((employeeId, dateStr, dayInfo) => {
     if (!canModifyPlanning) {
       toast.error('Lecture seule — vous n\'avez pas la permission de modifier le planning', {
         duration: 3000,
@@ -629,7 +629,14 @@ export default function PlanningV2() {
       cellAbove
     });
     setShowShiftModal(true);
-  };
+  }, [canModifyPlanning, visibleEmployees, getLastNonEmptyCellAbove]);
+
+  const handleSaveShift = useCallback((id, data) => {
+    return saveShiftMutation.mutateAsync({ id, data, captureForUndo: true });
+  }, [saveShiftMutation]);
+
+  const handleSetModalState = useCallback((state) => setModalState(state), []);
+  const handleSetSelectedCPPeriod = useCallback((period) => setSelectedCPPeriod(period), []);
 
   const handleDeleteShift = useCallback((shift) => {
     if (window.confirm(`Supprimer ce shift de ${shift.start_time} à ${shift.end_time} ?`)) {
