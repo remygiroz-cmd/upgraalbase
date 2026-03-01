@@ -100,7 +100,7 @@ export default function Home() {
       const firstDay = formatLocalDate(new Date(currentYear, currentMonth, 1));
       const lastDay = formatLocalDate(new Date(currentYear, currentMonth + 1, 0));
       
-      const allShifts = await base44.entities.Shift.list();
+      const allShifts = await perfFetch('Home:shifts', () => base44.entities.Shift.list(), { resetVersion });
       const monthShifts = allShifts.filter(s => s.date >= firstDay && s.date <= lastDay);
       // Filter by reset_version (same as Planning's filterByVersion)
       return monthShifts.filter(s => (s.reset_version ?? 0) >= resetVersion);
