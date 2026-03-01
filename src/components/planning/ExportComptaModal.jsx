@@ -211,9 +211,10 @@ function buildExportRow(employee, calculatedRecap, nonShiftTypes, cpPeriods, non
   };
 }
 
-export default function ExportComptaModal({ open, onOpenChange, monthStart, monthEnd, holidayDates: holidayDatesFromPlanning = [] }) {
+export default function ExportComptaModal({ open, onOpenChange, monthStart, monthEnd, holidayDates: holidayDatesFromPlanning = [], employees: employeesFromPlanning = [], shifts: shiftsFromPlanning = [], nonShiftEvents: nonShiftEventsFromPlanning = [], nonShiftTypes: nonShiftTypesFromPlanning = [], positions: positionsFromPlanning = [] }) {
   const [customMessage, setCustomMessage] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
+  const [isCapturing, setIsCapturing] = useState(false);
   const [isSending, setIsSending] = useState(false);
   const [error, setError] = useState(null);
   const [debugData, setDebugData] = useState([]);
@@ -221,6 +222,7 @@ export default function ExportComptaModal({ open, onOpenChange, monthStart, mont
   const [selectedEmployee, setSelectedEmployee] = useState(null);
   const [selectedAutoValues, setSelectedAutoValues] = useState(null);
   const queryClient = useQueryClient();
+  const planningCaptureRef = useRef(null);
 
   // Get current user
   const { data: currentUser } = useQuery({
