@@ -494,62 +494,6 @@ export default function PlanningV2() {
     return days;
   }, [currentYear, currentMonth]);
 
-  // Prefetch du mois suivant — uniquement après que le mois courant est DATA READY
-  // Lance en arrière-plan via requestIdleCallback (ou setTimeout fallback 1000ms)
-  useEffect(() => {
-    if (!allDataReady) return; // ① attendre DATA READY du mois courant
-
-    let cancelled = false;
-
-    const doPrefetch = async () => {
-      if (cancelled) return;
-
-      // Mois suivant uniquement (pas le précédent — moins prioritaire)
-      const nextYr = currentMonth === 11 ? currentYear + 1 : currentYear;
-      const nextMo = currentMonth === 11 ? 0 : currentMonth + 1;
-      const mk = computeMonthKey(nextYr, nextMo);
-
-      const t0 = performance.now();
-      console.log(`[Prefetch] prefetchStarted month=${mk}`);
-
-      try {
-        const { getActiveMonthContext } = await import('@/components/planning/monthContext');
-        if (cancelled) return;
-        const ctx = await getActiveMonthContext(mk);
-        const adjResetVersion = ctx.reset_version;
-
-        await queryClient.prefetchQuery({
-          queryKey: shiftsQueryKey(nextYr, nextMo, adjResetVersion),
-          queryFn: () => getActiveShiftsForMonth(mk, adjResetVersion),
-          staleTime: 30 * 1000
-        });
-
-        const ms = Math.round(performance.now() - t0);
-        console.log(`[Prefetch] prefetchDone month=${mk} reset_version=${adjResetVersion} duration=${ms}ms`);
-      } catch (e) {
-        // Prefetch silencieux — pas critique
-        console.log(`[Prefetch] prefetchError month=${mk} err=${e.message}`);
-      }
-    };
-
-    // ② Délai léger pour ne pas concurrencer le rendu du mois courant
-    let idleHandle;
-    if (typeof requestIdleCallback !== 'undefined') {
-      idleHandle = requestIdleCallback(doPrefetch, { timeout: 1500 });
-    } else {
-      idleHandle = setTimeout(doPrefetch, 1000);
-    }
-
-    return () => {
-      cancelled = true;
-      if (typeof cancelIdleCallback !== 'undefined') {
-        cancelIdleCallback(idleHandle);
-      } else {
-        clearTimeout(idleHandle);
-      }
-    };
-  }, [allDataReady, currentYear, currentMonth]); // ③ déclenché quand allDataReady devient true
-
   // Navigation
   const previousMonth = () => {
     setCurrentDate(new Date(currentYear, currentMonth - 1, 1));
