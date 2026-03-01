@@ -39,10 +39,10 @@ export default function Home() {
     queryFn: () => perfFetch('currentUser', () => base44.auth.me())
   });
 
-  // Get current employee record
+  // Get current employee record — active only; inactive loaded lazily on-demand
   const { data: employees = [] } = useQuery({
     queryKey: ['allEmployees'],
-    queryFn: () => perfFetch('employees', () => base44.entities.Employee.list()),
+    queryFn: () => perfFetch('employees', () => base44.entities.Employee.filter({ is_active: true })),
     enabled: !!currentUser
   });
 
