@@ -9,6 +9,7 @@ import { FileText, Send, Download, Loader2, AlertCircle, Edit3 } from 'lucide-re
 import { toast } from 'sonner';
 import { jsPDF } from 'jspdf';
 import 'jspdf-autotable';
+import html2canvas from 'html2canvas';
 import { calculateMonthlyRecap } from '@/components/utils/monthlyRecapCalculations';
 import { resolveRecapFinal, resolveExportFinal } from './resolveMonthlyPayrollValues';
 import { getActiveMonthContext } from './monthContext';
@@ -917,134 +918,161 @@ export default function ExportComptaModal({ open, onOpenChange, monthStart, mont
     doc.text('Page 1/2 - Tableau récapitulatif de paie', pageWidth / 2, pageHeight - 5, { align: 'center' });
 
     // ============================================
-    // PAGE 2: PLANNING COMPLET VECTORIEL (paysage)
+    // PAGES 2+: PLANNING PAR SEMAINE (HAUTE RÉSOLUTION)
     // ============================================
-    doc.addPage([297, 210], 'landscape'); // A4 paysage
-    const lsPageWidth = 297;
-    const lsPageHeight = 210;
-    const lsMargin = 8;
-
-    // Construire la liste des jours du mois
-    const [lsYear, lsMonth] = monthKey.split('-').map(Number);
-    const daysInMonth = new Date(lsYear, lsMonth, 0).getDate();
-    const dayLabels = [];
-    const FR_DAYS = ['Di', 'Lu', 'Ma', 'Me', 'Je', 'Ve', 'Sa'];
-    for (let d = 1; d <= daysInMonth; d++) {
-      const date = new Date(lsYear, lsMonth - 1, d);
-      dayLabels.push({ day: d, label: FR_DAYS[date.getDay()], dateStr: `${monthKey}-${String(d).padStart(2, '0')}` });
-    }
-
-    // Employés uniques dans les shifts
-    const empInShifts = new Set(shifts.map(s => s.employee_id));
-    const planningEmployees = employees.filter(e => empInShifts.has(e.id));
-
-    // Construire la table : colonnes = employés, lignes = jours
-    const colEmployees = planningEmployees;
-    const nCols = colEmployees.length + 1; // +1 col "Jour"
-    const tableWidth = lsPageWidth - 2 * lsMargin;
-
-    // Largeur minimale par colonne
-    const dayColW = 11;
-    const empColW = Math.max(14, (tableWidth - dayColW) / Math.max(1, colEmployees.length));
-
-    // En-tête page
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(10);
-    doc.setTextColor(0, 0, 0);
-    doc.text(`Planning ${monthName} ${year} — ${settings.etablissement_name || ''}`, lsMargin, lsMargin + 5);
-
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(6);
-    doc.setTextColor(120, 120, 120);
-    doc.text(`Généré le ${new Date().toLocaleDateString('fr-FR')}`, lsPageWidth - lsMargin, lsMargin + 5, { align: 'right' });
-
-    const tableStartY = lsMargin + 9;
-    const availableH = lsPageHeight - tableStartY - lsMargin;
-    const rowH = availableH / (daysInMonth + 1); // +1 pour header
-
-    // Auto-scale: si rowH trop petit on réduit la police
-    const baseFontSize = Math.min(6, rowH * 1.8);
-
-    // Dessiner l'en-tête du tableau
-    doc.setFillColor(243, 244, 246);
-    doc.setDrawColor(200, 200, 200);
-    doc.rect(lsMargin, tableStartY, tableWidth, rowH, 'FD');
-
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(baseFontSize);
-    doc.setTextColor(0, 0, 0);
-    doc.text('Jour', lsMargin + dayColW / 2, tableStartY + rowH * 0.65, { align: 'center' });
-
-    colEmployees.forEach((emp, i) => {
-      const x = lsMargin + dayColW + i * empColW;
-      // Ligne verticale
-      doc.setDrawColor(200, 200, 200);
-      doc.line(x, tableStartY, x, tableStartY + rowH * (daysInMonth + 1));
-      const name = `${emp.first_name?.charAt(0) || ''}. ${emp.last_name?.substring(0, 9) || ''}`;
-      doc.text(name, x + empColW / 2, tableStartY + rowH * 0.65, { align: 'center', maxWidth: empColW - 1 });
-    });
-
-    // Dessiner les lignes de jours
-    dayLabels.forEach(({ day, label, dateStr }, rowIdx) => {
-      const y = tableStartY + rowH * (rowIdx + 1);
-      const isWeekend = label === 'Sa' || label === 'Di';
-      const isHoliday = (holidayDatesFromPlanning || []).some(h => h.date === dateStr);
-
-      // Fond de ligne
-      if (isHoliday) {
-        doc.setFillColor(237, 233, 254); // violet clair
-      } else if (isWeekend) {
-        doc.setFillColor(255, 247, 237); // orange très clair
-      } else {
-        doc.setFillColor(rowIdx % 2 === 0 ? 255 : 250, rowIdx % 2 === 0 ? 255 : 250, rowIdx % 2 === 0 ? 255 : 250);
-      }
-      doc.rect(lsMargin, y, tableWidth, rowH, 'F');
-
-      // Ligne horizontale
-      doc.setDrawColor(220, 220, 220);
-      doc.line(lsMargin, y, lsMargin + tableWidth, y);
-
-      // Cellule jour
-      doc.setFont('helvetica', 'bold');
-      doc.setFontSize(baseFontSize);
-      doc.setTextColor(isWeekend || isHoliday ? 180 : 0, 60, isHoliday ? 200 : 0);
-      doc.text(`${label} ${day}`, lsMargin + dayColW / 2, y + rowH * 0.68, { align: 'center' });
-
-      // Cellules employés
-      colEmployees.forEach((emp, i) => {
-        const x = lsMargin + dayColW + i * empColW;
-        const empShifts = shifts.filter(s => s.employee_id === emp.id && s.date === dateStr);
-        const empNonShifts = nonShiftEvents.filter(ns => ns.employee_id === emp.id && ns.date === dateStr);
-
-        doc.setFont('helvetica', 'normal');
-        doc.setFontSize(Math.max(4, baseFontSize - 0.5));
-        doc.setTextColor(30, 30, 30);
-
-        if (empShifts.length > 0) {
-          const s = empShifts[0];
-          const txt = `${s.start_time?.substring(0, 5) || ''}‑${s.end_time?.substring(0, 5) || ''}`;
-          doc.text(txt, x + empColW / 2, y + rowH * 0.68, { align: 'center', maxWidth: empColW - 1 });
-        } else if (empNonShifts.length > 0) {
-          const ns = empNonShifts[0];
-          const code = ns.non_shift_type_label?.substring(0, 4) || 'ABS';
-          doc.setTextColor(220, 50, 50);
-          doc.text(code, x + empColW / 2, y + rowH * 0.68, { align: 'center', maxWidth: empColW - 1 });
-          doc.setTextColor(30, 30, 30);
+    
+    const planningElement = document.querySelector('[data-planning-calendar]');
+    
+    if (planningElement) {
+      try {
+        console.log('📸 Capture planning par semaine...');
+        
+        // Structure DOM: planningElement > div.inline-block > (header sticky + div body)
+        const container = planningElement.querySelector('.inline-block');
+        if (!container) {
+          console.error('Container inline-block introuvable');
+          return doc;
         }
-      });
-    });
-
-    // Bordure extérieure du tableau
-    doc.setDrawColor(150, 150, 150);
-    doc.rect(lsMargin, tableStartY, tableWidth, rowH * (daysInMonth + 1));
-    // Séparateur colonne jour
-    doc.line(lsMargin + dayColW, tableStartY, lsMargin + dayColW, tableStartY + rowH * (daysInMonth + 1));
-
-    // Pied de page
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(5.5);
-    doc.setTextColor(160, 160, 160);
-    doc.text('Planning généré automatiquement via UpGraal', lsPageWidth / 2, lsPageHeight - 3, { align: 'center' });
+        
+        // Body = 2ème enfant du container (après le header)
+        const bodyDiv = container.children[1];
+        if (!bodyDiv) {
+          console.error('Body div introuvable');
+          return doc;
+        }
+        
+        // Tous les enfants du body (jours + récaps)
+        const allRows = Array.from(bodyDiv.children);
+        console.log(`📦 ${allRows.length} éléments trouvés dans le body`);
+        
+        // Filtrer les récaps hebdomadaires (pas le mensuel)
+        const weeklyRecapRows = allRows.filter(row => 
+          row.classList.contains('from-gray-200') && 
+          row.classList.contains('to-gray-100') &&
+          !row.classList.contains('from-blue-100') // Exclure récap mensuel
+        );
+        
+        console.log(`📅 ${weeklyRecapRows.length} semaines détectées`);
+        
+        if (weeklyRecapRows.length === 0) {
+          console.warn('⚠️ Aucune semaine trouvée - vérifier structure DOM');
+          return doc;
+        }
+        
+        // En-tête avec noms des employés
+        const headerRow = container.children[0];
+        
+        // Pour chaque semaine
+        for (let weekIndex = 0; weekIndex < weeklyRecapRows.length; weekIndex++) {
+          toast.info(`📸 Semaine ${weekIndex + 1}/${weeklyRecapRows.length}...`, { duration: 2000 });
+          
+          const weekRecapRow = weeklyRecapRows[weekIndex];
+          const weekElements = [];
+          
+          // Remonter jusqu'à 7 jours avant le récap
+          let sibling = weekRecapRow.previousElementSibling;
+          let daysCount = 0;
+          
+          while (sibling && daysCount < 7) {
+            // Stop si on atteint un autre récap
+            if (sibling.classList.contains('from-gray-200') || sibling.classList.contains('from-blue-100')) {
+              break;
+            }
+            weekElements.unshift(sibling);
+            sibling = sibling.previousElementSibling;
+            daysCount++;
+          }
+          
+          // Ajouter le récap à la fin
+          weekElements.push(weekRecapRow);
+          
+          if (weekElements.length <= 1) continue; // Skip si pas de jours
+          
+          // Créer conteneur temporaire
+          const tempContainer = document.createElement('div');
+          tempContainer.style.position = 'fixed';
+          tempContainer.style.left = '-9999px';
+          tempContainer.style.top = '0';
+          tempContainer.style.backgroundColor = '#ffffff';
+          tempContainer.style.padding = '10px';
+          
+          // Cloner l'en-tête avec les noms
+          if (headerRow) {
+            const headerClone = headerRow.cloneNode(true);
+            headerClone.style.position = 'relative';
+            headerClone.style.fontSize = '12px'; // Optimisé
+            tempContainer.appendChild(headerClone);
+          }
+          
+          // Ajouter les lignes de la semaine
+          weekElements.forEach(el => {
+            const clone = el.cloneNode(true);
+            clone.style.fontSize = '11px'; // Optimisé
+            tempContainer.appendChild(clone);
+          });
+          
+          document.body.appendChild(tempContainer);
+          
+          // Capturer RAPIDEMENT (optimisé pour performance)
+          const canvas = await html2canvas(tempContainer, {
+            scale: 1.2, // Balance qualité/vitesse
+            useCORS: true,
+            logging: false,
+            backgroundColor: '#ffffff',
+            width: tempContainer.scrollWidth,
+            height: tempContainer.scrollHeight
+          });
+          
+          document.body.removeChild(tempContainer);
+          
+          // Convertir en JPEG léger
+          const imgData = canvas.toDataURL('image/jpeg', 0.5);
+          const imgSizeKB = Math.round((imgData.length * 3) / 4 / 1024);
+          console.log(`📦 Semaine ${weekIndex + 1}: ${imgSizeKB} KB`);
+          
+          // Nouvelle page en paysage
+          doc.addPage('a4', 'landscape');
+          doc.setTextColor(0, 0, 0);
+          
+          // En-tête
+          doc.setFontSize(11);
+          doc.setFont('helvetica', 'bold');
+          doc.text(`Planning ${monthName} ${year} - Semaine ${weekIndex + 1}`, pageWidth / 2, margin + 5, { align: 'center' });
+          
+          doc.setFontSize(8);
+          doc.setFont('helvetica', 'normal');
+          doc.setTextColor(80, 80, 80);
+          doc.text(settings.etablissement_name || '', pageWidth / 2, margin + 10, { align: 'center' });
+          
+          // Image
+          const imgWidth = pageWidth - 2 * margin;
+          const imgHeight = (canvas.height * imgWidth) / canvas.width;
+          const yPosition = margin + 14;
+          const maxHeight = pageHeight - yPosition - 8;
+          
+          if (imgHeight > maxHeight) {
+            const ratio = maxHeight / imgHeight;
+            const scaledWidth = imgWidth * ratio;
+            const scaledHeight = maxHeight;
+            const xOffset = (pageWidth - scaledWidth) / 2;
+            doc.addImage(imgData, 'JPEG', xOffset, yPosition, scaledWidth, scaledHeight);
+          } else {
+            doc.addImage(imgData, 'JPEG', margin, yPosition, imgWidth, imgHeight);
+          }
+          
+          // Pied de page
+          doc.setFontSize(7);
+          doc.setTextColor(128, 128, 128);
+          doc.text(`Semaine ${weekIndex + 1}/${weeklyRecapRows.length}`, pageWidth / 2, pageHeight - 5, { align: 'center' });
+          
+          console.log(`✅ Semaine ${weekIndex + 1} OK`);
+        }
+        
+      } catch (err) {
+        console.error('❌ Erreur capture:', err);
+        toast.error('Erreur capture planning: ' + err.message);
+      }
+    }
 
     return doc;
   };
