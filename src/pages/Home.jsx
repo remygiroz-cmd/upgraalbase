@@ -37,15 +37,17 @@ export default function Home() {
 
   // Get current user
   const { data: currentUser } = useQuery({
-    queryKey: ['currentUser'],
-    queryFn: () => perfFetch('currentUser', () => base44.auth.me())
+    queryKey: QK.currentUser(),
+    queryFn: () => perfFetch('currentUser', () => base44.auth.me()),
+    staleTime: STALE.STABLE,
   });
 
-  // Get current employee record — active only; inactive loaded lazily on-demand
+  // Get current employee record — active only
   const { data: employees = [] } = useQuery({
-    queryKey: ['allEmployees'],
+    queryKey: QK.employees(),
     queryFn: () => perfFetch('employees', () => base44.entities.Employee.filter({ is_active: true })),
-    enabled: !!currentUser
+    enabled: !!currentUser,
+    staleTime: STALE.STABLE,
   });
 
   const currentEmployee = useMemo(() => {
@@ -54,13 +56,12 @@ export default function Home() {
     return employees.find(emp => normalizeEmail(emp.email) === normalizeEmail(currentUser.email));
   }, [currentUser, employees]);
 
-  // Get active announcements — filtrées côté serveur sur is_active
+  // Get active announcements
   const { data: announcements = [] } = useQuery({
-    queryKey: ['activeAnnouncements'],
+    queryKey: QK.announcements(),
     queryFn: async () => {
       const now = new Date().toISOString();
       const all = await perfFetch('announcements', () => base44.entities.Announcement.filter({ is_active: true }, '-created_date', 50));
-      
       return all
         .filter(a => {
           const startsOk = !a.starts_at || new Date(a.starts_at) <= new Date(now);
@@ -73,7 +74,7 @@ export default function Home() {
         });
     },
     enabled: !!currentEmployee,
-    staleTime: 60 * 1000
+    staleTime: STALE.NOTIFICATIONS,
   });
 
   // Data fetching for current month
