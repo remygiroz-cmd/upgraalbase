@@ -125,16 +125,14 @@ const PlanningExportCapture = React.forwardRef(function PlanningExportCapture(
             {employees.map(emp => (
               <th key={emp.id} style={{
                 border: '1px solid #d1d5db',
-                padding: '4px 4px',
+                padding: '3px 3px',
                 textAlign: 'center',
                 fontWeight: 'bold',
                 fontSize: fontSizeSmall,
                 color: '#1f2937',
-                overflow: 'hidden',
                 whiteSpace: 'nowrap',
-                textOverflow: 'ellipsis',
               }}>
-                {emp.first_name} {emp.last_name?.charAt(0)}.
+                {empLabel(emp)}
               </th>
             ))}
           </tr>
