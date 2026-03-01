@@ -29,7 +29,8 @@ export const QK = {
   paidLeavePeriods: (monthKey, resetVersion) => ['paidLeavePeriods', monthKey, resetVersion],
   weeklyRecaps: (monthKey, resetVersion) => ['allWeeklyRecaps', monthKey, resetVersion],
   monthlyRecaps: (monthKey, resetVersion) => ['allMonthlyRecaps', monthKey, resetVersion],
-  holidayDates: (year, month) => ['holidayDates', year, month],
+  /** Jours fériés scoped par année (cache 7 jours) */
+  holidayDates: (year) => ['holidayDates', 'year', year],
   approvedSwaps: (monthKey) => ['approvedSwaps', monthKey],
 
   // ─── Messaging (live / near real-time) ───────────────────────────────────
