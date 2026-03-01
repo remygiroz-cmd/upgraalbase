@@ -465,22 +465,24 @@ export default function Home() {
     return currentUser?.role === 'admin' || currentEmployee.permission_level === 'manager';
   }, [currentUser, currentEmployee]);
 
-  // Get user role (for gérant detection)
+  // Get user role (for gérant detection) — stable
   const { data: userRole } = useQuery({
-    queryKey: ['userRole', currentUser?.role_id],
+    queryKey: QK.userRole(currentUser?.role_id),
     queryFn: async () => {
       if (!currentUser?.role_id) return null;
       const roles = await base44.entities.Role.filter({ id: currentUser.role_id });
       return roles[0] || null;
     },
-    enabled: !!currentUser?.role_id
+    enabled: !!currentUser?.role_id,
+    staleTime: STALE.STABLE,
   });
 
-  // Check if current user is planning manager
+  // Check if current user is planning manager — stable
   const { data: isPlanningManager = false } = useQuery({
-    queryKey: ['isPlanningManager', currentUser?.email],
+    queryKey: QK.isPlanningManager(currentUser?.email),
     queryFn: () => isCurrentUserPlanningManager(currentUser),
-    enabled: !!currentUser
+    enabled: !!currentUser,
+    staleTime: STALE.STABLE,
   });
 
   // Filter pending leave requests for current user if they are planning manager
