@@ -93,19 +93,15 @@ export default function Home() {
 
   const resetVersion = planningMonth?.reset_version ?? 0;
 
-  // Fetch shifts for CURRENT MONTH with version filtering (SAME as Planning)
+  // Fetch shifts for CURRENT MONTH — filtrés côté serveur (month_key + reset_version)
+  const monthKey = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}`;
   const { data: currentMonthShifts = [] } = useQuery({
     queryKey: ['shifts', currentYear, currentMonth, resetVersion],
-    queryFn: async () => {
-      const firstDay = formatLocalDate(new Date(currentYear, currentMonth, 1));
-      const lastDay = formatLocalDate(new Date(currentYear, currentMonth + 1, 0));
-      
-      const allShifts = await perfFetch('Home:shifts', () => base44.entities.Shift.list(), { resetVersion });
-      const monthShifts = allShifts.filter(s => s.date >= firstDay && s.date <= lastDay);
-      // Filter by reset_version (same as Planning's filterByVersion)
-      return monthShifts.filter(s => (s.reset_version ?? 0) >= resetVersion);
-    },
-    enabled: !!currentEmployee,
+    queryFn: () => perfFetch('Home:shifts', () => {
+      const { getActiveShiftsForMonth } = require('@/components/planning/shiftService');
+      return getActiveShiftsForMonth(monthKey, resetVersion);
+    }, { monthKey, resetVersion }),
+    enabled: !!currentEmployee && resetVersion !== undefined,
     staleTime: 5 * 60 * 1000,
     refetchInterval: 5 * 60 * 1000
   });
