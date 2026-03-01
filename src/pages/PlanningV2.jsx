@@ -831,15 +831,7 @@ export default function PlanningV2() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [undoStack.canUndo, undoStack.canRedo, isUndoing, isRedoing]);
 
-  // ✅ Barrière de chargement complète — toutes les sources doivent être prêtes
-  // Tant que ce n'est pas vrai, on affiche un loader et on bloque les calculs
-  const allDataReady = React.useMemo(() => {
-    if (resetVersion === undefined) return false;   // (a) version connue
-    if (!shiftsReady) return false;                  // (b) shifts chargés et versionnés
-    if (isFetchingCP) return false;                  // (c) CP chargés
-    if (isFetchingNonShifts) return false;           // (c) absences chargées
-    return true;
-  }, [resetVersion, shiftsReady, isFetchingCP, isFetchingNonShifts]);
+
 
   // Prefetch du mois suivant — après que allDataReady est true
   useEffect(() => {
