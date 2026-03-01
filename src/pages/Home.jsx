@@ -319,7 +319,7 @@ export default function Home() {
   // Get message reads
   const { data: messageReads = [] } = useQuery({
     queryKey: ['myMessageReads', currentEmployee?.id],
-    queryFn: () => base44.entities.MessageRead.filter({ employee_id: currentEmployee.id }),
+    queryFn: () => perfFetch('messageReads', () => base44.entities.MessageRead.filter({ employee_id: currentEmployee.id })),
     enabled: !!currentEmployee?.id,
     staleTime: 0,
     refetchOnMount: 'always'
