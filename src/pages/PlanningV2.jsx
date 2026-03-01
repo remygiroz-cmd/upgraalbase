@@ -1395,7 +1395,8 @@ export default function PlanningV2() {
                          const monthlyRecap = monthlyRecapsLookup.get(employee.id) || null;
 
                          return (
-                           <div key={employee.id} className="border-r border-blue-200 min-w-[150px] w-[150px] lg:min-w-[180px] lg:w-[180px]">
+                         <div key={employee.id} className="border-r border-blue-200 min-w-[150px] w-[150px] lg:min-w-[180px] lg:w-[180px]">
+                           {allDataReady ? (
                              <MonthlySummary
                                employee={employee}
                                shifts={shifts}
@@ -1411,7 +1412,10 @@ export default function PlanningV2() {
                                disabled={!canModifyPlanning}
                                onClearEmployeeMonth={canModifyPlanning ? () => setClearEmployeeMonthTarget(employee) : null}
                              />
-                           </div>
+                           ) : (
+                             <div className="px-2 py-4 text-center text-[10px] text-gray-400 animate-pulse">Chargement…</div>
+                           )}
+                         </div>
                          );
                        })}
                      </div>
