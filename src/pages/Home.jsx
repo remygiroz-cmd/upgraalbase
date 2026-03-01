@@ -377,18 +377,20 @@ export default function Home() {
     staleTime: 0
   });
 
-  // Get my leave request decisions
+  // Get my leave request decisions — filtrées côté serveur par employee_id
   const { data: myLeaveRequestDecisions = [] } = useQuery({
     queryKey: ['myLeaveRequestDecisions', currentEmployee?.id],
     queryFn: async () => {
       if (!currentEmployee?.id) return [];
-      const requests = await base44.entities.LeaveRequest.list();
+      const requests = await base44.entities.LeaveRequest.filter(
+        { employee_id: currentEmployee.id },
+        '-decision_at',
+        20
+      );
+      const cutoff = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
       return requests.filter(req => 
-        req.employee_id === currentEmployee.id && 
         req.status !== 'PENDING' &&
-        // Only show recent decisions (last 30 days)
-        new Date(req.decision_at) > new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) &&
-        // Filter out dismissed notifications
+        new Date(req.decision_at) > cutoff &&
         !(req.dismissed_by_employee_ids || []).includes(currentEmployee.id)
       ).sort((a, b) => new Date(b.decision_at) - new Date(a.decision_at));
     },
