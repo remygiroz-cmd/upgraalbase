@@ -75,16 +75,16 @@ export default function Home() {
     staleTime: 60 * 1000
   });
 
-  // EXACT same data fetching as Planning
+  // Data fetching for current month
   const today = new Date();
   const currentMonth = today.getMonth();
   const currentYear = today.getFullYear();
+  const monthKey = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}`;
 
-  // Fetch current planning version (same as Planning page)
+  // Fetch current planning version
   const { data: planningMonth } = useQuery({
     queryKey: ['planningMonth', currentYear, currentMonth],
     queryFn: async () => {
-      const monthKey = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}`;
       const months = await perfFetch('planningMonth', () => base44.entities.PlanningMonth.filter({ month_key: monthKey }), { monthKey });
       return months[0] || null;
     },
