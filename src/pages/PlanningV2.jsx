@@ -1127,6 +1127,17 @@ export default function PlanningV2() {
                     </div>
                   ))}
                 </div>
+              ) : !allDataReady ? (
+                <div className="px-4 py-16 text-center text-gray-500">
+                  <div className="animate-spin w-8 h-8 border-2 border-orange-400 border-t-transparent rounded-full mx-auto mb-4" />
+                  <p className="text-base font-medium text-gray-600">Chargement du planning…</p>
+                  <p className="text-xs text-gray-400 mt-1">
+                    {resetVersion === undefined ? 'Récupération de la version…' :
+                     isFetchingShifts ? 'Chargement des shifts…' :
+                     isFetchingCP ? 'Chargement des congés…' :
+                     'Chargement des absences…'}
+                  </p>
+                </div>
               ) : daysArray.length === 0 ? (
                 <div className="px-4 py-16 text-center text-gray-500">
                   <Calendar className="w-12 h-12 mx-auto mb-4 text-gray-300" />
