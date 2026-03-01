@@ -98,10 +98,7 @@ export default function Home() {
   const monthKey = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}`;
   const { data: currentMonthShifts = [] } = useQuery({
     queryKey: ['shifts', currentYear, currentMonth, resetVersion],
-    queryFn: () => perfFetch('Home:shifts', () => {
-      const { getActiveShiftsForMonth } = require('@/components/planning/shiftService');
-      return getActiveShiftsForMonth(monthKey, resetVersion);
-    }, { monthKey, resetVersion }),
+    queryFn: () => perfFetch('Home:shifts', () => getActiveShiftsForMonth(monthKey, resetVersion), { monthKey, resetVersion }),
     enabled: !!currentEmployee && resetVersion !== undefined,
     staleTime: 5 * 60 * 1000,
     refetchInterval: 5 * 60 * 1000
