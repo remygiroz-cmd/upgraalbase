@@ -650,7 +650,7 @@ export default function Home() {
         {isManagerOrAdmin && (
           <DepartureOrderPlanningBlock
             date={formatLocalDate(new Date())}
-            monthKey={`${currentYear}-${String(currentMonth + 1).padStart(2, '0')}`}
+            monthKey={monthKey}
             shifts={currentMonthShifts}
             employees={sortedEmployees}
             nonShiftEvents={currentMonthNonShiftEvents}
