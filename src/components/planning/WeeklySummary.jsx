@@ -335,7 +335,7 @@ export default function WeeklySummary({
     },
     onSuccess: () => {
       // Notifier le parent de rafraîchir les données (1 seule requête pour tous)
-      queryClient.invalidateQueries({ queryKey: ['allWeeklyRecaps'] });
+      queryClient.invalidateQueries({ queryKey: ['weeklyRecaps'] });
       if (onRecapUpdate) onRecapUpdate();
       toast.success('Base remise par défaut');
     },
