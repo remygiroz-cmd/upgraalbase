@@ -245,7 +245,7 @@ export default function PlanningV2() {
   const { data: paidLeavePeriods = [], isFetching: isFetchingCP } = useQuery({
     queryKey: ['paidLeavePeriods', monthKey, resetVersion],
     queryFn: async () => {
-      const allPeriods = await base44.entities.PaidLeavePeriod.list();
+      const allPeriods = await perfFetch('Planning:paidLeavePeriods', () => base44.entities.PaidLeavePeriod.list(), { monthKey, resetVersion });
       const monthPeriods = allPeriods.filter(p => p.end_cp >= monthFirstDay && p.start_cp <= monthLastDay);
       const versioned = filterByVersion(monthPeriods, resetVersion);
       console.log(`[Planning] paidLeavePeriods: ${versioned.length} / ${monthPeriods.length} (v${resetVersion})`);
