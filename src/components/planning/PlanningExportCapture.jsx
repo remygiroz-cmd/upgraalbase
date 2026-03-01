@@ -170,9 +170,9 @@ const PlanningExportCapture = React.forwardRef(function PlanningExportCapture(
                   return (
                     <td key={emp.id} style={{
                       border: '1px solid #e5e7eb',
-                      padding: '2px 3px',
+                      padding: '2px 2px',
                       verticalAlign: 'top',
-                      overflow: 'hidden',
+                      overflow: 'visible',
                     }}>
                       {/* Non-shifts */}
                       {dayNonShifts.map(ns => {
