@@ -173,7 +173,12 @@ ${settings.responsableCoords || ''}`;
             filename: pdfFilename,
             content: pdfBase64,
             type: 'application/pdf'
-          }
+          },
+          ...(planningBase64 ? [{
+            filename: planningImageFilename || `Planning_${monthName}_${year}.png`,
+            content: planningBase64,
+            type: planningMime
+          }] : [])
         ]
       })
     });
