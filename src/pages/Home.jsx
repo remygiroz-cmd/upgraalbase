@@ -189,7 +189,7 @@ export default function Home() {
       // Same team, sort by name
       return (a.first_name || '').localeCompare(b.first_name || '');
     });
-  }, [employees, allTeams, currentYear, currentMonth, currentMonthShifts]);
+  }, [employees, allTeams]);
 
   // Get conversation members for current employee
   const { data: myConversationMembers = [] } = useQuery({
