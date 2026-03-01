@@ -290,6 +290,22 @@ export default function PlanningV2() {
     return allYearHolidayDates.filter(h => h.date >= firstDay && h.date <= lastDay);
   }, [allYearHolidayDates, currentYear, currentMonth]);
 
+  // ✅ Barrière de chargement complète — MUST be defined BEFORE recaps queries
+  const shiftsReady = React.useMemo(() => {
+    if (resetVersion === undefined) return false;
+    if (isFetchingShifts) return false;
+    if (shifts.length > 0 && shifts.some(s => (s.reset_version ?? 0) !== resetVersion)) return false;
+    return true;
+  }, [resetVersion, isFetchingShifts, shifts]);
+
+  const allDataReady = React.useMemo(() => {
+    if (resetVersion === undefined) return false;
+    if (!shiftsReady) return false;
+    if (isFetchingCP) return false;
+    if (isFetchingNonShifts) return false;
+    return true;
+  }, [resetVersion, shiftsReady, isFetchingCP, isFetchingNonShifts]);
+
   // Recaps: lazy-load AFTER allDataReady (not part of the main readiness gate)
   const { data: allWeeklyRecaps = [] } = useQuery({
     queryKey: QK.weeklyRecaps(monthKey, resetVersion),
