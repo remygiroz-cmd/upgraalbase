@@ -30,7 +30,7 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'Permissions insuffisantes' }, { status: 403 });
     }
 
-    const { pdfUrl, pdfFilename, monthName, year, settings, customMessage } = await req.json();
+    const { pdfUrl, pdfFilename, planningImageUrl, planningImageFilename, monthName, year, settings, customMessage } = await req.json();
 
     // Vérifier RESEND_API_KEY en premier
     const resendApiKey = Deno.env.get('RESEND_API_KEY');
