@@ -267,29 +267,29 @@ export default function Home() {
 
   // Get all messages — limité aux 300 plus récents pour le décompte non-lus
   const { data: allMessages = [] } = useQuery({
-    queryKey: ['allMessages'],
+    queryKey: QK.messages(),
     queryFn: () => perfFetch('messages', () => base44.entities.Message.filter({ is_deleted: false }, '-created_date', 300)),
     enabled: !!currentEmployee?.id,
-    staleTime: 0,
-    refetchOnMount: 'always'
+    staleTime: STALE.LIVE,
+    refetchOnMount: true,
   });
 
   // Get message reads
   const { data: messageReads = [] } = useQuery({
-    queryKey: ['myMessageReads', currentEmployee?.id],
+    queryKey: QK.messageReads(currentEmployee?.id),
     queryFn: () => perfFetch('messageReads', () => base44.entities.MessageRead.filter({ employee_id: currentEmployee.id })),
     enabled: !!currentEmployee?.id,
-    staleTime: 0,
-    refetchOnMount: 'always'
+    staleTime: STALE.LIVE,
+    refetchOnMount: true,
   });
 
   // Get mentions for current user
   const { data: myMentions = [] } = useQuery({
-    queryKey: ['myMentions', currentEmployee?.id],
+    queryKey: QK.mentions(currentEmployee?.id),
     queryFn: () => base44.entities.MessageMention.filter({ mentioned_employee_id: currentEmployee.id }),
     enabled: !!currentEmployee?.id,
-    staleTime: 0,
-    refetchOnMount: 'always'
+    staleTime: STALE.LIVE,
+    refetchOnMount: true,
   });
 
   // Calculate unread counts
