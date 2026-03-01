@@ -191,17 +191,18 @@ export default function Home() {
 
   // Get conversation members for current employee
   const { data: myConversationMembers = [] } = useQuery({
-    queryKey: ['myConversationMembers', currentEmployee?.id],
+    queryKey: QK.conversationMembers(currentEmployee?.id),
     queryFn: () => perfFetch('conversationMembers', () => base44.entities.ConversationMember.filter({ 
       employee_id: currentEmployee.id 
     })),
     enabled: !!currentEmployee?.id,
-    staleTime: 0
+    staleTime: STALE.LIVE,
+    refetchOnMount: true,
   });
 
   // Get conversations — filtrées côté serveur sur status actif, limitées aux 60 plus récentes
   const { data: allConversations = [] } = useQuery({
-    queryKey: ['myConversations', currentEmployee?.id],
+    queryKey: QK.conversations(currentEmployee?.id),
     queryFn: async () => {
       if (!currentEmployee?.id) return [];
       const all = await base44.entities.Conversation.filter({ status: 'active' }, '-last_message_at', 60);
@@ -217,8 +218,8 @@ export default function Home() {
         });
     },
     enabled: !!currentEmployee?.id,
-    staleTime: 0,
-    refetchOnMount: 'always'
+    staleTime: STALE.LIVE,
+    refetchOnMount: true,
   });
 
   // Split into active, archived, hidden (deleted for me), and left
