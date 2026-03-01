@@ -207,7 +207,7 @@ export default function PlanningV2() {
   const { data: nonShiftEvents = [], isFetching: isFetchingNonShifts } = useQuery({
     queryKey: ['nonShiftEvents', monthKey, resetVersion],
     queryFn: async () => {
-      const allEvents = await base44.entities.NonShiftEvent.filter({ month_key: monthKey });
+      const allEvents = await perfFetch('Planning:nonShiftEvents', () => base44.entities.NonShiftEvent.filter({ month_key: monthKey }), { monthKey, resetVersion });
       // Fallback: si aucun non-shift avec month_key, récupérer par date
       if (allEvents.length === 0) {
         const byDate = await base44.entities.NonShiftEvent.list();
