@@ -108,19 +108,21 @@ export default function PlanningV2() {
 
   // Fetch current user
   const { data: currentUser } = useQuery({
-    queryKey: ['currentUser'],
-    queryFn: () => base44.auth.me()
+    queryKey: QK.currentUser(),
+    queryFn: () => base44.auth.me(),
+    staleTime: STALE.STABLE,
   });
 
-  // Fetch user role
+  // Fetch user role — stable
   const { data: userRole } = useQuery({
-    queryKey: ['userRole', currentUser?.role_id],
+    queryKey: QK.userRole(currentUser?.role_id),
     queryFn: async () => {
       if (!currentUser?.role_id) return null;
       const roles = await base44.entities.Role.filter({ id: currentUser.role_id });
       return roles[0] || null;
     },
-    enabled: !!currentUser?.role_id
+    enabled: !!currentUser?.role_id,
+    staleTime: STALE.STABLE,
   });
 
   const canModifyPlanning = currentUser?.role === 'admin' || userRole?.permissions?.planning_modify || false;
