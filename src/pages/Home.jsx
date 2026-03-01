@@ -117,7 +117,7 @@ export default function Home() {
       const firstDay = formatLocalDate(new Date(currentYear, currentMonth, 1));
       const lastDay = formatLocalDate(new Date(currentYear, currentMonth + 1, 0));
       
-      const allEvents = await base44.entities.NonShiftEvent.list();
+      const allEvents = await perfFetch('Home:nonShiftEvents', () => base44.entities.NonShiftEvent.list(), { resetVersion });
       const monthEvents = allEvents.filter(e => e.date >= firstDay && e.date <= lastDay);
       // Filter by reset_version
       return monthEvents.filter(e => (e.reset_version ?? 0) >= resetVersion);
