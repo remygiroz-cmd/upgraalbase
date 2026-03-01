@@ -231,9 +231,9 @@ export default function Home() {
   // Get conversation members for current employee
   const { data: myConversationMembers = [] } = useQuery({
     queryKey: ['myConversationMembers', currentEmployee?.id],
-    queryFn: () => base44.entities.ConversationMember.filter({ 
+    queryFn: () => perfFetch('conversationMembers', () => base44.entities.ConversationMember.filter({ 
       employee_id: currentEmployee.id 
-    }),
+    })),
     enabled: !!currentEmployee?.id,
     staleTime: 0
   });
