@@ -130,16 +130,18 @@ export default function PlanningV2() {
   const HIDE_COLS_ROLES = ['gérant', 'gerant', 'bureau', 'manager'];
   const canHideColumns = currentUser?.role === 'admin' || HIDE_COLS_ROLES.some(r => userRole?.name?.toLowerCase() === r.toLowerCase());
 
-  // Fetch all employees
+  // Fetch all employees — même queryKey que Home → cache partagé
   const { data: allEmployees = [] } = useQuery({
-    queryKey: ['employees'],
-    queryFn: () => base44.entities.Employee.list()
+    queryKey: QK.employees(),
+    queryFn: () => base44.entities.Employee.filter({ is_active: true }),
+    staleTime: STALE.STABLE,
   });
 
-  // Fetch teams
+  // Fetch teams — stable
   const { data: allTeams = [] } = useQuery({
-    queryKey: ['teams'],
-    queryFn: () => base44.entities.Team.filter({ is_active: true })
+    queryKey: QK.teams(),
+    queryFn: () => base44.entities.Team.filter({ is_active: true }),
+    staleTime: STALE.STABLE,
   });
 
   // Fetch shifts for current month — keepPreviousData pour éviter l'écran vide au changement de mois
