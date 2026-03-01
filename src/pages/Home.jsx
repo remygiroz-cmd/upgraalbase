@@ -148,7 +148,7 @@ export default function Home() {
 
   // Holiday dates — très stables
   const { data: holidayDates = [] } = useQuery({
-    queryKey: QK.holidayDates(currentYear, currentMonth),
+    queryKey: ['holidayDates', 'year', currentYear, currentMonth),
     queryFn: async () => {
       const firstDay = formatLocalDate(new Date(currentYear, currentMonth, 1));
       const lastDay = formatLocalDate(new Date(currentYear, currentMonth + 1, 0));
