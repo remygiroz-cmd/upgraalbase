@@ -534,10 +534,10 @@ export default function Home() {
 
   // Get urgent announcements history for managers — limité aux 50 plus récentes
   const { data: allUrgentAnnouncements = [] } = useQuery({
-    queryKey: ['allUrgentAnnouncements'],
+    queryKey: QK.allUrgentAnnouncements(),
     queryFn: () => base44.entities.UrgentAnnouncement.list('-created_date', 50),
     enabled: isManagerOrAdmin,
-    staleTime: 60000
+    staleTime: STALE.NOTIFICATIONS,
   });
 
   // Get online employees count for managers
