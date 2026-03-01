@@ -40,6 +40,7 @@ import { usePlanningVersion, withPlanningVersion, filterByVersion } from '@/comp
 import { getActiveShiftsForMonth, shiftsQueryKey } from '@/components/planning/shiftService';
 import { perfFetch } from '@/components/utils/perfLogger';
 import { QK, STALE } from '@/components/utils/queryKeys';
+import { useCallback } from 'react';
 import { useUndoStack } from '@/components/planning/useUndoStack';
 import UndoRedoButtons from '@/components/planning/UndoRedoButtons';
 import PinchZoomContainer from '@/components/planning/PinchZoomContainer';
