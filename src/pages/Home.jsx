@@ -104,19 +104,14 @@ export default function Home() {
     refetchInterval: 5 * 60 * 1000
   });
 
-  // Fetch non-shift events for CURRENT MONTH with version filtering (SAME as Planning)
+  // Fetch non-shift events for CURRENT MONTH — filtrés côté serveur par month_key
   const { data: currentMonthNonShiftEvents = [] } = useQuery({
     queryKey: ['nonShiftEvents', currentYear, currentMonth, resetVersion],
     queryFn: async () => {
-      const firstDay = formatLocalDate(new Date(currentYear, currentMonth, 1));
-      const lastDay = formatLocalDate(new Date(currentYear, currentMonth + 1, 0));
-      
-      const allEvents = await perfFetch('Home:nonShiftEvents', () => base44.entities.NonShiftEvent.list(), { resetVersion });
-      const monthEvents = allEvents.filter(e => e.date >= firstDay && e.date <= lastDay);
-      // Filter by reset_version
-      return monthEvents.filter(e => (e.reset_version ?? 0) >= resetVersion);
+      const allEvents = await perfFetch('Home:nonShiftEvents', () => base44.entities.NonShiftEvent.filter({ month_key: monthKey }), { monthKey, resetVersion });
+      return allEvents.filter(e => (e.reset_version ?? 0) >= resetVersion);
     },
-    enabled: !!currentEmployee,
+    enabled: !!currentEmployee && resetVersion !== undefined,
     staleTime: 5 * 60 * 1000,
     refetchInterval: 5 * 60 * 1000
   });
