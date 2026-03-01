@@ -268,7 +268,7 @@ export default function PlanningV2() {
     queryFn: async () => {
       const firstDay = formatLocalDate(new Date(currentYear, currentMonth, 1));
       const lastDay = formatLocalDate(new Date(currentYear, currentMonth + 1, 0));
-      const allHolidays = await base44.entities.HolidayDate.list();
+      const allHolidays = await perfFetch('Planning:holidayDates', () => base44.entities.HolidayDate.list(), { monthKey });
       return allHolidays.filter(h => h.date >= firstDay && h.date <= lastDay);
     },
     placeholderData: keepPreviousData,
