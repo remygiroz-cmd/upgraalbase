@@ -24,6 +24,7 @@ import { getActiveShiftsForMonth } from '@/components/planning/shiftService';
 import DepartureOrderPlanningBlock from '@/components/planning/DepartureOrderPlanningBlock';
 import HomeVehicleAlertsWidget from '@/components/vehicules/HomeVehicleAlertsWidget';
 import { QK, STALE } from '@/components/utils/queryKeys';
+import MyWeekShiftsCard from '@/components/planning/MyWeekShiftsCard';
 
 export default function Home() {
   const [showNewConversation, setShowNewConversation] = useState(false);
