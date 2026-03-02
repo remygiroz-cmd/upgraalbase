@@ -47,6 +47,7 @@ import TodaySummary from '@/components/planning/TodaySummary';
 import DepartureOrderPlanningBlock from '@/components/planning/DepartureOrderPlanningBlock';
 import PlanningDayRow from '@/components/planning/PlanningDayRow';
 import MonthCarousel from '@/components/planning/MonthCarousel';
+import ProposeShiftModal from '@/components/planning/ProposeShiftModal';
 
 const DAYS = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche'];
 const MONTHS = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'];
