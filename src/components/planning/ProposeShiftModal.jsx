@@ -27,6 +27,18 @@ export default function ProposeShiftModal({ open, onOpenChange, currentUser, pos
     staleTime: 5 * 60 * 1000,
   });
 
+  // Fetch positions directly if not provided or empty
+  const { data: fetchedPositions = [] } = useQuery({
+    queryKey: ['positions', 'active'],
+    queryFn: async () => {
+      const all = await base44.entities.Position.filter({ is_active: true });
+      return all.sort((a, b) => (a.order || 0) - (b.order || 0));
+    },
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const positions = (positionsProp && positionsProp.length > 0) ? positionsProp : fetchedPositions;
+
   // Eligible employees: displayable in planning + no shift/nonShift that day
   const eligibleEmployees = useMemo(() => {
     if (!date) return [];
