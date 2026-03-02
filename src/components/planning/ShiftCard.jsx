@@ -134,10 +134,18 @@ const ShiftCard = React.memo(function ShiftCard({
     );
 
     try {
-      // Logique existante : enregistrement de l'heure de fin
-      handleSaveTime(shift.start_time, currentTime);
-      // En plus : persiste clock_clicked
-      await base44.entities.Shift.update(shift.id, {
+      // Un seul appel avec toutes les données (heure de fin + clock_clicked)
+      const [startH, startM] = shift.start_time.split(':').map(Number);
+      const [endH, endM] = currentTime.split(':').map(Number);
+      let totalMinutes = (endH * 60 + endM) - (startH * 60 + startM);
+      if (totalMinutes < 0) totalMinutes += 24 * 60;
+      totalMinutes -= (shift.break_minutes || 0);
+      const decimalHours = Math.round((totalMinutes / 60) * 10) / 10;
+
+      await onSave(shift.id, {
+        ...shift,
+        end_time: currentTime,
+        base_hours_override: decimalHours,
         clock_clicked: true,
         clock_clicked_at: new Date().toISOString()
       });
