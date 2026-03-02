@@ -322,15 +322,16 @@ export default function PlanningV2() {
   const { data: allMonthlyRecaps = [] } = useQuery({
     queryKey: QK.monthlyRecaps(monthKey, resetVersion),
     queryFn: async () => {
-      const allRecaps = await perfFetch('Planning:monthlyRecaps', () => base44.entities.MonthlyRecap.filter({
+      const recaps = await perfFetch('Planning:monthlyRecaps', () => base44.entities.MonthlyRecap.filter({
         year: currentYear,
-        month: currentMonth + 1
+        month: currentMonth + 1,
+        month_key: monthKey
       }), { monthKey, resetVersion });
-      return filterByVersion(allRecaps, resetVersion);
+      return filterByVersion(recaps, resetVersion);
     },
-    enabled: allDataReady, // lazy: wait for shifts/nonShifts/CP ready
+    enabled: allDataReady,
     placeholderData: keepPreviousData,
-    staleTime: 90 * 1000 // 90s — longer cache window
+    staleTime: 90 * 1000
   });
 
   // Lookups
