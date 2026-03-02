@@ -72,6 +72,21 @@ export default function ShiftOffersManagerBlock() {
     cleanup();
   }, [offers, allRecipients, today]);
 
+  const handleDelete = async (offer, e) => {
+    e.stopPropagation();
+    if (!window.confirm('Supprimer définitivement cette offre ?')) return;
+    try {
+      await base44.entities.ShiftOffer.delete(offer.id);
+      const recipients = allRecipients.filter(r => r.offer_id === offer.id);
+      await Promise.all(recipients.map(r => base44.entities.ShiftOfferRecipient.delete(r.id)));
+      queryClient.invalidateQueries({ queryKey: ['shiftOffers', 'recent'] });
+      queryClient.invalidateQueries({ queryKey: ['shiftOfferRecipients', 'all'] });
+      toast.success('Offre supprimée');
+    } catch (err) {
+      toast.error('Erreur : ' + err.message);
+    }
+  };
+
   const handleCancel = async (offer) => {
     if (!window.confirm('Annuler cette offre ?')) return;
     try {
