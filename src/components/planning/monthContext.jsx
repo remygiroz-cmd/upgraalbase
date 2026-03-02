@@ -7,7 +7,7 @@ import { base44 } from '@/api/base44Client';
 // Cache en mémoire pour éviter les appels répétés (rate limit)
 // Invalidé explicitement lors du bumpMonthVersion
 const _contextCache = new Map(); // monthKey -> { context, ts }
-const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes — augmenté pour éviter les dépassements de limite
+const CACHE_TTL_MS = 30 * 60 * 1000; // 30 minutes — la version ne change que lors d'un reset explicite
 
 // Dédoublonnage des requêtes en cours (promise sharing)
 const _inflight = new Map(); // monthKey -> Promise
