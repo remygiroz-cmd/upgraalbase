@@ -11,7 +11,7 @@ import { Search, Check, X } from 'lucide-react';
 import { shouldDisplayEmployeeInPlanning } from '@/components/planning/employeeDisplayFilter';
 import { formatLocalDate } from '@/components/planning/dateUtils';
 
-export default function ProposeShiftModal({ open, onOpenChange, currentUser, positions, shifts, nonShiftEvents }) {
+export default function ProposeShiftModal({ open, onOpenChange, currentUser, positions: positionsProp, shifts, nonShiftEvents }) {
   const [position, setPosition] = useState('');
   const [date, setDate] = useState('');
   const [startTime, setStartTime] = useState('');
