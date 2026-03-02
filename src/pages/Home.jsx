@@ -709,6 +709,14 @@ export default function Home() {
           />
         )}
 
+        {/* Weekly Staffing Alert — managers/admins only */}
+        {isManagerOrAdmin && (
+          <WeeklyStaffingAlert
+            shifts={currentMonthShifts}
+            currentUser={currentUser}
+          />
+        )}
+
         {/* Vehicle Alerts Widget - managers only */}
         {isManagerOrAdmin && <HomeVehicleAlertsWidget />}
 
