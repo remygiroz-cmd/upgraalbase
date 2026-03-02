@@ -364,6 +364,14 @@ const ShiftCard = React.memo(function ShiftCard({
         </div>
       </div>
 
+      {shift.is_extra && (
+        <div className="mt-1 pt-1 border-t border-orange-200">
+          <div className="flex items-center gap-1 text-[9px] text-orange-600 font-semibold leading-tight">
+            <span>⭐ shift suppl. accepté</span>
+          </div>
+        </div>
+      )}
+
       {swapInfo && (
         <div className="mt-1 pt-1 border-t border-purple-200 relative">
           <button
