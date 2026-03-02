@@ -1054,54 +1054,40 @@ export default function PlanningV2() {
 
       {/* Month Navigation & Filters - Mobile optimized */}
       <div className="bg-white border border-gray-200 rounded-lg p-2 lg:p-3">
-        {/* Row 1: Navigation + Undo/Redo */}
-        <div className="flex items-center justify-between gap-2 mb-2 lg:mb-3">
-          <div className="flex items-center gap-1.5 lg:gap-2 flex-1 min-w-0">
-            <Button 
-              onClick={previousMonth} 
-              variant="outline" 
-              size="sm"
-              className="border border-gray-300 hover:border-orange-500 hover:bg-orange-50 h-7 lg:h-8 px-2 lg:px-3"
-            >
-              <ChevronLeft className="w-3.5 h-3.5 lg:w-4 lg:h-4" />
-              <span className="ml-1 hidden sm:inline text-xs">Préc.</span>
-            </Button>
-            <h2 className="text-sm lg:text-lg font-bold text-orange-600 truncate flex-1 text-center">
-              {MONTHS[currentMonth]} {currentYear}
-            </h2>
-            <Button 
-              onClick={nextMonth} 
-              variant="outline"
-              size="sm"
-              className="border border-gray-300 hover:border-orange-500 hover:bg-orange-50 h-7 lg:h-8 px-2 lg:px-3"
-            >
-              <span className="mr-1 hidden sm:inline text-xs">Suiv.</span>
-              <ChevronRight className="w-3.5 h-3.5 lg:w-4 lg:h-4" />
-            </Button>
+        {/* Row 1: Carousel + Undo/Redo */}
+        <div className="flex items-center gap-2 mb-2 lg:mb-3">
+          <div className="flex-1 min-w-0">
+            <MonthCarousel
+              currentYear={currentYear}
+              currentMonth={currentMonth}
+              onChange={handleCarouselChange}
+            />
           </div>
 
-          {/* Hidden columns indicator */}
-          {canHideColumns && (layout?.hidden_employee_ids?.length || 0) > 0 && (
-            <button
-              onClick={() => setShowColumnsManager(true)}
-              className="hidden sm:flex items-center gap-1 px-2 py-1 bg-orange-100 border border-orange-300 rounded text-xs text-orange-700 hover:bg-orange-200 transition-colors"
-               title="Colonnes masquées"
+          <div className="flex items-center gap-1.5 flex-shrink-0">
+            {/* Hidden columns indicator */}
+            {canHideColumns && (layout?.hidden_employee_ids?.length || 0) > 0 && (
+              <button
+                onClick={() => setShowColumnsManager(true)}
+                className="hidden sm:flex items-center gap-1 px-2 py-1 bg-orange-100 border border-orange-300 rounded text-xs text-orange-700 hover:bg-orange-200 transition-colors"
+                title="Colonnes masquées"
               >
-               <EyeOff className="w-3 h-3" />
-               {layout?.hidden_employee_ids?.length || 0}
+                <EyeOff className="w-3 h-3" />
+                {layout?.hidden_employee_ids?.length || 0}
               </button>
-              )}
+            )}
 
-          {/* Undo/Redo buttons - hidden on very small screens */}
-          <div className="hidden sm:block">
-            <UndoRedoButtons
-              canUndo={undoStack.canUndo}
-              canRedo={undoStack.canRedo}
-              onUndo={handleUndo}
-              onRedo={handleRedo}
-              isUndoing={isUndoing}
-              isRedoing={isRedoing}
-            />
+            {/* Undo/Redo buttons */}
+            <div className="hidden sm:block">
+              <UndoRedoButtons
+                canUndo={undoStack.canUndo}
+                canRedo={undoStack.canRedo}
+                onUndo={handleUndo}
+                onRedo={handleRedo}
+                isUndoing={isUndoing}
+                isRedoing={isRedoing}
+              />
+            </div>
           </div>
         </div>
 
