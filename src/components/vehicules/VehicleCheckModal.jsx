@@ -84,6 +84,16 @@ export default function VehicleCheckModal({ open, onOpenChange, type, assignment
     mutationFn: async () => {
       if (!canSubmit()) throw new Error('Remplissez tous les champs obligatoires.');
 
+      // Validation serveur côté client (re-vérification avant envoi)
+      if (type === 'DEBUT_SHIFT') {
+        const kmVal = parseInt(String(form.km_debut).replace(/\s/g, ''), 10);
+        const freshVehicle = await base44.entities.Vehicle.filter({ id: assignment.vehicule_id });
+        const ref = freshVehicle[0]?.km_current ?? freshVehicle[0]?.km_initial ?? 0;
+        if (isNaN(kmVal) || kmVal < 0 || kmVal < ref) {
+          throw new Error(`Le kilométrage de départ ne peut pas être inférieur au kilométrage actuel du véhicule (${ref} km).`);
+        }
+      }
+
       const checkData = {
         type,
         assignment_id: assignment.id,
