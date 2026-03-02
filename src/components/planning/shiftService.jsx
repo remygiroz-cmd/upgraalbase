@@ -101,7 +101,7 @@ export async function getActiveShiftsForMonth(monthKey, resetVersion, options = 
  * Quick helper to build the React Query key for active shifts.
  * Use this everywhere so invalidation works globally.
  */
-export function shiftsQueryKey(year, month, resetVersion) {
+export function shiftsQueryKey(year, month, resetVersion = 0) {
   return ['shifts', year, month, resetVersion];
 }
 
