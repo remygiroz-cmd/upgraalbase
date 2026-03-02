@@ -451,18 +451,23 @@ export default function Home() {
     const ackedIds = new Set(myAcks.map(ack => ack.announcement_id));
     
     const visibleAnnouncements = urgentAnnouncements.filter(ann => {
+      // Skip already acknowledged
       if (ackedIds.has(ann.id)) return false;
-      if (!ann.require_ack) return false;
       
-      if (ann.audience_mode === 'tous') return true;
-      if (ann.audience_mode === 'equipes') {
-        return ann.audience_team_names?.includes(currentEmployee.team);
-      }
-      if (ann.audience_mode === 'personnes') {
-        return ann.audience_employee_ids?.includes(currentEmployee.id);
+      // Check audience
+      let audienceMatch = false;
+      if (!ann.audience_mode || ann.audience_mode === 'tous') {
+        audienceMatch = true;
+      } else if (ann.audience_mode === 'equipes') {
+        audienceMatch = ann.audience_team_names?.includes(currentEmployee.team) || false;
+      } else if (ann.audience_mode === 'personnes') {
+        audienceMatch = ann.audience_employee_ids?.includes(currentEmployee.id) || false;
       }
       
-      return false;
+      if (!audienceMatch) return false;
+      
+      // Only show blocking modal if require_ack is true
+      return ann.require_ack === true;
     });
     
     return visibleAnnouncements[0] || null;
