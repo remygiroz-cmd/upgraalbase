@@ -48,8 +48,13 @@ export default function HistoryEntryFormatter({ entry }) {
       <div className="flex items-start gap-3 text-xs bg-gray-50 p-3 rounded-lg">
         <div className="flex-1">
           <div className="font-medium text-gray-900">{entry.details}</div>
+          {entry.recipients && (
+            <div className="text-blue-600 mt-0.5 font-medium">
+              → {entry.recipients}
+            </div>
+          )}
           <div className="text-gray-500 mt-1">
-            {entry.user_name} • {format(new Date(entry.timestamp), 'dd/MM/yyyy à HH:mm', { locale: fr })}
+            {entry.user_name || entry.user_email} • {format(new Date(entry.timestamp), 'dd/MM/yyyy à HH:mm', { locale: fr })}
           </div>
         </div>
       </div>
