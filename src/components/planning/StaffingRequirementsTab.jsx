@@ -247,17 +247,26 @@ export default function StaffingRequirementsTab({ positions = [] }) {
 
       {/* Save button */}
       <div className="flex items-center justify-between pt-2 border-t border-gray-100">
-        <p className="text-xs text-gray-500">
+        <p className="text-xs text-gray-500 flex items-center gap-2">
           {rows.length} poste{rows.length !== 1 ? 's' : ''} configuré{rows.length !== 1 ? 's' : ''}
+          {dirty && <span className="text-amber-600 font-medium">• Modifications non enregistrées</span>}
         </p>
-        <Button
-          onClick={() => saveMutation.mutate(rows)}
-          disabled={!dirty || saveMutation.isPending}
-          className="bg-amber-600 hover:bg-amber-700 h-8 gap-1.5 text-xs"
-        >
-          <Save className="w-3.5 h-3.5" />
-          {saveMutation.isPending ? 'Enregistrement…' : 'Enregistrer'}
-        </Button>
+        <div className="flex items-center gap-2">
+          {savedOk && !dirty && (
+            <span className="flex items-center gap-1 text-xs text-green-600 font-medium">
+              <CheckCircle2 className="w-3.5 h-3.5" />
+              Enregistré
+            </span>
+          )}
+          <Button
+            onClick={() => saveMutation.mutate(rows)}
+            disabled={!dirty || saveMutation.isPending}
+            className={`h-8 gap-1.5 text-xs ${dirty ? 'bg-amber-600 hover:bg-amber-700' : 'bg-gray-400'}`}
+          >
+            <Save className="w-3.5 h-3.5" />
+            {saveMutation.isPending ? 'Enregistrement…' : 'Enregistrer'}
+          </Button>
+        </div>
       </div>
     </div>
   );
