@@ -48,6 +48,7 @@ import DepartureOrderPlanningBlock from '@/components/planning/DepartureOrderPla
 import PlanningDayRow from '@/components/planning/PlanningDayRow';
 import MonthCarousel from '@/components/planning/MonthCarousel';
 import ProposeShiftModal from '@/components/planning/ProposeShiftModal';
+import { useStaffingAlerts } from '@/components/planning/useStaffingAlerts';
 
 const DAYS = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche'];
 const MONTHS = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'];
@@ -796,6 +797,9 @@ export default function PlanningV2() {
   // Set pour O(1) lookup (évite le .some() O(n) dans chaque cellule)
   const holidayDateSet = useMemo(() => new Set(holidayDates.map(h => h.date)), [holidayDates]);
 
+  // Staffing alerts
+  const { alertsByDate, understaffedDays } = useStaffingAlerts(shifts);
+
   const handleUndo = async () => {
     if (!undoStack.canUndo) return;
     setIsUndoing(true);
@@ -1327,6 +1331,7 @@ export default function PlanningV2() {
                         key={dateStr}
                         dayInfo={dayInfo}
                         dateStr={dateStr}
+                        staffingAlerts={alertsByDate.get(dateStr) || []}
                         visibleEmployees={visibleEmployees}
                         getShiftsForEmployeeAndDate={getShiftsForEmployeeAndDate}
                         getNonShiftsForEmployeeAndDate={getNonShiftsForEmployeeAndDate}
@@ -1451,6 +1456,7 @@ export default function PlanningV2() {
          onOpenChange={setShowPlanningSettings}
          displayMode={displayMode}
          setDisplayMode={setDisplayMode}
+         positions={positions}
        />
 
        {/* Modale centralisée pour les actions globales */}
