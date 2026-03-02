@@ -145,7 +145,7 @@ export default function ProposeShiftModal({ open, onOpenChange, currentUser, pos
               </SelectTrigger>
               <SelectContent>
                 {positions.map(p => (
-                  <SelectItem key={p.id} value={p.name}>{p.name}</SelectItem>
+                  <SelectItem key={p.id} value={p.label || p.name}>{p.label || p.name}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
