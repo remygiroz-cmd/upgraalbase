@@ -77,6 +77,7 @@ export default function ShiftOfferCard({ recipient, offer, employee, onHandled }
         month_key: ctx.month_key,
         reset_version: ctx.reset_version,
         notes: offer.notes || '',
+        is_extra: true,
         dedupe_key: `${employee.id}|${offer.date}|${offer.start_time}|${offer.end_time}|${ctx.month_key}|${ctx.reset_version}`,
       });
 
