@@ -205,15 +205,7 @@ export default function PlanningV2() {
     queryKey: ['nonShiftEvents', monthKey, resetVersion],
     queryFn: async () => {
       const allEvents = await perfFetch('Planning:nonShiftEvents', () => base44.entities.NonShiftEvent.filter({ month_key: monthKey }), { monthKey, resetVersion });
-      // Fallback: si aucun non-shift avec month_key, récupérer par date
-      if (allEvents.length === 0) {
-        const byDate = await base44.entities.NonShiftEvent.list();
-        const filtered = byDate.filter(e => e.date >= monthFirstDay && e.date <= monthLastDay);
-        console.log(`[Planning] nonShiftEvents fallback by date: ${filtered.length} events`);
-        return filterByVersion(filtered, resetVersion);
-      }
       const versioned = filterByVersion(allEvents, resetVersion);
-      console.log(`[Planning] nonShiftEvents: ${versioned.length} / ${allEvents.length} (v${resetVersion})`);
       return versioned;
     },
     enabled: resetVersion !== undefined,
