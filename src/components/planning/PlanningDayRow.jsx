@@ -72,7 +72,8 @@ const PlanningDayRow = React.memo(function PlanningDayRow({
       <div className={cn(
         "sticky left-0 z-20 border-r-2 border-gray-300 px-2 lg:px-4 py-2 lg:py-3 shadow-sm w-[80px] lg:w-[120px] flex flex-col justify-center bg-white",
         dayInfo.isWeekend && "bg-orange-50/30",
-        dayInfo.isToday && "bg-gradient-to-r from-blue-100 to-blue-50 border-l-4 border-l-blue-500"
+        dayInfo.isToday && "bg-gradient-to-r from-blue-100 to-blue-50 border-l-4 border-l-blue-500",
+        staffingAlerts.length > 0 && !dayInfo.isToday && "border-l-4 border-l-red-400"
       )}>
         <div className={cn(
           "font-bold text-[9px] lg:text-xs uppercase tracking-wide",
@@ -187,6 +188,7 @@ const PlanningDayRow = React.memo(function PlanningDayRow({
   if (prev.onToggleHoliday !== next.onToggleHoliday) return false;
   if (prev.onSetModalState !== next.onSetModalState) return false;
   if (prev.onSetSelectedCPPeriod !== next.onSetSelectedCPPeriod) return false;
+  if (prev.staffingAlerts !== next.staffingAlerts) return false;
   return true;
 });
 
