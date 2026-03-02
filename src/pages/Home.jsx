@@ -540,6 +540,37 @@ export default function Home() {
     staleTime: STALE.DECISIONS,
   });
 
+  // Shift offers for current employee
+  const [handledOfferRecipientIds, setHandledOfferRecipientIds] = useState([]);
+
+  const { data: myOfferRecipients = [] } = useQuery({
+    queryKey: ['shiftOfferRecipients', 'mine', currentEmployee?.id],
+    queryFn: () => base44.entities.ShiftOfferRecipient.filter({ employee_id: currentEmployee.id, status: 'pending' }),
+    enabled: !!currentEmployee?.id,
+    staleTime: 30 * 1000,
+    refetchOnMount: true,
+  });
+
+  const offerIds = useMemo(() => myOfferRecipients.map(r => r.offer_id), [myOfferRecipients]);
+
+  const { data: myOffers = [] } = useQuery({
+    queryKey: ['shiftOffers', 'mine', offerIds.join(',')],
+    queryFn: async () => {
+      if (!offerIds.length) return [];
+      const all = await base44.entities.ShiftOffer.filter({ status: 'open' });
+      return all.filter(o => offerIds.includes(o.id));
+    },
+    enabled: offerIds.length > 0,
+    staleTime: 30 * 1000,
+  });
+
+  const pendingOffers = useMemo(() => {
+    return myOfferRecipients
+      .filter(r => !handledOfferRecipientIds.includes(r.id) && r.status === 'pending')
+      .map(r => ({ recipient: r, offer: myOffers.find(o => o.id === r.offer_id) }))
+      .filter(x => x.offer);
+  }, [myOfferRecipients, myOffers, handledOfferRecipientIds]);
+
   const isManagerOrAdmin = useMemo(() => {
     if (!currentEmployee) return false;
     const roleName = (userRole?.name || '').toLowerCase();
