@@ -1,10 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
-import { Plus, Trash2, Save, Users } from 'lucide-react';
+import { Plus, Trash2, Save, Users, CheckCircle2 } from 'lucide-react';
 
 const DAYS = [
   { key: 'mon', label: 'Lun' },
@@ -21,6 +21,10 @@ export default function StaffingRequirementsTab({ positions = [] }) {
   const [rows, setRows] = useState([]);
   const [newPosition, setNewPosition] = useState('');
   const [dirty, setDirty] = useState(false);
+  const [savedOk, setSavedOk] = useState(false);
+  // Prevent the useEffect from overwriting local edits after a save
+  const isSavingRef = useRef(false);
+  const initializedRef = useRef(false);
 
   const { data: requirements = [], isLoading } = useQuery({
     queryKey: ['staffingRequirements'],
@@ -28,14 +32,21 @@ export default function StaffingRequirementsTab({ positions = [] }) {
     staleTime: 60 * 1000,
   });
 
+  // Only initialize rows from server data on first load (not on every invalidation)
   useEffect(() => {
-    if (!requirements.length) return;
-    setRows(requirements.map(r => ({ ...r })));
-    setDirty(false);
-  }, [requirements]);
+    if (isSavingRef.current) return; // ignore refetch triggered by our own save
+    if (initializedRef.current && !dirty) {
+      // Refresh from server if there are no pending local changes
+      setRows(requirements.map(r => ({ ...r })));
+    } else if (!initializedRef.current && requirements.length >= 0) {
+      setRows(requirements.map(r => ({ ...r })));
+      initializedRef.current = true;
+    }
+  }, [requirements]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const saveMutation = useMutation({
     mutationFn: async (updatedRows) => {
+      isSavingRef.current = true;
       const ops = [];
       for (const row of updatedRows) {
         const payload = {
@@ -54,14 +65,25 @@ export default function StaffingRequirementsTab({ positions = [] }) {
           ops.push(base44.entities.StaffingRequirement.create(payload));
         }
       }
-      return Promise.all(ops);
+      const results = await Promise.all(ops);
+      return results;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['staffingRequirements'] });
-      toast.success('Besoins d\'effectif enregistrés');
+    onSuccess: (results) => {
+      // Update local rows with server-returned ids (for newly created rows)
+      setRows(prev => prev.map((r, i) => r.id ? r : { ...r, ...results[i] }));
       setDirty(false);
+      setSavedOk(true);
+      setTimeout(() => setSavedOk(false), 3000);
+      toast.success('Besoins d\'effectif enregistrés ✓');
+      // Now safe to invalidate — isSavingRef will be cleared after refetch
+      queryClient.invalidateQueries({ queryKey: ['staffingRequirements'] }).finally(() => {
+        isSavingRef.current = false;
+      });
     },
-    onError: (err) => toast.error('Erreur : ' + err.message),
+    onError: (err) => {
+      isSavingRef.current = false;
+      toast.error('Erreur lors de l\'enregistrement : ' + err.message);
+    },
   });
 
   const deleteMutation = useMutation({
