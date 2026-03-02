@@ -1,7 +1,8 @@
 import React, { useCallback } from 'react';
 import { cn } from '@/lib/utils';
-import { Calendar } from 'lucide-react';
+import { Calendar, AlertTriangle } from 'lucide-react';
 import { toast } from 'sonner';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import PlanningDayCell from './PlanningDayCell';
 import { isDateInCPPeriod } from './paidLeaveCalculations';
 import { formatLocalDate } from './dateUtils';
@@ -31,6 +32,7 @@ const PlanningDayRow = React.memo(function PlanningDayRow({
   onToggleHoliday,
   onSetModalState,
   onSetSelectedCPPeriod,
+  staffingAlerts = [],
 }) {
   const maxEventsInRow = Math.max(
     1,
@@ -99,6 +101,27 @@ const PlanningDayRow = React.memo(function PlanningDayRow({
         >
           {isHoliday ? "🎉" : "+F"}
         </button>
+
+        {staffingAlerts.length > 0 && (
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <div className="mt-1 flex items-center justify-center gap-0.5 px-1 py-0.5 bg-red-100 border border-red-300 rounded text-[8px] text-red-700 font-semibold cursor-default">
+                  <AlertTriangle className="w-2.5 h-2.5 flex-shrink-0" />
+                  <span>{staffingAlerts.reduce((s, a) => s + a.missing, 0)}</span>
+                </div>
+              </TooltipTrigger>
+              <TooltipContent side="right" className="text-xs max-w-[180px]">
+                <p className="font-semibold mb-1 text-red-700">Sous-effectif :</p>
+                {staffingAlerts.map((a, i) => (
+                  <p key={i} className="text-gray-700">
+                    {a.position} : {a.planned}/{a.required} (-{a.missing})
+                  </p>
+                ))}
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        )}
       </div>
 
       {/* Employee cells */}
