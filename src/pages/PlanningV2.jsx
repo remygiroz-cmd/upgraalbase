@@ -1692,6 +1692,22 @@ export default function PlanningV2() {
              <div className="absolute bottom-16 right-0 bg-white rounded-lg shadow-2xl border-2 border-gray-200 p-2 space-y-2 min-w-[240px] animate-in slide-in-from-bottom-2">
                <button
                  onClick={() => {
+                   setShowProposeShiftModal(true);
+                   setShowFab(false);
+                 }}
+                 className="w-full flex items-center gap-3 px-4 py-3 hover:bg-orange-50 rounded-lg transition-colors group"
+               >
+                 <div className="w-10 h-10 bg-orange-100 rounded-full flex items-center justify-center group-hover:bg-orange-200 transition-colors">
+                   <span className="text-lg">📅</span>
+                 </div>
+                 <div className="text-left flex-1">
+                   <div className="font-semibold text-sm text-gray-900">Proposer un shift</div>
+                   <div className="text-xs text-gray-500">Offre à des employés</div>
+                 </div>
+               </button>
+
+               <button
+                 onClick={() => {
                    setShowLeaveRequestModal(true);
                    setShowFab(false);
                  }}
