@@ -556,6 +556,13 @@ export default function PlanningV2() {
     setCurrentDate(new Date(currentYear, currentMonth + 1, 1));
   };
 
+  const handleCarouselChange = useCallback((year, month) => {
+    setCurrentDate(prev => {
+      if (prev.getFullYear() === year && prev.getMonth() === month) return prev;
+      return new Date(year, month, 1);
+    });
+  }, []);
+
   // Column handlers using layout hook
   const handleColumnDragStart = (id) => setDraggingId(id);
   const handleColumnDragOver = (id) => setDragOverId(id);
