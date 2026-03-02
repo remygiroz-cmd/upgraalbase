@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Settings, Calendar, Calculator, Eye, Zap, Lock, Mail, TrendingDown } from 'lucide-react';
+import { Settings, Calendar, Calculator, Eye, Zap, Lock, Mail, TrendingDown, Users } from 'lucide-react';
 import OptimisationMasseSalariale from './OptimisationMasseSalariale';
+import StaffingRequirementsTab from './StaffingRequirementsTab';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import PositionsManager from './PositionsManager';
@@ -16,7 +17,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { toast } from 'sonner';
 
-export default function PlanningSettingsModal({ open, onOpenChange, displayMode, setDisplayMode }) {
+export default function PlanningSettingsModal({ open, onOpenChange, displayMode, setDisplayMode, positions = [] }) {
   const [activeTab, setActiveTab] = useState('statuts');
   const [comptaSettings, setComptaSettings] = useState({});
   const queryClient = useQueryClient();
@@ -140,7 +141,7 @@ export default function PlanningSettingsModal({ open, onOpenChange, displayMode,
         </DialogHeader>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="mt-4">
-          <TabsList className="grid w-full grid-cols-7 gap-1">
+          <TabsList className="grid w-full grid-cols-8 gap-1">
             <TabsTrigger value="statuts" className="text-xs flex flex-col items-center gap-1 py-2">
               <Calendar className="w-4 h-4" />
               <span>Statuts</span>
@@ -168,6 +169,10 @@ export default function PlanningSettingsModal({ open, onOpenChange, displayMode,
             <TabsTrigger value="optimisation" className="text-xs flex flex-col items-center gap-1 py-2">
               <TrendingDown className="w-4 h-4" />
               <span>Optim.</span>
+            </TabsTrigger>
+            <TabsTrigger value="effectif" className="text-xs flex flex-col items-center gap-1 py-2">
+              <Users className="w-4 h-4" />
+              <span>Effectif</span>
             </TabsTrigger>
           </TabsList>
 
@@ -626,6 +631,11 @@ export default function PlanningSettingsModal({ open, onOpenChange, displayMode,
           {/* Tab 7: Optimisation Masse Salariale */}
           <TabsContent value="optimisation" className="mt-6">
             <OptimisationMasseSalariale />
+          </TabsContent>
+
+          {/* Tab 8: Besoins d'effectif */}
+          <TabsContent value="effectif" className="mt-6">
+            <StaffingRequirementsTab positions={positions} />
           </TabsContent>
 
           {/* Tab 6: Sécurité & validation */}
