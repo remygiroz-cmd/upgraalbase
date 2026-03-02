@@ -214,9 +214,24 @@ export default function VehicleCheckModal({ open, onOpenChange, type, assignment
           {/* DEBUT SHIFT */}
           {type === 'DEBUT_SHIFT' && (
             <>
-              <Field label="Km au départ *">
-                <Input type="number" value={form.km_debut} onChange={e => set('km_debut', e.target.value)} placeholder="Ex: 45230" />
-              </Field>
+              <div>
+                <Label className="mb-1 block">Km au départ *</Label>
+                <Input
+                  type="number"
+                  value={form.km_debut}
+                  onChange={e => set('km_debut', e.target.value)}
+                  placeholder={minKmDepart > 0 ? `Minimum : ${minKmDepart} km` : 'Ex: 45230'}
+                  className={kmDepartError ? 'border-red-500 focus-visible:ring-red-500' : ''}
+                />
+                {minKmDepart > 0 && !kmDepartError && (
+                  <p className="text-xs text-gray-500 mt-1">Kilométrage minimum requis : <strong>{minKmDepart} km</strong></p>
+                )}
+                {kmDepartError && (
+                  <p className="text-xs text-red-600 mt-1 flex items-center gap-1">
+                    ⚠️ {kmDepartError}
+                  </p>
+                )}
+              </div>
 
               <Field label={`${energyLabel} au départ (%) *`}>
                 <Input
