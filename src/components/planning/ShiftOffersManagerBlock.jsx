@@ -143,14 +143,24 @@ export default function ShiftOffersManagerBlock() {
               </button>
             </div>
           </div>
-          {offer.status === 'open' && (
+          <div className="flex items-center gap-1 flex-shrink-0">
+            {offer.status === 'open' && (
+              <button
+                onClick={() => handleCancel(offer)}
+                className="text-xs text-red-400 hover:text-red-600"
+                title="Annuler l'offre"
+              >
+                <XCircle className="w-4 h-4" />
+              </button>
+            )}
             <button
-              onClick={() => handleCancel(offer)}
-              className="flex-shrink-0 text-xs text-red-400 hover:text-red-600 flex items-center gap-1"
+              onClick={(e) => handleDelete(offer, e)}
+              className="text-xs text-gray-300 hover:text-red-500 transition-colors"
+              title="Supprimer l'offre"
             >
-              <XCircle className="w-4 h-4" />
+              <Trash2 className="w-3.5 h-3.5" />
             </button>
-          )}
+          </div>
         </div>
         {isExpanded && recipients.length > 0 && (
           <div className="mt-2 bg-gray-50 rounded-lg p-2 space-y-1">
