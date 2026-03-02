@@ -1675,6 +1675,16 @@ export default function PlanningV2() {
          monthKey={monthKey}
        />
 
+       {/* Propose Shift Modal */}
+       <ProposeShiftModal
+         open={showProposeShiftModal}
+         onOpenChange={setShowProposeShiftModal}
+         currentUser={currentUser}
+         positions={positions}
+         shifts={shifts}
+         nonShiftEvents={nonShiftEvents}
+       />
+
        {/* Direct Shift Swap Modal */}
        <DirectShiftSwapModal
          open={showDirectSwapModal}
