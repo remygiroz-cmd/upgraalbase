@@ -185,6 +185,25 @@ export default function LeaveRequestModal({ open, onOpenChange }) {
             </Alert>
           )}
 
+          {/* Avertissement délai < 15 jours */}
+          {lastWorkDay && (() => {
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            const depart = new Date(lastWorkDay + 'T00:00:00');
+            const diffDays = Math.round((depart - today) / (1000 * 60 * 60 * 24));
+            return diffDays >= 0 && diffDays < 15;
+          })() && (
+            <div className="bg-red-600 text-white rounded-lg p-4 flex items-start gap-3 shadow-md">
+              <AlertTriangle className="w-5 h-5 flex-shrink-0 mt-0.5" />
+              <div>
+                <p className="font-bold text-sm">⚠️ Délai insuffisant</p>
+                <p className="text-sm mt-0.5">
+                  Attention, les congés payés doivent être déposés au minimum <strong>15 jours avant la date de départ souhaitée</strong>.
+                </p>
+              </div>
+            </div>
+          )}
+
           {/* Aperçu période */}
           {isValid && cpData && (
             <div className="bg-green-50 border-2 border-green-300 rounded-lg p-4">
