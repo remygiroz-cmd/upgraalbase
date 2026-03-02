@@ -52,9 +52,20 @@ export default function VehicleCheckModal({ open, onOpenChange, type, assignment
       : [...form.tags_incidents, tag]);
   };
 
+  // Validation km départ
+  const kmDepartValue = form.km_debut !== '' ? parseInt(String(form.km_debut).replace(/\s/g, ''), 10) : NaN;
+  const kmDepartError = type === 'DEBUT_SHIFT' && form.km_debut !== ''
+    ? (isNaN(kmDepartValue) || kmDepartValue < 0)
+      ? 'Kilométrage invalide.'
+      : kmDepartValue < minKmDepart
+        ? `Le kilométrage de départ ne peut pas être inférieur au kilométrage actuel du véhicule (${minKmDepart} km).`
+        : null
+    : null;
+
   const canSubmit = () => {
     if (type === 'DEBUT_SHIFT') {
       if (!form.km_debut || !form.confirmation_vehicule_ok) return false;
+      if (kmDepartError) return false;
       if (form.start_energy_level_pct === '' || Number(form.start_energy_level_pct) < 0 || Number(form.start_energy_level_pct) > 100) return false;
       return true;
     }
