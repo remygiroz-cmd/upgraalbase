@@ -360,11 +360,13 @@ Deno.serve(async (req) => {
     console.log(`[INFO] Sending order email for order ${order.id}`);
 
     // Historique
+    const allRecipients = [supplier.email, ...ccEmails].join(', ');
     const currentHistory = order.history || [];
     currentHistory.push({
       timestamp: new Date().toISOString(),
       action: 'email_sent',
       details: `Email envoyé${isAutomation ? ' (automatique)' : ''}`,
+      recipients: allRecipients,
       user_id: sentBy,
     });
 
