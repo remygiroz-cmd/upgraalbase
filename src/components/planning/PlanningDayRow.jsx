@@ -32,11 +32,11 @@ const PlanningDayRow = React.memo(function PlanningDayRow({
   onToggleHoliday,
   onSetModalState,
   onSetSelectedCPPeriod,
-  staffingAlerts = [],
+  staffingAlerts = []
 }) {
   const maxEventsInRow = Math.max(
     1,
-    ...visibleEmployees.map(emp => {
+    ...visibleEmployees.map((emp) => {
       const s = getShiftsForEmployeeAndDate(emp.id, dateStr);
       const ns = getNonShiftsForEmployeeAndDate(emp.id, dateStr);
       return s.length + ns.length;
@@ -66,8 +66,8 @@ const PlanningDayRow = React.memo(function PlanningDayRow({
         dayInfo.isToday && "bg-blue-50/80"
       )}
       data-day={dateStr}
-      data-today={dayInfo.isToday ? "true" : undefined}
-    >
+      data-today={dayInfo.isToday ? "true" : undefined}>
+
       {/* Sticky date column */}
       <div className={cn(
         "sticky left-0 z-20 border-r-2 border-gray-300 px-2 lg:px-4 py-2 lg:py-3 shadow-sm w-[80px] lg:w-[120px] flex flex-col justify-center bg-white",
@@ -92,19 +92,19 @@ const PlanningDayRow = React.memo(function PlanningDayRow({
           disabled={!canModifyPlanning}
           className={cn(
             "mt-1 text-[8px] lg:text-[9px] px-1 lg:px-1.5 py-0.5 rounded-full font-semibold transition-all",
-            !canModifyPlanning
-              ? "bg-gray-200 text-gray-400 cursor-not-allowed opacity-60"
-              : isHoliday
-              ? "bg-purple-600 text-white hover:bg-purple-700 cursor-pointer"
-              : "bg-gray-200 text-gray-600 hover:bg-purple-100 hover:text-purple-700 cursor-pointer"
+            !canModifyPlanning ?
+            "bg-gray-200 text-gray-400 cursor-not-allowed opacity-60" :
+            isHoliday ?
+            "bg-purple-600 text-white hover:bg-purple-700 cursor-pointer" :
+            "bg-gray-200 text-gray-600 hover:bg-purple-100 hover:text-purple-700 cursor-pointer"
           )}
-          title={!canModifyPlanning ? "Lecture seule" : (isHoliday ? "Retirer jour férié" : "Marquer jour férié")}
-        >
+          title={!canModifyPlanning ? "Lecture seule" : isHoliday ? "Retirer jour férié" : "Marquer jour férié"}>
+
           {isHoliday ? "🎉" : "+F"}
         </button>
 
-        {staffingAlerts.length > 0 && (
-          <TooltipProvider>
+        {staffingAlerts.length > 0 &&
+        <TooltipProvider>
             <Tooltip>
               <TooltipTrigger asChild>
                 <div className="mt-1 flex items-center justify-center gap-0.5 px-1 py-0.5 bg-red-100 border border-red-300 rounded text-[8px] text-red-700 font-semibold cursor-default">
@@ -112,25 +112,25 @@ const PlanningDayRow = React.memo(function PlanningDayRow({
                   <span>{staffingAlerts.reduce((s, a) => s + a.missing, 0)}</span>
                 </div>
               </TooltipTrigger>
-              <TooltipContent side="right" className="text-xs max-w-[180px]">
+              <TooltipContent side="right" className="bg-slate-50 text-primary-foreground px-3 py-1.5 text-xs rounded-md z-50 overflow-hidden animate-in fade-in-0 zoom-in-95 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 max-w-[180px]">
                 <p className="font-semibold mb-1 text-red-700">Sous-effectif :</p>
-                {staffingAlerts.map((a, i) => (
-                  <p key={i} className="text-gray-700">
+                {staffingAlerts.map((a, i) =>
+              <p key={i} className="text-gray-700">
                     {a.position} : {a.planned}/{a.required} (-{a.missing})
                   </p>
-                ))}
+              )}
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>
-        )}
+        }
       </div>
 
       {/* Employee cells */}
       <div className="flex flex-1">
-        {visibleEmployees.map(employee => {
+        {visibleEmployees.map((employee) => {
           const employeeShifts = getShiftsForEmployeeAndDate(employee.id, dateStr);
           const employeeNonShifts = getNonShiftsForEmployeeAndDate(employee.id, dateStr);
-          const employeeCPPeriods = paidLeavePeriods.filter(p => p.employee_id === employee.id);
+          const employeeCPPeriods = paidLeavePeriods.filter((p) => p.employee_id === employee.id);
           const cpPeriod = isDateInCPPeriod(dateStr, employeeCPPeriods);
           const isCPDay = !!cpPeriod;
 
@@ -162,13 +162,13 @@ const PlanningDayRow = React.memo(function PlanningDayRow({
               onSaveShift={onSaveShift}
               onDeleteNonShift={null}
               onSetModalState={onSetModalState}
-              onSetSelectedCPPeriod={onSetSelectedCPPeriod}
-            />
-          );
+              onSetSelectedCPPeriod={onSetSelectedCPPeriod} />);
+
+
         })}
       </div>
-    </div>
-  );
+    </div>);
+
 }, (prev, next) => {
   // Custom comparator : ne re-rendre que si les données de ce jour ont changé
   if (prev.dateStr !== next.dateStr) return false;
