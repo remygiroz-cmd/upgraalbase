@@ -12,6 +12,12 @@ export default function VehicleCheckModal({ open, onOpenChange, type, assignment
   const queryClient = useQueryClient();
   const isElectrique = vehicle?.energie === 'ELECTRIQUE';
 
+  // Km minimum de référence (fallback sur km_initial si km_current absent)
+  const minKmDepart = vehicle?.km_current ?? vehicle?.km_initial ?? 0;
+  if (type === 'DEBUT_SHIFT' && vehicle && vehicle.km_current == null) {
+    console.warn(`[VehicleCheckModal] km_current absent pour véhicule ${vehicle.id}, fallback km_initial=${vehicle.km_initial}`);
+  }
+
   const [form, setForm] = useState({
     km_debut: assignment?.km_debut || '',
     km_fin: '',
