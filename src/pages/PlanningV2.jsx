@@ -71,6 +71,7 @@ export default function PlanningV2() {
   const [showLeaveRequestModal, setShowLeaveRequestModal] = useState(false);
   const [showShiftSwapModal, setShowShiftSwapModal] = useState(false);
   const [showDirectSwapModal, setShowDirectSwapModal] = useState(false);
+  const [showProposeShiftModal, setShowProposeShiftModal] = useState(false);
   const [modalState, setModalState] = useState({
     isOpen: false,
     actionType: null,
