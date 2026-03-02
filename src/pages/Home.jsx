@@ -945,6 +945,9 @@ export default function Home() {
           )}
         </div>
 
+        {/* Shift Offers Manager Block */}
+        {isManagerOrAdmin && <ShiftOffersManagerBlock />}
+
         {/* Manager/Admin Quick Actions */}
         {isManagerOrAdmin && (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
