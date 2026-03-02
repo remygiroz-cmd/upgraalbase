@@ -402,11 +402,11 @@ export default function Home() {
     }
   });
 
-  // Get urgent announcements — filtrées côté serveur par is_active
+  // Get urgent announcements — récupérées sans filtre is_active (non fiable), filtrées côté client
   const { data: urgentAnnouncements = [] } = useQuery({
     queryKey: QK.urgentAnnouncements(),
     queryFn: async () => {
-      const all = await perfFetch('urgentAnnouncements', () => base44.entities.UrgentAnnouncement.filter({ is_active: true }, '-created_date', 20));
+      const all = await perfFetch('urgentAnnouncements', () => base44.entities.UrgentAnnouncement.list('-created_date', 50));
       const now = new Date();
       const activeAnnouncements = all.filter(ann => {
         const startsAt = ann.starts_at ? new Date(ann.starts_at) : new Date(0);
