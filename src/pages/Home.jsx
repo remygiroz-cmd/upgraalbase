@@ -684,6 +684,13 @@ export default function Home() {
           />
         )}
 
+        {/* My Week Shifts */}
+        <MyWeekShiftsCard
+          currentEmployee={currentEmployee}
+          resetVersion={resetVersion}
+          monthKey={monthKey}
+        />
+
         {/* Leave Request Decisions for Employee */}
         {myLeaveRequestDecisions.length > 0 && (
           <div className="mb-6">
