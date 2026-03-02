@@ -347,7 +347,7 @@ Deno.serve(async (req) => {
     );
 
     const emailPayload: any = {
-      from: `${sanitizeEmailHeaderText(senderName)} <commandes@upgraal.com>`,
+      from: `${sanitizeEmailHeaderText(senderName)} <upgraal@upgraal.com>`,
       to: [supplier.email],
       subject: emailSubject,
       text: emailBody,
