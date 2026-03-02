@@ -722,6 +722,21 @@ export default function Home() {
           />
         )}
 
+        {/* Shift Offers for employee */}
+        {pendingOffers.length > 0 && (
+          <div className="space-y-3">
+            {pendingOffers.map(({ recipient, offer }) => (
+              <ShiftOfferCard
+                key={recipient.id}
+                recipient={recipient}
+                offer={offer}
+                employee={currentEmployee}
+                onHandled={(id) => setHandledOfferRecipientIds(prev => [...prev, id])}
+              />
+            ))}
+          </div>
+        )}
+
         {/* My Week Shifts */}
         <MyWeekShiftsCard
           currentEmployee={currentEmployee}
