@@ -242,15 +242,17 @@ export default function PlanningV2() {
   const { data: paidLeavePeriods = [], isFetching: isFetchingCP } = useQuery({
     queryKey: ['paidLeavePeriods', monthKey, resetVersion],
     queryFn: async () => {
-      const allPeriods = await perfFetch('Planning:paidLeavePeriods', () => base44.entities.PaidLeavePeriod.list(), { monthKey, resetVersion });
-      const monthPeriods = allPeriods.filter(p => p.end_cp >= monthFirstDay && p.start_cp <= monthLastDay);
-      const versioned = filterByVersion(monthPeriods, resetVersion);
-      console.log(`[Planning] paidLeavePeriods: ${versioned.length} / ${monthPeriods.length} (v${resetVersion})`);
-      return versioned;
+      // Filtre côté serveur : périodes qui chevauchent le mois courant
+      const periods = await perfFetch('Planning:paidLeavePeriods', () =>
+        base44.entities.PaidLeavePeriod.filter({
+          start_cp: { $lte: monthLastDay },
+          end_cp: { $gte: monthFirstDay }
+        }), { monthKey, resetVersion });
+      return filterByVersion(periods, resetVersion);
     },
     enabled: resetVersion !== undefined,
     placeholderData: keepPreviousData,
-    staleTime: 30 * 1000
+    staleTime: 60 * 1000
   });
 
   const { data: approvedSwaps = [] } = useQuery({
