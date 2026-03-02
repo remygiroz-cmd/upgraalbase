@@ -303,16 +303,20 @@ export default function PlanningV2() {
   const { data: allWeeklyRecaps = [] } = useQuery({
     queryKey: QK.weeklyRecaps(monthKey, resetVersion),
     queryFn: async () => {
+      // Filtre côté serveur : semaines commençant dans [mois-7j, fin du mois]
       const startRange = new Date(currentYear, currentMonth, 1);
       startRange.setDate(startRange.getDate() - 7);
       const startRangeStr = formatLocalDate(startRange);
-      const allRecaps = await perfFetch('Planning:weeklyRecaps', () => base44.entities.WeeklyRecap.list(), { monthKey, resetVersion });
-      const monthRecaps = allRecaps.filter(r => r.week_start >= startRangeStr && r.week_start <= monthLastDay);
-      return filterByVersion(monthRecaps, resetVersion);
+      const recaps = await perfFetch('Planning:weeklyRecaps', () =>
+        base44.entities.WeeklyRecap.filter({
+          week_start: { $gte: startRangeStr, $lte: monthLastDay },
+          month_key: monthKey
+        }), { monthKey, resetVersion });
+      return filterByVersion(recaps, resetVersion);
     },
     enabled: allDataReady, // lazy: wait for shifts/nonShifts/CP ready
     placeholderData: keepPreviousData,
-    staleTime: 90 * 1000 // 90s — longer cache window
+    staleTime: 90 * 1000
   });
 
   const { data: allMonthlyRecaps = [] } = useQuery({
