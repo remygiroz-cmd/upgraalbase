@@ -149,6 +149,29 @@ export default function LeaveRequestModal({ open, onOpenChange }) {
                 ))}
               </SelectContent>
             </Select>
+            {selectedEmployee && (() => {
+              const latestPayslip = (selectedEmployee.payslips?.length > 0)
+                ? [...selectedEmployee.payslips].sort((a, b) => (b.month || '').localeCompare(a.month || ''))[0]
+                : null;
+              const remainingLeave = latestPayslip?.total_leave;
+              return remainingLeave != null ? (
+                <div className="mt-2 flex items-center gap-2 px-3 py-2 bg-green-50 border border-green-200 rounded-lg">
+                  <Calendar className="w-4 h-4 text-green-600 flex-shrink-0" />
+                  <span className="text-sm text-green-800 font-medium">
+                    Congés restants : <strong>{remainingLeave} jour{remainingLeave > 1 ? 's' : ''}</strong>
+                  </span>
+                  {latestPayslip?.month && (
+                    <span className="text-xs text-green-600 ml-auto">
+                      (fiche {latestPayslip.month})
+                    </span>
+                  )}
+                </div>
+              ) : (
+                <div className="mt-2 px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-xs text-gray-500">
+                  Aucune fiche de paie disponible pour cet employé
+                </div>
+              );
+            })()}
           </div>
 
           {/* Dates */}
