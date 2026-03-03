@@ -45,40 +45,35 @@ const SnapshotRenderer = forwardRef(function SnapshotRenderer({ monthKey, onRead
         const monthStartStr = `${yr}-${String(mo).padStart(2, '0')}-01`;
         const monthEndStr = `${yr}-${String(mo).padStart(2, '0')}-${String(monthEnd.getDate()).padStart(2, '0')}`;
 
-        // Charger toutes les données en parallèle
-        const [
-          employees,
-          teams,
-          shifts,
-          nonShiftEvents,
-          nonShiftTypes,
-          positions,
-          cpPeriods,
-          holidayDates,
-          exportOverrides,
-          recapExtrasOverrides,
-          recapsPersisted,
-          weeklyRecaps,
-          appSettings,
-          calculationSettings,
-        ] = await Promise.all([
-          base44.entities.Employee.filter({ is_active: true }),
-          base44.entities.Team.filter({ is_active: true }),
-          getActiveShiftsForMonth(monthKey, ctx.reset_version),
-          base44.entities.NonShiftEvent.filter({ month_key: monthKey }).then(evs =>
-            evs.filter(e => (e.reset_version ?? 0) >= ctx.reset_version && e.date >= monthStartStr && e.date <= monthEndStr)
-          ),
-          base44.entities.NonShiftType.filter({ is_active: true }),
-          base44.entities.Position.filter({ is_active: true }),
-          base44.entities.PaidLeavePeriod.filter({ month_key: monthKey }),
-          base44.entities.HolidayDate.filter({ date: { $gte: `${yr}-01-01`, $lte: `${yr}-12-31` } }),
-          base44.entities.MonthlyExportOverride.filter({ month_key: monthKey }),
-          base44.entities.MonthlyRecapExtrasOverride.filter({ month_key: monthKey }),
-          base44.entities.MonthlyRecapPersisted.filter({ month_key: monthKey }),
-          base44.entities.WeeklyRecap.filter({ month_key: monthKey }),
-          base44.entities.AppSettings.filter({ setting_key: 'compta_export' }),
-          base44.entities.AppSettings.filter({ setting_key: 'planning_calculation_mode' }),
-        ]);
+        // Charger les données en séries pour éviter le rate limit (429)
+        const employees = await base44.entities.Employee.filter({ is_active: true });
+        if (cancelled) return;
+        const nonShiftTypes = await base44.entities.NonShiftType.filter({ is_active: true });
+        if (cancelled) return;
+        const positions = await base44.entities.Position.filter({ is_active: true });
+        if (cancelled) return;
+        const shifts = await getActiveShiftsForMonth(monthKey, ctx.reset_version);
+        if (cancelled) return;
+        const nonShiftEventsRaw = await base44.entities.NonShiftEvent.filter({ month_key: monthKey });
+        const nonShiftEvents = nonShiftEventsRaw.filter(e => (e.reset_version ?? 0) >= ctx.reset_version && e.date >= monthStartStr && e.date <= monthEndStr);
+        if (cancelled) return;
+        const holidayDates = await base44.entities.HolidayDate.filter({ date: { $gte: `${yr}-01-01`, $lte: `${yr}-12-31` } });
+        if (cancelled) return;
+        const cpPeriods = await base44.entities.PaidLeavePeriod.filter({ month_key: monthKey });
+        if (cancelled) return;
+        const weeklyRecaps = await base44.entities.WeeklyRecap.filter({ month_key: monthKey });
+        if (cancelled) return;
+        const exportOverrides = await base44.entities.MonthlyExportOverride.filter({ month_key: monthKey });
+        if (cancelled) return;
+        const recapExtrasOverrides = await base44.entities.MonthlyRecapExtrasOverride.filter({ month_key: monthKey });
+        if (cancelled) return;
+        const recapsPersisted = await base44.entities.MonthlyRecapPersisted.filter({ month_key: monthKey });
+        if (cancelled) return;
+        const appSettings = await base44.entities.AppSettings.filter({ setting_key: 'compta_export' });
+        if (cancelled) return;
+        const calculationSettings = await base44.entities.AppSettings.filter({ setting_key: 'planning_calculation_mode' });
+        if (cancelled) return;
+        const teams = [];
 
         if (cancelled) return;
 
