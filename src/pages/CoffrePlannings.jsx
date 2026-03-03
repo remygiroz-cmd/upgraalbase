@@ -96,53 +96,31 @@ export default function CoffrePlannings() {
     onError: (err) => toast.error('Erreur suppression : ' + err.message),
   });
 
-  // Génération du snapshot
-  const handleGenerate = useCallback(async () => {
-    if (!selectedMonthKey) return;
+  const handleGenerate = useCallback(() => {
+    if (!selectedMonthKey || generating) return;
     setGenerating(true);
-    setProgress('Initialisation…');
-    setProgressPct(5);
-    setRendererReady(false);
-
-    // Lazy import du renderer (pas dans Planning !)
-    const SnapshotRenderer = (await import('@/components/planning/SnapshotRenderer')).default;
-    const { generateSnapshotPDF } = await import('@/components/planning/SnapshotGenerator');
-
-    // Monter le renderer offscreen en lui passant le monthKey
-    setRenderKey(selectedMonthKey);
     setProgress('Chargement des données du mois…');
-    setProgressPct(15);
+    setProgressPct(10);
+    setRenderKey(selectedMonthKey);
+  }, [selectedMonthKey, generating]);
 
-    // Attendre que le renderer soit prêt (via callback onReady)
-    // Cf. ci-dessous dans le JSX
-  }, [selectedMonthKey]);
-
-  const handleRendererReady = useCallback(async () => {
-    if (!rendererRef.current) return;
-    setRendererReady(true);
-
+  const handleRendererReady = useCallback(async (data) => {
     try {
+      setProgress('Calcul des données de paie…');
+      setProgressPct(30);
+
       const { generateSnapshotPDF } = await import('@/components/planning/SnapshotGenerator');
-
-      const captureEl = rendererRef.current.getCaptureElement();
-      const data = rendererRef.current.getData();
-
-      if (!captureEl || !data) throw new Error('Composant offscreen non disponible');
-
-      setProgress('Capture du planning en cours…');
-      setProgressPct(35);
 
       const onProgress = (msg) => {
         setProgress(msg);
-        setProgressPct(prev => Math.min(prev + 10, 90));
+        setProgressPct(prev => Math.min(prev + 12, 88));
       };
 
-      const { blob, exportRowsCount } = await generateSnapshotPDF(captureEl, data, onProgress);
+      const { blob, exportRowsCount } = await generateSnapshotPDF(data, onProgress);
 
       setProgress('Upload du fichier…');
       setProgressPct(92);
 
-      // Nom du fichier
       const now = new Date();
       const dateStr = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
       const timeStr = `${String(now.getHours()).padStart(2,'0')}-${String(now.getMinutes()).padStart(2,'0')}`;
@@ -151,8 +129,6 @@ export default function CoffrePlannings() {
 
       const uploaded = await base44.integrations.Core.UploadFile({ file });
       if (!uploaded?.file_url) throw new Error('Upload échoué');
-
-      const fileSizeKb = Math.round(blob.size / 1024);
 
       setProgress('Sauvegarde dans le coffre…');
       setProgressPct(97);
@@ -163,7 +139,7 @@ export default function CoffrePlannings() {
         reset_version: data.ctx.reset_version,
         file_url: uploaded.file_url,
         file_name: fileName,
-        file_size_kb: fileSizeKb,
+        file_size_kb: Math.round(blob.size / 1024),
         created_by_name: currentUser?.full_name || currentUser?.email || 'Inconnu',
         planning_employees_count: data.employees.length,
         planning_shifts_count: data.shifts.length,
@@ -174,7 +150,6 @@ export default function CoffrePlannings() {
       setProgressPct(100);
       setProgress('Snapshot généré avec succès !');
       toast.success(`✅ Snapshot ${data.monthName} ${data.yr} enregistré`);
-
       await new Promise(r => setTimeout(r, 1200));
     } catch (err) {
       toast.error('Erreur génération : ' + err.message);
@@ -182,7 +157,6 @@ export default function CoffrePlannings() {
     } finally {
       setGenerating(false);
       setRenderKey(null);
-      setRendererReady(false);
       setProgress('');
       setProgressPct(0);
     }
@@ -192,7 +166,6 @@ export default function CoffrePlannings() {
     toast.error('Erreur chargement données : ' + msg);
     setGenerating(false);
     setRenderKey(null);
-    setRendererReady(false);
     setProgress('');
     setProgressPct(0);
   }, []);
