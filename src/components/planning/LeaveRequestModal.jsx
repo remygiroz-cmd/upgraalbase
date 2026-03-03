@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Alert } from '@/components/ui/alert';
-import { AlertTriangle, Calendar, Send } from 'lucide-react';
+import { AlertTriangle, Calendar, Send, Leaf } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
 import { calculateCPPeriod, calculateCPDays } from './paidLeaveCalculations';
