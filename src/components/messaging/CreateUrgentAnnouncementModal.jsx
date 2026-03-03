@@ -267,7 +267,7 @@ export default function CreateUrgentAnnouncementModal({
                 <button
                   key={dur.hours}
                   type="button"
-                  onClick={() => setForm({ ...form, quickDuration: dur.hours, customEndsAt: '' })}
+                  onClick={() => setForm(prev => ({ ...prev, quickDuration: dur.hours, customEndsAt: '' }))}
                   className={cn(
                     "px-3 py-2 rounded-lg border text-sm font-medium transition-colors",
                     form.quickDuration === dur.hours && !form.customEndsAt
@@ -283,10 +283,15 @@ export default function CreateUrgentAnnouncementModal({
               <Input
                 type="datetime-local"
                 value={form.customEndsAt}
-                onChange={(e) => setForm({ ...form, customEndsAt: e.target.value })}
+                onChange={(e) => setForm(prev => ({ ...prev, customEndsAt: e.target.value, quickDuration: 0 }))}
                 className="text-sm"
                 placeholder="Ou date/heure précise"
               />
+              {form.customEndsAt && (
+                <p className="text-xs text-gray-500 mt-1">
+                  Fin : {new Date(form.customEndsAt).toLocaleString('fr-FR')}
+                </p>
+              )}
             </div>
           </div>
 
