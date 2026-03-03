@@ -50,9 +50,7 @@ export default function CoffrePlannings() {
   const [progressPct, setProgressPct] = useState(0);
   const [confirmDelete, setConfirmDelete] = useState(null);
 
-  // Refs pour le rendu offscreen
   const [renderKey, setRenderKey] = useState(null);
-  const [snapshotData, setSnapshotData] = useState(null);
 
   const monthOptions = buildMonthOptions();
 
