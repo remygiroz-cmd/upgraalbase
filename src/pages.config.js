@@ -51,6 +51,7 @@ import AdminShiftCleanup from './pages/AdminShiftCleanup';
 import AnnoncesUrgentes from './pages/AnnoncesUrgentes';
 import AnnouncementDetail from './pages/AnnouncementDetail';
 import CoffreFactures from './pages/CoffreFactures';
+import CoffrePlannings from './pages/CoffrePlannings';
 import Conversation from './pages/Conversation';
 import Equipe from './pages/Equipe';
 import GestionPostes from './pages/GestionPostes';
@@ -73,7 +74,6 @@ import TemplatesRH from './pages/TemplatesRH';
 import TravailDuJour from './pages/TravailDuJour';
 import VehiclesSettings from './pages/VehiclesSettings';
 import Vehicules from './pages/Vehicules';
-import CoffrePlannings from './pages/CoffrePlannings';
 import __Layout from './Layout.jsx';
 
 
@@ -82,6 +82,7 @@ export const PAGES = {
     "AnnoncesUrgentes": AnnoncesUrgentes,
     "AnnouncementDetail": AnnouncementDetail,
     "CoffreFactures": CoffreFactures,
+    "CoffrePlannings": CoffrePlannings,
     "Conversation": Conversation,
     "Equipe": Equipe,
     "GestionPostes": GestionPostes,
@@ -104,7 +105,6 @@ export const PAGES = {
     "TravailDuJour": TravailDuJour,
     "VehiclesSettings": VehiclesSettings,
     "Vehicules": Vehicules,
-    "CoffrePlannings": CoffrePlannings,
 }
 
 export const pagesConfig = {

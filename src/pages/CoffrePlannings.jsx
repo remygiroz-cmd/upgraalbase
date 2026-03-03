@@ -1,5 +1,4 @@
-import React, { useState, useCallback } from 'react';
-import SnapshotDataLoader from '@/components/planning/SnapshotRenderer';
+import React, { useState, useCallback, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
@@ -9,7 +8,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Progress } from '@/components/ui/progress';
 import {
   Camera, Download, Trash2, FileText, Calendar, User, HardDrive,
-  Loader2, AlertCircle, CheckCircle2, Filter, ExternalLink
+  Loader2, AlertCircle, CheckCircle2, Filter, ExternalLink, ClipboardList
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
@@ -38,6 +37,7 @@ function buildMonthOptions() {
 }
 
 const ALLOWED_ROLES = ['gérant', 'gerant', 'bureau', 'manager'];
+const SNAPSHOT_TIMEOUT_MS = 60_000;
 
 export default function CoffrePlannings() {
   const queryClient = useQueryClient();
@@ -50,12 +50,15 @@ export default function CoffrePlannings() {
   const [progress, setProgress] = useState('');
   const [progressPct, setProgressPct] = useState(0);
   const [confirmDelete, setConfirmDelete] = useState(null);
-
   const [renderKey, setRenderKey] = useState(null);
+  const [lastError, setLastError] = useState(null);
+
+  const resolveRef = useRef(null);
+  const rejectRef = useRef(null);
+  const timeoutRef = useRef(null);
 
   const monthOptions = buildMonthOptions();
 
-  // User
   const { data: currentUser } = useQuery({
     queryKey: ['currentUser'],
     queryFn: () => base44.auth.me(),
@@ -77,7 +80,6 @@ export default function CoffrePlannings() {
   const canAccess = isAdmin || ALLOWED_ROLES.some(r => userRole?.name?.toLowerCase() === r.toLowerCase());
   const canDelete = isAdmin;
 
-  // Snapshots
   const { data: snapshots = [], isLoading: loadingSnapshots } = useQuery({
     queryKey: ['planningSnapshots'],
     queryFn: () => base44.entities.PlanningSnapshot.list('-created_date', 100),
@@ -97,78 +99,133 @@ export default function CoffrePlannings() {
     onError: (err) => toast.error('Erreur suppression : ' + err.message),
   });
 
-  const handleGenerate = useCallback(() => {
-    if (!selectedMonthKey || generating) return;
-    setGenerating(true);
-    setProgress('Chargement des données du mois…');
-    setProgressPct(10);
-    setRenderKey(selectedMonthKey);
-  }, [selectedMonthKey, generating]);
-
-  const handleRendererReady = useCallback(async (data) => {
-    try {
-      setProgress('Calcul des données de paie…');
-      setProgressPct(30);
-
-      const { generateSnapshotPDF } = await import('@/components/planning/SnapshotGenerator');
-
-      const onProgress = (msg) => {
-        setProgress(msg);
-        setProgressPct(prev => Math.min(prev + 12, 88));
-      };
-
-      const { blob, exportRowsCount } = await generateSnapshotPDF(data, onProgress);
-
-      setProgress('Upload du fichier…');
-      setProgressPct(92);
-
-      const now = new Date();
-      const dateStr = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
-      const timeStr = `${String(now.getHours()).padStart(2,'0')}-${String(now.getMinutes()).padStart(2,'0')}`;
-      const fileName = `SNAPSHOT_${selectedMonthKey}_v${data.ctx.reset_version}_${dateStr}_${timeStr}.pdf`;
-      const file = new File([blob], fileName, { type: 'application/pdf' });
-
-      const uploaded = await base44.integrations.Core.UploadFile({ file });
-      if (!uploaded?.file_url) throw new Error('Upload échoué');
-
-      setProgress('Sauvegarde dans le coffre…');
-      setProgressPct(97);
-
-      await base44.entities.PlanningSnapshot.create({
-        month_key: selectedMonthKey,
-        month_label: data.monthName + ' ' + data.yr,
-        reset_version: data.ctx.reset_version,
-        file_url: uploaded.file_url,
-        file_name: fileName,
-        file_size_kb: Math.round(blob.size / 1024),
-        created_by_name: currentUser?.full_name || currentUser?.email || 'Inconnu',
-        planning_employees_count: data.employees.length,
-        planning_shifts_count: data.shifts.length,
-        export_rows_count: exportRowsCount,
-      });
-
-      queryClient.invalidateQueries({ queryKey: ['planningSnapshots'] });
-      setProgressPct(100);
-      setProgress('Snapshot généré avec succès !');
-      toast.success(`✅ Snapshot ${data.monthName} ${data.yr} enregistré`);
-      await new Promise(r => setTimeout(r, 1200));
-    } catch (err) {
-      toast.error('Erreur génération : ' + err.message);
-      console.error('[Snapshot]', err);
-    } finally {
-      setGenerating(false);
-      setRenderKey(null);
-      setProgress('');
-      setProgressPct(0);
-    }
-  }, [selectedMonthKey, currentUser, queryClient]);
-
-  const handleRendererError = useCallback((msg) => {
-    toast.error('Erreur chargement données : ' + msg);
+  const resetState = useCallback(() => {
     setGenerating(false);
     setRenderKey(null);
     setProgress('');
     setProgressPct(0);
+    if (timeoutRef.current) clearTimeout(timeoutRef.current);
+  }, []);
+
+  const handleGenerate = useCallback(() => {
+    if (!selectedMonthKey || generating) return;
+
+    setLastError(null);
+    setGenerating(true);
+    setProgress('Chargement des données du mois…');
+    setProgressPct(8);
+    console.log('[Snapshot] snapshot:start', selectedMonthKey);
+
+    // Promesse résolue par handleRendererReady
+    const rendererPromise = new Promise((resolve, reject) => {
+      resolveRef.current = resolve;
+      rejectRef.current = reject;
+    });
+
+    // Timeout de sécurité
+    timeoutRef.current = setTimeout(() => {
+      const msg = 'Timeout : le renderer n\'a pas répondu en 60s';
+      console.error('[Snapshot]', msg);
+      rejectRef.current?.(new Error(msg));
+    }, SNAPSHOT_TIMEOUT_MS);
+
+    console.log('[Snapshot] snapshot:mountRenderer');
+    setRenderKey(selectedMonthKey);
+
+    const run = async () => {
+      try {
+        setProgress('Rendu du planning offscreen…');
+        setProgressPct(15);
+
+        console.log('[Snapshot] snapshot:waitingRenderer…');
+        const { planningEl, exportEl, data } = await rendererPromise;
+        clearTimeout(timeoutRef.current);
+
+        console.log('[Snapshot] snapshot:rendererReady');
+        setProgress('Capture du planning…');
+        setProgressPct(30);
+
+        const { generateSnapshotPDF } = await import('@/components/planning/SnapshotGenerator');
+
+        const onProgress = (msg) => {
+          setProgress(msg);
+          setProgressPct(prev => Math.min(prev + 8, 85));
+        };
+
+        console.log('[Snapshot] snapshot:capturePlanningStart');
+        const { blob, exportRowsCount } = await generateSnapshotPDF(planningEl, exportEl, data, onProgress);
+        console.log('[Snapshot] snapshot:pdfBuilt', `${(blob.size / 1024).toFixed(0)} Ko`);
+
+        if (blob.size === 0) throw new Error('PDF vide (0 octet)');
+
+        setProgress('Upload du fichier PDF…');
+        setProgressPct(88);
+
+        const now = new Date();
+        const dateStr = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
+        const timeStr = `${String(now.getHours()).padStart(2,'0')}-${String(now.getMinutes()).padStart(2,'0')}`;
+        const fileName = `SNAPSHOT_${selectedMonthKey}_v${data.ctx.reset_version}_${dateStr}_${timeStr}.pdf`;
+        const file = new File([blob], fileName, { type: 'application/pdf' });
+
+        const uploaded = await base44.integrations.Core.UploadFile({ file });
+        console.log('[Snapshot] snapshot:uploadDone', uploaded?.file_url?.substring(0, 60));
+        if (!uploaded?.file_url) throw new Error('Upload échoué — file_url absent');
+
+        setProgress('Sauvegarde dans le coffre…');
+        setProgressPct(95);
+
+        const record = await base44.entities.PlanningSnapshot.create({
+          month_key: selectedMonthKey,
+          month_label: data.monthName + ' ' + data.yr,
+          reset_version: data.ctx.reset_version,
+          file_url: uploaded.file_url,
+          file_name: fileName,
+          file_size_kb: Math.round(blob.size / 1024),
+          created_by_name: currentUser?.full_name || currentUser?.email || 'Inconnu',
+          planning_employees_count: data.employees.length,
+          planning_shifts_count: data.shifts.length,
+          export_rows_count: exportRowsCount,
+        });
+        console.log('[Snapshot] snapshot:dbRecordDone', record?.id);
+        if (!record?.id) throw new Error('Enregistrement DB échoué — pas d\'ID retourné');
+
+        queryClient.invalidateQueries({ queryKey: ['planningSnapshots'] });
+        setProgressPct(100);
+        setProgress('✅ Snapshot créé !');
+        toast.success(`✅ Snapshot ${data.monthName} ${data.yr} enregistré (${(blob.size / 1024).toFixed(0)} Ko)`);
+        await new Promise(r => setTimeout(r, 1500));
+      } catch (err) {
+        console.error('[Snapshot] ERREUR:', err);
+        setLastError(err.message);
+        toast.error('Erreur snapshot : ' + err.message);
+      } finally {
+        resetState();
+      }
+    };
+
+    run();
+  }, [selectedMonthKey, generating, currentUser, queryClient, resetState]);
+
+  // Appelé par SnapshotRenderer quand planningEl + exportEl sont prêts
+  const handleRendererReady = useCallback(({ planningEl, exportEl, data }) => {
+    console.log('[Snapshot] handleRendererReady → résolution promesse');
+    resolveRef.current?.({ planningEl, exportEl, data });
+  }, []);
+
+  const handleRendererError = useCallback((msg) => {
+    console.error('[Snapshot] handleRendererError:', msg);
+    rejectRef.current?.(new Error(msg));
+  }, []);
+
+  const downloadLogs = useCallback(() => {
+    try {
+      const { getSnapshotLogs } = require('@/components/planning/SnapshotRenderer');
+      const logs = getSnapshotLogs();
+      const text = logs.map((l, i) => `[${i}] ${l.step}${l.detail ? ' — '+l.detail : ''} @${l.t}`).join('\n');
+      navigator.clipboard?.writeText(text).then(() => toast.success('Logs copiés dans le presse-papier'));
+    } catch {
+      toast.info('Consultez la console du navigateur pour les logs (F12)');
+    }
   }, []);
 
   if (!canAccess) {
@@ -181,8 +238,6 @@ export default function CoffrePlannings() {
     );
   }
 
-  const selectedMonthLabel = monthOptions.find(m => m.key === selectedMonthKey)?.label || selectedMonthKey;
-
   return (
     <div className="space-y-6 max-w-5xl mx-auto">
       {/* Header */}
@@ -192,7 +247,7 @@ export default function CoffrePlannings() {
         </div>
         <div>
           <h1 className="text-xl font-bold text-gray-900">Coffre à plannings</h1>
-          <p className="text-sm text-gray-500">Snapshots PDF mensuels (planning + export compta)</p>
+          <p className="text-sm text-gray-500">Snapshots PDF mensuels (planning page 1 + export compta page 2)</p>
         </div>
       </div>
 
@@ -239,9 +294,27 @@ export default function CoffrePlannings() {
           </div>
         )}
 
+        {/* Dernière erreur */}
+        {lastError && !generating && (
+          <div className="mt-3 bg-red-50 border border-red-200 rounded-lg p-3 flex items-start gap-2">
+            <AlertCircle className="w-4 h-4 text-red-500 mt-0.5 flex-shrink-0" />
+            <div className="flex-1 min-w-0">
+              <p className="text-xs text-red-700 font-medium">Erreur lors de la dernière génération</p>
+              <p className="text-xs text-red-600 mt-0.5 break-words">{lastError}</p>
+            </div>
+            <button
+              onClick={downloadLogs}
+              className="text-xs text-red-500 hover:text-red-700 underline whitespace-nowrap flex-shrink-0"
+            >
+              <ClipboardList className="w-3.5 h-3.5 inline mr-1" />
+              Copier les logs
+            </button>
+          </div>
+        )}
+
         <p className="text-xs text-gray-400 mt-3">
-          Le PDF inclut 2 parties : export comptable (page 1) + planning complet en image (page 2+).
-          La génération prend environ 15–30 secondes selon le volume de données.
+          PDF 2 pages : page 1 = planning complet en image, page 2 = export comptable.
+          Génération ~20–45s selon le volume.
         </p>
       </div>
 
@@ -318,12 +391,7 @@ export default function CoffrePlannings() {
                 <div className="flex items-center gap-1.5 flex-shrink-0">
                   {snap.file_url && (
                     <>
-                      <a
-                        href={snap.file_url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        title="Ouvrir dans un nouvel onglet"
-                      >
+                      <a href={snap.file_url} target="_blank" rel="noopener noreferrer" title="Ouvrir">
                         <Button size="icon" variant="ghost" className="h-8 w-8 text-indigo-600 hover:bg-indigo-50">
                           <ExternalLink className="w-4 h-4" />
                         </Button>
@@ -337,11 +405,9 @@ export default function CoffrePlannings() {
                   )}
                   {canDelete && (
                     <Button
-                      size="icon"
-                      variant="ghost"
+                      size="icon" variant="ghost"
                       className="h-8 w-8 text-red-400 hover:bg-red-50 hover:text-red-600"
                       onClick={() => setConfirmDelete(snap)}
-                      title="Supprimer"
                     >
                       <Trash2 className="w-4 h-4" />
                     </Button>
@@ -362,8 +428,7 @@ export default function CoffrePlannings() {
             </DialogTitle>
           </DialogHeader>
           <p className="text-sm text-gray-600">
-            Supprimer le snapshot de <strong>{confirmDelete?.month_label}</strong> (v{confirmDelete?.reset_version}) ?
-            Cette action est irréversible.
+            Supprimer <strong>{confirmDelete?.month_label}</strong> (v{confirmDelete?.reset_version}) ? Action irréversible.
           </p>
           <div className="flex gap-2 pt-2">
             <Button variant="outline" onClick={() => setConfirmDelete(null)} className="flex-1">Annuler</Button>
@@ -378,14 +443,19 @@ export default function CoffrePlannings() {
         </DialogContent>
       </Dialog>
 
-      {/* Loader de données — monté uniquement pendant la génération */}
-      {renderKey && (
-        <SnapshotDataLoader
-          monthKey={renderKey}
-          onReady={handleRendererReady}
-          onError={handleRendererError}
-        />
-      )}
+      {/* SnapshotRenderer — monté uniquement pendant la génération */}
+      {renderKey && (() => {
+        const SnapshotRenderer = React.lazy(() => import('@/components/planning/SnapshotRenderer'));
+        return (
+          <React.Suspense fallback={null}>
+            <SnapshotRenderer
+              monthKey={renderKey}
+              onReady={handleRendererReady}
+              onError={handleRendererError}
+            />
+          </React.Suspense>
+        );
+      })()}
     </div>
   );
 }
