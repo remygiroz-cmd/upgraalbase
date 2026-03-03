@@ -467,10 +467,7 @@ export default function Home() {
         audienceMatch = ann.audience_employee_ids?.includes(currentEmployee.id) || false;
       }
       
-      if (!audienceMatch) return false;
-      
-      // Only show blocking modal if require_ack is true
-      return ann.require_ack === true;
+      return audienceMatch;
     });
     
     return visibleAnnouncements[0] || null;
