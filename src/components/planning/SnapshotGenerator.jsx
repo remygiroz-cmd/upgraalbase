@@ -174,12 +174,11 @@ function buildExportData(data) {
 }
 
 /**
- * Génère le PDF snapshot (planning + export compta) et retourne le Blob.
- * @param {HTMLElement} planningEl - élément offscreen du PlanningExportCapture
+ * Génère le PDF snapshot (export compta uniquement, sans capture DOM).
  * @param {object} data - données chargées par SnapshotRenderer
  * @param {function} onProgress - callback(message)
  */
-export async function generateSnapshotPDF(planningEl, data, onProgress) {
+export async function generateSnapshotPDF(data, onProgress) {
   const { jsPDF } = await import('jspdf');
   await import('jspdf-autotable');
 
