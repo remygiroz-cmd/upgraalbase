@@ -1,34 +1,21 @@
 /**
  * SnapshotRenderer
- * Composant offscreen autonome : charge ses propres données et rend le planning+export.
- * Utilisé exclusivement depuis CoffrePlannings — JAMAIS importé dans Planning.
- * Rendu hors-écran (left: -99999px), fond blanc, largeur réelle.
+ * Charge toutes les données du mois et appelle onReady(data) quand c'est prêt.
+ * Rendu offscreen (invisible), utilisé uniquement depuis CoffrePlannings.
  */
-import React, { useEffect, useState, forwardRef, useImperativeHandle, useRef } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { base44 } from '@/api/base44Client';
 import { getActiveMonthContext } from '@/components/planning/monthContext';
 import { getActiveShiftsForMonth } from '@/components/planning/shiftService';
-import PlanningExportCapture from '@/components/planning/PlanningExportCapture';
 
 const MONTHS = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'];
 
-const SnapshotRenderer = forwardRef(function SnapshotRenderer({ monthKey, onReady, onError }, ref) {
-  const [data, setData] = useState(null);
-  const [status, setStatus] = useState('idle'); // idle | loading | ready | error
-  const planningCaptureRef = useRef(null);
-
-  // Exposer la ref du composant de capture + les données
-  useImperativeHandle(ref, () => ({
-    getCaptureElement: () => planningCaptureRef.current,
-    getData: () => data,
-    getStatus: () => status,
-  }));
+export default function SnapshotRenderer({ monthKey, onReady, onError }) {
+  const calledRef = useRef(false);
 
   useEffect(() => {
-    if (!monthKey) return;
-    setStatus('loading');
-    setData(null);
-
+    if (!monthKey || calledRef.current) return;
+    calledRef.current = true;
     let cancelled = false;
 
     const load = async () => {
@@ -36,16 +23,13 @@ const SnapshotRenderer = forwardRef(function SnapshotRenderer({ monthKey, onRead
         const [yr, mo] = monthKey.split('-').map(Number);
         const monthIndex = mo - 1;
 
-        // Contexte du mois
         const ctx = await getActiveMonthContext(monthKey);
         if (cancelled) return;
 
-        const monthStart = new Date(yr, monthIndex, 1);
         const monthEnd = new Date(yr, monthIndex + 1, 0);
         const monthStartStr = `${yr}-${String(mo).padStart(2, '0')}-01`;
         const monthEndStr = `${yr}-${String(mo).padStart(2, '0')}-${String(monthEnd.getDate()).padStart(2, '0')}`;
 
-        // Charger les données en séries pour éviter le rate limit (429)
         const employees = await base44.entities.Employee.filter({ is_active: true });
         if (cancelled) return;
         const nonShiftTypes = await base44.entities.NonShiftType.filter({ is_active: true });
@@ -55,9 +39,14 @@ const SnapshotRenderer = forwardRef(function SnapshotRenderer({ monthKey, onRead
         const shifts = await getActiveShiftsForMonth(monthKey, ctx.reset_version);
         if (cancelled) return;
         const nonShiftEventsRaw = await base44.entities.NonShiftEvent.filter({ month_key: monthKey });
-        const nonShiftEvents = nonShiftEventsRaw.filter(e => (e.reset_version ?? 0) >= ctx.reset_version && e.date >= monthStartStr && e.date <= monthEndStr);
+        const nonShiftEvents = nonShiftEventsRaw.filter(e =>
+          (e.reset_version ?? 0) >= ctx.reset_version &&
+          e.date >= monthStartStr && e.date <= monthEndStr
+        );
         if (cancelled) return;
-        const holidayDates = await base44.entities.HolidayDate.filter({ date: { $gte: `${yr}-01-01`, $lte: `${yr}-12-31` } });
+        const holidayDates = await base44.entities.HolidayDate.filter({
+          date: { $gte: `${yr}-01-01`, $lte: `${yr}-12-31` }
+        });
         if (cancelled) return;
         const cpPeriods = await base44.entities.PaidLeavePeriod.filter({ month_key: monthKey });
         if (cancelled) return;
@@ -73,23 +62,17 @@ const SnapshotRenderer = forwardRef(function SnapshotRenderer({ monthKey, onRead
         if (cancelled) return;
         const calculationSettings = await base44.entities.AppSettings.filter({ setting_key: 'planning_calculation_mode' });
         if (cancelled) return;
-        const teams = [];
 
-        if (cancelled) return;
-
-        const settings = appSettings[0] || {};
-        const calculationMode = calculationSettings[0]?.planning_calculation_mode || 'disabled';
-
-        setData({
+        const data = {
           ctx,
           yr,
           monthIndex,
           monthKey,
           monthName: MONTHS[monthIndex],
-          monthStart,
+          monthStart: new Date(yr, monthIndex, 1),
           monthEnd,
           employees,
-          teams,
+          teams: [],
           shifts,
           nonShiftEvents,
           nonShiftTypes,
@@ -100,16 +83,13 @@ const SnapshotRenderer = forwardRef(function SnapshotRenderer({ monthKey, onRead
           recapExtrasOverrides,
           recapsPersisted,
           weeklyRecaps,
-          settings,
-          calculationMode,
-        });
-        setStatus('ready');
-        onReady?.();
+          settings: appSettings[0] || {},
+          calculationMode: calculationSettings[0]?.planning_calculation_mode || 'disabled',
+        };
+
+        if (!cancelled) onReady?.(data);
       } catch (err) {
-        if (!cancelled) {
-          setStatus('error');
-          onError?.(err.message);
-        }
+        if (!cancelled) onError?.(err.message);
       }
     };
 
@@ -117,22 +97,5 @@ const SnapshotRenderer = forwardRef(function SnapshotRenderer({ monthKey, onRead
     return () => { cancelled = true; };
   }, [monthKey]);
 
-  if (!data || status !== 'ready') return null;
-
-  return (
-    <PlanningExportCapture
-      ref={planningCaptureRef}
-      year={data.yr}
-      month={data.monthIndex}
-      monthName={data.monthName}
-      employees={data.employees}
-      shifts={data.shifts}
-      nonShiftEvents={data.nonShiftEvents}
-      nonShiftTypes={data.nonShiftTypes}
-      positions={data.positions}
-      holidayDates={data.holidayDates}
-    />
-  );
-});
-
-export default SnapshotRenderer;
+  return null;
+}
