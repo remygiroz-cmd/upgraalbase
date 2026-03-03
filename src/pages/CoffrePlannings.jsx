@@ -1,4 +1,5 @@
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useState, useCallback } from 'react';
+import SnapshotDataLoader from '@/components/planning/SnapshotRenderer';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
