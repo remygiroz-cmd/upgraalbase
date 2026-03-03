@@ -266,60 +266,6 @@ export async function generateSnapshotPDF(data, onProgress) {
   doc.setTextColor(128, 128, 128);
   doc.text('Page 1 – Récapitulatif de paie', pageW / 2, pageH - 5, { align: 'center' });
 
-  // ── Pages 2+ : Planning (tuiles verticales) ───────────────────────────────
-  onProgress?.('Capture du planning en cours…');
-
-  const scale = planningEl.scrollWidth > 2400 ? 1.8 : 2.2;
-  const tileHeight = 1400;
-
-  const tiles = await captureTiles(planningEl, scale, tileHeight);
-  const totalRealH = planningEl.scrollHeight;
-  const totalRealW = planningEl.scrollWidth;
-
-  for (let i = 0; i < tiles.length; i++) {
-    onProgress?.(`Planning – tuile ${i + 1}/${tiles.length}…`);
-    const tile = tiles[i];
-
-    doc.addPage('a4', 'landscape');
-    doc.setTextColor(0, 0, 0);
-
-    const titleY = margin + 5;
-    doc.setFontSize(11);
-    doc.setFont('helvetica', 'bold');
-    doc.text(`Planning ${monthName} ${yr}${tiles.length > 1 ? ` (${i + 1}/${tiles.length})` : ''}`, pageW / 2, titleY, { align: 'center' });
-
-    if (settings.etablissement_name) {
-      doc.setFontSize(8);
-      doc.setFont('helvetica', 'normal');
-      doc.setTextColor(80, 80, 80);
-      doc.text(settings.etablissement_name, pageW / 2, titleY + 5, { align: 'center' });
-      doc.setTextColor(0, 0, 0);
-    }
-
-    const imgY = titleY + (settings.etablissement_name ? 9 : 5);
-    const availW = pageW - 2 * margin;
-    const availH = pageH - imgY - 8;
-
-    // Ratio réel de la tuile
-    const tileRatio = (tile.height / scale) / (totalRealH / scale);
-    const naturalTileH = (tile.height / scale);
-    const naturalTileW = totalRealW;
-
-    const scaleW = availW / naturalTileW;
-    const scaleH2 = availH / naturalTileH;
-    const drawScale = Math.min(scaleW, scaleH2);
-
-    const drawW = naturalTileW * drawScale;
-    const drawH = naturalTileH * drawScale;
-    const xOff = margin + (availW - drawW) / 2;
-
-    doc.addImage(tile.dataUrl, 'JPEG', xOff, imgY, drawW, drawH);
-
-    doc.setFontSize(7);
-    doc.setTextColor(128, 128, 128);
-    doc.text(`Page ${i + 2} – Planning${tiles.length > 1 ? ` (${i + 1}/${tiles.length})` : ''}`, pageW / 2, pageH - 5, { align: 'center' });
-  }
-
   onProgress?.('Finalisation du PDF…');
   return { blob: doc.output('blob'), exportRowsCount: exportData.length };
 }
