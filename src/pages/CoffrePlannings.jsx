@@ -377,20 +377,14 @@ export default function CoffrePlannings() {
         </DialogContent>
       </Dialog>
 
-      {/* Renderer offscreen — monté uniquement pendant la génération */}
-      {renderKey && (() => {
-        const SnapshotRenderer = React.lazy(() => import('@/components/planning/SnapshotRenderer'));
-        return (
-          <React.Suspense fallback={null}>
-            <SnapshotRenderer
-              ref={rendererRef}
-              monthKey={renderKey}
-              onReady={handleRendererReady}
-              onError={handleRendererError}
-            />
-          </React.Suspense>
-        );
-      })()}
+      {/* Loader de données — monté uniquement pendant la génération */}
+      {renderKey && (
+        <SnapshotDataLoader
+          monthKey={renderKey}
+          onReady={handleRendererReady}
+          onError={handleRendererError}
+        />
+      )}
     </div>
   );
 }
