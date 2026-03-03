@@ -976,72 +976,93 @@ export default function PlanningV2() {
 
 
 
-  // Prefetch des mois adjacent (précédent + suivant) — après que allDataReady est true
+  // Prefetch des mois adjacents puis des 6 mois suivants — en arrière-plan, sans bloquer l'UX
   useEffect(() => {
     if (!allDataReady) return;
     let cancelled = false;
 
     const prefetchMonth = async (yr, mo) => {
+      if (cancelled) return;
       const mk = computeMonthKey(yr, mo);
-      const t0 = performance.now();
 
-      // Skip si déjà en cache React Query (stale < 30s)
-      const existingData = queryClient.getQueryData(['planningMonth', mk]);
-      
+      // Skip si les shifts sont déjà en cache frais pour ce mois
+      const ctxCached = queryClient.getQueryData(['planningMonth', mk]);
+      if (ctxCached) {
+        const existing = queryClient.getQueryData(shiftsQueryKey(yr, mo, ctxCached.reset_version));
+        if (existing) return; // déjà chargé
+      }
+
       try {
         const { getActiveMonthContext } = await import('@/components/planning/monthContext');
         if (cancelled) return;
         const ctx = await getActiveMonthContext(mk);
-
-        // Prefetch planningMonth dans React Query cache
         queryClient.setQueryData(['planningMonth', mk], ctx);
-
         if (cancelled) return;
 
-        // Prefetch shifts
-        await queryClient.prefetchQuery({
-          queryKey: shiftsQueryKey(yr, mo, ctx.reset_version),
-          queryFn: () => getActiveShiftsForMonth(mk, ctx.reset_version),
-          staleTime: 30 * 1000
-        });
-
-        // Prefetch nonShiftEvents
-        await queryClient.prefetchQuery({
-          queryKey: ['nonShiftEvents', mk, ctx.reset_version],
-          queryFn: async () => {
-            const allEvents = await base44.entities.NonShiftEvent.filter({ month_key: mk });
-            return allEvents.filter(e => (e.reset_version ?? 0) >= ctx.reset_version);
-          },
-          staleTime: 30 * 1000
-        });
-
-        console.log(`[Prefetch] ✅ ${mk} done in ${Math.round(performance.now() - t0)}ms`);
+        // Shifts + nonShiftEvents en parallèle
+        await Promise.all([
+          queryClient.prefetchQuery({
+            queryKey: shiftsQueryKey(yr, mo, ctx.reset_version),
+            queryFn: () => getActiveShiftsForMonth(mk, ctx.reset_version),
+            staleTime: 60 * 1000
+          }),
+          queryClient.prefetchQuery({
+            queryKey: ['nonShiftEvents', mk, ctx.reset_version],
+            queryFn: async () => {
+              const allEvents = await base44.entities.NonShiftEvent.filter({ month_key: mk });
+              return allEvents.filter(e => (e.reset_version ?? 0) >= ctx.reset_version);
+            },
+            staleTime: 60 * 1000
+          })
+        ]);
+        console.log(`[Prefetch] ✅ ${mk}`);
       } catch (e) {
-        console.log(`[Prefetch] ❌ ${mk} err=${e.message}`);
+        console.log(`[Prefetch] ❌ ${mk} ${e.message}`);
       }
+    };
+
+    // Calcule les mois à précharger : prev, next+1..next+6
+    const getAdjacentMonths = () => {
+      const months = [];
+      // Mois précédent en premier (navigation fréquente)
+      const prevYr = currentMonth === 0 ? currentYear - 1 : currentYear;
+      const prevMo = currentMonth === 0 ? 11 : currentMonth - 1;
+      months.push({ yr: prevYr, mo: prevMo });
+      // Mois suivants : +1 à +6
+      for (let i = 1; i <= 6; i++) {
+        const totalMonth = currentMonth + i;
+        months.push({
+          yr: currentYear + Math.floor(totalMonth / 12),
+          mo: totalMonth % 12
+        });
+      }
+      return months;
     };
 
     const doPrefetch = async () => {
       if (cancelled) return;
-      // Mois suivant
-      const nextYr = currentMonth === 11 ? currentYear + 1 : currentYear;
-      const nextMo = currentMonth === 11 ? 0 : currentMonth + 1;
-      // Mois précédent
-      const prevYr = currentMonth === 0 ? currentYear - 1 : currentYear;
-      const prevMo = currentMonth === 0 ? 11 : currentMonth - 1;
+      const toLoad = getAdjacentMonths();
 
-      // Lancer les deux en parallèle
+      // Phase 1 : mois précédent + suivant immédiat en parallèle (priorité haute)
       await Promise.allSettled([
-        prefetchMonth(nextYr, nextMo),
-        prefetchMonth(prevYr, prevMo)
+        prefetchMonth(toLoad[0].yr, toLoad[0].mo), // précédent
+        prefetchMonth(toLoad[1].yr, toLoad[1].mo), // +1
       ]);
+
+      // Phase 2 : mois +2 à +6 séquentiellement avec petite pause pour ne pas saturer
+      for (let i = 2; i < toLoad.length; i++) {
+        if (cancelled) return;
+        await prefetchMonth(toLoad[i].yr, toLoad[i].mo);
+        // Petite pause entre chaque mois pour ne pas bloquer les requêtes de l'UX courante
+        await new Promise(r => setTimeout(r, 300));
+      }
     };
 
     let idleHandle;
     if (typeof requestIdleCallback !== 'undefined') {
-      idleHandle = requestIdleCallback(doPrefetch, { timeout: 1500 });
+      idleHandle = requestIdleCallback(doPrefetch, { timeout: 2000 });
     } else {
-      idleHandle = setTimeout(doPrefetch, 1000);
+      idleHandle = setTimeout(doPrefetch, 1500);
     }
     return () => {
       cancelled = true;
