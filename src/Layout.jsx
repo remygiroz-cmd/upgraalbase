@@ -23,7 +23,8 @@ import {
         Receipt,
         Calendar,
         Megaphone,
-        Car
+        Car,
+        Camera
       } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import UserAccessCheck from '@/components/UserAccessCheck';
