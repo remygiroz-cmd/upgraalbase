@@ -73,6 +73,7 @@ import TemplatesRH from './pages/TemplatesRH';
 import TravailDuJour from './pages/TravailDuJour';
 import VehiclesSettings from './pages/VehiclesSettings';
 import Vehicules from './pages/Vehicules';
+import CoffrePlannings from './pages/CoffrePlannings';
 import __Layout from './Layout.jsx';
 
 
@@ -103,6 +104,7 @@ export const PAGES = {
     "TravailDuJour": TravailDuJour,
     "VehiclesSettings": VehiclesSettings,
     "Vehicules": Vehicules,
+    "CoffrePlannings": CoffrePlannings,
 }
 
 export const pagesConfig = {
