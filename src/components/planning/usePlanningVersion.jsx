@@ -15,13 +15,13 @@ export function usePlanningVersion(year, month) {
       console.log(`[usePlanningVersion] ${monthKey} → reset_version=${ctx.reset_version}`);
       return ctx;
     },
-    staleTime: 2 * 60_000, // 2 min — évite les refetch inutiles au changement de mois
-    gcTime: 10 * 60_000,
+    staleTime: 5 * 60_000, // 5 min — la version ne change que lors d'un reset explicite
+    gcTime: 30 * 60_000,   // Garder en cache 30 min pour navigation rapide
+    placeholderData: keepPreviousData,
     retry: 1
   });
 
-  // CRITIQUE : undefined tant que non chargé → les queries restent disabled
-  // Ne jamais tomber à 0 par défaut, sinon on charge les shifts de la version 0
+  // Si déjà en cache (prefetch), isLoading=false immédiatement → resetVersion disponible de suite
   const resetVersion = isLoading ? undefined : (planningMonth?.reset_version ?? 0);
 
   return {
