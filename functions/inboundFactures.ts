@@ -11,7 +11,7 @@ const ALLOWED_MIME = ['application/pdf', 'image/jpeg', 'image/png', 'image/jpg']
 const MAX_FILE_SIZE = 15 * 1024 * 1024; // 15 MB
 const MAX_ATTACHMENTS = 10;
 const MAX_TOTAL_SIZE = 30 * 1024 * 1024; // 30 MB
-const TARGET_EMAIL = 'factures@upgraal.com';
+const TARGET_EMAIL = 'factures@factures.upgraal.com';
 
 async function sha256(str) {
   const encoder = new TextEncoder();

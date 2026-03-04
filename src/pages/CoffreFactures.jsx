@@ -45,7 +45,7 @@ export default function CoffreFactures() {
   const [emailCopied, setEmailCopied] = useState(false);
 
   const handleCopyEmail = () => {
-    navigator.clipboard?.writeText('factures@upgraal.com').then(() => {
+    navigator.clipboard?.writeText('factures@factures.upgraal.com').then(() => {
       setEmailCopied(true);
       setTimeout(() => setEmailCopied(false), 2000);
     });
@@ -193,7 +193,7 @@ export default function CoffreFactures() {
           <div className="min-w-0">
             <p className="text-sm font-semibold text-blue-900">Import automatique par email</p>
             <p className="text-xs text-blue-700 mt-0.5">
-              Transférez vos factures à : <span className="font-mono font-bold">factures@upgraal.com</span>
+              Transférez vos factures à : <span className="font-mono font-bold">factures@factures.upgraal.com</span>
             </p>
           </div>
         </div>
