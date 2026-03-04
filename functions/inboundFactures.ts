@@ -69,7 +69,14 @@ async function downloadAttachmentFromResend(emailId: string, attachmentId: strin
   );
   if (!metaResp.ok) {
     const txt = await metaResp.text().catch(() => '');
-    throw new Error(`Resend attachment meta HTTP ${metaResp.status} ${txt}`.trim());
+    console.error('[inboundFactures] Resend meta failed', {
+      status: metaResp.status,
+      statusText: metaResp.statusText,
+      body: txt?.slice(0, 500),
+      email_id: emailId,
+      attachment_id: attachmentId,
+    });
+    throw new Error(`Resend attachment meta HTTP ${metaResp.status}`);
   }
 
   const metaJson = await metaResp.json().catch(() => ({}));
