@@ -84,8 +84,9 @@ export default function CoffreFactures() {
                               (!endDate || inv.invoice_date <= endDate);
     const matchesAmount = (!minAmount || inv.amount_ttc >= parseFloat(minAmount)) &&
                           (!maxAmount || inv.amount_ttc <= parseFloat(maxAmount));
+    const matchesSource = sourceFilter === 'all' || inv.source === sourceFilter;
 
-    return matchesSearch && matchesStatus && matchesCategory && matchesSupplier && matchesAccount && matchesDateRange && matchesAmount;
+    return matchesSearch && matchesStatus && matchesCategory && matchesSupplier && matchesAccount && matchesDateRange && matchesAmount && matchesSource;
   });
 
   const toggleSelect = (id) => {
