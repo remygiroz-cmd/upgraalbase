@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
-import { AlertTriangle, CheckCircle2, Clock, ChevronDown, ChevronUp, Ban } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, Clock, ChevronDown, ChevronUp, Ban, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import moment from 'moment';
