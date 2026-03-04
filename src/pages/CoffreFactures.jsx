@@ -46,6 +46,7 @@ export default function CoffreFactures() {
   const [emailCopied, setEmailCopied] = useState(false);
   const [webhookCopied, setWebhookCopied] = useState(false);
   const [showWebhookInfo, setShowWebhookInfo] = useState(false);
+  const [showEmailLogs, setShowEmailLogs] = useState(false);
 
   const handleCopyEmail = () => {
     navigator.clipboard?.writeText('factures@factures.upgraal.com').then(() => {
