@@ -296,8 +296,11 @@ export default function CoffreFactures() {
         )}
       </div>
 
+      {/* Logs imports email */}
+      <EmailImportLogsPanel />
+
       {/* Recherche */}
-      <div className="mb-6">
+      <div className="mt-6 mb-6">
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
           <Input
