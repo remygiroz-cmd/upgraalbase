@@ -27,15 +27,23 @@ async function processAttachments(base44, payload, logId, dryRun = false) {
   await db.entities.InboundEmailImportLog.update(logId, { status: 'processing' });
 
   try {
-    const email = payload?.data?.email || payload;
-    const emailFrom = email.from || '';
-    const emailSubject = email.subject || '';
-    const emailMessageId = email.message_id || email.id || '';
-    const emailAttachments = email.attachments || [];
-    const toStr = Array.isArray(email.to) ? email.to.join(',') : (email.to || '');
+    // Lire depuis payload.data (format Resend email.received)
+    const data = payload?.data ?? {};
+    const normalize = (e) => (typeof e === 'string' ? e : '').toLowerCase().trim();
+
+    const emailFrom      = (data.from ?? '').trim();
+    const emailSubject   = (data.subject ?? '').trim();
+    const emailMessageId = (data.message_id ?? data.messageId ?? '').trim();
+    const emailAttachments = Array.isArray(data.attachments) ? data.attachments : [];
+
+    const toArr  = Array.isArray(data.to)  ? data.to  : (data.to  ? [data.to]  : []);
+    const ccArr  = Array.isArray(data.cc)  ? data.cc  : (data.cc  ? [data.cc]  : []);
+    const bccArr = Array.isArray(data.bcc) ? data.bcc : (data.bcc ? [data.bcc] : []);
+    const allRecipients = [...toArr, ...ccArr, ...bccArr].map(normalize);
+    const TARGET_EMAIL_N = normalize(TARGET_EMAIL);
 
     console.log(`[inboundFactures] from="${emailFrom}" subject="${emailSubject}" messageId="${emailMessageId}"`);
-    console.log(`[inboundFactures] to="${toStr}" TARGET_EMAIL="${TARGET_EMAIL}"`);
+    console.log(`[inboundFactures] allRecipients=${JSON.stringify(allRecipients)} TARGET_EMAIL="${TARGET_EMAIL_N}"`);
     console.log(`[inboundFactures] attachments count=${emailAttachments.length}`);
 
     const workspaceId = Deno.env.get('INVOICE_WORKSPACE_ID') || '';
@@ -44,8 +52,8 @@ async function processAttachments(base44, payload, logId, dryRun = false) {
     }
 
     // Vérif destinataire
-    if (!toStr.toLowerCase().includes(TARGET_EMAIL.toLowerCase())) {
-      const msg = `Recipient "${toStr}" does not match TARGET_EMAIL "${TARGET_EMAIL}"`;
+    if (!allRecipients.includes(TARGET_EMAIL_N)) {
+      const msg = `Recipients ${JSON.stringify(allRecipients)} do not include TARGET_EMAIL "${TARGET_EMAIL_N}"`;
       console.warn('[inboundFactures] SKIP:', msg);
       await db.entities.InboundEmailImportLog.update(logId, { status: 'failed', error_message: msg });
       return;
