@@ -221,6 +221,7 @@ export default function Agenda() {
       queryClient.invalidateQueries({ queryKey: ['homeAlerts'] });
       setShowForm(false);
       setEditingEvent(null);
+      setDraft(null);
       toast.success(editingEvent ? 'Événement modifié' : 'Événement créé');
     },
     onError: (err) => toast.error('Erreur : ' + err.message),
@@ -344,9 +345,19 @@ export default function Agenda() {
                 currentDate={currentDate}
                 events={events}
                 onEventClick={setSelectedEvent}
-                onDayClick={(day) => { setCurrentDate(day); setView('day'); }}
-                currentEmployeeId={currentEmployee.id}
-                isPrivileged={isPrivileged}
+                onDayClick={(day) => {
+                  const start = new Date(day);
+                  start.setHours(9, 0, 0, 0);
+                  const end = new Date(day);
+                  end.setHours(10, 0, 0, 0);
+                  setDraft({
+                    start_at: start.toISOString(),
+                    end_at: end.toISOString(),
+                    owner_employee_id: targetEmployeeId || currentEmployee.id,
+                  });
+                  setEditingEvent(null);
+                  setShowForm(true);
+                }}
               />
             )}
             {view === 'week' && (
@@ -354,8 +365,17 @@ export default function Agenda() {
                 currentDate={currentDate}
                 events={events}
                 onEventClick={setSelectedEvent}
-                currentEmployeeId={currentEmployee.id}
-                isPrivileged={isPrivileged}
+                onCellClick={(dt) => {
+                  const start = new Date(dt);
+                  const end = new Date(dt.getTime() + 3600000);
+                  setDraft({
+                    start_at: start.toISOString(),
+                    end_at: end.toISOString(),
+                    owner_employee_id: targetEmployeeId || currentEmployee.id,
+                  });
+                  setEditingEvent(null);
+                  setShowForm(true);
+                }}
               />
             )}
             {view === 'day' && (
@@ -363,8 +383,17 @@ export default function Agenda() {
                 currentDate={currentDate}
                 events={events}
                 onEventClick={setSelectedEvent}
-                currentEmployeeId={currentEmployee.id}
-                isPrivileged={isPrivileged}
+                onCellClick={(dt) => {
+                  const start = new Date(dt);
+                  const end = new Date(dt.getTime() + 3600000);
+                  setDraft({
+                    start_at: start.toISOString(),
+                    end_at: end.toISOString(),
+                    owner_employee_id: targetEmployeeId || currentEmployee.id,
+                  });
+                  setEditingEvent(null);
+                  setShowForm(true);
+                }}
               />
             )}
           </>
@@ -376,21 +405,21 @@ export default function Agenda() {
         event={selectedEvent}
         open={!!selectedEvent}
         onClose={() => setSelectedEvent(null)}
-        onEdit={() => { setEditingEvent(selectedEvent); setSelectedEvent(null); setShowForm(true); }}
+        onEdit={() => { setEditingEvent(selectedEvent); setDraft(null); setSelectedEvent(null); setShowForm(true); }}
         onDelete={() => {
           if (confirm('Annuler cet événement ?')) deleteEventMutation.mutate(selectedEvent);
         }}
         canEdit={canEditSelectedEvent}
         ownerEmployee={ownerEmployee}
-        isPrivate={isSelectedEventPrivate}
       />
 
       {/* Event Form Modal */}
       <EventFormModal
         open={showForm}
-        onClose={() => { setShowForm(false); setEditingEvent(null); }}
+        onClose={() => { setShowForm(false); setEditingEvent(null); setDraft(null); }}
         onSave={(data) => saveEventMutation.mutate(data)}
         event={editingEvent}
+        draft={draft}
         employees={isPrivileged ? employees : [currentEmployee]}
         currentEmployee={currentEmployee}
         isPrivileged={isPrivileged}
