@@ -1,6 +1,8 @@
 /**
  * Webhook inbound Resend → import automatique des factures
- * Répond IMMÉDIATEMENT 200, puis traite les pièces jointes en background.
+ * - Répond 200 IMMÉDIATEMENT à Resend (jamais de 405)
+ * - Traitement en background via EdgeRuntime.waitUntil (si dispo) ou Promise fire&forget
+ * - Mode dryRun : ?dryRun=1 → log payload sans rien créer
  */
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.20';
 
@@ -8,6 +10,7 @@ const ALLOWED_MIME = ['application/pdf', 'image/jpeg', 'image/png', 'image/jpg']
 const MAX_FILE_SIZE = 15 * 1024 * 1024; // 15 MB
 const MAX_ATTACHMENTS = 10;
 const MAX_TOTAL_SIZE = 30 * 1024 * 1024; // 30 MB
+const TARGET_EMAIL = 'factures@factures.upgraal.com';
 
 async function sha256(str) {
   const encoder = new TextEncoder();
@@ -17,17 +20,35 @@ async function sha256(str) {
   return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
 }
 
-async function processAttachments(base44, payload) {
-  const { from, to, subject, message_id: messageId, attachments = [], data } = payload;
+async function processAttachments(base44, payload, dryRun = false) {
+  console.log('[inboundFactures] ▶ processAttachments start, dryRun=', dryRun);
 
-  // Resend wraps the email in a "data" object for email.received events
-  const email = data?.email || payload;
-  const emailFrom = email.from || from || '';
-  const emailSubject = email.subject || subject || '';
-  const emailMessageId = email.message_id || messageId || '';
-  const emailAttachments = email.attachments || attachments || [];
+  // Resend envelope : event type "email.received" wraps data in payload.data.email
+  const email = payload?.data?.email || payload;
 
-  console.log(`[inboundFactures] Processing: from=${emailFrom} subject="${emailSubject}" attachments=${emailAttachments.length} messageId=${emailMessageId}`);
+  const emailFrom = email.from || '';
+  const emailSubject = email.subject || '';
+  const emailMessageId = email.message_id || email.id || '';
+  const emailAttachments = email.attachments || [];
+  const toStr = Array.isArray(email.to) ? email.to.join(',') : (email.to || '');
+
+  console.log(`[inboundFactures] from="${emailFrom}" subject="${emailSubject}" messageId="${emailMessageId}"`);
+  console.log(`[inboundFactures] to="${toStr}" (TARGET_EMAIL="${TARGET_EMAIL}")`);
+  console.log(`[inboundFactures] attachments count=${emailAttachments.length}`);
+
+  // Workspace
+  const workspaceId = Deno.env.get('INVOICE_WORKSPACE_ID') || '';
+  if (!workspaceId) {
+    console.error('[inboundFactures] ⚠ INVOICE_WORKSPACE_ID not set — invoices may go to wrong workspace');
+  } else {
+    console.log('[inboundFactures] workspaceId=', workspaceId);
+  }
+
+  // Vérif destinataire
+  if (!toStr.toLowerCase().includes(TARGET_EMAIL.toLowerCase())) {
+    console.warn(`[inboundFactures] SKIP: recipient "${toStr}" does not match TARGET_EMAIL "${TARGET_EMAIL}"`);
+    return;
+  }
 
   if (emailAttachments.length === 0) {
     console.log('[inboundFactures] No attachments, nothing to import');
@@ -42,13 +63,23 @@ async function processAttachments(base44, payload) {
 
   const limited = emailAttachments.slice(0, MAX_ATTACHMENTS);
 
+  if (dryRun) {
+    console.log('[inboundFactures] DRY RUN — would process', limited.length, 'attachments:');
+    limited.forEach((a, i) => {
+      console.log(`  [${i}] filename="${a.filename || a.name}" mime="${a.content_type || a.type}" size=${a.size || '?'} hasContent=${!!a.content} hasUrl=${!!(a.url || a.attachment_url)}`);
+    });
+    return;
+  }
+
   for (const attachment of limited) {
     const filename = attachment.filename || attachment.name || 'facture.pdf';
     const mimeType = attachment.content_type || attachment.mime_type || attachment.type || 'application/pdf';
     const normalizedMime = mimeType.split(';')[0].trim().toLowerCase();
 
+    console.log(`[inboundFactures] → Processing: "${filename}" mime="${normalizedMime}"`);
+
     if (!ALLOWED_MIME.includes(normalizedMime)) {
-      console.log(`[inboundFactures] SKIP unsupported mime ${normalizedMime} for ${filename}`);
+      console.log(`[inboundFactures]   SKIP unsupported mime: ${normalizedMime}`);
       continue;
     }
 
@@ -56,6 +87,7 @@ async function processAttachments(base44, payload) {
     let fileContent;
     try {
       if (attachment.content) {
+        console.log(`[inboundFactures]   Reading base64 content (${attachment.content.length} chars)`);
         const b64 = typeof attachment.content === 'string' ? attachment.content : '';
         const binaryStr = atob(b64);
         fileContent = new Uint8Array(binaryStr.length);
@@ -64,20 +96,21 @@ async function processAttachments(base44, payload) {
         }
       } else if (attachment.url || attachment.attachment_url) {
         const attachUrl = attachment.url || attachment.attachment_url;
-        console.log(`[inboundFactures] Downloading from ${attachUrl}`);
+        console.log(`[inboundFactures]   Downloading from ${attachUrl}`);
         const resp = await fetch(attachUrl);
-        if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+        if (!resp.ok) throw new Error(`HTTP ${resp.status} from ${attachUrl}`);
         fileContent = new Uint8Array(await resp.arrayBuffer());
       } else {
-        throw new Error('No content or URL');
+        throw new Error('No content or URL for attachment');
       }
+      console.log(`[inboundFactures]   Content OK: ${fileContent.length} bytes`);
     } catch (err) {
-      console.error(`[inboundFactures] Failed to get content for ${filename}:`, err.message);
+      console.error(`[inboundFactures]   DOWNLOAD ERROR for "${filename}":`, err.message);
       continue;
     }
 
     if (fileContent.length > MAX_FILE_SIZE) {
-      console.log(`[inboundFactures] SKIP too large: ${filename} (${fileContent.length} bytes)`);
+      console.log(`[inboundFactures]   SKIP too large: ${fileContent.length} bytes`);
       continue;
     }
 
@@ -86,30 +119,31 @@ async function processAttachments(base44, payload) {
     try {
       const existing = await base44.asServiceRole.entities.Invoice.filter({ dedupe_key: dedupeKey });
       if (existing.length > 0) {
-        console.log(`[inboundFactures] SKIP duplicate: ${filename}`);
+        console.log(`[inboundFactures]   SKIP duplicate: "${filename}" (dedupeKey=${dedupeKey})`);
         continue;
       }
     } catch (err) {
-      console.warn(`[inboundFactures] Dedupe check failed for ${filename}:`, err.message);
+      console.warn(`[inboundFactures]   Dedupe check failed for "${filename}":`, err.message);
     }
 
     // Upload
     let file_url;
     try {
       const file = new File([fileContent], filename, { type: normalizedMime });
+      console.log(`[inboundFactures]   Uploading "${filename}"...`);
       const uploaded = await base44.asServiceRole.integrations.Core.UploadFile({ file });
       file_url = uploaded.file_url;
-      if (!file_url) throw new Error('No file_url returned');
-      console.log(`[inboundFactures] Uploaded: ${filename}`);
+      if (!file_url) throw new Error('No file_url returned from UploadFile');
+      console.log(`[inboundFactures]   Upload OK: ${file_url.substring(0, 80)}`);
     } catch (err) {
-      console.error(`[inboundFactures] Upload failed for ${filename}:`, err.message);
+      console.error(`[inboundFactures]   UPLOAD ERROR for "${filename}":`, err.message);
       continue;
     }
 
     // Création facture
     let invoice;
     try {
-      invoice = await base44.asServiceRole.entities.Invoice.create({
+      const invoiceData = {
         file_url,
         file_name: filename,
         file_mime: normalizedMime,
@@ -124,10 +158,14 @@ async function processAttachments(base44, payload) {
         source_email_message_id: emailMessageId,
         received_at: new Date().toISOString(),
         dedupe_key: dedupeKey,
-      });
-      console.log(`[inboundFactures] Invoice created: ${invoice.id} (${filename})`);
+      };
+      if (workspaceId) invoiceData.workspace_id = workspaceId;
+
+      console.log(`[inboundFactures]   Creating Invoice for "${filename}"...`);
+      invoice = await base44.asServiceRole.entities.Invoice.create(invoiceData);
+      console.log(`[inboundFactures]   ✅ Invoice created: id=${invoice.id} file="${filename}"`);
     } catch (err) {
-      console.error(`[inboundFactures] Invoice create failed for ${filename}:`, err.message);
+      console.error(`[inboundFactures]   INVOICE CREATE ERROR for "${filename}":`, err.message);
       continue;
     }
 
@@ -151,33 +189,37 @@ async function processAttachments(base44, payload) {
           status: d.status || 'non_envoyee',
           ai_processing: false,
         });
-        console.log(`[inboundFactures] AI done for ${invoice.id}`);
+        console.log(`[inboundFactures]   AI scan done for invoice ${invoice.id}`);
       })
       .catch(async (err) => {
-        console.error(`[inboundFactures] AI failed for ${invoice.id}:`, err.message);
+        console.error(`[inboundFactures]   AI scan failed for ${invoice.id}:`, err.message);
         await base44.asServiceRole.entities.Invoice.update(invoice.id, {
           ai_processing: false,
           status: 'a_verifier',
         });
       });
   }
+
+  console.log('[inboundFactures] ✅ processAttachments done');
 }
 
 Deno.serve(async (req) => {
   console.log('[inboundFactures] method=', req.method, 'url=', req.url);
 
-  // Toujours 200 quelle que soit la méthode (jamais de 405)
+  // Toujours 200 quelle que soit la méthode (jamais de 405 pour Resend)
   if (req.method !== 'POST') {
     return Response.json({ ok: true, method: req.method }, { status: 200 });
   }
 
+  const url = new URL(req.url);
+  const dryRun = url.searchParams.get('dryRun') === '1';
+
   // Vérification du secret (query param ?secret=...)
   const expectedSecret = Deno.env.get('RESEND_INBOUND_SECRET');
   if (expectedSecret) {
-    const url = new URL(req.url);
     const querySecret = url.searchParams.get('secret');
     if (!querySecret || querySecret !== expectedSecret) {
-      console.warn('[inboundFactures] Invalid or missing secret');
+      console.warn('[inboundFactures] Invalid or missing secret, ignoring request');
       return Response.json({ success: true, warning: 'unauthorized' }, { status: 200 });
     }
   }
@@ -186,21 +228,28 @@ Deno.serve(async (req) => {
   let payload;
   try {
     const text = await req.text();
-    console.log('[inboundFactures] raw body (first 500):', text.substring(0, 500));
+    console.log('[inboundFactures] raw body (first 800):', text.substring(0, 800));
     payload = JSON.parse(text);
   } catch (err) {
-    console.error('[inboundFactures] Failed to parse body:', err.message);
+    console.error('[inboundFactures] Failed to parse JSON body:', err.message);
     return Response.json({ success: true, warning: 'invalid JSON body' }, { status: 200 });
   }
 
-  console.log('[inboundFactures] event type:', payload?.type, '| keys:', Object.keys(payload || {}));
+  console.log('[inboundFactures] event type=', payload?.type, '| top-level keys=', Object.keys(payload || {}));
 
-  // ── ACK IMMÉDIAT 200 ───────────────────────────────────────────────────────
+  // ACK immédiat 200, traitement en background
   const base44 = createClientFromRequest(req);
-  processAttachments(base44, payload).catch(err => {
-    console.error('[inboundFactures] Background processing error:', err.message);
+  const job = processAttachments(base44, payload, dryRun).catch(err => {
+    console.error('[inboundFactures] Background job error:', err.message);
   });
 
-  console.log('[inboundFactures] ACK 200 sent');
-  return Response.json({ success: true }, { status: 200 });
+  // Utiliser EdgeRuntime.waitUntil si disponible pour garantir l'exécution
+  if (typeof EdgeRuntime !== 'undefined' && EdgeRuntime.waitUntil) {
+    EdgeRuntime.waitUntil(job);
+    console.log('[inboundFactures] ACK 200 sent (EdgeRuntime.waitUntil registered)');
+  } else {
+    console.log('[inboundFactures] ACK 200 sent (fire & forget)');
+  }
+
+  return Response.json({ success: true, dryRun }, { status: 200 });
 });
