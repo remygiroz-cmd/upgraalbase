@@ -55,8 +55,8 @@ async function sha256(str: string) {
 }
 
 async function downloadAttachmentFromResend(emailId: string, attachmentId: string) {
-  const apiKey = Deno.env.get('RESEND_API_KEY');
-  if (!apiKey) throw new Error('RESEND_API_KEY not set');
+  const apiKey = Deno.env.get('RESEND_RECEIVING_API_KEY') || Deno.env.get('RESEND_API_KEY');
+  if (!apiKey) throw new Error('RESEND_RECEIVING_API_KEY / RESEND_API_KEY not set');
 
   // 1) Récupérer un download_url via l’API Resend
   const metaResp = await fetch(
