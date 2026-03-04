@@ -212,8 +212,15 @@ export default function VehicleAlertsPanel({ vehicles }) {
                   />
                 )}
                 {alert.resolution_note && alert.status === 'RESOLVED' && (
-                  <p className="text-xs text-green-700 mt-2 bg-green-50 rounded px-2 py-1">✅ {alert.resolution_note}</p>
+                <p className="text-xs text-green-700 mt-2 bg-green-50 rounded px-2 py-1">✅ {alert.resolution_note}</p>
                 )}
+                <div className="flex justify-end mt-2">
+                <Button size="sm" variant="ghost"
+                  className="text-xs h-7 text-red-400 hover:text-red-600 hover:bg-red-50"
+                  onClick={() => { if (window.confirm('Supprimer cette alerte définitivement ?')) deleteMutation.mutate(alert.id); }}>
+                  <Trash2 className="w-3 h-3 mr-1" /> Supprimer
+                </Button>
+                </div>
               </div>
             );
           })}
