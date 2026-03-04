@@ -34,22 +34,26 @@ function toDateValue(iso) {
   return iso.substring(0, 10);
 }
 
-export default function EventFormModal({ open, onClose, onSave, event, employees, currentEmployee, isPrivileged }) {
+export default function EventFormModal({ open, onClose, onSave, event, draft, employees, currentEmployee, isPrivileged }) {
+  // draft = { start_at, end_at, owner_employee_id } pre-filled from cell click
   const initStart = event?.start_at
     ? (event.all_day ? toDateValue(event.start_at) : toLocalDatetimeValue(event.start_at))
-    : toLocalDatetimeValue(new Date().toISOString());
+    : draft?.start_at
+      ? toLocalDatetimeValue(draft.start_at)
+      : toLocalDatetimeValue(new Date().toISOString());
   const initEnd = event?.end_at
     ? (event.all_day ? toDateValue(event.end_at) : toLocalDatetimeValue(event.end_at))
-    : toLocalDatetimeValue(new Date(Date.now() + 3600000).toISOString());
+    : draft?.end_at
+      ? toLocalDatetimeValue(draft.end_at)
+      : toLocalDatetimeValue(new Date(Date.now() + 3600000).toISOString());
 
   const [form, setForm] = useState({
-    owner_employee_id: event?.owner_employee_id || currentEmployee?.id || '',
+    owner_employee_id: event?.owner_employee_id || draft?.owner_employee_id || currentEmployee?.id || '',
     title: event?.title || '',
     type: event?.type || 'RDV',
     start_at: initStart,
     end_at: initEnd,
     all_day: event?.all_day || false,
-    visibility: event?.visibility || 'INTERNAL',
     importance: event?.importance || 'NORMAL',
     status: event?.status || 'CONFIRMED',
     location: event?.location || '',
@@ -62,18 +66,21 @@ export default function EventFormModal({ open, onClose, onSave, event, employees
     if (open) {
       const s = event?.start_at
         ? (event.all_day ? toDateValue(event.start_at) : toLocalDatetimeValue(event.start_at))
-        : toLocalDatetimeValue(new Date().toISOString());
+        : draft?.start_at
+          ? toLocalDatetimeValue(draft.start_at)
+          : toLocalDatetimeValue(new Date().toISOString());
       const e = event?.end_at
         ? (event.all_day ? toDateValue(event.end_at) : toLocalDatetimeValue(event.end_at))
-        : toLocalDatetimeValue(new Date(Date.now() + 3600000).toISOString());
+        : draft?.end_at
+          ? toLocalDatetimeValue(draft.end_at)
+          : toLocalDatetimeValue(new Date(Date.now() + 3600000).toISOString());
       setForm({
-        owner_employee_id: event?.owner_employee_id || currentEmployee?.id || '',
+        owner_employee_id: event?.owner_employee_id || draft?.owner_employee_id || currentEmployee?.id || '',
         title: event?.title || '',
         type: event?.type || 'RDV',
         start_at: s,
         end_at: e,
         all_day: event?.all_day || false,
-        visibility: event?.visibility || 'INTERNAL',
         importance: event?.importance || 'NORMAL',
         status: event?.status || 'CONFIRMED',
         location: event?.location || '',
@@ -110,6 +117,7 @@ export default function EventFormModal({ open, onClose, onSave, event, employees
     setSaving(true);
     await onSave({
       ...form,
+      visibility: 'INTERNAL',
       start_at: startISO,
       end_at: endISO,
       title: form.title.trim().substring(0, 80),
@@ -207,20 +215,6 @@ export default function EventFormModal({ open, onClose, onSave, event, employees
                 onChange={e => set('end_at', e.target.value)}
               />
             </div>
-          </div>
-
-          <div>
-            <Label>Visibilité</Label>
-            <Select value={form.visibility} onValueChange={v => set('visibility', v)}>
-              <SelectTrigger className="mt-1">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="INTERNAL">🏢 Interne (visible par tous)</SelectItem>
-                <SelectItem value="TEAM">👥 Équipe</SelectItem>
-                <SelectItem value="PRIVATE">🔒 Privé (détails masqués)</SelectItem>
-              </SelectContent>
-            </Select>
           </div>
 
           <div>
