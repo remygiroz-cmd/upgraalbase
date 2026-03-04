@@ -13,6 +13,7 @@ import InvoiceDetailModal from '@/components/invoices/InvoiceDetailModal';
 import InvoiceUploadModal from '@/components/invoices/InvoiceUploadModal';
 import SendInvoicesModal from '@/components/invoices/SendInvoicesModal';
 import AutomationManagementModal from '@/components/invoices/AutomationManagementModal';
+import EmailImportLogsPanel from '@/components/invoices/EmailImportLogsPanel';
 import { format, parseISO } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
