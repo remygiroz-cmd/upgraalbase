@@ -114,6 +114,13 @@ async function processAttachments(base44: any, payload: any, logId: string, dryR
     const emailId = (email?.email_id || email?.emailId || '').trim(); // présent dans ton raw body
     const emailAttachments = Array.isArray(email?.attachments) ? email.attachments : [];
 
+    console.log('[inboundFactures] email identifiers:', {
+      email_id: email?.email_id,
+      id: email?.id,
+      message_id: email?.message_id,
+      messageId: email?.messageId,
+      created_at: email?.created_at,
+    });
     console.log(`[inboundFactures] from="${emailFrom}" subject="${emailSubject}" messageId="${emailMessageId}"`);
     console.log(`[inboundFactures] recipients=${JSON.stringify(allRecipients)} TARGET_EMAIL="${TARGET_EMAIL}"`);
     console.log(`[inboundFactures] attachments count=${emailAttachments.length}`);
