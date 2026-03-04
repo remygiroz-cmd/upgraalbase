@@ -74,6 +74,7 @@ import TemplatesRH from './pages/TemplatesRH';
 import TravailDuJour from './pages/TravailDuJour';
 import VehiclesSettings from './pages/VehiclesSettings';
 import Vehicules from './pages/Vehicules';
+import Agenda from './pages/Agenda';
 import __Layout from './Layout.jsx';
 
 
@@ -105,6 +106,7 @@ export const PAGES = {
     "TravailDuJour": TravailDuJour,
     "VehiclesSettings": VehiclesSettings,
     "Vehicules": Vehicules,
+    "Agenda": Agenda,
 }
 
 export const pagesConfig = {
