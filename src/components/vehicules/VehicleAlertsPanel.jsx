@@ -157,7 +157,7 @@ export default function VehicleAlertsPanel({ vehicles }) {
                 </div>
 
                 {/* Actions */}
-                <div className="flex flex-wrap gap-2 mt-3">
+                <div className="flex flex-wrap gap-2 mt-3 items-center">
                   {alert.status === 'OPEN' && (
                     <Button size="sm" variant="outline" className="text-xs h-7"
                       onClick={() => updateMutation.mutate({ id: alert.id, data: { status: 'IN_PROGRESS' } })}>
