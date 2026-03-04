@@ -13,7 +13,7 @@ const TYPE_BG = {
   AUTRE: 'bg-orange-500',
 };
 
-export default function AgendaMonthView({ currentDate, events, onEventClick, onDayClick, currentEmployeeId, isPrivileged }) {
+export default function AgendaMonthView({ currentDate, events, onEventClick, onDayClick }) {
   const monthStart = startOfMonth(currentDate);
   const monthEnd = endOfMonth(currentDate);
   const calStart = startOfWeek(monthStart, { weekStartsOn: 1 });
@@ -85,22 +85,19 @@ export default function AgendaMonthView({ currentDate, events, onEventClick, onD
                 </div>
 
                 <div className="space-y-0.5">
-                  {dayEvents.slice(0, 3).map(ev => {
-                    const isPrivate = ev.visibility === 'PRIVATE' && isPrivileged && ev.owner_employee_id !== currentEmployeeId;
-                    return (
-                      <div
-                        key={ev.id}
-                        onClick={e => { e.stopPropagation(); onEventClick(ev); }}
-                        className={cn(
-                          'text-xs px-1 py-0.5 rounded text-white truncate cursor-pointer hover:opacity-80',
-                          isPrivate ? 'bg-gray-400 italic' : (TYPE_BG[ev.type] || 'bg-gray-400'),
-                          ev.importance === 'URGENT' && 'ring-1 ring-red-400'
-                        )}
-                      >
-                        {isPrivate ? '🔒 Occupé' : ev.title}
-                      </div>
-                    );
-                  })}
+                  {dayEvents.slice(0, 3).map(ev => (
+                    <div
+                      key={ev.id}
+                      onClick={e => { e.stopPropagation(); onEventClick(ev); }}
+                      className={cn(
+                        'text-xs px-1 py-0.5 rounded text-white truncate cursor-pointer hover:opacity-80',
+                        TYPE_BG[ev.type] || 'bg-gray-400',
+                        ev.importance === 'URGENT' && 'ring-1 ring-red-400'
+                      )}
+                    >
+                      {ev.title}
+                    </div>
+                  ))}
                   {dayEvents.length > 3 && (
                     <div className="text-xs text-gray-500 px-1">+{dayEvents.length - 3}</div>
                   )}

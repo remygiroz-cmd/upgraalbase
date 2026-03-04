@@ -14,7 +14,7 @@ const TYPE_BG = {
 
 const HOURS = Array.from({ length: 16 }, (_, i) => i + 7);
 
-export default function AgendaDayView({ currentDate, events, onEventClick, currentEmployeeId, isPrivileged }) {
+export default function AgendaDayView({ currentDate, events, onEventClick, onCellClick }) {
   const dayEvents = events.filter(ev => {
     if (ev.status === 'CANCELLED') return false;
     return isSameDay(new Date(ev.start_at), currentDate);
@@ -35,11 +35,18 @@ export default function AgendaDayView({ currentDate, events, onEventClick, curre
         {/* Colonne journée */}
         <div className="relative">
           {HOURS.map(h => (
-            <div key={h} className="h-16 border-b border-gray-50" />
+            <div
+              key={h}
+              className="h-16 border-b border-gray-50 hover:bg-blue-50/40 cursor-pointer transition-colors"
+              onClick={() => {
+                const dt = new Date(currentDate);
+                dt.setHours(h, 0, 0, 0);
+                onCellClick && onCellClick(dt);
+              }}
+            />
           ))}
 
           {dayEvents.map(ev => {
-            const isPrivate = ev.visibility === 'PRIVATE' && isPrivileged && ev.owner_employee_id !== currentEmployeeId;
             const startH = new Date(ev.start_at).getHours() + new Date(ev.start_at).getMinutes() / 60;
             const endH = new Date(ev.end_at).getHours() + new Date(ev.end_at).getMinutes() / 60;
             const top = Math.max(0, (startH - 7) * 64);
@@ -48,20 +55,18 @@ export default function AgendaDayView({ currentDate, events, onEventClick, curre
             return (
               <div
                 key={ev.id}
-                onClick={() => onEventClick(ev)}
+                onClick={(e) => { e.stopPropagation(); onEventClick(ev); }}
                 style={{ top: `${top}px`, height: `${height}px` }}
                 className={cn(
                   'absolute left-1 right-1 px-2 py-1 rounded border-l-4 text-sm cursor-pointer hover:opacity-80 z-10 overflow-hidden',
-                  isPrivate ? 'bg-gray-100 border-gray-400 text-gray-600 italic' : (TYPE_BG[ev.type] || 'bg-gray-100 border-gray-400'),
+                  TYPE_BG[ev.type] || 'bg-gray-100 border-gray-400',
                   ev.importance === 'URGENT' && 'ring-1 ring-red-500'
                 )}
               >
-                <div className="font-medium truncate">{isPrivate ? '🔒 Occupé' : ev.title}</div>
-                {!isPrivate && (
-                  <div className="text-xs opacity-70">
-                    {format(new Date(ev.start_at), 'HH:mm')} – {format(new Date(ev.end_at), 'HH:mm')}
-                  </div>
-                )}
+                <div className="font-medium truncate">{ev.title}</div>
+                <div className="text-xs opacity-70">
+                  {format(new Date(ev.start_at), 'HH:mm')} – {format(new Date(ev.end_at), 'HH:mm')}
+                </div>
               </div>
             );
           })}

@@ -15,7 +15,7 @@ const TYPE_BG = {
 
 const HOURS = Array.from({ length: 16 }, (_, i) => i + 7); // 7h à 22h
 
-export default function AgendaWeekView({ currentDate, events, onEventClick, currentEmployeeId, isPrivileged }) {
+export default function AgendaWeekView({ currentDate, events, onEventClick, onCellClick }) {
   const weekStart = startOfWeek(currentDate, { weekStartsOn: 1 });
   const days = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
   const today = new Date();
@@ -76,12 +76,19 @@ export default function AgendaWeekView({ currentDate, events, onEventClick, curr
           return (
             <div key={di} className={cn('border-r border-gray-100 last:border-0 relative', isToday && 'bg-blue-50/30')}>
               {HOURS.map(h => (
-                <div key={h} className="h-14 border-b border-gray-50" />
+                <div
+                  key={h}
+                  className="h-14 border-b border-gray-50 hover:bg-blue-50/40 cursor-pointer transition-colors"
+                  onClick={() => {
+                    const dt = new Date(d);
+                    dt.setHours(h, 0, 0, 0);
+                    onCellClick && onCellClick(dt);
+                  }}
+                />
               ))}
 
               {/* Événements positionnés */}
               {dayEvents.map(ev => {
-                const isPrivate = ev.visibility === 'PRIVATE' && isPrivileged && ev.owner_employee_id !== currentEmployeeId;
                 const startH = new Date(ev.start_at).getHours() + new Date(ev.start_at).getMinutes() / 60;
                 const endH = new Date(ev.end_at).getHours() + new Date(ev.end_at).getMinutes() / 60;
                 const top = Math.max(0, (startH - 7) * 56);
@@ -90,16 +97,16 @@ export default function AgendaWeekView({ currentDate, events, onEventClick, curr
                 return (
                   <div
                     key={ev.id}
-                    onClick={() => onEventClick(ev)}
+                    onClick={(e) => { e.stopPropagation(); onEventClick(ev); }}
                     style={{ top: `${top}px`, height: `${height}px` }}
                     className={cn(
                       'absolute left-0.5 right-0.5 px-1 py-0.5 rounded border-l-2 text-xs cursor-pointer hover:opacity-80 overflow-hidden z-10',
-                      isPrivate ? 'bg-gray-100 border-gray-400 text-gray-600 italic' : (TYPE_BG[ev.type] || 'bg-gray-100 border-gray-400 text-gray-900'),
+                      TYPE_BG[ev.type] || 'bg-gray-100 border-gray-400 text-gray-900',
                       ev.importance === 'URGENT' && 'ring-1 ring-red-400'
                     )}
                   >
-                    <div className="font-medium truncate">{isPrivate ? '🔒 Occupé' : ev.title}</div>
-                    {!isPrivate && !ev.all_day && (
+                    <div className="font-medium truncate">{ev.title}</div>
+                    {!ev.all_day && (
                       <div className="text-[10px] opacity-70">
                         {format(new Date(ev.start_at), 'HH:mm')}
                       </div>
