@@ -252,9 +252,13 @@ Deno.serve(async (req) => {
 
   console.log('[inboundFactures] event type=', payload?.type, '| top-level keys=', Object.keys(payload || {}));
 
-  // Extraire infos email pour le log
-  const email = payload?.data?.email || payload;
-  const toStr = Array.isArray(email.to) ? email.to.join(',') : (email.to || '');
+  // Extraire infos email depuis payload.data (format Resend email.received)
+  const data = payload?.data ?? {};
+  const normalize = (e) => (typeof e === 'string' ? e : '').toLowerCase().trim();
+  const toArr  = Array.isArray(data.to)  ? data.to  : (data.to  ? [data.to]  : []);
+  const ccArr  = Array.isArray(data.cc)  ? data.cc  : (data.cc  ? [data.cc]  : []);
+  const bccArr = Array.isArray(data.bcc) ? data.bcc : (data.bcc ? [data.bcc] : []);
+  const toStr = [...toArr, ...ccArr, ...bccArr].join(',');
 
   // Créer le log immédiatement (status="received")
   const base44 = createClientFromRequest(req);
