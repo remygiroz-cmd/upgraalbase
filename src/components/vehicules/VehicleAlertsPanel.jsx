@@ -46,6 +46,15 @@ export default function VehicleAlertsPanel({ vehicles }) {
     onError: () => toast.error('Erreur'),
   });
 
+  const deleteMutation = useMutation({
+    mutationFn: (id) => base44.entities.VehicleAlert.delete(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['vehicleAlerts'] });
+      toast.success('Alerte supprimée');
+    },
+    onError: () => toast.error('Erreur suppression'),
+  });
+
   const activeAlerts = alerts.filter(a => a.status === 'OPEN' || a.status === 'IN_PROGRESS');
   const displayed = filter === 'active' ? activeAlerts : alerts;
 
