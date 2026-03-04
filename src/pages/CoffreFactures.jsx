@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
-import { FileText, Upload, Search, Filter, Download, Send, Eye, Edit2, Trash2, CheckSquare, Square, RefreshCw, Loader2, Camera, Zap } from 'lucide-react';
+import { FileText, Upload, Search, Filter, Download, Send, Eye, Edit2, Trash2, CheckSquare, Square, RefreshCw, Loader2, Camera, Zap, Mail, Copy, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
