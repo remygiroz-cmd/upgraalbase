@@ -81,6 +81,7 @@ export default function Layout({ children, currentPageName }) {
   ].filter(link => hasPermission(link.module));
 
   const gestionLinks = [
+    { name: 'Agenda', label: 'Agenda', icon: CalendarDays, module: 'equipe' },
     { name: 'Equipe', label: 'Gestion du personnel', icon: Users, module: 'equipe' },
     { name: 'Planning', label: 'Planning', icon: Calendar, module: 'equipe' },
     { name: 'CoffrePlannings', label: 'Coffre à plannings', icon: Camera, module: 'coffre_plannings' },
