@@ -358,9 +358,9 @@ Deno.serve(async (req) => {
   console.log('[inboundFactures] event type=', payload?.type, '| top-level keys=', Object.keys(payload || {}));
 
   try {
-    const apiKey = Deno.env.get('RESEND_API_KEY');
+    const apiKey = Deno.env.get('RESEND_RECEIVING_API_KEY') || Deno.env.get('RESEND_API_KEY');
     const hasKey = !!apiKey;
-    console.log('[inboundFactures] RESEND_API_KEY present=', hasKey);
+    console.log('[inboundFactures] RESEND_API_KEY present=', hasKey, '| using RESEND_RECEIVING_API_KEY=', !!Deno.env.get('RESEND_RECEIVING_API_KEY'));
 
     if (hasKey) {
       const r = await fetch('https://api.resend.com/domains', {
