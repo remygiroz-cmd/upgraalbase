@@ -104,6 +104,16 @@ async function processAttachments(base44: any, payload: any, logId: string, dryR
   try {
     const email = extractEmailPayload(payload);
 
+    const rawData = payload?.data ?? {};
+    console.log('[inboundFactures] inbound ids=', {
+      payloadDataId: rawData?.id,
+      payloadDataEmailId: rawData?.email_id,
+      payloadDataMessageId: rawData?.message_id,
+      emailId: email?.id,
+      emailEmailId: email?.email_id,
+      emailMessageId: email?.message_id,
+    });
+
     const emailFrom = (email?.from || '').trim();
     const emailSubject = (email?.subject || '').trim();
     const emailMessageId = (email?.message_id || email?.messageId || email?.id || '').trim();
