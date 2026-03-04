@@ -201,34 +201,98 @@ export default function CoffreFactures() {
       />
 
       {/* Encart import email */}
-      <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-6 flex flex-col sm:flex-row sm:items-center gap-4">
-        <div className="flex items-center gap-3 flex-1 min-w-0">
-          <div className="w-9 h-9 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
-            <Mail className="w-5 h-5 text-blue-600" />
+      <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-6 space-y-3">
+        <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+          <div className="flex items-center gap-3 flex-1 min-w-0">
+            <div className="w-9 h-9 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
+              <Mail className="w-5 h-5 text-blue-600" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-sm font-semibold text-blue-900">Import automatique par email</p>
+              <p className="text-xs text-blue-700 mt-0.5">
+                Transférez vos factures à : <span className="font-mono font-bold">factures@factures.upgraal.com</span>
+              </p>
+            </div>
           </div>
-          <div className="min-w-0">
-            <p className="text-sm font-semibold text-blue-900">Import automatique par email</p>
-            <p className="text-xs text-blue-700 mt-0.5">
-              Transférez vos factures à : <span className="font-mono font-bold">factures@factures.upgraal.com</span>
-            </p>
+          <div className="flex items-center gap-2 flex-shrink-0">
+            <button
+              onClick={handleCopyEmail}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-blue-700 bg-white border border-blue-300 rounded-lg hover:bg-blue-50 transition-colors"
+            >
+              {emailCopied ? <Check className="w-3.5 h-3.5 text-green-600" /> : <Copy className="w-3.5 h-3.5" />}
+              {emailCopied ? 'Copié !' : "Copier l'adresse"}
+            </button>
+            <button
+              onClick={() => setShowWebhookInfo(!showWebhookInfo)}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-purple-700 bg-white border border-purple-300 rounded-lg hover:bg-purple-50 transition-colors"
+            >
+              <Zap className="w-3.5 h-3.5" />
+              URL Webhook Resend
+            </button>
+            <button
+              onClick={() => setSourceFilter(sourceFilter === 'email_inbound' ? 'all' : 'email_inbound')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg border transition-colors ${sourceFilter === 'email_inbound' ? 'bg-blue-600 text-white border-blue-600' : 'text-blue-700 bg-white border-blue-300 hover:bg-blue-50'}`}
+            >
+              <Filter className="w-3.5 h-3.5" />
+              Importées par email
+            </button>
           </div>
         </div>
-        <div className="flex items-center gap-2 flex-shrink-0">
-          <button
-            onClick={handleCopyEmail}
-            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-blue-700 bg-white border border-blue-300 rounded-lg hover:bg-blue-50 transition-colors"
-          >
-            {emailCopied ? <Check className="w-3.5 h-3.5 text-green-600" /> : <Copy className="w-3.5 h-3.5" />}
-            {emailCopied ? 'Copié !' : "Copier l'adresse"}
-          </button>
-          <button
-            onClick={() => setSourceFilter(sourceFilter === 'email_inbound' ? 'all' : 'email_inbound')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg border transition-colors ${sourceFilter === 'email_inbound' ? 'bg-blue-600 text-white border-blue-600' : 'text-blue-700 bg-white border-blue-300 hover:bg-blue-50'}`}
-          >
-            <Filter className="w-3.5 h-3.5" />
-            Importées par email
-          </button>
-        </div>
+
+        {/* Panneau URL Webhook */}
+        {showWebhookInfo && (
+          <div className="border-t border-blue-200 pt-3 space-y-2">
+            {webhookLoading ? (
+              <div className="flex items-center gap-2 text-xs text-blue-600">
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                Chargement des URLs…
+              </div>
+            ) : webhookInfo ? (
+              <div className="space-y-2">
+                {/* Warning si pas native */}
+                {!webhookInfo.isNativeBase44 && (
+                  <div className="flex items-start gap-2 bg-yellow-50 border border-yellow-300 rounded-lg p-2 text-xs text-yellow-800">
+                    <span className="text-base leading-none">⚠️</span>
+                    <span><strong>BASE44_APP_URL</strong> ({webhookInfo.base44AppUrl}) n'est pas une URL native Base44 (*.base44.app). Utilisez l'URL native ci-dessous.</span>
+                  </div>
+                )}
+
+                {/* URL Base44 native */}
+                {webhookInfo.nativeUrl && (
+                  <div className="bg-white border border-blue-200 rounded-lg p-2.5 space-y-1">
+                    <p className="text-xs font-medium text-gray-600">URL Base44 native :</p>
+                    <div className="flex items-center gap-2">
+                      <code className="text-xs text-gray-800 font-mono bg-gray-50 px-2 py-1 rounded flex-1 break-all">{webhookInfo.nativeUrl}</code>
+                    </div>
+                  </div>
+                )}
+
+                {/* URL Webhook complète */}
+                {webhookInfo.webhookUrl && (
+                  <div className="bg-purple-50 border border-purple-200 rounded-lg p-2.5 space-y-1">
+                    <p className="text-xs font-medium text-purple-700">🔗 URL Webhook à coller dans Resend :</p>
+                    <div className="flex items-center gap-2">
+                      <code className="text-xs text-purple-900 font-mono bg-white px-2 py-1 rounded flex-1 break-all border border-purple-200">{webhookInfo.webhookUrl}</code>
+                      <button
+                        onClick={() => handleCopyWebhook(webhookInfo.webhookUrl)}
+                        className="flex-shrink-0 flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium text-purple-700 bg-white border border-purple-300 rounded-lg hover:bg-purple-50 transition-colors"
+                      >
+                        {webhookCopied ? <Check className="w-3.5 h-3.5 text-green-600" /> : <Copy className="w-3.5 h-3.5" />}
+                        {webhookCopied ? 'Copié !' : 'Copier'}
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {!webhookInfo.nativeUrl && (
+                  <div className="bg-red-50 border border-red-200 rounded-lg p-2 text-xs text-red-700">
+                    Impossible de déduire l'URL native. Vérifiez le secret <strong>BASE44_APP_URL</strong> dans les paramètres.
+                  </div>
+                )}
+              </div>
+            ) : null}
+          </div>
+        )}
       </div>
 
       {/* Recherche */}
