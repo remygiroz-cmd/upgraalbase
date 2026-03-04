@@ -224,13 +224,7 @@ export default function CoffreFactures() {
               {emailCopied ? <Check className="w-3.5 h-3.5 text-green-600" /> : <Copy className="w-3.5 h-3.5" />}
               {emailCopied ? 'Copié !' : "Copier l'adresse"}
             </button>
-            <button
-              onClick={() => setShowWebhookInfo(!showWebhookInfo)}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-purple-700 bg-white border border-purple-300 rounded-lg hover:bg-purple-50 transition-colors"
-            >
-              <Zap className="w-3.5 h-3.5" />
-              URL Webhook Resend
-            </button>
+
             <button
               onClick={() => setSourceFilter(sourceFilter === 'email_inbound' ? 'all' : 'email_inbound')}
               className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg border transition-colors ${sourceFilter === 'email_inbound' ? 'bg-blue-600 text-white border-blue-600' : 'text-blue-700 bg-white border-blue-300 hover:bg-blue-50'}`}
