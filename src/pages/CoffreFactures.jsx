@@ -41,6 +41,15 @@ export default function CoffreFactures() {
   const [showSend, setShowSend] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
   const [showAutomation, setShowAutomation] = useState(false);
+  const [sourceFilter, setSourceFilter] = useState('all');
+  const [emailCopied, setEmailCopied] = useState(false);
+
+  const handleCopyEmail = () => {
+    navigator.clipboard?.writeText('factures@upgraal.com').then(() => {
+      setEmailCopied(true);
+      setTimeout(() => setEmailCopied(false), 2000);
+    });
+  };
 
   const { data: invoices = [], isLoading } = useQuery({
     queryKey: ['invoices'],
