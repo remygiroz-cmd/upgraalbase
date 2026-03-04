@@ -43,11 +43,27 @@ export default function CoffreFactures() {
   const [showAutomation, setShowAutomation] = useState(false);
   const [sourceFilter, setSourceFilter] = useState('all');
   const [emailCopied, setEmailCopied] = useState(false);
+  const [webhookCopied, setWebhookCopied] = useState(false);
+  const [showWebhookInfo, setShowWebhookInfo] = useState(false);
 
   const handleCopyEmail = () => {
     navigator.clipboard?.writeText('factures@factures.upgraal.com').then(() => {
       setEmailCopied(true);
       setTimeout(() => setEmailCopied(false), 2000);
+    });
+  };
+
+  const { data: webhookInfo, isLoading: webhookLoading } = useQuery({
+    queryKey: ['webhookInfo'],
+    queryFn: () => base44.functions.invoke('getWebhookInfo').then(r => r.data),
+    enabled: showWebhookInfo,
+    staleTime: Infinity,
+  });
+
+  const handleCopyWebhook = (url) => {
+    navigator.clipboard?.writeText(url).then(() => {
+      setWebhookCopied(true);
+      setTimeout(() => setWebhookCopied(false), 2000);
     });
   };
 
