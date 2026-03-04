@@ -166,13 +166,20 @@ async function processAttachments(base44, payload) {
 Deno.serve(async (req) => {
   console.log('[inboundFactures] method=', req.method, 'url=', req.url);
 
-  // Toujours 200 sur OPTIONS/HEAD/GET pour Resend
-  if (req.method === 'OPTIONS') return new Response(null, { status: 204 });
-  if (req.method === 'HEAD' || req.method === 'GET') {
-    return Response.json({ ok: true, method: req.method, url: req.url });
-  }
+  // Toujours 200 quelle que soit la méthode (jamais de 405)
   if (req.method !== 'POST') {
-    return Response.json({ ok: false, method: req.method });
+    return Response.json({ ok: true, method: req.method }, { status: 200 });
+  }
+
+  // Vérification du secret (query param ?secret=...)
+  const expectedSecret = Deno.env.get('RESEND_INBOUND_SECRET');
+  if (expectedSecret) {
+    const url = new URL(req.url);
+    const querySecret = url.searchParams.get('secret');
+    if (!querySecret || querySecret !== expectedSecret) {
+      console.warn('[inboundFactures] Invalid or missing secret');
+      return Response.json({ success: true, warning: 'unauthorized' }, { status: 200 });
+    }
   }
 
   // Parse body
@@ -183,30 +190,17 @@ Deno.serve(async (req) => {
     payload = JSON.parse(text);
   } catch (err) {
     console.error('[inboundFactures] Failed to parse body:', err.message);
-    // Répondre 200 quand même pour éviter les retries Resend
-    return Response.json({ success: true, warning: 'invalid JSON body' });
+    return Response.json({ success: true, warning: 'invalid JSON body' }, { status: 200 });
   }
 
   console.log('[inboundFactures] event type:', payload?.type, '| keys:', Object.keys(payload || {}));
 
-  // Vérification du secret (optionnelle, via query param uniquement)
-  const expectedSecret = Deno.env.get('RESEND_INBOUND_SECRET');
-  if (expectedSecret) {
-    const url = new URL(req.url);
-    const querySecret = url.searchParams.get('secret');
-    if (!querySecret || querySecret !== expectedSecret) {
-      console.warn('[inboundFactures] Invalid or missing secret');
-      // On répond 200 pour éviter les retries, mais on n'importe rien
-      return Response.json({ success: true, warning: 'unauthorized' });
-    }
-  }
-
-  // ── RÉPONDRE IMMÉDIATEMENT 200 ─────────────────────────────────────────────
-  // Le traitement se fait en background (fire & forget)
+  // ── ACK IMMÉDIAT 200 ───────────────────────────────────────────────────────
   const base44 = createClientFromRequest(req);
   processAttachments(base44, payload).catch(err => {
     console.error('[inboundFactures] Background processing error:', err.message);
   });
 
-  return Response.json({ success: true });
+  console.log('[inboundFactures] ACK 200 sent');
+  return Response.json({ success: true }, { status: 200 });
 });
