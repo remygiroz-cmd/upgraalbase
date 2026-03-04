@@ -28,6 +28,7 @@ import MyWeekShiftsCard from '@/components/planning/MyWeekShiftsCard';
 import ShiftOfferCard from '@/components/planning/ShiftOfferCard';
 import ShiftOffersManagerBlock from '@/components/planning/ShiftOffersManagerBlock';
 import WeeklyStaffingAlert from '@/components/planning/WeeklyStaffingAlert';
+import HomeAlertsWidget from '@/components/agenda/HomeAlertsWidget';
 
 export default function Home() {
   const [showNewConversation, setShowNewConversation] = useState(false);
