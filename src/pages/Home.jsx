@@ -692,6 +692,9 @@ export default function Home() {
       </div>
 
       <div className="max-w-4xl mx-auto px-4 py-6 space-y-6">
+        {/* HomeAlerts Widget */}
+        {currentEmployee && <HomeAlertsWidget employeeId={currentEmployee.id} />}
+
         {/* Departure Order Block — calcul live identique au planning */}
         {isManagerOrAdmin && (
           <DepartureOrderPlanningBlock
