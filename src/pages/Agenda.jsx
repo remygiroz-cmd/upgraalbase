@@ -49,6 +49,7 @@ export default function Agenda() {
   const [showForm, setShowForm] = useState(false);
   const [editingEvent, setEditingEvent] = useState(null);
   const [selectedEvent, setSelectedEvent] = useState(null);
+  const [draft, setDraft] = useState(null); // pre-fill from cell click
 
   // Lire event_id depuis URL
   useEffect(() => {
@@ -155,13 +156,6 @@ export default function Agenda() {
     if (!selectedEvent) return null;
     return employees.find(e => e.id === selectedEvent.owner_employee_id);
   }, [selectedEvent, employees]);
-
-  const isSelectedEventPrivate = useMemo(() => {
-    if (!selectedEvent) return false;
-    return selectedEvent.visibility === 'PRIVATE' &&
-      isPrivileged &&
-      selectedEvent.owner_employee_id !== currentEmployee?.id;
-  }, [selectedEvent, isPrivileged, currentEmployee]);
 
   const canEditSelectedEvent = useMemo(() => {
     if (!selectedEvent || !currentEmployee) return false;
@@ -330,7 +324,7 @@ export default function Agenda() {
             )}
 
             <Button
-              onClick={() => { setEditingEvent(null); setShowForm(true); }}
+              onClick={() => { setEditingEvent(null); setDraft(null); setShowForm(true); }}
               className="bg-blue-600 hover:bg-blue-700 text-sm"
             >
               <Plus className="w-4 h-4 mr-1" />
