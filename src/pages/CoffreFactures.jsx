@@ -298,7 +298,16 @@ export default function CoffreFactures() {
       </div>
 
       {/* Logs imports email */}
-      <EmailImportLogsPanel />
+      <div className="mb-2">
+        <button
+          onClick={() => setShowEmailLogs(v => !v)}
+          className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-600 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+        >
+          <Mail className="w-3.5 h-3.5" />
+          {showEmailLogs ? 'Masquer les imports email' : 'Voir les imports email'}
+        </button>
+      </div>
+      {showEmailLogs && <EmailImportLogsPanel />}
 
       {/* Recherche */}
       <div className="mt-6 mb-6">
