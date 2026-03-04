@@ -22,12 +22,24 @@ async function sha256(str) {
 }
 
 Deno.serve(async (req) => {
+  console.log('[inboundFactures] method=', req.method, 'url=', req.url);
+
   if (req.method === 'OPTIONS') {
     return new Response(null, { status: 204 });
   }
 
+  // ── DEBUG COMPAT : HEAD/GET → 200 sans import (diagnostic Resend) ─────────
+  if (req.method === 'HEAD') {
+    return Response.json({ ok: true, method: req.method, url: req.url });
+  }
+  if (req.method === 'GET') {
+    return Response.json({ ok: true, method: req.method, url: req.url });
+  }
+
+  // ── Méthodes non gérées → 200 pour éviter les retries Resend ─────────────
   if (req.method !== 'POST') {
-    return Response.json({ error: 'Method not allowed' }, { status: 405 });
+    console.warn('[inboundFactures] Unexpected method:', req.method);
+    return Response.json({ ok: false, method: req.method, url: req.url });
   }
 
   // ── Vérification du secret ─────────────────────────────────────────────────
