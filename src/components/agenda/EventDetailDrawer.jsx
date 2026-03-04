@@ -41,7 +41,8 @@ function formatEventDates(event) {
   }
 }
 
-export default function EventDetailDrawer({ event, open, onClose, onEdit, onDelete, canEdit, ownerEmployee, isPrivate }) {
+export default function EventDetailDrawer({ event, open, onClose, onEdit, onDelete, canEdit, ownerEmployee }) {
+  const isPrivate = false; // visibility supprimée — tous les events sont INTERNAL
   if (!event) return null;
 
   const isCancelled = event.status === 'CANCELLED';
@@ -74,9 +75,6 @@ export default function EventDetailDrawer({ event, open, onClose, onEdit, onDele
                 {isCancelled && (
                   <Badge className="bg-gray-200 text-gray-600">Annulé</Badge>
                 )}
-                <Badge variant="outline" className="text-xs">
-                  {event.visibility === 'PRIVATE' ? '🔒 Privé' : event.visibility === 'TEAM' ? '👥 Équipe' : '🏢 Interne'}
-                </Badge>
               </div>
 
               <div className="flex items-start gap-2 text-sm text-gray-700">
