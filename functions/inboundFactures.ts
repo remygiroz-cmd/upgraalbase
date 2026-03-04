@@ -347,6 +347,21 @@ Deno.serve(async (req) => {
 
   console.log('[inboundFactures] event type=', payload?.type, '| top-level keys=', Object.keys(payload || {}));
 
+  try {
+    const apiKey = Deno.env.get('RESEND_API_KEY');
+    const hasKey = !!apiKey;
+    console.log('[inboundFactures] RESEND_API_KEY present=', hasKey);
+
+    if (hasKey) {
+      const r = await fetch('https://api.resend.com/domains', {
+        headers: { Authorization: `Bearer ${apiKey}` },
+      });
+      console.log('[inboundFactures] Resend API key test /domains status=', r.status);
+    }
+  } catch (e) {
+    console.error('[inboundFactures] Resend API key test failed:', e?.message || String(e));
+  }
+
   // Extraire infos email pour le log
   const email = extractEmailPayload(payload);
   const emailFrom = (email?.from || '').trim();
