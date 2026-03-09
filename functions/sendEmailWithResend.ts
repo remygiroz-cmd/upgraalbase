@@ -51,7 +51,7 @@ Deno.serve(async (req) => {
 
     // Build email payload
     const emailPayload: any = {
-      from: `${senderName} <commandes@upgraal.com>`,
+      from: `${senderName} <noreply@upgraal.com>`,
       to: [to],
       subject: subject
     };
