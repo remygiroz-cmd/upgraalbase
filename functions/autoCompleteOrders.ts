@@ -9,8 +9,6 @@ Deno.serve(async (req) => {
     const orders = await base44.asServiceRole.entities.Order.filter({ status: 'envoyee' });
 
     const now = new Date();
-    const completedOrders = [];
-
     const updatePromises = [];
 
     for (const order of orders) {
