@@ -29,6 +29,7 @@ export default function AutomationConfigModal({ open, onClose, config = null }) 
   const [formData, setFormData] = useState(config || {
     name: '',
     recipient_email: '',
+    cc_email: '',
     send_day: 'monday',
     send_time: '09:00',
     status_filter: ['non_envoyee'],
@@ -109,6 +110,22 @@ export default function AutomationConfigModal({ open, onClose, config = null }) 
               placeholder="comptabilite@example.com"
               className="bg-white border-gray-300 text-gray-900"
             />
+          </div>
+
+          {/* Email en copie (CC) */}
+          <div>
+            <label className="text-sm font-medium text-gray-900 mb-2 block flex items-center gap-2">
+              <Mail className="w-4 h-4" />
+              Email en copie (CC)
+            </label>
+            <Input
+              type="email"
+              value={formData.cc_email || ''}
+              onChange={(e) => setFormData({ ...formData, cc_email: e.target.value })}
+              placeholder="copie@example.com"
+              className="bg-white border-gray-300 text-gray-900"
+            />
+            <p className="text-xs text-gray-500 mt-1">Optionnel - Une copie sera envoyée à cette adresse</p>
           </div>
 
           {/* Jour et heure */}
