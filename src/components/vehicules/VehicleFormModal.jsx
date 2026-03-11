@@ -4,10 +4,10 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { toast } from 'sonner';
-import { Car, Upload, X, Download } from 'lucide-react';
+import { Car, Upload, X, Download, UserCheck } from 'lucide-react';
 
 const CARD_COLORS = [
   { label: 'Aucune', value: '' },
@@ -30,7 +30,8 @@ const defaultForm = {
   loa_date_debut: '', loa_date_fin: '', loa_km_total_autorises: '',
   loa_cout_km_supp: '', batterie_capacite_kwh: '', type_prise: '',
   carburant_type: 'DIESEL', photo_url: '', notes: '',
-  date_montage_pneus: '', km_montage_pneus: '', seuil_alerte_km_pneus: ''
+  date_montage_pneus: '', km_montage_pneus: '', seuil_alerte_km_pneus: '',
+  priority_driver_id: '', priority_driver_name: ''
 };
 
 export default function VehicleFormModal({ open, onOpenChange, vehicle = null }) {
@@ -38,6 +39,19 @@ export default function VehicleFormModal({ open, onOpenChange, vehicle = null })
   const [form, setForm] = useState(defaultForm);
   const [photoUploading, setPhotoUploading] = useState(false);
   const photoInputRef = useRef(null);
+
+  // Fetch delivery drivers for priority assignment
+  const { data: employees = [] } = useQuery({
+    queryKey: ['employees', 'active'],
+    queryFn: () => base44.entities.Employee.filter({ is_active: true }),
+    enabled: open
+  });
+
+  const deliveryDrivers = employees.filter(e => {
+    const team = (e.team || '').toLowerCase();
+    const pos = (e.position || '').toLowerCase();
+    return team.includes('livraison') || pos.includes('livreur') || pos.includes('livreuse');
+  });
 
   const handlePhotoUpload = async (e) => {
     const file = e.target.files[0];
@@ -74,7 +88,8 @@ export default function VehicleFormModal({ open, onOpenChange, vehicle = null })
         });
       // Remove empty string date/string fields
       ['loa_date_debut', 'loa_date_fin', 'date_mise_en_service', 'date_montage_pneus',
-      'couleur', 'card_color', 'photo_url', 'notes', 'type_prise', 'carburant_type']
+      'couleur', 'card_color', 'photo_url', 'notes', 'type_prise', 'carburant_type',
+      'priority_driver_id', 'priority_driver_name']
       .forEach(k => { if (data[k] === '') delete data[k]; });
 
       if (vehicle?.id) {
@@ -309,6 +324,47 @@ export default function VehicleFormModal({ open, onOpenChange, vehicle = null })
               </div>
             </div>
           </section>
+
+          {/* Assignation prioritaire */}
+          {form.type_usage === 'LIVRAISON' && (
+            <section>
+              <h3 className="text-sm font-semibold text-gray-700 mb-3 uppercase tracking-wide flex items-center gap-2">
+                <UserCheck className="w-4 h-4" />
+                Assignation prioritaire
+              </h3>
+              <div>
+                <Label>Livreur prioritaire (optionnel)</Label>
+                <Select
+                  value={form.priority_driver_id || ''}
+                  onValueChange={(v) => {
+                    if (v === '') {
+                      set('priority_driver_id', '');
+                      set('priority_driver_name', '');
+                    } else {
+                      const driver = deliveryDrivers.find(d => d.id === v);
+                      set('priority_driver_id', v);
+                      set('priority_driver_name', driver ? `${driver.first_name} ${driver.last_name}` : '');
+                    }
+                  }}
+                >
+                  <SelectTrigger className="mt-1">
+                    <SelectValue placeholder="Aucune priorité" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value={null}>Aucune priorité</SelectItem>
+                    {deliveryDrivers.map(d => (
+                      <SelectItem key={d.id} value={d.id}>
+                        {d.first_name} {d.last_name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-gray-500 mt-1.5">
+                  Ce véhicule sera automatiquement assigné à ce livreur en priorité lors des assignations automatiques quotidiennes.
+                </p>
+              </div>
+            </section>
+          )}
 
           {/* Photo & notes */}
           <section>
