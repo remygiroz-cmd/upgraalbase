@@ -76,22 +76,6 @@ Deno.serve(async (req) => {
       return Response.json({ message: 'No active delivery vehicles available', date: today, assigned: 0 });
     }
 
-    // Sort: SOCIETE first (km_actuel ASC), then LOA (km_restants DESC)
-    const societe = deliveryVehicles
-      .filter(v => v.propriete === 'SOCIETE')
-      .sort((a, b) => (a.km_actuel || 0) - (b.km_actuel || 0));
-
-    const loa = deliveryVehicles
-      .filter(v => v.propriete === 'LOA')
-      .map(v => {
-        const kmConsumed = (v.km_actuel || 0) - (v.km_initial || 0);
-        const kmRestants = (v.loa_km_total_autorises || 0) - kmConsumed;
-        return { ...v, _kmRestants: kmRestants };
-      })
-      .sort((a, b) => b._kmRestants - a._kmRestants);
-
-    const sortedVehicles = [...societe, ...loa];
-
     // Keep MANUEL and locked assignments, delete AUTO non-locked
     const toDelete = existingAssignments.filter(a => a.source === 'AUTO' && !a.locked);
     await Promise.all(toDelete.map(a => client.entities.VehicleAssignment.delete(a.id)));
@@ -100,7 +84,7 @@ Deno.serve(async (req) => {
     const keptVehicleIds = new Set(kept.map(a => a.vehicule_id));
     const keptEmployeeIds = new Set(kept.map(a => a.employe_id));
 
-    const availableVehicles = sortedVehicles.filter(v => !keptVehicleIds.has(v.id));
+    const availableVehicles = deliveryVehicles.filter(v => !keptVehicleIds.has(v.id));
     const availableLivreurs = livreurs.filter(e => !keptEmployeeIds.has(e.id));
 
     // Priority assignment: match vehicles with priority drivers first
@@ -128,15 +112,31 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Phase 2: Assign remaining vehicles to remaining drivers
+    // Phase 2: Sort remaining vehicles and assign to remaining drivers
     const remainingVehicles = availableVehicles.filter(v => !assignedVehicles.has(v.id));
     const remainingDrivers = availableLivreurs.filter(e => !assignedDrivers.has(e.id));
-    const count = Math.min(remainingVehicles.length, remainingDrivers.length);
+
+    // Sort: SOCIETE first (km_actuel ASC), then LOA (km_restants DESC)
+    const societeSorted = remainingVehicles
+      .filter(v => v.propriete === 'SOCIETE')
+      .sort((a, b) => (a.km_actuel || 0) - (b.km_actuel || 0));
+
+    const loaSorted = remainingVehicles
+      .filter(v => v.propriete === 'LOA')
+      .map(v => {
+        const kmConsumed = (v.km_actuel || 0) - (v.km_initial || 0);
+        const kmRestants = (v.loa_km_total_autorises || 0) - kmConsumed;
+        return { ...v, _kmRestants: kmRestants };
+      })
+      .sort((a, b) => b._kmRestants - a._kmRestants);
+
+    const sortedRemainingVehicles = [...societeSorted, ...loaSorted];
+    const count = Math.min(sortedRemainingVehicles.length, remainingDrivers.length);
 
     for (let i = 0; i < count; i++) {
       toCreate.push({
         date: today,
-        vehicule_id: remainingVehicles[i].id,
+        vehicule_id: sortedRemainingVehicles[i].id,
         employe_id: remainingDrivers[i].id,
         employe_name: `${remainingDrivers[i].first_name} ${remainingDrivers[i].last_name}`,
         source: 'AUTO',
@@ -153,9 +153,10 @@ Deno.serve(async (req) => {
       success: true,
       date: today,
       assigned: toCreate.length,
+      priority_assigned: assignedDrivers.size,
       livreurs_present: livreurs.length,
       vehicles_available: deliveryVehicles.length,
-      without_vehicle: Math.max(0, livreurs.length - count)
+      without_vehicle: Math.max(0, livreurs.length - toCreate.length)
     });
 
   } catch (error) {
