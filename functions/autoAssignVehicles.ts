@@ -1,4 +1,4 @@
-import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
+import { createClientFromRequest } from 'npm:@base44/sdk@0.8.20';
 
 /**
  * Daily auto-assignment of delivery vehicles to present delivery drivers.
@@ -103,17 +103,47 @@ Deno.serve(async (req) => {
     const availableVehicles = sortedVehicles.filter(v => !keptVehicleIds.has(v.id));
     const availableLivreurs = livreurs.filter(e => !keptEmployeeIds.has(e.id));
 
-    const count = Math.min(availableVehicles.length, availableLivreurs.length);
+    // Priority assignment: match vehicles with priority drivers first
+    const toCreate = [];
+    const assignedVehicles = new Set();
+    const assignedDrivers = new Set();
 
-    const toCreate = availableVehicles.slice(0, count).map((v, i) => ({
-      date: today,
-      vehicule_id: v.id,
-      employe_id: availableLivreurs[i].id,
-      employe_name: `${availableLivreurs[i].first_name} ${availableLivreurs[i].last_name}`,
-      source: 'AUTO',
-      locked: false,
-      statut: 'ASSIGNE'
-    }));
+    // Phase 1: Assign priority vehicles to their priority drivers (if present)
+    for (const vehicle of availableVehicles) {
+      if (vehicle.priority_driver_id) {
+        const priorityDriver = availableLivreurs.find(e => e.id === vehicle.priority_driver_id);
+        if (priorityDriver && !assignedDrivers.has(priorityDriver.id)) {
+          toCreate.push({
+            date: today,
+            vehicule_id: vehicle.id,
+            employe_id: priorityDriver.id,
+            employe_name: `${priorityDriver.first_name} ${priorityDriver.last_name}`,
+            source: 'AUTO',
+            locked: false,
+            statut: 'ASSIGNE'
+          });
+          assignedVehicles.add(vehicle.id);
+          assignedDrivers.add(priorityDriver.id);
+        }
+      }
+    }
+
+    // Phase 2: Assign remaining vehicles to remaining drivers
+    const remainingVehicles = availableVehicles.filter(v => !assignedVehicles.has(v.id));
+    const remainingDrivers = availableLivreurs.filter(e => !assignedDrivers.has(e.id));
+    const count = Math.min(remainingVehicles.length, remainingDrivers.length);
+
+    for (let i = 0; i < count; i++) {
+      toCreate.push({
+        date: today,
+        vehicule_id: remainingVehicles[i].id,
+        employe_id: remainingDrivers[i].id,
+        employe_name: `${remainingDrivers[i].first_name} ${remainingDrivers[i].last_name}`,
+        source: 'AUTO',
+        locked: false,
+        statut: 'ASSIGNE'
+      });
+    }
 
     if (toCreate.length > 0) {
       await client.entities.VehicleAssignment.bulkCreate(toCreate);
