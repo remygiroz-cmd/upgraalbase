@@ -218,14 +218,13 @@ export default function CoffrePlannings() {
   }, []);
 
   const downloadLogs = useCallback(() => {
-    try {
-      const { getSnapshotLogs } = await import('@/components/planning/SnapshotRenderer');
+    import('@/components/planning/SnapshotRenderer').then(({ getSnapshotLogs }) => {
       const logs = getSnapshotLogs();
       const text = logs.map((l, i) => `[${i}] ${l.step}${l.detail ? ' — '+l.detail : ''} @${l.t}`).join('\n');
       navigator.clipboard?.writeText(text).then(() => toast.success('Logs copiés dans le presse-papier'));
-    } catch {
+    }).catch(() => {
       toast.info('Consultez la console du navigateur pour les logs (F12)');
-    }
+    });
   }, []);
 
   if (!canAccess) {
