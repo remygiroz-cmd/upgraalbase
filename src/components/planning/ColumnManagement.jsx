@@ -1,7 +1,5 @@
-import React from 'react';
-
 /**
- * Column management hooks for Planning page
+ * Column management handlers for Planning page
  * Manages drag, drop, hide/show logic with layout persistence
  */
 
@@ -11,10 +9,12 @@ export const createColumnHandlers = (
   saveLayout,
   employees,
   canModifyPlanning,
-  toast
+  toast,
+  draggingId,
+  setDraggingId,
+  dragOverId,
+  setDragOverId
 ) => {
-  const [draggingId, setDraggingId] = React.useState(null);
-  const [dragOverId, setDragOverId] = React.useState(null);
 
   const handleColumnDragStart = (id) => setDraggingId(id);
   const handleColumnDragOver = (id) => setDragOverId(id);

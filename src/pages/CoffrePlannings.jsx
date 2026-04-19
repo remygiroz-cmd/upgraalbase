@@ -219,7 +219,7 @@ export default function CoffrePlannings() {
 
   const downloadLogs = useCallback(() => {
     try {
-      const { getSnapshotLogs } = require('@/components/planning/SnapshotRenderer');
+      const { getSnapshotLogs } = await import('@/components/planning/SnapshotRenderer');
       const logs = getSnapshotLogs();
       const text = logs.map((l, i) => `[${i}] ${l.step}${l.detail ? ' — '+l.detail : ''} @${l.t}`).join('\n');
       navigator.clipboard?.writeText(text).then(() => toast.success('Logs copiés dans le presse-papier'));

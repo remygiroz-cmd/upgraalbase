@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
+import { useState, useMemo } from 'react';
 import { History, Download, Check, ClipboardList, Clock, Trash2, Search, User } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -269,7 +270,6 @@ export default function Historique() {
 }
 
 function DayDetailModal({ day, onClose }) {
-  if (!day) return null;
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedUser, setSelectedUser] = useState('all');
 
@@ -281,7 +281,7 @@ function DayDetailModal({ day, onClose }) {
   // Get unique users from completed tasks
   const uniqueUsers = useMemo(() => {
     const users = new Set();
-    if (day.tasks) {
+    if (day?.tasks) {
       day.tasks.forEach(task => {
         if (task.completed_by_name) {
           users.add(task.completed_by_name);
@@ -293,7 +293,7 @@ function DayDetailModal({ day, onClose }) {
 
   // Filter tasks by search and user
   const filteredTasks = useMemo(() => {
-    if (!day.tasks) return [];
+    if (!day?.tasks) return [];
     return day.tasks.filter(task => {
       const matchesSearch = searchQuery === '' || 
         task.task_name?.toLowerCase().includes(searchQuery.toLowerCase());
@@ -331,6 +331,8 @@ function DayDetailModal({ day, onClose }) {
   });
 
   const remainingSeconds = totalSeconds - completedSeconds;
+
+  if (!day) return null;
 
   const formatTime = (seconds) => {
     const hours = Math.floor(seconds / 3600);

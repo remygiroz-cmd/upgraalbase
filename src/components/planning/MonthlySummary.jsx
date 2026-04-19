@@ -663,7 +663,7 @@ function EditMonthlyRecapDialog({
           payees_hors_sup_comp: toNum(formData.payees_hors_sup_comp),
           non_shifts_visibles:  toStr(formData.non_shifts_visibles),
           notes:                toStr(formData.notes)
-        }, resetVersion);
+        }, recapPersisted?.reset_version ?? 0);
       } else {
         await clearRecapExtras(monthKey, employee.id);
       }

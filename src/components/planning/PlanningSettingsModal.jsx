@@ -296,7 +296,7 @@ export default function PlanningSettingsModal({ open, onOpenChange, displayMode,
                     </div>
                     <div className="mt-2 space-y-1 text-xs">
                       <div className="bg-blue-100 rounded px-2 py-1 text-blue-900">
-                        <strong>Temps plein (35h/semaine) :</strong> Supp. +25% (36-43h), +50% (>43h)
+                        <strong>Temps plein (35h/semaine) :</strong> Supp. +25% (36-43h), +50% (&gt;43h)
                       </div>
                       <div className="bg-green-100 rounded px-2 py-1 text-green-900">
                         <strong>Temps partiel :</strong> Compl. +10% (≤10% contrat), +25% (>10%) • Max 1/3 contrat

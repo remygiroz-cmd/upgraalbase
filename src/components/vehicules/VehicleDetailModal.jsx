@@ -9,28 +9,28 @@ import { calcLoaStats, getStatutBadge, vehicleDisplayName, getRisqueBadge } from
 import moment from 'moment';
 
 export default function VehicleDetailModal({ open, onOpenChange, vehicle, onEdit }) {
-  if (!vehicle) return null;
-
-  const loaStats = calcLoaStats(vehicle);
-  const statutBadge = getStatutBadge(vehicle.statut);
+  const loaStats = calcLoaStats(vehicle || {});
+  const statutBadge = getStatutBadge(vehicle?.statut);
 
   const { data: assignments = [] } = useQuery({
     queryKey: ['vehicleAssignments', vehicle.id],
     queryFn: () => base44.entities.VehicleAssignment.filter({ vehicule_id: vehicle.id }),
-    enabled: open
+    enabled: open && !!vehicle
   });
 
   const { data: maintenances = [] } = useQuery({
-    queryKey: ['vehicleMaintenance', vehicle.id],
+    queryKey: ['vehicleMaintenance', vehicle?.id],
     queryFn: () => base44.entities.MaintenanceLog.filter({ vehicule_id: vehicle.id }),
-    enabled: open
+    enabled: open && !!vehicle
   });
 
   const { data: documents = [] } = useQuery({
-    queryKey: ['vehicleDocuments', vehicle.id],
+    queryKey: ['vehicleDocuments', vehicle?.id],
     queryFn: () => base44.entities.VehicleDocument.filter({ vehicule_id: vehicle.id }),
-    enabled: open
+    enabled: open && !!vehicle
   });
+
+  if (!vehicle) return null;
 
   const pneuKmDepuisMontage = vehicle.km_montage_pneus
     ? (vehicle.km_actuel || 0) - (vehicle.km_montage_pneus || 0)
