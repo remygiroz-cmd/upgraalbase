@@ -1,0 +1,66 @@
+{
+  "name": "NonShiftType",
+  "type": "object",
+  "properties": {
+    "label": {
+      "type": "string",
+      "description": "Libell\u00e9 du type (ex: Cong\u00e9s pay\u00e9s, Maladie)"
+    },
+    "code": {
+      "type": "string",
+      "description": "Code court obligatoire (2-5 caract\u00e8res, ex: CP, MAL, SS)"
+    },
+    "key": {
+      "type": "string",
+      "description": "Cl\u00e9 unique (ex: conges_payes, maladie)"
+    },
+    "color": {
+      "type": "string",
+      "description": "Couleur d'affichage",
+      "default": "#6b7280"
+    },
+    "icon": {
+      "type": "string",
+      "description": "Ic\u00f4ne emoji ou texte",
+      "default": "\ud83d\udcc5"
+    },
+    "generates_work_hours": {
+      "type": "boolean",
+      "default": false,
+      "description": "G\u00e9n\u00e8re des heures de travail"
+    },
+    "impacts_payroll": {
+      "type": "boolean",
+      "default": false,
+      "description": "D\u00e9duit automatiquement des heures de la base contractuelle pay\u00e9e"
+    },
+    "counts_as_work_time": {
+      "type": "boolean",
+      "default": false,
+      "description": "Compte dans le temps de travail"
+    },
+    "impacts_paid_leave": {
+      "type": "boolean",
+      "default": false,
+      "description": "Impacte les cong\u00e9s pay\u00e9s"
+    },
+    "visible_in_recap": {
+      "type": "boolean",
+      "default": false,
+      "description": "Visible dans les r\u00e9caps mensuels"
+    },
+    "order": {
+      "type": "number",
+      "description": "Ordre d'affichage"
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true
+    }
+  },
+  "required": [
+    "label",
+    "code",
+    "key"
+  ]
+}

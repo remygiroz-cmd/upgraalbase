@@ -1,0 +1,115 @@
+{
+  "name": "LeaveRequest",
+  "type": "object",
+  "properties": {
+    "status": {
+      "type": "string",
+      "enum": [
+        "PENDING",
+        "APPROVED",
+        "REJECTED",
+        "CANCELLED"
+      ],
+      "default": "PENDING",
+      "description": "Statut de la demande"
+    },
+    "employee_id": {
+      "type": "string",
+      "description": "ID de l'employ\u00e9 concern\u00e9"
+    },
+    "employee_name": {
+      "type": "string",
+      "description": "Nom de l'employ\u00e9 concern\u00e9"
+    },
+    "requested_by_user_id": {
+      "type": "string",
+      "description": "ID de l'utilisateur qui a d\u00e9pos\u00e9 la demande"
+    },
+    "requested_by_user_email": {
+      "type": "string",
+      "description": "Email de l'utilisateur qui a d\u00e9pos\u00e9 la demande"
+    },
+    "requested_by_employee_id": {
+      "type": "string",
+      "description": "ID de l'employ\u00e9 correspondant (si li\u00e9)"
+    },
+    "last_work_day": {
+      "type": "string",
+      "format": "date",
+      "description": "Dernier jour travaill\u00e9 avant CP"
+    },
+    "first_work_day_after": {
+      "type": "string",
+      "format": "date",
+      "description": "Jour de reprise apr\u00e8s CP"
+    },
+    "start_cp": {
+      "type": "string",
+      "format": "date",
+      "description": "Date de d\u00e9but CP calcul\u00e9e"
+    },
+    "end_cp": {
+      "type": "string",
+      "format": "date",
+      "description": "Date de fin CP calcul\u00e9e"
+    },
+    "cp_days_computed": {
+      "type": "number",
+      "description": "Nombre de jours CP d\u00e9compt\u00e9s (calcul\u00e9)"
+    },
+    "calendar_days": {
+      "type": "number",
+      "description": "Nombre total de jours calendaires"
+    },
+    "excluded_days": {
+      "type": "number",
+      "description": "Jours non compt\u00e9s (dimanches + f\u00e9ri\u00e9s)"
+    },
+    "manual_override_days": {
+      "type": "number",
+      "description": "Surcharge manuelle (optionnel)"
+    },
+    "notes": {
+      "type": "string",
+      "description": "Notes de la demande"
+    },
+    "decision_by_user_id": {
+      "type": "string",
+      "description": "ID de l'utilisateur qui a pris la d\u00e9cision"
+    },
+    "decision_by_user_email": {
+      "type": "string",
+      "description": "Email de l'utilisateur qui a pris la d\u00e9cision"
+    },
+    "decision_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Date/heure de la d\u00e9cision"
+    },
+    "rejection_reason": {
+      "type": "string",
+      "description": "Motif de refus (optionnel)"
+    },
+    "created_period_id": {
+      "type": "string",
+      "description": "ID de la p\u00e9riode CP cr\u00e9\u00e9e si accept\u00e9e"
+    },
+    "dismissed_by_employee_ids": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "IDs des employ\u00e9s qui ont masqu\u00e9 cette notification de r\u00e9ponse",
+      "default": []
+    }
+  },
+  "required": [
+    "employee_id",
+    "employee_name",
+    "last_work_day",
+    "first_work_day_after",
+    "start_cp",
+    "end_cp",
+    "cp_days_computed"
+  ]
+}

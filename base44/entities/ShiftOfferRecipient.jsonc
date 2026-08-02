@@ -1,0 +1,34 @@
+{
+  "name": "ShiftOfferRecipient",
+  "type": "object",
+  "properties": {
+    "offer_id": {
+      "type": "string"
+    },
+    "employee_id": {
+      "type": "string"
+    },
+    "employee_name": {
+      "type": "string"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "pending",
+        "accepted",
+        "refused",
+        "cancelled"
+      ],
+      "default": "pending"
+    },
+    "responded_at": {
+      "type": "string",
+      "format": "date-time"
+    }
+  },
+  "required": [
+    "offer_id",
+    "employee_id",
+    "employee_name"
+  ]
+}

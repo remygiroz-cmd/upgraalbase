@@ -1,0 +1,109 @@
+{
+  "name": "AppSettings",
+  "type": "object",
+  "properties": {
+    "setting_key": {
+      "type": "string",
+      "description": "Cl\u00e9 unique pour identifier le param\u00e8tre"
+    },
+    "logo_url": {
+      "type": "string",
+      "description": "URL du logo personnalis\u00e9 de l'application"
+    },
+    "email_sender_name": {
+      "type": "string",
+      "description": "Nom qui appara\u00eetra comme exp\u00e9diteur dans les emails",
+      "default": "UpGraal"
+    },
+    "auto_enabled": {
+      "type": "boolean",
+      "description": "Active/d\u00e9sactive l'automation",
+      "default": false
+    },
+    "completion_times": {
+      "type": "array",
+      "description": "Heures de cl\u00f4ture automatique",
+      "items": {
+        "type": "string"
+      }
+    },
+    "planning_calculation_mode": {
+      "type": "string",
+      "enum": [
+        "disabled",
+        "weekly",
+        "monthly"
+      ],
+      "default": "disabled",
+      "description": "Mode de calcul des heures suppl\u00e9mentaires"
+    },
+    "hours_display_mode": {
+      "type": "string",
+      "enum": [
+        "HHMM",
+        "DECIMAL"
+      ],
+      "default": "HHMM",
+      "description": "Mode d'affichage des heures (HH:MM ou d\u00e9cimal)"
+    },
+    "email_compta": {
+      "type": "string",
+      "description": "Email de la comptabilit\u00e9 (destinataire exports)"
+    },
+    "etablissement_name": {
+      "type": "string",
+      "description": "Nom de l'\u00e9tablissement pour exports compta"
+    },
+    "responsable_name": {
+      "type": "string",
+      "description": "Nom du responsable (signature email compta)"
+    },
+    "responsable_email": {
+      "type": "string",
+      "description": "Email du responsable (Reply-To)"
+    },
+    "responsable_coords": {
+      "type": "string",
+      "description": "Coordonn\u00e9es du responsable (texte libre pour signature)"
+    },
+    "enabled": {
+      "type": "boolean",
+      "default": false,
+      "description": "Activation de l'optimisation masse salariale"
+    },
+    "services": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Services \u00e0 optimiser (labels des postes)",
+      "default": []
+    },
+    "hours_type": {
+      "type": "string",
+      "enum": [
+        "complementary",
+        "overtime",
+        "both"
+      ],
+      "default": "complementary",
+      "description": "Type d'heures pour le calcul"
+    },
+    "home_roles": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "IDs des r\u00f4les qui voient le bloc sur la Home",
+      "default": []
+    },
+    "show_in_planning": {
+      "type": "boolean",
+      "default": true,
+      "description": "Afficher le bloc dans le Planning"
+    }
+  },
+  "required": [
+    "setting_key"
+  ]
+}

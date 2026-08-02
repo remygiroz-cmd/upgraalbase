@@ -1,0 +1,49 @@
+{
+  "name": "QuickActionsConfig",
+  "type": "object",
+  "properties": {
+    "role": {
+      "type": "string",
+      "enum": [
+        "admin",
+        "manager",
+        "employe"
+      ],
+      "description": "R\u00f4le utilisateur"
+    },
+    "actions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "ID de l'action (ex: voir_planning, envoyer_message, poser_cp)"
+          },
+          "label": {
+            "type": "string",
+            "description": "Libell\u00e9 de l'action"
+          },
+          "icon": {
+            "type": "string",
+            "description": "Nom de l'ic\u00f4ne Lucide"
+          },
+          "target_page": {
+            "type": "string",
+            "description": "Page de destination"
+          }
+        }
+      },
+      "description": "Liste des actions rapides disponibles"
+    },
+    "is_enabled": {
+      "type": "boolean",
+      "default": true,
+      "description": "Configuration active"
+    }
+  },
+  "required": [
+    "role",
+    "actions"
+  ]
+}

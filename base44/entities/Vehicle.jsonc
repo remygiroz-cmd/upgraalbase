@@ -1,0 +1,173 @@
+{
+  "name": "Vehicle",
+  "type": "object",
+  "properties": {
+    "numero": {
+      "type": "number",
+      "description": "Num\u00e9ro du v\u00e9hicule"
+    },
+    "type_usage": {
+      "type": "string",
+      "enum": [
+        "LIVRAISON",
+        "DIRECTION"
+      ],
+      "description": "Usage du v\u00e9hicule"
+    },
+    "energie": {
+      "type": "string",
+      "enum": [
+        "ELECTRIQUE",
+        "THERMIQUE"
+      ],
+      "description": "Type d'\u00e9nergie"
+    },
+    "propriete": {
+      "type": "string",
+      "enum": [
+        "SOCIETE",
+        "LOA"
+      ],
+      "description": "Type de propri\u00e9t\u00e9"
+    },
+    "statut": {
+      "type": "string",
+      "enum": [
+        "ACTIF",
+        "INDISPONIBLE",
+        "ATELIER",
+        "RESERVE"
+      ],
+      "default": "ACTIF"
+    },
+    "marque": {
+      "type": "string"
+    },
+    "modele": {
+      "type": "string"
+    },
+    "immatriculation": {
+      "type": "string"
+    },
+    "couleur": {
+      "type": "string"
+    },
+    "card_color": {
+      "type": "string",
+      "default": ""
+    },
+    "annee": {
+      "type": "number"
+    },
+    "date_mise_en_service": {
+      "type": "string",
+      "format": "date"
+    },
+    "km_initial": {
+      "type": "number",
+      "default": 0
+    },
+    "km_actuel": {
+      "type": "number",
+      "default": 0
+    },
+    "photo_url": {
+      "type": "string"
+    },
+    "loa_date_debut": {
+      "type": "string",
+      "format": "date"
+    },
+    "loa_date_fin": {
+      "type": "string",
+      "format": "date"
+    },
+    "loa_km_total_autorises": {
+      "type": "number"
+    },
+    "loa_cout_km_supp": {
+      "type": "number"
+    },
+    "batterie_capacite_kwh": {
+      "type": "number"
+    },
+    "type_prise": {
+      "type": "string",
+      "enum": [
+        "TYPE2",
+        "CCS",
+        "CHADEMO",
+        "AUTRE"
+      ]
+    },
+    "carburant_type": {
+      "type": "string",
+      "enum": [
+        "DIESEL",
+        "ESSENCE",
+        "GPL",
+        "AUTRE"
+      ]
+    },
+    "date_montage_pneus": {
+      "type": "string",
+      "format": "date"
+    },
+    "km_montage_pneus": {
+      "type": "number"
+    },
+    "seuil_alerte_km_pneus": {
+      "type": "number"
+    },
+    "notes": {
+      "type": "string"
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true
+    },
+    "last_energy_level_pct": {
+      "type": "number",
+      "description": "Dernier % d'\u00e9nergie connu (0-100)"
+    },
+    "last_energy_updated_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Date de la derni\u00e8re mise \u00e0 jour \u00e9nergie"
+    },
+    "last_energy_source": {
+      "type": "string",
+      "enum": [
+        "START_SHIFT",
+        "END_SHIFT",
+        "AUTO_CHARGED"
+      ],
+      "description": "Source de la derni\u00e8re mise \u00e0 jour \u00e9nergie"
+    },
+    "last_plugged_in_charge": {
+      "type": "boolean",
+      "description": "V\u00e9hicule branch\u00e9 lors du dernier fin de service"
+    },
+    "last_plugged_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Date du dernier branchement"
+    },
+    "priority_driver_id": {
+      "type": "string",
+      "description": "ID de l'employ\u00e9 prioritaire pour ce v\u00e9hicule"
+    },
+    "priority_driver_name": {
+      "type": "string",
+      "description": "Nom de l'employ\u00e9 prioritaire"
+    }
+  },
+  "required": [
+    "type_usage",
+    "energie",
+    "propriete",
+    "marque",
+    "modele",
+    "immatriculation"
+  ]
+}

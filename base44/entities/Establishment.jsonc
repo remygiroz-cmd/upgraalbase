@@ -1,0 +1,62 @@
+{
+  "name": "Establishment",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Nom de l'\u00e9tablissement"
+    },
+    "postal_address": {
+      "type": "string",
+      "description": "Adresse postale"
+    },
+    "postal_code": {
+      "type": "string",
+      "description": "Code postal"
+    },
+    "city": {
+      "type": "string",
+      "description": "Ville de l'\u00e9tablissement"
+    },
+    "delivery_address": {
+      "type": "string",
+      "description": "Adresse de livraison"
+    },
+    "siret": {
+      "type": "string",
+      "description": "Num\u00e9ro de SIRET"
+    },
+    "website": {
+      "type": "string",
+      "description": "Adresse du site internet"
+    },
+    "contact_email": {
+      "type": "string",
+      "description": "Email de contact"
+    },
+    "managers": {
+      "type": "array",
+      "description": "Liste des responsables",
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Nom du responsable"
+          },
+          "phone": {
+            "type": "string",
+            "description": "Num\u00e9ro de t\u00e9l\u00e9phone"
+          },
+          "email": {
+            "type": "string",
+            "description": "Email du responsable"
+          }
+        }
+      }
+    }
+  },
+  "required": [
+    "name"
+  ]
+}

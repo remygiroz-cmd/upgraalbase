@@ -1,0 +1,31 @@
+{
+  "name": "HomeWidgetsConfig",
+  "type": "object",
+  "properties": {
+    "role": {
+      "type": "string",
+      "enum": [
+        "admin",
+        "manager",
+        "employe"
+      ],
+      "description": "R\u00f4le utilisateur"
+    },
+    "widget_order": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Ordre d'affichage des widgets (ex: today_shifts, team_messages, announcements, my_stats)"
+    },
+    "is_enabled": {
+      "type": "boolean",
+      "default": true,
+      "description": "Configuration active"
+    }
+  },
+  "required": [
+    "role",
+    "widget_order"
+  ]
+}

@@ -1,0 +1,49 @@
+{
+  "name": "UserPermissionOverride",
+  "type": "object",
+  "properties": {
+    "user_email": {
+      "type": "string",
+      "description": "Email de l'utilisateur"
+    },
+    "permissions_override": {
+      "type": "object",
+      "description": "Surcharges de permissions par module",
+      "properties": {
+        "home": {
+          "type": "boolean"
+        },
+        "travail_du_jour": {
+          "type": "boolean"
+        },
+        "mise_en_place": {
+          "type": "boolean"
+        },
+        "temperatures": {
+          "type": "boolean"
+        },
+        "recettes": {
+          "type": "boolean"
+        },
+        "historique": {
+          "type": "boolean"
+        },
+        "equipe": {
+          "type": "boolean"
+        },
+        "pertes": {
+          "type": "boolean"
+        },
+        "stocks": {
+          "type": "boolean"
+        },
+        "parametres": {
+          "type": "boolean"
+        }
+      }
+    }
+  },
+  "required": [
+    "user_email"
+  ]
+}

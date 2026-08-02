@@ -1,0 +1,54 @@
+{
+  "name": "PlanningSnapshot",
+  "type": "object",
+  "properties": {
+    "month_key": {
+      "type": "string",
+      "description": "Cl\u00e9 YYYY-MM du mois"
+    },
+    "month_label": {
+      "type": "string",
+      "description": "Libell\u00e9 lisible du mois (ex: F\u00e9vrier 2026)"
+    },
+    "reset_version": {
+      "type": "number",
+      "description": "Version du mois au moment du snapshot"
+    },
+    "file_url": {
+      "type": "string",
+      "description": "URL du fichier PDF g\u00e9n\u00e9r\u00e9"
+    },
+    "file_name": {
+      "type": "string",
+      "description": "Nom du fichier PDF"
+    },
+    "file_size_kb": {
+      "type": "number",
+      "description": "Taille du fichier en Ko"
+    },
+    "created_by_name": {
+      "type": "string",
+      "description": "Nom complet du cr\u00e9ateur"
+    },
+    "planning_employees_count": {
+      "type": "number",
+      "description": "Nombre d'employ\u00e9s dans le planning"
+    },
+    "planning_shifts_count": {
+      "type": "number",
+      "description": "Nombre de shifts inclus"
+    },
+    "export_rows_count": {
+      "type": "number",
+      "description": "Nombre de lignes dans l'export compta"
+    },
+    "notes": {
+      "type": "string",
+      "description": "Notes libres sur ce snapshot"
+    }
+  },
+  "required": [
+    "month_key",
+    "reset_version"
+  ]
+}

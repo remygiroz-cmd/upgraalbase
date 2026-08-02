@@ -1,0 +1,74 @@
+{
+  "name": "VehicleAssignment",
+  "type": "object",
+  "properties": {
+    "date": {
+      "type": "string",
+      "format": "date"
+    },
+    "vehicule_id": {
+      "type": "string"
+    },
+    "employe_id": {
+      "type": "string"
+    },
+    "employe_name": {
+      "type": "string"
+    },
+    "km_debut": {
+      "type": "number"
+    },
+    "km_fin": {
+      "type": "number"
+    },
+    "distance_calculee": {
+      "type": "number"
+    },
+    "source": {
+      "type": "string",
+      "enum": [
+        "AUTO",
+        "MANUEL"
+      ],
+      "default": "AUTO"
+    },
+    "locked": {
+      "type": "boolean",
+      "default": false,
+      "description": "Assignation verrouill\u00e9e, ne pas \u00e9craser"
+    },
+    "statut": {
+      "type": "string",
+      "enum": [
+        "ASSIGNE",
+        "EN_COURS",
+        "TERMINE"
+      ],
+      "default": "ASSIGNE"
+    },
+    "cle_remise": {
+      "type": "boolean",
+      "default": false
+    },
+    "non_conformite": {
+      "type": "boolean",
+      "default": false
+    },
+    "debut_shift_fait": {
+      "type": "boolean",
+      "default": false
+    },
+    "fin_service_fait": {
+      "type": "boolean",
+      "default": false
+    },
+    "notes_manager": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "date",
+    "vehicule_id",
+    "employe_id"
+  ]
+}

@@ -1,0 +1,26 @@
+{
+  "name": "Position",
+  "type": "object",
+  "properties": {
+    "label": {
+      "type": "string",
+      "description": "Nom du poste (ex: Cuisine, Caisse, Service)"
+    },
+    "color": {
+      "type": "string",
+      "description": "Couleur du poste (ex: #ef4444)",
+      "default": "#3b82f6"
+    },
+    "order": {
+      "type": "number",
+      "description": "Ordre d'affichage"
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true
+    }
+  },
+  "required": [
+    "label"
+  ]
+}

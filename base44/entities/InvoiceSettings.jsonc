@@ -1,0 +1,96 @@
+{
+  "name": "InvoiceSettings",
+  "type": "object",
+  "properties": {
+    "setting_key": {
+      "type": "string",
+      "description": "Cl\u00e9 unique (ex: auto_send_config)"
+    },
+    "auto_send_enabled": {
+      "type": "boolean",
+      "default": false,
+      "description": "Activer envoi automatique"
+    },
+    "frequency": {
+      "type": "string",
+      "enum": [
+        "daily",
+        "weekly",
+        "monthly"
+      ],
+      "default": "monthly",
+      "description": "Fr\u00e9quence d'envoi"
+    },
+    "send_time": {
+      "type": "string",
+      "description": "Heure d'envoi (HH:mm)"
+    },
+    "exclude_to_verify": {
+      "type": "boolean",
+      "default": true,
+      "description": "Exclure les factures \u00e0 v\u00e9rifier"
+    },
+    "group_in_one_email": {
+      "type": "boolean",
+      "default": true,
+      "description": "Regrouper en un seul email"
+    },
+    "recipients": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Liste des destinataires email"
+    },
+    "email_subject": {
+      "type": "string",
+      "description": "Objet de l'email"
+    },
+    "email_template": {
+      "type": "string",
+      "description": "Template de l'email"
+    },
+    "execution_log": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "executed_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "invoices_sent": {
+            "type": "number"
+          },
+          "success": {
+            "type": "boolean"
+          },
+          "error_message": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "supplier_rules": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "supplier_name": {
+            "type": "string"
+          },
+          "default_category": {
+            "type": "string"
+          },
+          "default_accounting_account": {
+            "type": "string"
+          }
+        }
+      },
+      "description": "R\u00e8gles par fournisseur"
+    }
+  },
+  "required": [
+    "setting_key"
+  ]
+}

@@ -1,0 +1,127 @@
+{
+  "name": "ShiftSwapRequest",
+  "type": "object",
+  "properties": {
+    "status": {
+      "type": "string",
+      "enum": [
+        "PENDING",
+        "APPROVED",
+        "REJECTED",
+        "CANCELED"
+      ],
+      "default": "PENDING",
+      "description": "Statut de la demande"
+    },
+    "requester_employee_id": {
+      "type": "string",
+      "description": "ID de l'employ\u00e9 qui a cr\u00e9\u00e9 la demande"
+    },
+    "employee_a_id": {
+      "type": "string",
+      "description": "ID de l'employ\u00e9 A (celui qui demande)"
+    },
+    "employee_a_name": {
+      "type": "string",
+      "description": "Nom de l'employ\u00e9 A"
+    },
+    "shift_a_id": {
+      "type": "string",
+      "description": "ID du shift de l'employ\u00e9 A"
+    },
+    "shift_a_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Date du shift A (pour affichage)"
+    },
+    "shift_a_start_time": {
+      "type": "string",
+      "description": "Heure de d\u00e9but du shift A"
+    },
+    "shift_a_end_time": {
+      "type": "string",
+      "description": "Heure de fin du shift A"
+    },
+    "shift_a_position": {
+      "type": "string",
+      "description": "Poste du shift A"
+    },
+    "shift_a_updated_at": {
+      "type": "string",
+      "description": "Timestamp updated_at du shift A au moment de la demande (contr\u00f4le de version)"
+    },
+    "employee_b_id": {
+      "type": "string",
+      "description": "ID de l'employ\u00e9 B"
+    },
+    "employee_b_name": {
+      "type": "string",
+      "description": "Nom de l'employ\u00e9 B"
+    },
+    "shift_b_id": {
+      "type": "string",
+      "description": "ID du shift de l'employ\u00e9 B"
+    },
+    "shift_b_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Date du shift B (pour affichage)"
+    },
+    "shift_b_start_time": {
+      "type": "string",
+      "description": "Heure de d\u00e9but du shift B"
+    },
+    "shift_b_end_time": {
+      "type": "string",
+      "description": "Heure de fin du shift B"
+    },
+    "shift_b_position": {
+      "type": "string",
+      "description": "Poste du shift B"
+    },
+    "shift_b_updated_at": {
+      "type": "string",
+      "description": "Timestamp updated_at du shift B au moment de la demande (contr\u00f4le de version)"
+    },
+    "month_key": {
+      "type": "string",
+      "description": "Mois des shifts (format YYYY-MM)"
+    },
+    "message": {
+      "type": "string",
+      "description": "Message optionnel du demandeur"
+    },
+    "decided_by_user_id": {
+      "type": "string",
+      "description": "ID de l'utilisateur qui a d\u00e9cid\u00e9"
+    },
+    "decided_by_user_email": {
+      "type": "string",
+      "description": "Email de l'utilisateur qui a d\u00e9cid\u00e9"
+    },
+    "decided_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Date/heure de la d\u00e9cision"
+    },
+    "rejection_reason": {
+      "type": "string",
+      "description": "Motif de refus (optionnel)"
+    },
+    "dismissed_by_employee_ids": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "IDs des employ\u00e9s ayant masqu\u00e9 la notification de r\u00e9ponse",
+      "default": []
+    }
+  },
+  "required": [
+    "employee_a_id",
+    "shift_a_id",
+    "employee_b_id",
+    "shift_b_id",
+    "month_key"
+  ]
+}

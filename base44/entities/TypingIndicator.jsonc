@@ -1,0 +1,23 @@
+{
+  "name": "TypingIndicator",
+  "type": "object",
+  "properties": {
+    "conversation_id": {
+      "type": "string",
+      "description": "ID de la conversation"
+    },
+    "employee_id": {
+      "type": "string",
+      "description": "ID de l'employ\u00e9 qui \u00e9crit"
+    },
+    "is_typing": {
+      "type": "boolean",
+      "default": false,
+      "description": "Indique si l'employ\u00e9 est en train d'\u00e9crire"
+    }
+  },
+  "required": [
+    "conversation_id",
+    "employee_id"
+  ]
+}

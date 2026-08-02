@@ -1,0 +1,32 @@
+{
+  "name": "WeeklyRecap",
+  "type": "object",
+  "properties": {
+    "employee_id": {
+      "type": "string",
+      "description": "ID de l'employ\u00e9"
+    },
+    "week_start": {
+      "type": "string",
+      "format": "date",
+      "description": "Date de d\u00e9but de semaine (lundi)"
+    },
+    "base_override_hours": {
+      "type": "number",
+      "description": "Surcharge manuelle des heures de base pour cette semaine"
+    },
+    "month_key": {
+      "type": "string",
+      "description": "Cl\u00e9 du mois YYYY-MM pour scope/versioning"
+    },
+    "reset_version": {
+      "type": "number",
+      "default": 0,
+      "description": "Version du mois - pour invalidation rapide lors du reset"
+    }
+  },
+  "required": [
+    "employee_id",
+    "week_start"
+  ]
+}

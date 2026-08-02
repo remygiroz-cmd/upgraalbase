@@ -1,0 +1,41 @@
+{
+  "name": "PlanningMonth",
+  "type": "object",
+  "properties": {
+    "year": {
+      "type": "number",
+      "description": "Ann\u00e9e du mois (ex: 2026)"
+    },
+    "month": {
+      "type": "number",
+      "description": "Mois (0-11, 0=janvier)"
+    },
+    "month_key": {
+      "type": "string",
+      "description": "Cl\u00e9 unique YYYY-MM (ex: 2026-01)"
+    },
+    "reset_version": {
+      "type": "number",
+      "default": 0,
+      "description": "Version du mois - incr\u00e9ment\u00e9e \u00e0 chaque reset"
+    },
+    "reset_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Date/heure du dernier reset"
+    },
+    "reset_by": {
+      "type": "string",
+      "description": "Email de l'utilisateur ayant effectu\u00e9 le reset"
+    },
+    "reset_by_name": {
+      "type": "string",
+      "description": "Nom de l'utilisateur ayant effectu\u00e9 le reset"
+    }
+  },
+  "required": [
+    "year",
+    "month",
+    "month_key"
+  ]
+}

@@ -1,0 +1,25 @@
+{
+  "name": "Category",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Nom de la cat\u00e9gorie"
+    },
+    "color": {
+      "type": "string",
+      "description": "Couleur de la cat\u00e9gorie"
+    },
+    "order": {
+      "type": "number",
+      "description": "Ordre d'affichage"
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true
+    }
+  },
+  "required": [
+    "name"
+  ]
+}

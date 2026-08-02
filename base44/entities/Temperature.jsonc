@@ -1,0 +1,58 @@
+{
+  "name": "Temperature",
+  "type": "object",
+  "properties": {
+    "equipment_id": {
+      "type": "string",
+      "description": "ID de l'\u00e9quipement"
+    },
+    "date": {
+      "type": "string",
+      "format": "date"
+    },
+    "morning_temp": {
+      "type": "number",
+      "description": "Temp\u00e9rature d\u00e9but de service"
+    },
+    "evening_temp": {
+      "type": "number",
+      "description": "Temp\u00e9rature fin de service"
+    },
+    "target_min": {
+      "type": "number"
+    },
+    "target_max": {
+      "type": "number"
+    },
+    "morning_compliant": {
+      "type": "boolean"
+    },
+    "evening_compliant": {
+      "type": "boolean"
+    },
+    "morning_signed_by": {
+      "type": "string"
+    },
+    "morning_signed_by_name": {
+      "type": "string"
+    },
+    "morning_signed_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "evening_signed_by": {
+      "type": "string"
+    },
+    "evening_signed_by_name": {
+      "type": "string"
+    },
+    "evening_signed_at": {
+      "type": "string",
+      "format": "date-time"
+    }
+  },
+  "required": [
+    "equipment_id",
+    "date"
+  ]
+}

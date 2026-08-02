@@ -1,0 +1,73 @@
+{
+  "name": "MonthlyExportOverride",
+  "type": "object",
+  "properties": {
+    "month_key": {
+      "type": "string",
+      "description": "Cl\u00e9 du mois YYYY-MM"
+    },
+    "employee_id": {
+      "type": "string",
+      "description": "ID de l'employ\u00e9"
+    },
+    "reset_version": {
+      "type": "number",
+      "description": "Version de planning"
+    },
+    "nb_jours_travailles": {
+      "type": "number",
+      "description": "Surcharge export: nb jours travaill\u00e9s"
+    },
+    "jours_supp": {
+      "type": "number",
+      "description": "Surcharge export: jours supp"
+    },
+    "payees_hors_sup_comp": {
+      "type": "number",
+      "description": "Surcharge export: pay\u00e9es hors sup/comp"
+    },
+    "compl_10": {
+      "type": "number",
+      "description": "Surcharge export: heures compl\u00e9mentaires +10%"
+    },
+    "compl_25": {
+      "type": "number",
+      "description": "Surcharge export: heures compl\u00e9mentaires +25%"
+    },
+    "supp_25": {
+      "type": "number",
+      "description": "Surcharge export: heures suppl\u00e9mentaires +25%"
+    },
+    "supp_50": {
+      "type": "number",
+      "description": "Surcharge export: heures suppl\u00e9mentaires +50%"
+    },
+    "ferie_jours": {
+      "type": "number",
+      "description": "Surcharge export: jours f\u00e9ri\u00e9s travaill\u00e9s"
+    },
+    "ferie_heures": {
+      "type": "number",
+      "description": "Surcharge export: heures f\u00e9ri\u00e9es"
+    },
+    "non_shifts_visibles": {
+      "type": "string",
+      "description": "Surcharge export: texte non-shifts visibles"
+    },
+    "cp_decomptes": {
+      "type": "string",
+      "description": "Surcharge export: CP d\u00e9compt\u00e9s (texte)"
+    },
+    "notes": {
+      "type": "string"
+    },
+    "updated_at": {
+      "type": "string",
+      "format": "date-time"
+    }
+  },
+  "required": [
+    "month_key",
+    "employee_id"
+  ]
+}

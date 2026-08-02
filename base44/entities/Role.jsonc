@@ -1,0 +1,83 @@
+{
+  "name": "Role",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Nom du r\u00f4le"
+    },
+    "description": {
+      "type": "string",
+      "description": "Description du r\u00f4le"
+    },
+    "permissions": {
+      "type": "object",
+      "description": "Permissions par module",
+      "properties": {
+        "home": {
+          "type": "boolean",
+          "default": true
+        },
+        "travail_du_jour": {
+          "type": "boolean",
+          "default": false
+        },
+        "mise_en_place": {
+          "type": "boolean",
+          "default": false
+        },
+        "temperatures": {
+          "type": "boolean",
+          "default": false
+        },
+        "recettes": {
+          "type": "boolean",
+          "default": false
+        },
+        "historique": {
+          "type": "boolean",
+          "default": false
+        },
+        "equipe": {
+          "type": "boolean",
+          "default": false
+        },
+        "planning_modify": {
+          "type": "boolean",
+          "default": false
+        },
+        "postes_templates": {
+          "type": "boolean",
+          "default": false
+        },
+        "coffre_factures": {
+          "type": "boolean",
+          "default": false
+        },
+        "pertes": {
+          "type": "boolean",
+          "default": false
+        },
+        "stocks": {
+          "type": "boolean",
+          "default": false
+        },
+        "parametres": {
+          "type": "boolean",
+          "default": false
+        },
+        "messages_urgents": {
+          "type": "boolean",
+          "default": false
+        }
+      }
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true
+    }
+  },
+  "required": [
+    "name"
+  ]
+}

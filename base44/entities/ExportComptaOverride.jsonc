@@ -1,0 +1,78 @@
+{
+  "name": "ExportComptaOverride",
+  "type": "object",
+  "properties": {
+    "month_key": {
+      "type": "string",
+      "description": "Cl\u00e9 du mois YYYY-MM"
+    },
+    "employee_id": {
+      "type": "string",
+      "description": "ID de l'employ\u00e9"
+    },
+    "employee_name": {
+      "type": "string",
+      "description": "Nom de l'employ\u00e9 (pour r\u00e9f\u00e9rence)"
+    },
+    "override_nbJoursTravailles": {
+      "type": "number",
+      "description": "Override du nombre de jours travaill\u00e9s"
+    },
+    "override_joursSupp": {
+      "type": "number",
+      "description": "Override des jours suppl\u00e9mentaires"
+    },
+    "override_payeesHorsSupComp": {
+      "type": "number",
+      "description": "Override des heures pay\u00e9es (hors sup/comp)"
+    },
+    "override_compl10": {
+      "type": "number",
+      "description": "Override des heures compl\u00e9mentaires +10%"
+    },
+    "override_compl25": {
+      "type": "number",
+      "description": "Override des heures compl\u00e9mentaires +25%"
+    },
+    "override_supp25": {
+      "type": "number",
+      "description": "Override des heures suppl\u00e9mentaires +25%"
+    },
+    "override_supp50": {
+      "type": "number",
+      "description": "Override des heures suppl\u00e9mentaires +50%"
+    },
+    "override_ferieDays": {
+      "type": "number",
+      "description": "Override du nombre de jours f\u00e9ri\u00e9s"
+    },
+    "override_ferieHours": {
+      "type": "number",
+      "description": "Override des heures f\u00e9ri\u00e9es"
+    },
+    "override_nonShiftsText": {
+      "type": "string",
+      "description": "Override du texte des non-shifts (multi-lignes)"
+    },
+    "override_cpText": {
+      "type": "string",
+      "description": "Override du texte des CP (multi-lignes)"
+    },
+    "notes": {
+      "type": "string",
+      "description": "Notes internes sur les overrides"
+    },
+    "modified_by": {
+      "type": "string",
+      "description": "Email de qui a modifi\u00e9"
+    },
+    "modified_by_name": {
+      "type": "string",
+      "description": "Nom de qui a modifi\u00e9"
+    }
+  },
+  "required": [
+    "month_key",
+    "employee_id"
+  ]
+}

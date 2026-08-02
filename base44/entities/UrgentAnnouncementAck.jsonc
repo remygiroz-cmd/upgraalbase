@@ -1,0 +1,27 @@
+{
+  "name": "UrgentAnnouncementAck",
+  "type": "object",
+  "properties": {
+    "announcement_id": {
+      "type": "string",
+      "description": "ID de l'annonce"
+    },
+    "employee_id": {
+      "type": "string",
+      "description": "ID de l'employ\u00e9"
+    },
+    "acknowledged_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Date/heure de lecture"
+    },
+    "acknowledged_by_user_id": {
+      "type": "string",
+      "description": "ID utilisateur (optionnel)"
+    }
+  },
+  "required": [
+    "announcement_id",
+    "employee_id"
+  ]
+}

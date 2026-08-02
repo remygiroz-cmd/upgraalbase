@@ -1,0 +1,68 @@
+{
+  "name": "Announcement",
+  "type": "object",
+  "properties": {
+    "title": {
+      "type": "string",
+      "description": "Titre de l'annonce"
+    },
+    "content": {
+      "type": "string",
+      "description": "Contenu de l'annonce"
+    },
+    "category": {
+      "type": "string",
+      "enum": [
+        "info",
+        "urgent",
+        "planning",
+        "rh",
+        "promo"
+      ],
+      "description": "Cat\u00e9gorie de l'annonce"
+    },
+    "audience_type": {
+      "type": "string",
+      "enum": [
+        "tous",
+        "equipe",
+        "personnel"
+      ],
+      "default": "tous",
+      "description": "Type d'audience cible"
+    },
+    "audience_team_id": {
+      "type": "string",
+      "description": "ID de l'\u00e9quipe cible (si audience_type=equipe)"
+    },
+    "audience_employee_id": {
+      "type": "string",
+      "description": "ID de l'employ\u00e9 cible (si audience_type=personnel)"
+    },
+    "starts_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Date/heure de d\u00e9but d'affichage"
+    },
+    "ends_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Date/heure de fin d'affichage"
+    },
+    "created_by_employee_id": {
+      "type": "string",
+      "description": "ID de l'employ\u00e9 cr\u00e9ateur (Personnel.id)"
+    },
+    "is_pinned": {
+      "type": "boolean",
+      "default": false,
+      "description": "\u00c9pingler en haut"
+    }
+  },
+  "required": [
+    "title",
+    "content",
+    "category",
+    "created_by_employee_id"
+  ]
+}

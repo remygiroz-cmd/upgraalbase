@@ -1,0 +1,66 @@
+{
+  "name": "HomeAlert",
+  "type": "object",
+  "properties": {
+    "employee_id": {
+      "type": "string",
+      "description": "ID de l'employ\u00e9 destinataire"
+    },
+    "title": {
+      "type": "string",
+      "description": "Titre de l'alerte (max 80)"
+    },
+    "message": {
+      "type": "string",
+      "description": "Message de l'alerte (max 400)"
+    },
+    "severity": {
+      "type": "string",
+      "enum": [
+        "INFO",
+        "WARNING",
+        "URGENT"
+      ],
+      "default": "INFO"
+    },
+    "action_type": {
+      "type": "string",
+      "enum": [
+        "VIEW_EVENT",
+        "ACK_ONLY"
+      ],
+      "default": "VIEW_EVENT"
+    },
+    "event_id": {
+      "type": "string",
+      "description": "ID de l'\u00e9v\u00e9nement li\u00e9 (optionnel)"
+    },
+    "is_read": {
+      "type": "boolean",
+      "default": false
+    },
+    "is_dismissed": {
+      "type": "boolean",
+      "default": false
+    },
+    "dismissed_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Date de dismissal"
+    },
+    "created_by_employee_id": {
+      "type": "string",
+      "description": "ID de l'employ\u00e9 cr\u00e9ateur (null si syst\u00e8me)"
+    },
+    "expires_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Date d'expiration"
+    }
+  },
+  "required": [
+    "employee_id",
+    "title",
+    "message"
+  ]
+}

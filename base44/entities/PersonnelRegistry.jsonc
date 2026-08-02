@@ -1,0 +1,95 @@
+{
+  "name": "PersonnelRegistry",
+  "type": "object",
+  "properties": {
+    "employee_id": {
+      "type": "string",
+      "description": "ID unique de l'employ\u00e9"
+    },
+    "last_name": {
+      "type": "string",
+      "description": "Nom de famille"
+    },
+    "first_name": {
+      "type": "string",
+      "description": "Pr\u00e9nom(s)"
+    },
+    "birth_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Date de naissance"
+    },
+    "birth_place": {
+      "type": "string",
+      "description": "Lieu de naissance"
+    },
+    "nationality": {
+      "type": "string",
+      "description": "Nationalit\u00e9"
+    },
+    "gender": {
+      "type": "string",
+      "enum": [
+        "male",
+        "female",
+        "other"
+      ],
+      "description": "Sexe"
+    },
+    "address": {
+      "type": "string",
+      "description": "Adresse postale"
+    },
+    "social_security_number": {
+      "type": "string",
+      "description": "Num\u00e9ro de s\u00e9curit\u00e9 sociale"
+    },
+    "position": {
+      "type": "string",
+      "description": "Poste"
+    },
+    "start_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Date d'embauche"
+    },
+    "contract_type": {
+      "type": "string",
+      "enum": [
+        "cdi",
+        "cdd",
+        "extra",
+        "apprenti",
+        "stage"
+      ],
+      "description": "Type de contrat"
+    },
+    "exit_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Date de sortie"
+    },
+    "entry_order": {
+      "type": "number",
+      "description": "Ordre d'enregistrement"
+    },
+    "registered_by": {
+      "type": "string",
+      "description": "Email de qui a enregistr\u00e9"
+    },
+    "registered_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Date d'enregistrement"
+    },
+    "last_updated_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Derni\u00e8re mise \u00e0 jour"
+    }
+  },
+  "required": [
+    "last_name",
+    "first_name"
+  ]
+}

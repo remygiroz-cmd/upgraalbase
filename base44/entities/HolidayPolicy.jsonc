@@ -1,0 +1,47 @@
+{
+  "name": "HolidayPolicy",
+  "type": "object",
+  "properties": {
+    "establishment_id": {
+      "type": "string",
+      "description": "ID de l'\u00e9tablissement (ou global si vide)"
+    },
+    "policy_for_non_may1": {
+      "type": "string",
+      "enum": [
+        "pay",
+        "time_off"
+      ],
+      "default": "pay",
+      "description": "Politique pour jours f\u00e9ri\u00e9s hors 1er mai : r\u00e9mun\u00e9ration ou r\u00e9cup\u00e9ration"
+    },
+    "eligibility_months": {
+      "type": "number",
+      "default": 8,
+      "description": "Nombre de mois d'anciennet\u00e9 requis (CCN = 8 mois)"
+    },
+    "weekly_rest_fixed_day_protection": {
+      "type": "boolean",
+      "default": true,
+      "description": "Protection du jour de repos fixe (interdire d\u00e9placement sur f\u00e9ri\u00e9 sans consentement)"
+    },
+    "may1_open_allowed": {
+      "type": "boolean",
+      "default": false,
+      "description": "Autorisation d'ouverture le 1er mai"
+    },
+    "may1_auto_double_pay": {
+      "type": "boolean",
+      "default": true,
+      "description": "Doublement automatique de la paie le 1er mai"
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true
+    }
+  },
+  "required": [
+    "policy_for_non_may1",
+    "eligibility_months"
+  ]
+}

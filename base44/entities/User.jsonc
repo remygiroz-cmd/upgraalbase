@@ -1,0 +1,57 @@
+{
+  "name": "User",
+  "type": "object",
+  "properties": {
+    "role_id": {
+      "type": "string",
+      "description": "ID du r\u00f4le assign\u00e9"
+    },
+    "team": {
+      "type": "string",
+      "description": "\u00c9quipe"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "invited",
+        "active",
+        "disabled"
+      ],
+      "default": "invited",
+      "description": "Statut du compte"
+    },
+    "preferences": {
+      "type": "object",
+      "description": "Pr\u00e9f\u00e9rences utilisateur",
+      "properties": {
+        "theme": {
+          "type": "string",
+          "default": "professional-light"
+        },
+        "notifications_enabled": {
+          "type": "boolean",
+          "default": true
+        },
+        "session_timeout": {
+          "type": "number",
+          "default": 30
+        }
+      }
+    },
+    "last_active_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Derni\u00e8re activit\u00e9 de l'utilisateur"
+    },
+    "is_online": {
+      "type": "boolean",
+      "default": false,
+      "description": "Utilisateur actuellement connect\u00e9"
+    }
+  },
+  "required": [
+    "role_id",
+    "team",
+    "preferences"
+  ]
+}

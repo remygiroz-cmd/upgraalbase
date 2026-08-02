@@ -1,0 +1,121 @@
+{
+  "name": "Order",
+  "type": "object",
+  "properties": {
+    "supplier_id": {
+      "type": "string"
+    },
+    "supplier_name": {
+      "type": "string"
+    },
+    "date": {
+      "type": "string",
+      "format": "date"
+    },
+    "delivery_date": {
+      "type": "string",
+      "format": "date"
+    },
+    "desired_delivery_day": {
+      "type": "string",
+      "enum": [
+        "Lundi",
+        "Mardi",
+        "Mercredi",
+        "Jeudi",
+        "Vendredi",
+        "Samedi",
+        "Dimanche"
+      ],
+      "description": "Jour de livraison souhait\u00e9 pour cette commande"
+    },
+    "items": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "product_id": {
+            "type": "string"
+          },
+          "product_name": {
+            "type": "string"
+          },
+          "quantity": {
+            "type": "number"
+          },
+          "unit": {
+            "type": "string"
+          },
+          "unit_price": {
+            "type": "number"
+          },
+          "supplier_reference": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "en_cours",
+        "envoyee",
+        "terminee",
+        "annulee"
+      ],
+      "default": "en_cours"
+    },
+    "notes": {
+      "type": "string"
+    },
+    "courses_state": {
+      "type": "object",
+      "description": "\u00c9tat partag\u00e9 de la liste de courses (inter-utilisateurs)",
+      "additionalProperties": {
+        "type": "string"
+      }
+    },
+    "history": {
+      "type": "array",
+      "description": "Historique des actions sur la commande",
+      "items": {
+        "type": "object",
+        "properties": {
+          "timestamp": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "action": {
+            "type": "string"
+          },
+          "details": {
+            "type": "string"
+          },
+          "user_email": {
+            "type": "string"
+          },
+          "user_name": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "sent_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Date/heure d'envoi automatique"
+    },
+    "sent_by": {
+      "type": "string",
+      "description": "Qui a envoy\u00e9 (automation ou user email)"
+    },
+    "auto_send_slot": {
+      "type": "string",
+      "description": "Slot d'envoi auto (YYYY-MM-DD-HH) pour idempotence"
+    }
+  },
+  "required": [
+    "supplier_id",
+    "date"
+  ]
+}

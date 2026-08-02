@@ -1,0 +1,28 @@
+{
+  "name": "MessageReaction",
+  "type": "object",
+  "properties": {
+    "message_id": {
+      "type": "string",
+      "description": "ID du message"
+    },
+    "employee_id": {
+      "type": "string",
+      "description": "ID de l'employ\u00e9 qui r\u00e9agit"
+    },
+    "conversation_id": {
+      "type": "string",
+      "description": "ID de la conversation (pour filtrage rapide)"
+    },
+    "emoji": {
+      "type": "string",
+      "description": "Emoji de r\u00e9action (\ud83d\udc4d \u2764\ufe0f \ud83d\ude02 etc.)"
+    }
+  },
+  "required": [
+    "message_id",
+    "employee_id",
+    "emoji",
+    "conversation_id"
+  ]
+}

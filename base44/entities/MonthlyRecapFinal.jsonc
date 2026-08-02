@@ -1,0 +1,50 @@
+{
+  "name": "MonthlyRecapFinal",
+  "type": "object",
+  "properties": {
+    "month_key": {
+      "type": "string",
+      "description": "Cl\u00e9 du mois YYYY-MM"
+    },
+    "employee_id": {
+      "type": "string",
+      "description": "ID de l'employ\u00e9"
+    },
+    "final_compl_total_min": {
+      "type": "number",
+      "description": "Total H. Compl\u00e9mentaires en minutes (EXACTEMENT la valeur affich\u00e9e dans la carte)"
+    },
+    "final_supp_total_min": {
+      "type": "number",
+      "description": "Total H. Suppl\u00e9mentaires en minutes (EXACTEMENT la valeur affich\u00e9e dans la carte)"
+    },
+    "final_compl_10_min": {
+      "type": "number",
+      "description": "HC +10% en minutes"
+    },
+    "final_compl_25_min": {
+      "type": "number",
+      "description": "HC +25% en minutes"
+    },
+    "final_supp_25_min": {
+      "type": "number",
+      "description": "HS +25% en minutes"
+    },
+    "final_supp_50_min": {
+      "type": "number",
+      "description": "HS +50% en minutes"
+    },
+    "final_source": {
+      "type": "string",
+      "description": "Source de la valeur : auto | manualOverride | extrasOverride"
+    },
+    "updated_at": {
+      "type": "string",
+      "format": "date-time"
+    }
+  },
+  "required": [
+    "month_key",
+    "employee_id"
+  ]
+}

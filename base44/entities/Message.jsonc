@@ -1,0 +1,133 @@
+{
+  "name": "Message",
+  "type": "object",
+  "properties": {
+    "conversation_id": {
+      "type": "string",
+      "description": "ID de la conversation"
+    },
+    "sender_employee_id": {
+      "type": "string",
+      "description": "ID de l'employ\u00e9 exp\u00e9diteur (Personnel.id)"
+    },
+    "type": {
+      "type": "string",
+      "enum": [
+        "text",
+        "image"
+      ],
+      "default": "text",
+      "description": "Type de message"
+    },
+    "text": {
+      "type": "string",
+      "description": "Contenu du message (optionnel pour images)"
+    },
+    "images": {
+      "type": "array",
+      "description": "Images du message",
+      "items": {
+        "type": "object",
+        "properties": {
+          "url": {
+            "type": "string",
+            "description": "URL de l'image optimis\u00e9e"
+          },
+          "thumbUrl": {
+            "type": "string",
+            "description": "URL de la miniature"
+          },
+          "width": {
+            "type": "number",
+            "description": "Largeur de l'image"
+          },
+          "height": {
+            "type": "number",
+            "description": "Hauteur de l'image"
+          },
+          "size": {
+            "type": "number",
+            "description": "Taille en bytes"
+          },
+          "mimeType": {
+            "type": "string",
+            "description": "Type MIME"
+          }
+        }
+      }
+    },
+    "reply_to_message_id": {
+      "type": "string",
+      "description": "ID du message auquel on r\u00e9pond"
+    },
+    "reply_preview_text": {
+      "type": "string",
+      "description": "Aper\u00e7u du texte du message original"
+    },
+    "reply_preview_type": {
+      "type": "string",
+      "enum": [
+        "text",
+        "image"
+      ],
+      "description": "Type du message original"
+    },
+    "reply_preview_thumb_url": {
+      "type": "string",
+      "description": "Miniature si message original est une image"
+    },
+    "reply_preview_author_name": {
+      "type": "string",
+      "description": "Nom de l'auteur du message original"
+    },
+    "attachments": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "URLs des pi\u00e8ces jointes (legacy)"
+    },
+    "edited_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Date/heure de la derni\u00e8re modification"
+    },
+    "is_deleted": {
+      "type": "boolean",
+      "default": false,
+      "description": "Message supprim\u00e9"
+    },
+    "is_pinned": {
+      "type": "boolean",
+      "default": false,
+      "description": "Message \u00e9pingl\u00e9"
+    },
+    "pinned_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Date/heure d'\u00e9pinglage"
+    },
+    "pinned_by_employee_id": {
+      "type": "string",
+      "description": "ID de l'employ\u00e9 qui a \u00e9pingl\u00e9 (Personnel.id)"
+    },
+    "is_urgent": {
+      "type": "boolean",
+      "default": false,
+      "description": "Message d'annonce urgente"
+    },
+    "urgent_level": {
+      "type": "string",
+      "enum": [
+        "info",
+        "important",
+        "critique"
+      ],
+      "description": "Niveau d'urgence de l'annonce"
+    }
+  },
+  "required": [
+    "conversation_id",
+    "sender_employee_id"
+  ]
+}

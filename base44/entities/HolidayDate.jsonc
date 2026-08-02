@@ -1,0 +1,18 @@
+{
+  "name": "HolidayDate",
+  "type": "object",
+  "properties": {
+    "date": {
+      "type": "string",
+      "format": "date",
+      "description": "Date du jour f\u00e9ri\u00e9"
+    },
+    "label": {
+      "type": "string",
+      "description": "Nom du jour f\u00e9ri\u00e9 (optionnel)"
+    }
+  },
+  "required": [
+    "date"
+  ]
+}

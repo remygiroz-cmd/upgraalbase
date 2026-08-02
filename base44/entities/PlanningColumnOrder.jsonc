@@ -1,0 +1,21 @@
+{
+  "name": "PlanningColumnOrder",
+  "type": "object",
+  "properties": {
+    "key": {
+      "type": "string",
+      "description": "Cl\u00e9 globale (toujours 'global')"
+    },
+    "column_order": {
+      "type": "array",
+      "description": "Ordre global des IDs employ\u00e9s",
+      "items": {
+        "type": "string"
+      },
+      "default": []
+    }
+  },
+  "required": [
+    "key"
+  ]
+}

@@ -1,0 +1,65 @@
+{
+  "name": "Invitation",
+  "type": "object",
+  "properties": {
+    "email": {
+      "type": "string",
+      "description": "Email de l'invit\u00e9"
+    },
+    "first_name": {
+      "type": "string",
+      "description": "Pr\u00e9nom"
+    },
+    "last_name": {
+      "type": "string",
+      "description": "Nom"
+    },
+    "role_id": {
+      "type": "string",
+      "description": "ID du r\u00f4le assign\u00e9"
+    },
+    "team": {
+      "type": "string",
+      "description": "\u00c9quipe"
+    },
+    "notes": {
+      "type": "string",
+      "description": "Notes admin"
+    },
+    "token": {
+      "type": "string",
+      "description": "Token unique d'invitation"
+    },
+    "expires_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Date d'expiration"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "pending",
+        "accepted",
+        "expired"
+      ],
+      "default": "pending",
+      "description": "Statut de l'invitation"
+    },
+    "invited_by": {
+      "type": "string",
+      "description": "Email de l'admin qui a invit\u00e9"
+    },
+    "invited_by_name": {
+      "type": "string"
+    },
+    "accepted_at": {
+      "type": "string",
+      "format": "date-time"
+    }
+  },
+  "required": [
+    "email",
+    "role_id",
+    "token"
+  ]
+}

@@ -1,0 +1,85 @@
+{
+  "name": "Conversation",
+  "type": "object",
+  "properties": {
+    "title": {
+      "type": "string",
+      "description": "Titre de la conversation (optionnel)"
+    },
+    "type": {
+      "type": "string",
+      "enum": [
+        "privee",
+        "equipe",
+        "entreprise",
+        "rh"
+      ],
+      "description": "Type de conversation"
+    },
+    "participant_employee_ids": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "IDs des employ\u00e9s participants (Personnel.id)"
+    },
+    "team_id": {
+      "type": "string",
+      "description": "ID de l'\u00e9quipe (si type=equipe)"
+    },
+    "last_message_text": {
+      "type": "string",
+      "description": "Texte du dernier message"
+    },
+    "last_message_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Date/heure du dernier message"
+    },
+    "created_by_employee_id": {
+      "type": "string",
+      "description": "ID de l'employ\u00e9 cr\u00e9ateur (Personnel.id)"
+    },
+    "is_archived": {
+      "type": "boolean",
+      "default": false,
+      "description": "Conversation archiv\u00e9e (ancien syst\u00e8me - d\u00e9pr\u00e9ci\u00e9)"
+    },
+    "archived_by_employee_ids": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "IDs des employ\u00e9s ayant archiv\u00e9 cette conversation (archivage personnel)",
+      "default": []
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "active",
+        "closed",
+        "deleted"
+      ],
+      "default": "active",
+      "description": "Statut de la conversation"
+    },
+    "deleted_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Date de suppression d\u00e9finitive"
+    },
+    "deleted_by_employee_id": {
+      "type": "string",
+      "description": "ID de l'employ\u00e9 ayant supprim\u00e9 d\u00e9finitivement"
+    },
+    "delete_reason": {
+      "type": "string",
+      "description": "Raison de la suppression"
+    }
+  },
+  "required": [
+    "type",
+    "participant_employee_ids",
+    "created_by_employee_id"
+  ]
+}

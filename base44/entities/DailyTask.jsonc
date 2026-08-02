@@ -1,0 +1,51 @@
+{
+  "name": "DailyTask",
+  "type": "object",
+  "properties": {
+    "task_id": {
+      "type": "string",
+      "description": "R\u00e9f\u00e9rence \u00e0 la t\u00e2che"
+    },
+    "date": {
+      "type": "string",
+      "format": "date",
+      "description": "Date du jour"
+    },
+    "target_quantity": {
+      "type": "number",
+      "description": "Quantit\u00e9 cible"
+    },
+    "current_stock": {
+      "type": "number",
+      "description": "Stock actuel"
+    },
+    "quantity_to_produce": {
+      "type": "number",
+      "description": "Quantit\u00e9 \u00e0 produire"
+    },
+    "is_completed": {
+      "type": "boolean",
+      "default": false
+    },
+    "completed_by": {
+      "type": "string",
+      "description": "Email de qui a compl\u00e9t\u00e9"
+    },
+    "completed_by_name": {
+      "type": "string",
+      "description": "Nom de qui a compl\u00e9t\u00e9"
+    },
+    "completed_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "actual_duration_seconds": {
+      "type": "number",
+      "description": "Dur\u00e9e r\u00e9elle en secondes"
+    }
+  },
+  "required": [
+    "task_id",
+    "date"
+  ]
+}

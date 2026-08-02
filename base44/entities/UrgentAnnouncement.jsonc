@@ -1,0 +1,78 @@
+{
+  "name": "UrgentAnnouncement",
+  "type": "object",
+  "properties": {
+    "title": {
+      "type": "string",
+      "description": "Titre de l'annonce"
+    },
+    "content": {
+      "type": "string",
+      "description": "Contenu d\u00e9taill\u00e9 de l'annonce"
+    },
+    "severity": {
+      "type": "string",
+      "enum": [
+        "info",
+        "important",
+        "critique"
+      ],
+      "default": "important",
+      "description": "Niveau de gravit\u00e9"
+    },
+    "starts_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Date/heure de d\u00e9but d'affichage"
+    },
+    "ends_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Date/heure de fin d'affichage"
+    },
+    "audience_mode": {
+      "type": "string",
+      "enum": [
+        "tous",
+        "equipes",
+        "personnes"
+      ],
+      "default": "tous",
+      "description": "Mode de ciblage"
+    },
+    "audience_team_names": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Noms des \u00e9quipes cibl\u00e9es (si audience_mode=equipes)"
+    },
+    "audience_employee_ids": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "IDs des employ\u00e9s cibl\u00e9s (si audience_mode=personnes)"
+    },
+    "created_by_employee_id": {
+      "type": "string",
+      "description": "ID de l'employ\u00e9 cr\u00e9ateur"
+    },
+    "require_ack": {
+      "type": "boolean",
+      "default": true,
+      "description": "Obliger la lecture (bloquant)"
+    },
+    "ack_deadline_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Date limite de lecture (optionnel)"
+    }
+  },
+  "required": [
+    "title",
+    "content",
+    "ends_at",
+    "created_by_employee_id"
+  ]
+}

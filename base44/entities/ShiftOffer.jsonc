@@ -1,0 +1,57 @@
+{
+  "name": "ShiftOffer",
+  "type": "object",
+  "properties": {
+    "created_by_user_id": {
+      "type": "string"
+    },
+    "created_by_name": {
+      "type": "string"
+    },
+    "position": {
+      "type": "string"
+    },
+    "date": {
+      "type": "string",
+      "format": "date"
+    },
+    "start_time": {
+      "type": "string"
+    },
+    "end_time": {
+      "type": "string"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "open",
+        "filled",
+        "cancelled",
+        "expired"
+      ],
+      "default": "open"
+    },
+    "accepted_by_employee_id": {
+      "type": "string"
+    },
+    "accepted_by_employee_name": {
+      "type": "string"
+    },
+    "accepted_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "notes": {
+      "type": "string"
+    },
+    "dedupe_key": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "position",
+    "date",
+    "start_time",
+    "end_time"
+  ]
+}

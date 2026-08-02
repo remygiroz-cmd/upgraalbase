@@ -1,0 +1,441 @@
+{
+  "name": "Employee",
+  "type": "object",
+  "properties": {
+    "first_name": {
+      "type": "string"
+    },
+    "last_name": {
+      "type": "string"
+    },
+    "married_name": {
+      "type": "string",
+      "description": "Nom d'\u00e9pouse"
+    },
+    "nickname": {
+      "type": "string",
+      "description": "Surnom de l'employ\u00e9"
+    },
+    "gender": {
+      "type": "string",
+      "enum": [
+        "male",
+        "female",
+        "other"
+      ]
+    },
+    "birth_date": {
+      "type": "string",
+      "format": "date"
+    },
+    "birth_place": {
+      "type": "string"
+    },
+    "nationality": {
+      "type": "string"
+    },
+    "photo_url": {
+      "type": "string"
+    },
+    "address": {
+      "type": "string"
+    },
+    "email": {
+      "type": "string"
+    },
+    "phone": {
+      "type": "string"
+    },
+    "show_phone_in_directory": {
+      "type": "boolean",
+      "default": false,
+      "description": "Autoriser l'affichage du num\u00e9ro dans les \u00e9tiquettes pour les non autoris\u00e9s"
+    },
+    "user_id": {
+      "type": "string",
+      "description": "ID du compte utilisateur rattach\u00e9 (si l'email correspond)"
+    },
+    "last_seen_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Derni\u00e8re activit\u00e9 de l'employ\u00e9 dans l'application"
+    },
+    "social_security_number": {
+      "type": "string"
+    },
+    "iban": {
+      "type": "string"
+    },
+    "bic": {
+      "type": "string"
+    },
+    "contract_type": {
+      "type": "string",
+      "enum": [
+        "cdi",
+        "cdd",
+        "extra",
+        "apprenti",
+        "stage"
+      ]
+    },
+    "cdd_reason": {
+      "type": "string",
+      "enum": [
+        "replacement",
+        "temporary_activity",
+        "seasonal",
+        "apprenticeship",
+        "cascade_replacement"
+      ],
+      "description": "Motif du CDD"
+    },
+    "cdd_replacement_employee": {
+      "type": "string",
+      "description": "Nom du salari\u00e9 \u00e0 remplacer (pour remplacement d'absent)"
+    },
+    "cdd_replacement_reason": {
+      "type": "string",
+      "enum": [
+        "sick_leave",
+        "maternity_leave",
+        "paternity_leave",
+        "paid_leave",
+        "training"
+      ],
+      "description": "Motif de l'absence du salari\u00e9 \u00e0 remplacer"
+    },
+    "cdd_custom_reason": {
+      "type": "string",
+      "description": "Motif personnalis\u00e9 du CDD (pour remplacement en cascade ou autre)"
+    },
+    "position": {
+      "type": "string"
+    },
+    "team": {
+      "type": "string"
+    },
+    "team_id": {
+      "type": "string",
+      "description": "ID de l'\u00e9quipe assign\u00e9e"
+    },
+    "work_time_type": {
+      "type": "string",
+      "enum": [
+        "full_time",
+        "part_time"
+      ],
+      "description": "Temps de travail"
+    },
+    "coefficient_level": {
+      "type": "string",
+      "description": "Coefficient / niveau si convention collective"
+    },
+    "manager": {
+      "type": "string",
+      "description": "Responsable hi\u00e9rarchique"
+    },
+    "start_date": {
+      "type": "string",
+      "format": "date"
+    },
+    "start_time": {
+      "type": "string"
+    },
+    "end_date": {
+      "type": "string",
+      "format": "date"
+    },
+    "contract_hours": {
+      "type": "string",
+      "description": "Heures contractuelles par mois (format HH:MM)"
+    },
+    "contract_hours_weekly": {
+      "type": "string",
+      "description": "Heures contractuelles par semaine (format HH:MM)"
+    },
+    "contract_total_hours": {
+      "type": "string",
+      "description": "Heures totales du contrat CDD (format HH:MM ou d\u00e9cimal) - pour les CDD de courte dur\u00e9e"
+    },
+    "contract_total_days": {
+      "type": "number",
+      "description": "Nombre de jours travaill\u00e9s pr\u00e9vus sur le contrat CDD de courte dur\u00e9e"
+    },
+    "work_days_per_week": {
+      "type": "number",
+      "description": "Nombre de jours de travail par semaine"
+    },
+    "weekly_schedule": {
+      "type": "object",
+      "description": "R\u00e9partition hebdomadaire des jours et heures travaill\u00e9s",
+      "properties": {
+        "monday": {
+          "type": "object",
+          "properties": {
+            "worked": {
+              "type": "boolean",
+              "default": false
+            },
+            "hours": {
+              "type": "number",
+              "default": 0
+            }
+          }
+        },
+        "tuesday": {
+          "type": "object",
+          "properties": {
+            "worked": {
+              "type": "boolean",
+              "default": false
+            },
+            "hours": {
+              "type": "number",
+              "default": 0
+            }
+          }
+        },
+        "wednesday": {
+          "type": "object",
+          "properties": {
+            "worked": {
+              "type": "boolean",
+              "default": false
+            },
+            "hours": {
+              "type": "number",
+              "default": 0
+            }
+          }
+        },
+        "thursday": {
+          "type": "object",
+          "properties": {
+            "worked": {
+              "type": "boolean",
+              "default": false
+            },
+            "hours": {
+              "type": "number",
+              "default": 0
+            }
+          }
+        },
+        "friday": {
+          "type": "object",
+          "properties": {
+            "worked": {
+              "type": "boolean",
+              "default": false
+            },
+            "hours": {
+              "type": "number",
+              "default": 0
+            }
+          }
+        },
+        "saturday": {
+          "type": "object",
+          "properties": {
+            "worked": {
+              "type": "boolean",
+              "default": false
+            },
+            "hours": {
+              "type": "number",
+              "default": 0
+            }
+          }
+        },
+        "sunday": {
+          "type": "object",
+          "properties": {
+            "worked": {
+              "type": "boolean",
+              "default": false
+            },
+            "hours": {
+              "type": "number",
+              "default": 0
+            }
+          }
+        }
+      }
+    },
+    "hourly_rate": {
+      "type": "number"
+    },
+    "gross_salary": {
+      "type": "number",
+      "description": "Salaire brut mensuel"
+    },
+    "gross_hourly_rate": {
+      "type": "number",
+      "description": "Taux horaire brut"
+    },
+    "payment_method": {
+      "type": "string",
+      "enum": [
+        "virement",
+        "cheque",
+        "especes"
+      ],
+      "description": "Mode de paiement"
+    },
+    "payslips": {
+      "type": "array",
+      "description": "Fiches de paie",
+      "items": {
+        "type": "object",
+        "properties": {
+          "month": {
+            "type": "string",
+            "description": "Mois de la fiche de paie (ex: 2026-01)"
+          },
+          "file_url": {
+            "type": "string"
+          },
+          "uploaded_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "uploaded_by": {
+            "type": "string"
+          },
+          "gross_salary": {
+            "type": "number",
+            "description": "Salaire brut"
+          },
+          "net_salary": {
+            "type": "number",
+            "description": "Salaire net pay\u00e9"
+          },
+          "employee_contributions": {
+            "type": "number",
+            "description": "Cotisations salariales"
+          },
+          "employer_contributions": {
+            "type": "number",
+            "description": "Charges patronales"
+          },
+          "total_leave": {
+            "type": "number",
+            "description": "Total des cong\u00e9s en jours"
+          },
+          "advance_payment": {
+            "type": "number",
+            "description": "Acompte vers\u00e9"
+          }
+        }
+      }
+    },
+    "trial_end_date": {
+      "type": "string",
+      "format": "date"
+    },
+    "exit_date": {
+      "type": "string",
+      "format": "date"
+    },
+    "exit_time": {
+      "type": "string"
+    },
+    "exit_reason": {
+      "type": "string"
+    },
+    "exit_checklist": {
+      "type": "object",
+      "properties": {
+        "keys_returned": {
+          "type": "boolean"
+        },
+        "uniform_returned": {
+          "type": "boolean"
+        },
+        "documents_provided": {
+          "type": "boolean"
+        }
+      }
+    },
+    "documents": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "url": {
+            "type": "string"
+          },
+          "category": {
+            "type": "string"
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "uploaded_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      }
+    },
+    "notes": {
+      "type": "string"
+    },
+    "history": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "date": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "action": {
+            "type": "string"
+          },
+          "details": {
+            "type": "string"
+          },
+          "by": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "permission_level": {
+      "type": "string",
+      "enum": [
+        "admin",
+        "manager",
+        "employee"
+      ],
+      "default": "employee"
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true
+    },
+    "force_show_in_planning": {
+      "type": "boolean",
+      "default": false,
+      "description": "Forcer l'affichage dans tous les plannings (prioritaire sur les r\u00e8gles de contrat)"
+    },
+    "force_hide_in_planning": {
+      "type": "boolean",
+      "default": false,
+      "description": "Masquer totalement dans tous les plannings (priorit\u00e9 absolue)"
+    }
+  },
+  "required": [
+    "first_name",
+    "last_name",
+    "email"
+  ]
+}

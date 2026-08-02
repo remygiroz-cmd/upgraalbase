@@ -1,0 +1,55 @@
+{
+  "name": "MaintenanceLog",
+  "type": "object",
+  "properties": {
+    "vehicule_id": {
+      "type": "string"
+    },
+    "date": {
+      "type": "string",
+      "format": "date"
+    },
+    "type": {
+      "type": "string",
+      "enum": [
+        "REVISION",
+        "PNEUS",
+        "FREINS",
+        "VIDANGE",
+        "BATTERIE",
+        "CONTROLE_TECHNIQUE",
+        "AUTRE"
+      ]
+    },
+    "description": {
+      "type": "string"
+    },
+    "garage": {
+      "type": "string"
+    },
+    "cout": {
+      "type": "number"
+    },
+    "km_au_moment": {
+      "type": "number"
+    },
+    "prochaine_echeance_km": {
+      "type": "number"
+    },
+    "prochaine_echeance_date": {
+      "type": "string",
+      "format": "date"
+    },
+    "document_facture_url": {
+      "type": "string"
+    },
+    "effectue_par": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "vehicule_id",
+    "date",
+    "type"
+  ]
+}

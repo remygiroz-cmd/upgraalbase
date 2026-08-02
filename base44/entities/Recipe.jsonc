@@ -1,0 +1,66 @@
+{
+  "name": "Recipe",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string"
+    },
+    "section": {
+      "type": "string",
+      "enum": [
+        "fiches_techniques",
+        "labo",
+        "archives"
+      ],
+      "description": "Section de la recette"
+    },
+    "image_url": {
+      "type": "string"
+    },
+    "steps": {
+      "type": "string",
+      "description": "\u00c9tapes en markdown"
+    },
+    "ingredients": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "quantity": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "author": {
+      "type": "string"
+    },
+    "author_name": {
+      "type": "string"
+    },
+    "is_validated": {
+      "type": "boolean",
+      "default": false
+    },
+    "validated_by": {
+      "type": "string"
+    },
+    "validated_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "media_urls": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    }
+  },
+  "required": [
+    "name",
+    "section"
+  ]
+}

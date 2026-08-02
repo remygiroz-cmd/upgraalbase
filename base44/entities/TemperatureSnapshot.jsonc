@@ -1,0 +1,64 @@
+{
+  "name": "TemperatureSnapshot",
+  "type": "object",
+  "properties": {
+    "date": {
+      "type": "string",
+      "format": "date",
+      "description": "Date de l'enregistrement"
+    },
+    "snapshot": {
+      "type": "array",
+      "description": "Snapshot des temp\u00e9ratures",
+      "items": {
+        "type": "object",
+        "properties": {
+          "equipment_id": {
+            "type": "string"
+          },
+          "equipment_name": {
+            "type": "string"
+          },
+          "equipment_type": {
+            "type": "string"
+          },
+          "morning_temp": {
+            "type": "number"
+          },
+          "evening_temp": {
+            "type": "number"
+          },
+          "target_min": {
+            "type": "number"
+          },
+          "target_max": {
+            "type": "number"
+          },
+          "morning_compliant": {
+            "type": "boolean"
+          },
+          "evening_compliant": {
+            "type": "boolean"
+          }
+        }
+      }
+    },
+    "recorded_by": {
+      "type": "string",
+      "description": "Email de l'enregistreur"
+    },
+    "recorded_by_name": {
+      "type": "string",
+      "description": "Nom de l'enregistreur"
+    },
+    "recorded_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Horodatage"
+    }
+  },
+  "required": [
+    "date",
+    "snapshot"
+  ]
+}

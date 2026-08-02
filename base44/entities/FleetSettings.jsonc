@@ -1,0 +1,268 @@
+{
+  "name": "FleetSettings",
+  "type": "object",
+  "properties": {
+    "setting_key": {
+      "type": "string",
+      "default": "fleet_main",
+      "description": "Cl\u00e9 unique (toujours 'fleet_main' pour un seul enregistrement)"
+    },
+    "assignment_target_type": {
+      "type": "string",
+      "enum": [
+        "ALL_PRESENT",
+        "ROLE_LIVREUR",
+        "TEAM",
+        "CUSTOM"
+      ],
+      "default": "ALL_PRESENT",
+      "description": "Type de cible pour l'assignation"
+    },
+    "assignment_target_team_ids": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "IDs des \u00e9quipes cibles"
+    },
+    "assignment_target_employee_ids": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "IDs des employ\u00e9s cibles (mode CUSTOM)"
+    },
+    "assignment_mode": {
+      "type": "string",
+      "enum": [
+        "MANUAL_ONLY",
+        "MANUAL_AUTO_BUTTON",
+        "AUTO_DAILY"
+      ],
+      "default": "MANUAL_ONLY",
+      "description": "Mode d'assignation des v\u00e9hicules"
+    },
+    "auto_assign_hour": {
+      "type": "string",
+      "description": "Heure d'assignation automatique (HH:mm)"
+    },
+    "auto_assign_days": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": [
+          "MON",
+          "TUE",
+          "WED",
+          "THU",
+          "FRI",
+          "SAT",
+          "SUN"
+        ]
+      },
+      "description": "Jours d'assignation automatique"
+    },
+    "auto_assign_do_not_override": {
+      "type": "boolean",
+      "default": false,
+      "description": "Ne pas remplacer les assignations existantes"
+    },
+    "required_vehicles_mon_thu": {
+      "type": "number",
+      "default": 0,
+      "description": "V\u00e9hicules requis lun-jeu"
+    },
+    "required_vehicles_fri_sat_sun": {
+      "type": "number",
+      "default": 0,
+      "description": "V\u00e9hicules requis ven-dim"
+    },
+    "weight_km_balance": {
+      "type": "number",
+      "default": 5,
+      "description": "Pond\u00e9ration \u00e9quilibrage km (0-10)"
+    },
+    "weight_loa_protection": {
+      "type": "number",
+      "default": 5,
+      "description": "Pond\u00e9ration protection LOA (0-10)"
+    },
+    "weight_driver_rotation": {
+      "type": "number",
+      "default": 5,
+      "description": "Pond\u00e9ration rotation chauffeurs (0-10)"
+    },
+    "weight_electric_priority": {
+      "type": "number",
+      "default": 3,
+      "description": "Pond\u00e9ration priorit\u00e9 \u00e9lectrique (0-10)"
+    },
+    "show_widget_loa": {
+      "type": "boolean",
+      "default": true
+    },
+    "show_widget_km_30j": {
+      "type": "boolean",
+      "default": true
+    },
+    "show_widget_conformite": {
+      "type": "boolean",
+      "default": true
+    },
+    "show_widget_incidents": {
+      "type": "boolean",
+      "default": true
+    },
+    "show_widget_documents": {
+      "type": "boolean",
+      "default": true
+    },
+    "show_widget_thermique_electrique": {
+      "type": "boolean",
+      "default": true
+    },
+    "show_widget_score_fiabilite": {
+      "type": "boolean",
+      "default": true
+    },
+    "show_widget_loa_projection_cost": {
+      "type": "boolean",
+      "default": false
+    },
+    "show_widget_pneus_alert": {
+      "type": "boolean",
+      "default": true
+    },
+    "show_widget_missing_key": {
+      "type": "boolean",
+      "default": true
+    },
+    "start_shift_km_required": {
+      "type": "boolean",
+      "default": false
+    },
+    "start_shift_photo_required": {
+      "type": "boolean",
+      "default": false
+    },
+    "start_shift_tire_check_required": {
+      "type": "boolean",
+      "default": false
+    },
+    "start_shift_warning_lights_required": {
+      "type": "boolean",
+      "default": false
+    },
+    "end_shift_key_required": {
+      "type": "boolean",
+      "default": false
+    },
+    "end_shift_photo_required": {
+      "type": "boolean",
+      "default": false
+    },
+    "end_shift_signature_required": {
+      "type": "boolean",
+      "default": false
+    },
+    "end_shift_block_if_missing": {
+      "type": "boolean",
+      "default": false
+    },
+    "end_shift_tolerance_minutes": {
+      "type": "number",
+      "default": 5
+    },
+    "document_reminder_days_1": {
+      "type": "number",
+      "default": 30
+    },
+    "document_reminder_days_2": {
+      "type": "number",
+      "default": 60
+    },
+    "document_reminder_days_3": {
+      "type": "number",
+      "default": 90
+    },
+    "block_assignment_if_insurance_expired": {
+      "type": "boolean",
+      "default": false
+    },
+    "block_assignment_if_ct_expired": {
+      "type": "boolean",
+      "default": false
+    },
+    "tire_km_alert_threshold": {
+      "type": "number",
+      "default": 3000
+    },
+    "revision_km_threshold": {
+      "type": "number",
+      "default": 15000
+    },
+    "maintenance_reminder_days": {
+      "type": "number",
+      "default": 30
+    },
+    "enable_vehicle_reliability_score": {
+      "type": "boolean",
+      "default": true
+    },
+    "enable_auto_reserve_replacement": {
+      "type": "boolean",
+      "default": false
+    },
+    "reserve_priority_order": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Ordre de priorit\u00e9 des v\u00e9hicules de r\u00e9serve (IDs)"
+    },
+    "notify_manager_on_auto_replace": {
+      "type": "boolean",
+      "default": true
+    },
+    "enable_driver_score": {
+      "type": "boolean",
+      "default": true
+    },
+    "driver_score_green_threshold": {
+      "type": "number",
+      "default": 80
+    },
+    "driver_score_orange_threshold": {
+      "type": "number",
+      "default": 50
+    },
+    "show_driver_score_dashboard": {
+      "type": "boolean",
+      "default": true
+    },
+    "loa_calculation_mode": {
+      "type": "string",
+      "enum": [
+        "DAILY",
+        "MONTHLY",
+        "MOVING_AVERAGE_30D"
+      ],
+      "default": "MONTHLY"
+    },
+    "allow_multi_driver_same_day": {
+      "type": "boolean",
+      "default": false
+    },
+    "enforce_one_driver_one_vehicle": {
+      "type": "boolean",
+      "default": true
+    },
+    "enable_settings_audit_log": {
+      "type": "boolean",
+      "default": false
+    }
+  },
+  "required": [
+    "setting_key"
+  ]
+}

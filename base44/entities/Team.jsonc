@@ -1,0 +1,33 @@
+{
+  "name": "Team",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Nom de l'\u00e9quipe"
+    },
+    "description": {
+      "type": "string",
+      "description": "Description de l'\u00e9quipe"
+    },
+    "color": {
+      "type": "string",
+      "description": "Couleur pour l'affichage"
+    },
+    "manager_id": {
+      "type": "string",
+      "description": "ID de l'employ\u00e9 manager de l'\u00e9quipe"
+    },
+    "order": {
+      "type": "number",
+      "description": "Ordre d'affichage"
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true
+    }
+  },
+  "required": [
+    "name"
+  ]
+}

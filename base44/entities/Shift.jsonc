@@ -1,0 +1,117 @@
+{
+  "name": "Shift",
+  "type": "object",
+  "properties": {
+    "employee_id": {
+      "type": "string"
+    },
+    "employee_name": {
+      "type": "string"
+    },
+    "date": {
+      "type": "string",
+      "format": "date"
+    },
+    "start_time": {
+      "type": "string"
+    },
+    "end_time": {
+      "type": "string"
+    },
+    "break_minutes": {
+      "type": "number",
+      "default": 0
+    },
+    "base_hours_override": {
+      "type": "number",
+      "description": "Surcharge manuelle des heures de base pour ce shift"
+    },
+    "position": {
+      "type": "string"
+    },
+    "team": {
+      "type": "string"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "planned",
+        "confirmed",
+        "absent",
+        "leave",
+        "archived"
+      ],
+      "default": "planned"
+    },
+    "notes": {
+      "type": "string"
+    },
+    "holiday_id": {
+      "type": "string",
+      "description": "ID du jour f\u00e9ri\u00e9 si le shift tombe sur un f\u00e9ri\u00e9"
+    },
+    "holiday_flag": {
+      "type": "boolean",
+      "default": false,
+      "description": "Indique si ce shift est un jour f\u00e9ri\u00e9"
+    },
+    "holiday_pay_multiplier": {
+      "type": "number",
+      "description": "Multiplicateur de paie (ex: 2.0 pour 1er mai, 1.0 normal)",
+      "default": 1.0
+    },
+    "holiday_comp_minutes": {
+      "type": "number",
+      "description": "Minutes de r\u00e9cup\u00e9ration dues si policy TIME_OFF",
+      "default": 0
+    },
+    "manager_override": {
+      "type": "string",
+      "description": "Email du manager ayant valid\u00e9 le shift f\u00e9ri\u00e9"
+    },
+    "explicit_employee_consent": {
+      "type": "boolean",
+      "default": false,
+      "description": "Consentement explicite de l'employ\u00e9 pour travailler le jour f\u00e9ri\u00e9"
+    },
+    "consent_date": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Date du consentement"
+    },
+    "month_key": {
+      "type": "string",
+      "description": "Cl\u00e9 du mois YYYY-MM pour scope/versioning"
+    },
+    "reset_version": {
+      "type": "number",
+      "default": 0,
+      "description": "Version du mois - pour invalidation rapide lors du reset"
+    },
+    "dedupe_key": {
+      "type": "string",
+      "description": "Cl\u00e9 stable de d\u00e9duplication : employee_id|date|start_time|end_time|month_key|reset_version"
+    },
+    "clock_clicked": {
+      "type": "boolean",
+      "default": false,
+      "description": "Indique si l'horloge a \u00e9t\u00e9 cliqu\u00e9e"
+    },
+    "clock_clicked_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Date/heure du clic sur l'horloge"
+    },
+    "is_extra": {
+      "type": "boolean",
+      "default": false,
+      "description": "Shift suppl\u00e9mentaire cr\u00e9\u00e9 via une offre de shift accept\u00e9e"
+    }
+  },
+  "required": [
+    "employee_id",
+    "date",
+    "start_time",
+    "end_time"
+  ]
+}

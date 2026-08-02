@@ -1,0 +1,224 @@
+{
+  "name": "Invoice",
+  "type": "object",
+  "properties": {
+    "file_url": {
+      "type": "string",
+      "description": "URL du fichier PDF/image"
+    },
+    "file_bucket": {
+      "type": "string",
+      "description": "Nom du bucket Supabase"
+    },
+    "file_path": {
+      "type": "string",
+      "description": "Chemin du fichier dans le bucket"
+    },
+    "file_name": {
+      "type": "string",
+      "description": "Nom original du fichier"
+    },
+    "file_mime": {
+      "type": "string",
+      "description": "Type MIME du fichier"
+    },
+    "file_size": {
+      "type": "number",
+      "description": "Taille du fichier en bytes"
+    },
+    "original_size": {
+      "type": "number",
+      "description": "Taille originale avant compression (bytes)"
+    },
+    "optimized_size": {
+      "type": "number",
+      "description": "Taille apr\u00e8s compression (bytes)"
+    },
+    "compression_applied": {
+      "type": "boolean",
+      "default": false,
+      "description": "Compression automatique appliqu\u00e9e"
+    },
+    "compression_passes_count": {
+      "type": "number",
+      "description": "Nombre de passes de compression"
+    },
+    "normalized_file_name": {
+      "type": "string",
+      "description": "Nom normalis\u00e9 YYYY-MM-DD__FOURNISSEUR__TTC.pdf"
+    },
+    "supplier": {
+      "type": "string",
+      "description": "Nom du fournisseur (extrait IA)"
+    },
+    "invoice_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Date de la facture"
+    },
+    "categories": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": [
+          "Produits alimentaires",
+          "Carburant",
+          "Fournitures de bureau",
+          "Garagiste / Entretien v\u00e9hicule",
+          "Mat\u00e9riel / \u00c9quipement",
+          "Emballages",
+          "T\u00e9l\u00e9com / Internet",
+          "\u00c9nergie",
+          "Divers"
+        ]
+      },
+      "description": "Cat\u00e9gories (multi-s\u00e9lection)"
+    },
+    "short_description": {
+      "type": "string",
+      "description": "Description courte (5-12 mots)"
+    },
+    "accounting_account": {
+      "type": "string",
+      "description": "Compte comptable ou nature (ex: 6063, Carburant)"
+    },
+    "amount_ht": {
+      "type": "number",
+      "description": "Montant HT"
+    },
+    "amount_ttc": {
+      "type": "number",
+      "description": "Montant TTC"
+    },
+    "vat": {
+      "type": "number",
+      "description": "TVA"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "non_envoyee",
+        "a_verifier",
+        "envoyee"
+      ],
+      "default": "non_envoyee",
+      "description": "Statut de la facture"
+    },
+    "ai_processing": {
+      "type": "boolean",
+      "default": false,
+      "description": "Extraction IA en cours"
+    },
+    "ai_confidence": {
+      "type": "number",
+      "description": "Niveau de confiance de l'IA (0-1)"
+    },
+    "indexed_text": {
+      "type": "string",
+      "description": "Texte int\u00e9gral extrait pour recherche plein texte"
+    },
+    "internal_comments": {
+      "type": "string",
+      "description": "Commentaires internes"
+    },
+    "send_history": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "sent_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "sent_by": {
+            "type": "string"
+          },
+          "sent_by_name": {
+            "type": "string"
+          },
+          "method": {
+            "type": "string",
+            "enum": [
+              "manual",
+              "automatic"
+            ]
+          },
+          "recipient": {
+            "type": "string"
+          },
+          "delivery_method": {
+            "type": "string",
+            "enum": [
+              "attachment",
+              "secure_link"
+            ]
+          },
+          "success": {
+            "type": "boolean"
+          },
+          "error_message": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "last_sent_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Derni\u00e8re date d'envoi"
+    },
+    "last_sent_method": {
+      "type": "string",
+      "enum": [
+        "manual",
+        "automatic"
+      ],
+      "description": "Derni\u00e8re m\u00e9thode d'envoi"
+    },
+    "is_paid": {
+      "type": "boolean",
+      "default": false,
+      "description": "Facture pay\u00e9e"
+    },
+    "payment_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Date de paiement"
+    },
+    "payment_method": {
+      "type": "string",
+      "description": "Mode de paiement"
+    },
+    "source": {
+      "type": "string",
+      "enum": [
+        "manual",
+        "email_inbound"
+      ],
+      "default": "manual",
+      "description": "Source d'import de la facture"
+    },
+    "source_email_from": {
+      "type": "string",
+      "description": "Exp\u00e9diteur de l'email source"
+    },
+    "source_email_subject": {
+      "type": "string",
+      "description": "Sujet de l'email source"
+    },
+    "source_email_message_id": {
+      "type": "string",
+      "description": "Message-ID de l'email source (d\u00e9duplication)"
+    },
+    "received_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Date/heure de r\u00e9ception de l'email"
+    },
+    "dedupe_key": {
+      "type": "string",
+      "description": "Cl\u00e9 de d\u00e9duplication sha256(messageId+filename)"
+    }
+  },
+  "required": []
+}

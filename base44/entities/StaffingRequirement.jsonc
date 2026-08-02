@@ -1,0 +1,41 @@
+{
+  "name": "StaffingRequirement",
+  "type": "object",
+  "properties": {
+    "position": {
+      "type": "string",
+      "description": "Nom du poste (ex: LIVRAISON, CAISSE, CUISINE)"
+    },
+    "mon": {
+      "type": "number",
+      "default": 0
+    },
+    "tue": {
+      "type": "number",
+      "default": 0
+    },
+    "wed": {
+      "type": "number",
+      "default": 0
+    },
+    "thu": {
+      "type": "number",
+      "default": 0
+    },
+    "fri": {
+      "type": "number",
+      "default": 0
+    },
+    "sat": {
+      "type": "number",
+      "default": 0
+    },
+    "sun": {
+      "type": "number",
+      "default": 0
+    }
+  },
+  "required": [
+    "position"
+  ]
+}

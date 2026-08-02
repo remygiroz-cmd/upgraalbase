@@ -1,0 +1,48 @@
+{
+  "name": "ConversationMember",
+  "type": "object",
+  "properties": {
+    "conversation_id": {
+      "type": "string",
+      "description": "ID de la conversation"
+    },
+    "employee_id": {
+      "type": "string",
+      "description": "ID de l'employ\u00e9 membre"
+    },
+    "joined_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Date d'adh\u00e9sion"
+    },
+    "left_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Date de sortie (quitt\u00e9)"
+    },
+    "is_hidden": {
+      "type": "boolean",
+      "default": false,
+      "description": "Supprim\u00e9 pour moi (masqu\u00e9)"
+    },
+    "hidden_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Date de masquage"
+    },
+    "role": {
+      "type": "string",
+      "enum": [
+        "owner",
+        "admin",
+        "member"
+      ],
+      "default": "member",
+      "description": "R\u00f4le dans la conversation"
+    }
+  },
+  "required": [
+    "conversation_id",
+    "employee_id"
+  ]
+}

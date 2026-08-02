@@ -1,0 +1,42 @@
+{
+  "name": "Equipment",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Nom de l'\u00e9quipement"
+    },
+    "type": {
+      "type": "string",
+      "enum": [
+        "positive",
+        "negative"
+      ],
+      "description": "Type: frigo positif ou n\u00e9gatif"
+    },
+    "target_min": {
+      "type": "number",
+      "description": "Temp\u00e9rature min cible"
+    },
+    "target_max": {
+      "type": "number",
+      "description": "Temp\u00e9rature max cible"
+    },
+    "location": {
+      "type": "string"
+    },
+    "order": {
+      "type": "number"
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true
+    }
+  },
+  "required": [
+    "name",
+    "type",
+    "target_min",
+    "target_max"
+  ]
+}

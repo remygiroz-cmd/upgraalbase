@@ -1,0 +1,102 @@
+{
+  "name": "InvoiceAutomationConfig",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Nom de la configuration"
+    },
+    "enabled": {
+      "type": "boolean",
+      "default": true,
+      "description": "Configuration active ou non"
+    },
+    "recipient_email": {
+      "type": "string",
+      "description": "Email destinataire"
+    },
+    "cc_email": {
+      "type": "string",
+      "description": "Email en copie (CC)"
+    },
+    "send_day": {
+      "type": "string",
+      "enum": [
+        "monday",
+        "tuesday",
+        "wednesday",
+        "thursday",
+        "friday",
+        "saturday",
+        "sunday"
+      ],
+      "description": "Jour d'envoi"
+    },
+    "send_time": {
+      "type": "string",
+      "description": "Heure d'envoi (HH:mm)"
+    },
+    "status_filter": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": [
+          "non_envoyee",
+          "a_verifier",
+          "envoyee"
+        ]
+      },
+      "description": "Filtrer par statut des factures \u00e0 envoyer"
+    },
+    "include_all_unreviewed": {
+      "type": "boolean",
+      "default": false,
+      "description": "Inclure toutes les factures non revis\u00e9es"
+    },
+    "last_run_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Dernier envoi"
+    },
+    "last_run_status": {
+      "type": "string",
+      "enum": [
+        "success",
+        "failed",
+        "pending"
+      ],
+      "description": "Statut du dernier envoi"
+    },
+    "run_history": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "run_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "success",
+              "failed"
+            ]
+          },
+          "invoices_count": {
+            "type": "number"
+          },
+          "error_message": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  },
+  "required": [
+    "name",
+    "recipient_email",
+    "send_day",
+    "send_time"
+  ]
+}

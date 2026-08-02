@@ -1,0 +1,61 @@
+{
+  "name": "VehicleDocument",
+  "type": "object",
+  "properties": {
+    "vehicule_id": {
+      "type": "string"
+    },
+    "type_doc": {
+      "type": "string",
+      "enum": [
+        "CARTE_GRISE",
+        "ASSURANCE",
+        "CONTROLE_TECHNIQUE",
+        "CONTRAT_LOA",
+        "AUTRE"
+      ]
+    },
+    "nom": {
+      "type": "string"
+    },
+    "fichier_url": {
+      "type": "string",
+      "description": "URL du fichier upload\u00e9"
+    },
+    "file_name": {
+      "type": "string",
+      "description": "Nom original du fichier"
+    },
+    "file_size": {
+      "type": "number",
+      "description": "Taille en octets"
+    },
+    "file_type": {
+      "type": "string",
+      "description": "MIME type du fichier"
+    },
+    "uploaded_by": {
+      "type": "string",
+      "description": "Email de l'utilisateur"
+    },
+    "uploaded_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "date_expiration": {
+      "type": "string",
+      "format": "date"
+    },
+    "rappel_auto": {
+      "type": "boolean",
+      "default": true
+    },
+    "notes": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "vehicule_id",
+    "type_doc"
+  ]
+}

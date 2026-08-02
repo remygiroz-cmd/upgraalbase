@@ -1,0 +1,59 @@
+{
+  "name": "DepartureOrder",
+  "type": "object",
+  "properties": {
+    "date": {
+      "type": "string",
+      "format": "date",
+      "description": "Date du jour pour lequel l'ordre est calcul\u00e9"
+    },
+    "service": {
+      "type": "string",
+      "description": "Service/poste concern\u00e9 (ex: LIVRAISON, CUISINE)"
+    },
+    "ordered_employees": {
+      "type": "array",
+      "description": "Liste ordonn\u00e9e des employ\u00e9s",
+      "items": {
+        "type": "object",
+        "properties": {
+          "employee_id": {
+            "type": "string"
+          },
+          "employee_name": {
+            "type": "string"
+          },
+          "score": {
+            "type": "number"
+          },
+          "shift_duration": {
+            "type": "number"
+          }
+        }
+      }
+    },
+    "message": {
+      "type": "string",
+      "description": "Message format\u00e9 \u00e0 afficher"
+    },
+    "generated_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Date/heure de g\u00e9n\u00e9ration"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "success",
+        "empty",
+        "error"
+      ],
+      "default": "success",
+      "description": "Statut du calcul"
+    }
+  },
+  "required": [
+    "date",
+    "service"
+  ]
+}

@@ -1,0 +1,60 @@
+{
+  "name": "PaidLeavePeriod",
+  "type": "object",
+  "properties": {
+    "employee_id": {
+      "type": "string",
+      "description": "ID de l'employ\u00e9"
+    },
+    "employee_name": {
+      "type": "string",
+      "description": "Nom de l'employ\u00e9"
+    },
+    "cp_start_date": {
+      "type": "string",
+      "format": "date",
+      "description": "D\u00e9part en CP (premier jour en cong\u00e9s, inclus)"
+    },
+    "return_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Jour de reprise (premier jour travaill\u00e9 apr\u00e8s CP, exclu de la p\u00e9riode)"
+    },
+    "start_cp": {
+      "type": "string",
+      "format": "date",
+      "description": "D\u00e9but p\u00e9riode CP (= cp_start_date, inclus)"
+    },
+    "end_cp": {
+      "type": "string",
+      "format": "date",
+      "description": "Fin p\u00e9riode CP (veille du jour de reprise, inclus)"
+    },
+    "cp_days_auto": {
+      "type": "number",
+      "description": "Jours CP calcul\u00e9s automatiquement (jours ouvrables)"
+    },
+    "cp_days_manual": {
+      "type": "number",
+      "description": "Surcharge manuelle du nombre de CP pour le badge"
+    },
+    "notes": {
+      "type": "string",
+      "description": "Notes / commentaires"
+    },
+    "month_key": {
+      "type": "string",
+      "description": "Cl\u00e9 du mois YYYY-MM pour scope/versioning (mois de d\u00e9but)"
+    },
+    "reset_version": {
+      "type": "number",
+      "default": 0,
+      "description": "Version du mois - pour invalidation rapide lors du reset"
+    }
+  },
+  "required": [
+    "employee_id",
+    "cp_start_date",
+    "return_date"
+  ]
+}

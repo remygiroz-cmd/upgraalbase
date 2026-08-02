@@ -1,0 +1,142 @@
+{
+  "name": "Task",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Nom de la t\u00e2che"
+    },
+    "category_id": {
+      "type": "string",
+      "description": "ID de la cat\u00e9gorie"
+    },
+    "poste": {
+      "type": "string",
+      "enum": [
+        "chaud",
+        "froid",
+        "sushi",
+        "patisserie",
+        "plonge",
+        "autre"
+      ],
+      "description": "Poste de travail"
+    },
+    "duration_minutes": {
+      "type": "number",
+      "description": "Dur\u00e9e th\u00e9orique en minutes"
+    },
+    "duration_seconds": {
+      "type": "number",
+      "description": "Dur\u00e9e th\u00e9orique en secondes"
+    },
+    "tracking_mode": {
+      "type": "string",
+      "enum": [
+        "binary",
+        "quantity"
+      ],
+      "description": "Mode de suivi"
+    },
+    "unit": {
+      "type": "string",
+      "description": "Unit\u00e9 pour le mode quantit\u00e9"
+    },
+    "requires_stock_check": {
+      "type": "boolean",
+      "default": false,
+      "description": "N\u00e9cessite de v\u00e9rifier le stock restant"
+    },
+    "auto_schedule": {
+      "type": "object",
+      "description": "Planification automatique",
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "default": false
+        },
+        "schedules": {
+          "type": "array",
+          "description": "Liste des planifications par jour",
+          "items": {
+            "type": "object",
+            "properties": {
+              "trigger_day": {
+                "type": "string",
+                "enum": [
+                  "monday",
+                  "tuesday",
+                  "wednesday",
+                  "thursday",
+                  "friday",
+                  "saturday",
+                  "sunday"
+                ],
+                "description": "Jour de d\u00e9clenchement"
+              },
+              "trigger_time_start": {
+                "type": "string",
+                "description": "Heure de d\u00e9but du cr\u00e9neau (HH:mm)"
+              },
+              "trigger_time_end": {
+                "type": "string",
+                "description": "Heure de fin du cr\u00e9neau (HH:mm)"
+              },
+              "quantity": {
+                "type": "number",
+                "description": "Quantit\u00e9 pr\u00e9d\u00e9finie"
+              }
+            }
+          }
+        }
+      }
+    },
+    "weekly_targets": {
+      "type": "object",
+      "description": "Objectifs par jour de la semaine",
+      "properties": {
+        "monday": {
+          "type": "number"
+        },
+        "tuesday": {
+          "type": "number"
+        },
+        "wednesday": {
+          "type": "number"
+        },
+        "thursday": {
+          "type": "number"
+        },
+        "friday": {
+          "type": "number"
+        },
+        "saturday": {
+          "type": "number"
+        },
+        "sunday": {
+          "type": "number"
+        }
+      }
+    },
+    "image_url": {
+      "type": "string",
+      "description": "URL de l'image"
+    },
+    "instructions": {
+      "type": "string",
+      "description": "Instructions de la t\u00e2che"
+    },
+    "order": {
+      "type": "number",
+      "description": "Ordre d'affichage"
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true
+    }
+  },
+  "required": [
+    "name",
+    "tracking_mode"
+  ]
+}

@@ -1,0 +1,122 @@
+{
+  "name": "VehicleAlert",
+  "type": "object",
+  "properties": {
+    "vehicle_id": {
+      "type": "string",
+      "description": "ID du v\u00e9hicule concern\u00e9"
+    },
+    "assignment_id": {
+      "type": "string",
+      "description": "ID de l'assignation (optionnel)"
+    },
+    "reported_by_user_id": {
+      "type": "string",
+      "description": "ID utilisateur auteur"
+    },
+    "reported_by_employee_id": {
+      "type": "string",
+      "description": "ID employ\u00e9 auteur"
+    },
+    "reported_by_name": {
+      "type": "string",
+      "description": "Nom de l'auteur"
+    },
+    "reported_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "category": {
+      "type": "string",
+      "enum": [
+        "PNEUS",
+        "FREINS",
+        "VOYANTS",
+        "CARROSSERIE",
+        "MOTEUR",
+        "BATTERIE_CHARGE",
+        "CARBURANT",
+        "SECURITE",
+        "DOCUMENTS",
+        "AUTRE"
+      ]
+    },
+    "severity": {
+      "type": "string",
+      "enum": [
+        "INFO",
+        "IMPORTANT",
+        "URGENT"
+      ],
+      "default": "IMPORTANT"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "OPEN",
+        "IN_PROGRESS",
+        "RESOLVED",
+        "DISMISSED"
+      ],
+      "default": "OPEN"
+    },
+    "title": {
+      "type": "string"
+    },
+    "description": {
+      "type": "string"
+    },
+    "when_context": {
+      "type": "string",
+      "enum": [
+        "DEBUT_SHIFT",
+        "PENDANT_SHIFT",
+        "FIN_SHIFT",
+        "HORS_SHIFT"
+      ]
+    },
+    "location_context": {
+      "type": "string"
+    },
+    "what_happened": {
+      "type": "string"
+    },
+    "impact": {
+      "type": "string",
+      "enum": [
+        "BLOQUANT",
+        "NON_BLOQUANT"
+      ]
+    },
+    "vehicle_drivable": {
+      "type": "boolean"
+    },
+    "photos": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "handled_by_user_id": {
+      "type": "string"
+    },
+    "handled_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "resolution_note": {
+      "type": "string"
+    },
+    "mark_vehicle_unavailable": {
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "vehicle_id",
+    "reported_by_user_id",
+    "category",
+    "severity",
+    "title",
+    "description"
+  ]
+}

@@ -1,0 +1,96 @@
+{
+  "name": "WorkSession",
+  "type": "object",
+  "properties": {
+    "date": {
+      "type": "string",
+      "format": "date",
+      "description": "Date de la session"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "active",
+        "completed"
+      ],
+      "default": "active",
+      "description": "Statut de la session"
+    },
+    "tasks": {
+      "type": "array",
+      "description": "T\u00e2ches de la session",
+      "items": {
+        "type": "object",
+        "properties": {
+          "task_id": {
+            "type": "string"
+          },
+          "task_name": {
+            "type": "string"
+          },
+          "category_id": {
+            "type": "string"
+          },
+          "category_name": {
+            "type": "string"
+          },
+          "is_completed": {
+            "type": "boolean",
+            "default": false
+          },
+          "completed_by": {
+            "type": "string"
+          },
+          "completed_by_name": {
+            "type": "string"
+          },
+          "completed_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "added_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "current_stock": {
+            "type": "number",
+            "description": "Stock actuel"
+          },
+          "target_quantity": {
+            "type": "number",
+            "description": "Quantit\u00e9 cible"
+          },
+          "quantity_to_produce": {
+            "type": "number",
+            "description": "Quantit\u00e9 \u00e0 produire"
+          }
+        }
+      }
+    },
+    "started_by": {
+      "type": "string"
+    },
+    "started_by_name": {
+      "type": "string"
+    },
+    "started_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "completed_by": {
+      "type": "string",
+      "description": "Email de qui a valid\u00e9 la session"
+    },
+    "completed_by_name": {
+      "type": "string",
+      "description": "Nom de qui a valid\u00e9 la session"
+    },
+    "completed_at": {
+      "type": "string",
+      "format": "date-time"
+    }
+  },
+  "required": [
+    "date"
+  ]
+}

@@ -1,0 +1,48 @@
+{
+  "name": "Holiday",
+  "type": "object",
+  "properties": {
+    "date": {
+      "type": "string",
+      "format": "date",
+      "description": "Date du jour f\u00e9ri\u00e9"
+    },
+    "name": {
+      "type": "string",
+      "description": "Nom du jour f\u00e9ri\u00e9 (ex: Jour de l'an, 1er mai)"
+    },
+    "type": {
+      "type": "string",
+      "enum": [
+        "legal",
+        "local",
+        "regional"
+      ],
+      "default": "legal",
+      "description": "Type de jour f\u00e9ri\u00e9"
+    },
+    "is_may_first": {
+      "type": "boolean",
+      "default": false,
+      "description": "Cas sp\u00e9cial du 1er mai (doublement obligatoire)"
+    },
+    "zone": {
+      "type": "string",
+      "description": "Zone g\u00e9ographique si f\u00e9ri\u00e9 local (ex: Alsace-Moselle)"
+    },
+    "year": {
+      "type": "number",
+      "description": "Ann\u00e9e du f\u00e9ri\u00e9"
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true,
+      "description": "F\u00e9ri\u00e9 actif ou archiv\u00e9"
+    }
+  },
+  "required": [
+    "date",
+    "name",
+    "year"
+  ]
+}

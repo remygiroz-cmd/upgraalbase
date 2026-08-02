@@ -1,0 +1,38 @@
+{
+  "name": "JobRoles",
+  "type": "object",
+  "properties": {
+    "label": {
+      "type": "string",
+      "description": "Nom du poste (ex: Livreur aide caisse, Caissi\u00e8re, Responsable cuisine)"
+    },
+    "labelFeminin": {
+      "type": "string",
+      "description": "Version f\u00e9minine du poste (ex: Livreuse aide caisse, Caissi\u00e8re, Responsable cuisine)"
+    },
+    "tasksText": {
+      "type": "string",
+      "description": "Description des t\u00e2ches en multiligne (libre, peut inclure articles, listes, etc.)"
+    },
+    "posteAlias": {
+      "type": "array",
+      "description": "Alias du poste pour matching flexible",
+      "items": {
+        "type": "string"
+      }
+    },
+    "ordre": {
+      "type": "number",
+      "description": "Ordre d'affichage"
+    },
+    "isActive": {
+      "type": "boolean",
+      "default": true,
+      "description": "Poste actif"
+    }
+  },
+  "required": [
+    "label",
+    "tasksText"
+  ]
+}

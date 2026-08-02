@@ -1,0 +1,147 @@
+{
+  "name": "TemplatesRH",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Nom du template (ex: CDD_RESTAURATION)"
+    },
+    "typeDocument": {
+      "type": "string",
+      "enum": [
+        "CDD",
+        "CDI",
+        "AVENANT",
+        "AVERTISSEMENT",
+        "CONVOCATION",
+        "SANCTION",
+        "LICENCIEMENT",
+        "FIN_CDD",
+        "RUPTURE_ESSAI",
+        "ATTESTATION",
+        "COURRIER_RH",
+        "LETTRE_LIBRE",
+        "NOTE_INTERNE",
+        "DEMISSION"
+      ],
+      "description": "Type de document"
+    },
+    "categorieDocument": {
+      "type": "string",
+      "enum": [
+        "A_CONTRACTUEL",
+        "B_DISCIPLINAIRE",
+        "C_RUPTURE",
+        "D_ADMINISTRATIF",
+        "E_LIBRE"
+      ],
+      "description": "Cat\u00e9gorie RH - d\u00e9termine le niveau de validation"
+    },
+    "sousType": {
+      "type": "string",
+      "description": "Sous-cat\u00e9gorie (ex: TEMPS_PARTIEL, TRANSFORMATION_CDD_EN_CDI)"
+    },
+    "description": {
+      "type": "string",
+      "description": "Description du template"
+    },
+    "version": {
+      "type": "string",
+      "description": "Version du template (ex: v1.0, v1.1)"
+    },
+    "htmlContent": {
+      "type": "string",
+      "description": "Contenu HTML du template avec variables {{}} pour g\u00e9n\u00e9ration"
+    },
+    "variablesExpected": {
+      "type": "array",
+      "description": "Liste des variables {{}} attendues",
+      "items": {
+        "type": "string"
+      }
+    },
+    "customFields": {
+      "type": "array",
+      "description": "Champs personnalis\u00e9s \u00e0 saisir lors de la g\u00e9n\u00e9ration",
+      "items": {
+        "type": "object",
+        "properties": {
+          "key": {
+            "type": "string",
+            "description": "Cl\u00e9 de la variable (ex: descriptionFaits)"
+          },
+          "label": {
+            "type": "string",
+            "description": "Label affich\u00e9"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "text",
+              "textarea",
+              "date",
+              "number",
+              "select"
+            ],
+            "description": "Type de champ"
+          },
+          "required": {
+            "type": "boolean",
+            "default": false
+          },
+          "placeholder": {
+            "type": "string"
+          },
+          "helpText": {
+            "type": "string"
+          },
+          "options": {
+            "type": "array",
+            "description": "Options pour select",
+            "items": {
+              "type": "string"
+            }
+          },
+          "maxLength": {
+            "type": "number"
+          },
+          "defaultValue": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "docxFileUrl": {
+      "type": "string",
+      "description": "URL du fichier DOCX stock\u00e9 (priv\u00e9)"
+    },
+    "docxFileUri": {
+      "type": "string",
+      "description": "URI interne du fichier DOCX pour stockage priv\u00e9"
+    },
+    "isActive": {
+      "type": "boolean",
+      "default": true,
+      "description": "Template disponible pour usage"
+    },
+    "isOfficial": {
+      "type": "boolean",
+      "default": false,
+      "description": "Template officiel valid\u00e9 juridiquement (non modifiable directement)"
+    },
+    "parentTemplateId": {
+      "type": "string",
+      "description": "ID du template parent si c'est une copie"
+    },
+    "notes": {
+      "type": "string",
+      "description": "Notes internes sur le template"
+    }
+  },
+  "required": [
+    "name",
+    "typeDocument",
+    "categorieDocument",
+    "version"
+  ]
+}

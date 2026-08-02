@@ -1,0 +1,95 @@
+{
+  "name": "MonthlyRecap",
+  "type": "object",
+  "properties": {
+    "employee_id": {
+      "type": "string",
+      "description": "ID de l'employ\u00e9"
+    },
+    "year": {
+      "type": "number",
+      "description": "Ann\u00e9e"
+    },
+    "month": {
+      "type": "number",
+      "description": "Mois (1-12)"
+    },
+    "manual_days_worked": {
+      "type": "number",
+      "description": "Surcharge manuelle : jours travaill\u00e9s"
+    },
+    "manual_total_hours": {
+      "type": "number",
+      "description": "Surcharge manuelle : total heures effectu\u00e9es"
+    },
+    "manual_contract_hours": {
+      "type": "number",
+      "description": "Surcharge manuelle : base contractuelle pay\u00e9e"
+    },
+    "manual_deducted_hours": {
+      "type": "number",
+      "description": "Surcharge manuelle : heures d\u00e9compt\u00e9es"
+    },
+    "manual_overtime_25": {
+      "type": "number",
+      "description": "Surcharge manuelle : heures suppl\u00e9mentaires +25%"
+    },
+    "manual_overtime_50": {
+      "type": "number",
+      "description": "Surcharge manuelle : heures suppl\u00e9mentaires +50%"
+    },
+    "manual_complementary_10": {
+      "type": "number",
+      "description": "Surcharge manuelle : heures compl\u00e9mentaires +10%"
+    },
+    "manual_complementary_25": {
+      "type": "number",
+      "description": "Surcharge manuelle : heures compl\u00e9mentaires +25%"
+    },
+    "manual_non_shifts": {
+      "type": "object",
+      "description": "Surcharge manuelle : comptage des non-shifts par type",
+      "additionalProperties": {
+        "type": "number"
+      }
+    },
+    "manual_cp_days": {
+      "type": "number",
+      "description": "Surcharge manuelle : jours CP d\u00e9compt\u00e9s"
+    },
+    "notes": {
+      "type": "string",
+      "description": "Notes / commentaires"
+    },
+    "month_key": {
+      "type": "string",
+      "description": "Cl\u00e9 du mois YYYY-MM pour scope/versioning"
+    },
+    "reset_version": {
+      "type": "number",
+      "default": 0,
+      "description": "Version du mois - pour invalidation rapide lors du reset"
+    },
+    "complementaryHours10": {
+      "type": "number",
+      "description": "Heures compl\u00e9mentaires +10% (calcul\u00e9es auto)"
+    },
+    "complementaryHours25": {
+      "type": "number",
+      "description": "Heures compl\u00e9mentaires +25% (calcul\u00e9es auto)"
+    },
+    "overtimeHours25": {
+      "type": "number",
+      "description": "Heures suppl\u00e9mentaires +25% (calcul\u00e9es auto)"
+    },
+    "overtimeHours50": {
+      "type": "number",
+      "description": "Heures suppl\u00e9mentaires +50% (calcul\u00e9es auto)"
+    }
+  },
+  "required": [
+    "employee_id",
+    "year",
+    "month"
+  ]
+}

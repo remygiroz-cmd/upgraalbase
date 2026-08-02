@@ -1,0 +1,31 @@
+{
+  "name": "TemplateWeek",
+  "type": "object",
+  "properties": {
+    "employee_id": {
+      "type": "string",
+      "description": "ID de l'employ\u00e9"
+    },
+    "name": {
+      "type": "string",
+      "description": "Nom de la semaine type (ex: Semaine type 1, Semaine vacances)"
+    },
+    "description": {
+      "type": "string",
+      "description": "Description optionnelle"
+    },
+    "is_default": {
+      "type": "boolean",
+      "default": false,
+      "description": "Semaine type par d\u00e9faut pour cet employ\u00e9"
+    },
+    "order": {
+      "type": "number",
+      "description": "Ordre d'affichage"
+    }
+  },
+  "required": [
+    "employee_id",
+    "name"
+  ]
+}

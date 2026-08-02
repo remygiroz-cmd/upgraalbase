@@ -1,0 +1,37 @@
+{
+  "name": "DailyHistory",
+  "type": "object",
+  "properties": {
+    "date": {
+      "type": "string",
+      "format": "date"
+    },
+    "completion_percentage": {
+      "type": "number"
+    },
+    "total_production_time_seconds": {
+      "type": "number"
+    },
+    "tasks_completed": {
+      "type": "number"
+    },
+    "tasks_total": {
+      "type": "number"
+    },
+    "chef_messages": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "photos": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    }
+  },
+  "required": [
+    "date"
+  ]
+}

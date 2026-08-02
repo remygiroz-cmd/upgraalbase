@@ -1,0 +1,70 @@
+{
+  "name": "Product",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string"
+    },
+    "category": {
+      "type": "string"
+    },
+    "unit": {
+      "type": "string"
+    },
+    "unit_price": {
+      "type": "number"
+    },
+    "supplier_id": {
+      "type": "string"
+    },
+    "par_levels": {
+      "type": "object",
+      "properties": {
+        "monday": {
+          "type": "number"
+        },
+        "tuesday": {
+          "type": "number"
+        },
+        "wednesday": {
+          "type": "number"
+        },
+        "thursday": {
+          "type": "number"
+        },
+        "friday": {
+          "type": "number"
+        },
+        "saturday": {
+          "type": "number"
+        },
+        "sunday": {
+          "type": "number"
+        }
+      }
+    },
+    "current_stock": {
+      "type": "number",
+      "default": 0
+    },
+    "store_order": {
+      "type": "number"
+    },
+    "image_url": {
+      "type": "string",
+      "description": "URL de l'image du produit"
+    },
+    "remarks": {
+      "type": "string",
+      "description": "Remarques visibles uniquement dans l'inventaire"
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true
+    }
+  },
+  "required": [
+    "name",
+    "unit"
+  ]
+}

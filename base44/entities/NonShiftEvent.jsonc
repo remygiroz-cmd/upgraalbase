@@ -1,0 +1,45 @@
+{
+  "name": "NonShiftEvent",
+  "type": "object",
+  "properties": {
+    "employee_id": {
+      "type": "string",
+      "description": "ID de l'employ\u00e9"
+    },
+    "employee_name": {
+      "type": "string",
+      "description": "Nom de l'employ\u00e9"
+    },
+    "date": {
+      "type": "string",
+      "format": "date",
+      "description": "Date de l'\u00e9v\u00e9nement"
+    },
+    "non_shift_type_id": {
+      "type": "string",
+      "description": "ID du type de non-shift"
+    },
+    "non_shift_type_label": {
+      "type": "string",
+      "description": "Libell\u00e9 du type"
+    },
+    "notes": {
+      "type": "string",
+      "description": "Notes optionnelles"
+    },
+    "month_key": {
+      "type": "string",
+      "description": "Cl\u00e9 du mois YYYY-MM pour scope/versioning"
+    },
+    "reset_version": {
+      "type": "number",
+      "default": 0,
+      "description": "Version du mois - pour invalidation rapide lors du reset"
+    }
+  },
+  "required": [
+    "employee_id",
+    "date",
+    "non_shift_type_id"
+  ]
+}

@@ -1,0 +1,201 @@
+{
+  "name": "VehicleCheck",
+  "type": "object",
+  "properties": {
+    "type": {
+      "type": "string",
+      "enum": [
+        "DEBUT_SHIFT",
+        "FIN_RUN",
+        "FIN_SERVICE"
+      ]
+    },
+    "assignment_id": {
+      "type": "string"
+    },
+    "vehicule_id": {
+      "type": "string"
+    },
+    "employe_id": {
+      "type": "string"
+    },
+    "employe_name": {
+      "type": "string"
+    },
+    "date_heure": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "km_debut": {
+      "type": "number"
+    },
+    "km_fin": {
+      "type": "number"
+    },
+    "check_visuel_pneus": {
+      "type": "string",
+      "enum": [
+        "OK",
+        "DEFAUT"
+      ]
+    },
+    "check_voyants": {
+      "type": "string",
+      "enum": [
+        "OK",
+        "ANOMALIE"
+      ]
+    },
+    "check_carrosserie": {
+      "type": "string",
+      "enum": [
+        "OK",
+        "DOMMAGE"
+      ]
+    },
+    "confirmation_vehicule_ok": {
+      "type": "boolean",
+      "default": false
+    },
+    "start_energy_level_pct": {
+      "type": "number",
+      "description": "% \u00e9nergie au d\u00e9part (0-100)"
+    },
+    "start_energy_type": {
+      "type": "string",
+      "enum": [
+        "ELECTRIC",
+        "THERMIQUE"
+      ],
+      "description": "Type \u00e9nergie au d\u00e9part"
+    },
+    "start_tires_status": {
+      "type": "string",
+      "enum": [
+        "OK",
+        "DEFAUT"
+      ]
+    },
+    "start_warning_lights_status": {
+      "type": "string",
+      "enum": [
+        "OK",
+        "ANOMALIE"
+      ]
+    },
+    "start_body_status": {
+      "type": "string",
+      "enum": [
+        "OK",
+        "DOMMAGE"
+      ]
+    },
+    "start_anomaly_detail": {
+      "type": "string"
+    },
+    "etat_pneus": {
+      "type": "string",
+      "enum": [
+        "BON",
+        "USAGE",
+        "CRITIQUE"
+      ]
+    },
+    "etat_freins": {
+      "type": "string",
+      "enum": [
+        "BON",
+        "USAGE",
+        "CRITIQUE"
+      ]
+    },
+    "etat_carrosserie": {
+      "type": "string",
+      "enum": [
+        "BON",
+        "RAYE",
+        "ENDOMMAGE"
+      ]
+    },
+    "end_energy_level_pct": {
+      "type": "number",
+      "description": "% \u00e9nergie \u00e0 la fin (0-100)"
+    },
+    "end_energy_type": {
+      "type": "string",
+      "enum": [
+        "ELECTRIC",
+        "THERMIQUE"
+      ]
+    },
+    "end_vehicle_plugged": {
+      "type": "boolean"
+    },
+    "end_key_returned": {
+      "type": "boolean"
+    },
+    "end_service_note": {
+      "type": "string",
+      "description": "Note libre fin de service"
+    },
+    "end_final_validation": {
+      "type": "boolean"
+    },
+    "branche_en_charge": {
+      "type": "boolean"
+    },
+    "charge_restante_pct": {
+      "type": "number"
+    },
+    "niveau_carburant": {
+      "type": "string",
+      "enum": [
+        "PLEIN",
+        "3/4",
+        "1/2",
+        "1/4",
+        "RESERVE"
+      ]
+    },
+    "cle_remise_en_place": {
+      "type": "boolean",
+      "default": false
+    },
+    "validation_finale": {
+      "type": "boolean",
+      "default": false
+    },
+    "incidents": {
+      "type": "string"
+    },
+    "tags_incidents": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": [
+          "RAYURE",
+          "CHOC",
+          "PNEU_PLAT",
+          "VOYANT_ALLUME",
+          "VITRE_CASSEE",
+          "AUTRE"
+        ]
+      }
+    },
+    "photos": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "signature_conducteur": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "type",
+    "assignment_id",
+    "vehicule_id",
+    "employe_id"
+  ]
+}

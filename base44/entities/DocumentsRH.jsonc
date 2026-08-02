@@ -1,0 +1,131 @@
+{
+  "name": "DocumentsRH",
+  "type": "object",
+  "properties": {
+    "employee_id": {
+      "type": "string",
+      "description": "R\u00e9f\u00e9rence \u00e0 l'employ\u00e9"
+    },
+    "establishment_id": {
+      "type": "string",
+      "description": "R\u00e9f\u00e9rence \u00e0 l'\u00e9tablissement"
+    },
+    "template_id": {
+      "type": "string",
+      "description": "R\u00e9f\u00e9rence au template utilis\u00e9"
+    },
+    "templateName": {
+      "type": "string",
+      "description": "Nom du template (snapshot)"
+    },
+    "templateVersion": {
+      "type": "string",
+      "description": "Version du template utilis\u00e9e"
+    },
+    "typeDocument": {
+      "type": "string",
+      "enum": [
+        "CDD",
+        "CDI",
+        "AVENANT",
+        "AVERTISSEMENT",
+        "CONVOCATION",
+        "SANCTION",
+        "LICENCIEMENT",
+        "FIN_CDD",
+        "RUPTURE_ESSAI",
+        "ATTESTATION",
+        "COURRIER_RH",
+        "LETTRE_LIBRE",
+        "NOTE_INTERNE"
+      ],
+      "description": "Type du document g\u00e9n\u00e9r\u00e9"
+    },
+    "categorieDocument": {
+      "type": "string",
+      "enum": [
+        "A_CONTRACTUEL",
+        "B_DISCIPLINAIRE",
+        "C_RUPTURE",
+        "D_ADMINISTRATIF",
+        "E_LIBRE"
+      ],
+      "description": "Cat\u00e9gorie RH du document"
+    },
+    "titre": {
+      "type": "string",
+      "description": "Titre du document (ex: AVENANT_DUPONT_JEAN_2026-01-29)"
+    },
+    "payloadSnapshot": {
+      "type": "object",
+      "description": "JSON de toutes les variables inject\u00e9es (fig\u00e9)"
+    },
+    "customData": {
+      "type": "object",
+      "description": "Donn\u00e9es personnalis\u00e9es saisies lors de la g\u00e9n\u00e9ration (pour r\u00e9g\u00e9n\u00e9ration)"
+    },
+    "pdfUrl": {
+      "type": "string",
+      "description": "URL sign\u00e9e du PDF g\u00e9n\u00e9r\u00e9"
+    },
+    "pdfFileUri": {
+      "type": "string",
+      "description": "URI interne du PDF pour storage priv\u00e9"
+    },
+    "docxUrl": {
+      "type": "string",
+      "description": "URL sign\u00e9e du DOCX rempli (optionnel)"
+    },
+    "docxFileUri": {
+      "type": "string",
+      "description": "URI interne du DOCX pour storage priv\u00e9"
+    },
+    "statusSignature": {
+      "type": "string",
+      "enum": [
+        "non_signe",
+        "signe"
+      ],
+      "default": "non_signe",
+      "description": "Statut de signature"
+    },
+    "signedFileUrl": {
+      "type": "string",
+      "description": "URL sign\u00e9e du document sign\u00e9 upload\u00e9"
+    },
+    "signedFileUri": {
+      "type": "string",
+      "description": "URI interne du fichier sign\u00e9"
+    },
+    "signedAt": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Date d'upload du document sign\u00e9"
+    },
+    "signedBy": {
+      "type": "string",
+      "description": "Email de qui a upload\u00e9 le doc sign\u00e9"
+    },
+    "generatedAt": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Date de g\u00e9n\u00e9ration du document"
+    },
+    "generatedBy": {
+      "type": "string",
+      "description": "Email de qui a g\u00e9n\u00e9r\u00e9 le document"
+    },
+    "notes": {
+      "type": "string",
+      "description": "Notes et annotations"
+    }
+  },
+  "required": [
+    "employee_id",
+    "establishment_id",
+    "template_id",
+    "typeDocument",
+    "categorieDocument",
+    "titre"
+  ]
+}

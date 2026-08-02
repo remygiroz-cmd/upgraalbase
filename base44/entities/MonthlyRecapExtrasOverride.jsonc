@@ -1,0 +1,62 @@
+{
+  "name": "MonthlyRecapExtrasOverride",
+  "type": "object",
+  "properties": {
+    "month_key": {
+      "type": "string",
+      "description": "Cl\u00e9 du mois YYYY-MM"
+    },
+    "employee_id": {
+      "type": "string",
+      "description": "ID de l'employ\u00e9"
+    },
+    "reset_version": {
+      "type": "number",
+      "description": "Version de planning (pour \u00e9viter que les surcharges d'une ancienne version se r\u00e9appliquent)"
+    },
+    "jours_travailles": {
+      "type": "number",
+      "description": "Surcharge jours travaill\u00e9s"
+    },
+    "jours_prevus": {
+      "type": "number",
+      "description": "Surcharge jours pr\u00e9vus"
+    },
+    "jours_supp": {
+      "type": "number",
+      "description": "Surcharge jours suppl\u00e9mentaires"
+    },
+    "ferie_jours": {
+      "type": "number",
+      "description": "Surcharge nombre de jours f\u00e9ri\u00e9s travaill\u00e9s"
+    },
+    "ferie_heures": {
+      "type": "number",
+      "description": "Surcharge heures f\u00e9ri\u00e9es travaill\u00e9es"
+    },
+    "cp_decomptes": {
+      "type": "number",
+      "description": "Surcharge CP d\u00e9compt\u00e9s"
+    },
+    "payees_hors_sup_comp": {
+      "type": "number",
+      "description": "Surcharge heures pay\u00e9es hors sup/comp"
+    },
+    "non_shifts_visibles": {
+      "type": "string",
+      "description": "Surcharge texte non-shifts visibles (affich\u00e9 dans r\u00e9cap)"
+    },
+    "notes": {
+      "type": "string",
+      "description": "Notes / commentaires"
+    },
+    "updated_at": {
+      "type": "string",
+      "format": "date-time"
+    }
+  },
+  "required": [
+    "month_key",
+    "employee_id"
+  ]
+}

@@ -1,0 +1,50 @@
+{
+  "name": "DailyNote",
+  "type": "object",
+  "properties": {
+    "content": {
+      "type": "string",
+      "description": "Contenu de la note"
+    },
+    "author": {
+      "type": "string",
+      "description": "Email de l'auteur"
+    },
+    "author_name": {
+      "type": "string",
+      "description": "Nom de l'auteur"
+    },
+    "expires_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Date d'expiration"
+    },
+    "read_by": {
+      "type": "array",
+      "description": "Liste des utilisateurs ayant lu/ferm\u00e9",
+      "items": {
+        "type": "object",
+        "properties": {
+          "user_email": {
+            "type": "string"
+          },
+          "user_name": {
+            "type": "string"
+          },
+          "read_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      }
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true
+    }
+  },
+  "required": [
+    "content",
+    "author"
+  ]
+}

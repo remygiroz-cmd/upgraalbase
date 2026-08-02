@@ -1,0 +1,41 @@
+{
+  "name": "TemplateShift",
+  "type": "object",
+  "properties": {
+    "template_week_id": {
+      "type": "string",
+      "description": "ID de la semaine type"
+    },
+    "day_of_week": {
+      "type": "number",
+      "description": "Jour de la semaine (1=Lundi, 7=Dimanche)"
+    },
+    "start_time": {
+      "type": "string",
+      "description": "Heure de d\u00e9but (HH:mm)"
+    },
+    "end_time": {
+      "type": "string",
+      "description": "Heure de fin (HH:mm)"
+    },
+    "break_minutes": {
+      "type": "number",
+      "default": 0,
+      "description": "Dur\u00e9e de la pause en minutes"
+    },
+    "position": {
+      "type": "string",
+      "description": "Poste de travail"
+    },
+    "notes": {
+      "type": "string",
+      "description": "Notes optionnelles"
+    }
+  },
+  "required": [
+    "template_week_id",
+    "day_of_week",
+    "start_time",
+    "end_time"
+  ]
+}

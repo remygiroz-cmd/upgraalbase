@@ -1,0 +1,147 @@
+{
+  "name": "Article",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Nom de l'article"
+    },
+    "category": {
+      "type": "string",
+      "description": "Cat\u00e9gorie/Famille de l'article"
+    },
+    "supplier_id": {
+      "type": "string",
+      "description": "ID du fournisseur"
+    },
+    "supplier_name": {
+      "type": "string",
+      "description": "Nom du fournisseur"
+    },
+    "unit": {
+      "type": "string",
+      "description": "Unit\u00e9 (kg, L, pi\u00e8ce, etc.)"
+    },
+    "unit_price": {
+      "type": "number",
+      "description": "Prix unitaire"
+    },
+    "brand": {
+      "type": "string",
+      "description": "Marque optionnelle"
+    },
+    "supplier_reference": {
+      "type": "string",
+      "description": "R\u00e9f\u00e9rence fournisseur"
+    },
+    "internal_code": {
+      "type": "string",
+      "description": "Code de r\u00e9f\u00e9rence interne"
+    },
+    "image_url": {
+      "type": "string",
+      "description": "URL de l'image"
+    },
+    "remarks": {
+      "type": "string",
+      "description": "Remarques visibles uniquement dans l'inventaire"
+    },
+    "order": {
+      "type": "number",
+      "description": "Ordre d'affichage pour Parcours Magasin",
+      "default": 0
+    },
+    "storage_order": {
+      "type": "number",
+      "description": "Ordre d'affichage pour Stockage Boutique",
+      "default": 0
+    },
+    "inventory_mode": {
+      "type": "string",
+      "enum": [
+        "stock_reel",
+        "juste_a_cocher"
+      ],
+      "default": "stock_reel",
+      "description": "Mode de contr\u00f4le en r\u00e9serve"
+    },
+    "counting_days": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": [
+          "L",
+          "MA",
+          "ME",
+          "J",
+          "V",
+          "S",
+          "D"
+        ]
+      },
+      "description": "Jours de comptage"
+    },
+    "safety_stock": {
+      "type": "object",
+      "description": "Stock de s\u00e9curit\u00e9 par jour (pour stock_reel)",
+      "properties": {
+        "L": {
+          "type": "number"
+        },
+        "MA": {
+          "type": "number"
+        },
+        "ME": {
+          "type": "number"
+        },
+        "J": {
+          "type": "number"
+        },
+        "V": {
+          "type": "number"
+        },
+        "S": {
+          "type": "number"
+        },
+        "D": {
+          "type": "number"
+        }
+      }
+    },
+    "order_quantity": {
+      "type": "object",
+      "description": "Quantit\u00e9 de commande par jour (pour juste_a_cocher)",
+      "properties": {
+        "L": {
+          "type": "number"
+        },
+        "MA": {
+          "type": "number"
+        },
+        "ME": {
+          "type": "number"
+        },
+        "J": {
+          "type": "number"
+        },
+        "V": {
+          "type": "number"
+        },
+        "S": {
+          "type": "number"
+        },
+        "D": {
+          "type": "number"
+        }
+      }
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true,
+      "description": "Article actif"
+    }
+  },
+  "required": [
+    "name"
+  ]
+}

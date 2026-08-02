@@ -1,0 +1,29 @@
+{
+  "name": "PlanningLayout",
+  "type": "object",
+  "properties": {
+    "month_key": {
+      "type": "string",
+      "description": "Cl\u00e9 du mois au format YYYY-MM (ex: 2026-02)"
+    },
+    "column_order": {
+      "type": "array",
+      "description": "Ordre des IDs d'employ\u00e9s dans les colonnes",
+      "items": {
+        "type": "string"
+      },
+      "default": []
+    },
+    "hidden_employee_ids": {
+      "type": "array",
+      "description": "IDs des employ\u00e9s \u00e0 masquer",
+      "items": {
+        "type": "string"
+      },
+      "default": []
+    }
+  },
+  "required": [
+    "month_key"
+  ]
+}

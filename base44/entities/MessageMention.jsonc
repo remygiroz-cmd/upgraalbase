@@ -1,0 +1,23 @@
+{
+  "name": "MessageMention",
+  "type": "object",
+  "properties": {
+    "message_id": {
+      "type": "string",
+      "description": "ID du message"
+    },
+    "mentioned_employee_id": {
+      "type": "string",
+      "description": "ID de l'employ\u00e9 mentionn\u00e9 (Personnel.id)"
+    },
+    "conversation_id": {
+      "type": "string",
+      "description": "ID de la conversation (pour requ\u00eates rapides)"
+    }
+  },
+  "required": [
+    "message_id",
+    "mentioned_employee_id",
+    "conversation_id"
+  ]
+}

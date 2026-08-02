@@ -1,0 +1,86 @@
+{
+  "name": "Supplier",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Nom du fournisseur"
+    },
+    "contact_name": {
+      "type": "string",
+      "description": "Nom du contact"
+    },
+    "phone": {
+      "type": "string",
+      "description": "T\u00e9l\u00e9phone"
+    },
+    "email": {
+      "type": "string",
+      "description": "Email principal"
+    },
+    "address": {
+      "type": "string",
+      "description": "Adresse"
+    },
+    "internal_reference": {
+      "type": "string",
+      "description": "R\u00e9f\u00e9rence client interne (ex: FR-12345)"
+    },
+    "delivery_days": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": [
+          "L",
+          "MA",
+          "ME",
+          "J",
+          "V",
+          "S",
+          "D"
+        ]
+      },
+      "description": "Jours d'envoi automatique"
+    },
+    "preferred_delivery_days": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": [
+          "L",
+          "MA",
+          "ME",
+          "J",
+          "V",
+          "S",
+          "D"
+        ]
+      },
+      "description": "Jours de livraison souhait\u00e9s"
+    },
+    "closing_time": {
+      "type": "string",
+      "description": "Heure d'envoi des commandes (HH:mm)"
+    },
+    "cc_emails": {
+      "type": "string",
+      "description": "Emails en copie (s\u00e9par\u00e9s par des virgules)"
+    },
+    "email_subject": {
+      "type": "string",
+      "description": "Objet de l'email pour les commandes"
+    },
+    "custom_message": {
+      "type": "string",
+      "description": "Message personnalis\u00e9 pour les commandes"
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true,
+      "description": "Fournisseur actif"
+    }
+  },
+  "required": [
+    "name"
+  ]
+}

@@ -1,0 +1,55 @@
+{
+  "name": "InboundEmailImportLog",
+  "type": "object",
+  "properties": {
+    "created_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Date/heure de r\u00e9ception du webhook"
+    },
+    "message_id": {
+      "type": "string",
+      "description": "Message-ID de l'email source"
+    },
+    "from": {
+      "type": "string",
+      "description": "Exp\u00e9diteur de l'email"
+    },
+    "to": {
+      "type": "string",
+      "description": "Destinataire(s) de l'email"
+    },
+    "subject": {
+      "type": "string",
+      "description": "Sujet de l'email"
+    },
+    "attachments_count": {
+      "type": "number",
+      "default": 0,
+      "description": "Nombre de pi\u00e8ces jointes"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "received",
+        "processing",
+        "success",
+        "failed"
+      ],
+      "default": "received",
+      "description": "Statut du traitement"
+    },
+    "error_message": {
+      "type": "string",
+      "description": "Message d'erreur si status=failed"
+    },
+    "invoice_ids": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "IDs des factures cr\u00e9\u00e9es"
+    }
+  },
+  "required": []
+}

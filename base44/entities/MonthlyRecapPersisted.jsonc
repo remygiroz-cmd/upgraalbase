@@ -1,0 +1,60 @@
+{
+  "name": "MonthlyRecapPersisted",
+  "type": "object",
+  "properties": {
+    "month_key": {
+      "type": "string",
+      "description": "Cl\u00e9 du mois YYYY-MM"
+    },
+    "employee_id": {
+      "type": "string",
+      "description": "ID de l'employ\u00e9"
+    },
+    "reset_version": {
+      "type": "number",
+      "description": "Version active du planning pour ce mois"
+    },
+    "is_manual_override": {
+      "type": "boolean",
+      "default": false,
+      "description": "true uniquement si les valeurs ont \u00e9t\u00e9 saisies manuellement par un utilisateur (via la modale). false = cache auto ignor\u00e9 par le resolver."
+    },
+    "complementary_hours_ui": {
+      "type": "number",
+      "description": "Total heures compl\u00e9mentaires (HC10+HC25) tel qu'affich\u00e9 dans l'UI"
+    },
+    "overtime_hours_ui": {
+      "type": "number",
+      "description": "Total heures suppl\u00e9mentaires (HS25+HS50) tel qu'affich\u00e9 dans l'UI"
+    },
+    "complementary_hours_10": {
+      "type": "number",
+      "description": "HC +10%"
+    },
+    "complementary_hours_25": {
+      "type": "number",
+      "description": "HC +25%"
+    },
+    "overtime_hours_25": {
+      "type": "number",
+      "description": "HS +25%"
+    },
+    "overtime_hours_50": {
+      "type": "number",
+      "description": "HS +50%"
+    },
+    "worked_hours": {
+      "type": "number",
+      "description": "Heures travaill\u00e9es totales"
+    },
+    "updated_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Date de derni\u00e8re mise \u00e0 jour"
+    }
+  },
+  "required": [
+    "month_key",
+    "employee_id"
+  ]
+}
