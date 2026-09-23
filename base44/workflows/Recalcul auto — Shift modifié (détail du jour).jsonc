@@ -1,0 +1,39 @@
+{
+  "name": "Recalcul auto \u2014 Shift modifi\u00e9 (d\u00e9tail du jour)",
+  "description": "D\u00e9clenche recalcul de l'ordre si shift du jour modifi\u00e9 et service optimis\u00e9",
+  "trigger": {
+    "condition": null,
+    "config": {
+      "trigger_type": "entity",
+      "events": [
+        "create",
+        "update",
+        "delete"
+      ],
+      "entity_name": "Shift"
+    }
+  },
+  "definition": {
+    "document": {
+      "dsl": "1.0.0",
+      "name": "recalcul_auto_shift_modifi_d_tail_du_jour",
+      "version": "1.0",
+      "namespace": "base44"
+    },
+    "do": [
+      {
+        "run_function": {
+          "call": "invoke_backend_function",
+          "with": {
+            "function_name": "recomputeDepartureOrderIfNeeded",
+            "args": {}
+          },
+          "then": "end"
+        }
+      }
+    ]
+  },
+  "x-base44-migrated-from-automation": {
+    "legacy_payload_function": "recomputeDepartureOrderIfNeeded"
+  }
+}

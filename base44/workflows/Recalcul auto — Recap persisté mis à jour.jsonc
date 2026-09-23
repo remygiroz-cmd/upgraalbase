@@ -1,0 +1,37 @@
+{
+  "name": "Recalcul auto \u2014 Recap persist\u00e9 mis \u00e0 jour",
+  "description": "Recalcule ordre si recap mensuel persist\u00e9 change (horaires compl/sup)",
+  "trigger": {
+    "condition": null,
+    "config": {
+      "trigger_type": "entity",
+      "events": [
+        "update"
+      ],
+      "entity_name": "MonthlyRecapPersisted"
+    }
+  },
+  "definition": {
+    "document": {
+      "dsl": "1.0.0",
+      "name": "recalcul_auto_recap_persist_mis_jour",
+      "version": "1.0",
+      "namespace": "base44"
+    },
+    "do": [
+      {
+        "run_function": {
+          "call": "invoke_backend_function",
+          "with": {
+            "function_name": "recomputeDepartureOrderIfNeeded",
+            "args": {}
+          },
+          "then": "end"
+        }
+      }
+    ]
+  },
+  "x-base44-migrated-from-automation": {
+    "legacy_payload_function": "recomputeDepartureOrderIfNeeded"
+  }
+}

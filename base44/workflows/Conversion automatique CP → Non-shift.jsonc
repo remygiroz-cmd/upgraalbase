@@ -1,0 +1,39 @@
+{
+  "name": "Conversion automatique CP \u2192 Non-shift",
+  "description": "Convertit automatiquement les shifts en non-shifts CP quand une p\u00e9riode de cong\u00e9s pay\u00e9s est cr\u00e9\u00e9e/modifi\u00e9e, et restaure les shifts originaux quand la p\u00e9riode CP est supprim\u00e9e",
+  "trigger": {
+    "condition": null,
+    "config": {
+      "trigger_type": "entity",
+      "events": [
+        "create",
+        "update",
+        "delete"
+      ],
+      "entity_name": "PaidLeavePeriod"
+    }
+  },
+  "definition": {
+    "document": {
+      "dsl": "1.0.0",
+      "name": "conversion_automatique_cp_non_shift",
+      "version": "1.0",
+      "namespace": "base44"
+    },
+    "do": [
+      {
+        "run_function": {
+          "call": "invoke_backend_function",
+          "with": {
+            "function_name": "handlePaidLeaveOverride",
+            "args": {}
+          },
+          "then": "end"
+        }
+      }
+    ]
+  },
+  "x-base44-migrated-from-automation": {
+    "legacy_payload_function": "handlePaidLeaveOverride"
+  }
+}
